@@ -31,6 +31,7 @@ html {
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
@@ -38,6 +39,8 @@ body {
   line-height: 1.6;
   color: var(--color-navy-800);
   background: #ffffff;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 h1, h2, h3, h4 {
