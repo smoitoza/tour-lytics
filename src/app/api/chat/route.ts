@@ -10,6 +10,109 @@ function getClient() {
   })
 }
 
+// ---- Google Places helper ----
+async function searchNearbyPlaces(query: string, maxResults = 5): Promise<string> {
+  const apiKey = process.env.GOOGLE_PLACES_API_KEY
+  if (!apiKey) {
+    return 'Google Places API key is not configured. Unable to search for nearby places.'
+  }
+
+  try {
+    const response = await fetch(
+      'https://places.googleapis.com/v1/places:searchText',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': apiKey,
+          'X-Goog-FieldMask': [
+            'places.displayName',
+            'places.formattedAddress',
+            'places.rating',
+            'places.userRatingCount',
+            'places.priceLevel',
+            'places.currentOpeningHours',
+            'places.regularOpeningHours',
+            'places.websiteUri',
+            'places.googleMapsUri',
+            'places.primaryType',
+          ].join(','),
+        },
+        body: JSON.stringify({
+          textQuery: query,
+          maxResultCount: Math.min(maxResults, 10),
+          languageCode: 'en',
+        }),
+      }
+    )
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Google Places API error:', response.status, errorText)
+      return `Google Places API returned an error (status ${response.status}). Unable to search for nearby places at this time.`
+    }
+
+    const data = await response.json()
+    const places = (data.places || []).map((place: Record<string, unknown>) => {
+      const openingHours = (place.currentOpeningHours || place.regularOpeningHours) as Record<string, unknown> | undefined
+      const weekday = openingHours?.weekdayDescriptions as string[] | undefined
+      const displayName = place.displayName as Record<string, string> | undefined
+      const priceMap: Record<string, string> = {
+        PRICE_LEVEL_FREE: 'Free',
+        PRICE_LEVEL_INEXPENSIVE: '$',
+        PRICE_LEVEL_MODERATE: '$$',
+        PRICE_LEVEL_EXPENSIVE: '$$$',
+        PRICE_LEVEL_VERY_EXPENSIVE: '$$$$',
+      }
+
+      return {
+        name: displayName?.text || 'Unknown',
+        address: place.formattedAddress || '',
+        rating: place.rating || null,
+        reviewCount: place.userRatingCount || null,
+        price: priceMap[place.priceLevel as string] || null,
+        type: place.primaryType || null,
+        website: place.websiteUri || null,
+        googleMapsUrl: place.googleMapsUri || null,
+        todayHours: weekday ? weekday[new Date().getDay()] : null,
+      }
+    })
+
+    if (places.length === 0) {
+      return 'No places found matching that search.'
+    }
+
+    return JSON.stringify(places, null, 2)
+  } catch (err) {
+    console.error('Places search error:', err)
+    return `Error searching for places: ${String(err)}`
+  }
+}
+
+// ---- Claude tool definitions ----
+const TOOLS: Anthropic.Tool[] = [
+  {
+    name: 'search_nearby_places',
+    description:
+      'Search for nearby places (restaurants, coffee shops, parking, bars, gyms, etc.) near a specific address or building location. Use this whenever a user asks about places to eat, drink, park, or visit near any of the tour buildings. Always include "San Francisco" in the query for accurate results.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        query: {
+          type: 'string',
+          description:
+            'A natural language search query including the place type and location, e.g. "coffee shops near 250 Brannan Street, San Francisco" or "parking garages near 300 Mission Street, San Francisco"',
+        },
+        max_results: {
+          type: 'number',
+          description: 'Maximum number of results to return (1-10, default 5)',
+        },
+      },
+      required: ['query'],
+    },
+  },
+]
+
 const SYSTEM_PROMPT = `You are the Tour-Lytics Tour Book Assistant -- an AI concierge for a commercial real estate office search in San Francisco.
 
 You have detailed knowledge of 33 survey buildings plus 4 buildings in active deal negotiations. Your job is to answer questions about these properties clearly and helpfully, like a knowledgeable broker assistant.
@@ -48,6 +151,13 @@ Each message may include [LIVE TOUR LIST], [LIVE SCORES], and [LIVE TOUR SCHEDUL
 - If scores are provided, reference them when relevant.
 - If schedule data is provided, reference tour dates and times when relevant.
 
+NEARBY PLACES CAPABILITY:
+You have access to a tool called search_nearby_places that uses Google Places to find coffee shops, restaurants, bars, parking, gyms, and any other type of place near the tour buildings. When a user asks about places near a building:
+1. Identify the building address from your data
+2. Call search_nearby_places with a query like "coffee shops near [address], San Francisco"
+3. Present the results in a clean, helpful format with name, rating, distance context, and Google Maps link if available
+4. If the user asks about their "first tour" or "next tour", check the LIVE TOUR SCHEDULE data to identify which building, then search near that address
+
 GUIDELINES:
 - Be concise but thorough. Use specific numbers (rates, SF, etc.) when available.
 - If comparing buildings, use a structured format.
@@ -60,21 +170,28 @@ GUIDELINES:
 - When asked about costs, always distinguish between lease-only P&L and all-in occupancy cost (which includes OpEx).`
 
 // In-memory conversation store
-const conversations = new Map<string, Array<{ role: string; content: string }>>()
+const conversations = new Map<string, Array<{ role: string; content: string | Anthropic.ContentBlockParam[] }>>()
 const MAX_HISTORY = 20
 
 export async function POST(request: NextRequest) {
   try {
     if (!process.env.ANTHROPIC_API_KEY) {
-      return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY is not configured. Please add it in Vercel Environment Variables and redeploy.' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      })
+      return new Response(
+        JSON.stringify({
+          error:
+            'ANTHROPIC_API_KEY is not configured. Please add it in Vercel Environment Variables and redeploy.',
+        }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      )
     }
 
     const body = await request.json()
     const { message, visitor_id, tour_list, scores, schedule } = body
-    const visitorId = visitor_id || request.headers.get('x-visitor-id') || 'default'
+    const visitorId =
+      visitor_id || request.headers.get('x-visitor-id') || 'default'
 
     // Get or create conversation history
     let history = conversations.get(visitorId) || []
@@ -110,45 +227,101 @@ export async function POST(request: NextRequest) {
       history = history.slice(-MAX_HISTORY)
     }
 
-    // Stream response
+    // Stream response with tool use support
     const encoder = new TextEncoder()
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          const anthropicStream = getClient().messages.stream({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 1024,
-            system: SYSTEM_PROMPT,
-            messages: history as Array<{ role: 'user' | 'assistant'; content: string }>,
-          })
+          // First call - may return tool_use
+          let apiMessages = history.map((m) => ({
+            role: m.role as 'user' | 'assistant',
+            content: m.content as string | Anthropic.ContentBlockParam[],
+          }))
 
-          let fullResponse = ''
+          let assistantResponse = ''
+          let needsToolCall = true
 
-          anthropicStream.on('text', (text) => {
-            fullResponse += text
-            controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ text })}\n\n`)
+          while (needsToolCall) {
+            needsToolCall = false
+
+            const response = await getClient().messages.create({
+              model: 'claude-sonnet-4-20250514',
+              max_tokens: 1024,
+              system: SYSTEM_PROMPT,
+              tools: TOOLS,
+              messages: apiMessages,
+            })
+
+            // Check if we need to handle tool calls
+            const toolUseBlocks = response.content.filter(
+              (block) => block.type === 'tool_use'
             )
-          })
+            const textBlocks = response.content.filter(
+              (block) => block.type === 'text'
+            )
 
-          anthropicStream.on('end', () => {
-            history.push({ role: 'assistant', content: fullResponse })
+            // Stream any text that came before tool use
+            for (const block of textBlocks) {
+              if (block.type === 'text' && block.text) {
+                assistantResponse += block.text
+                controller.enqueue(
+                  encoder.encode(
+                    `data: ${JSON.stringify({ text: block.text })}\n\n`
+                  )
+                )
+              }
+            }
+
+            if (toolUseBlocks.length > 0 && response.stop_reason === 'tool_use') {
+              // Process each tool call
+              const toolResults: Anthropic.ToolResultBlockParam[] = []
+
+              for (const toolBlock of toolUseBlocks) {
+                if (toolBlock.type === 'tool_use') {
+                  const { name, id, input } = toolBlock
+                  const toolInput = input as { query: string; max_results?: number }
+
+                  if (name === 'search_nearby_places') {
+                    const result = await searchNearbyPlaces(
+                      toolInput.query,
+                      toolInput.max_results || 5
+                    )
+                    toolResults.push({
+                      type: 'tool_result',
+                      tool_use_id: id,
+                      content: result,
+                    })
+                  }
+                }
+              }
+
+              // Add assistant response with tool use and tool results to messages
+              apiMessages = [
+                ...apiMessages,
+                { role: 'assistant' as const, content: response.content as Anthropic.ContentBlockParam[] },
+                { role: 'user' as const, content: toolResults as Anthropic.ContentBlockParam[] },
+              ]
+
+              // We need another round to get the final text response
+              needsToolCall = true
+            }
+          }
+
+          // Save final response to history
+          if (assistantResponse) {
+            history.push({ role: 'assistant', content: assistantResponse })
             conversations.set(visitorId, history)
-            controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`)
-            )
-            controller.close()
-          })
+          }
 
-          anthropicStream.on('error', (err) => {
-            controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ error: String(err) })}\n\n`)
-            )
-            controller.close()
-          })
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`)
+          )
+          controller.close()
         } catch (err) {
           controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ error: String(err) })}\n\n`)
+            encoder.encode(
+              `data: ${JSON.stringify({ error: String(err) })}\n\n`
+            )
           )
           controller.close()
         }
