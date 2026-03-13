@@ -3,7 +3,12 @@ import { NextRequest } from 'next/server'
 import buildingContext from '@/data/building_context.json'
 import financialContext from '@/data/financial_context.json'
 
-const client = new Anthropic()
+// Initialize client inside handler to pick up env vars after redeploy
+function getClient() {
+  return new Anthropic({
+    apiKey: process.env.ANTHROPIC_API_KEY,
+  })
+}
 
 const SYSTEM_PROMPT = `You are the Tour-Lytics Tour Book Assistant -- an AI concierge for a commercial real estate office search in San Francisco.
 
@@ -60,6 +65,13 @@ const MAX_HISTORY = 20
 
 export async function POST(request: NextRequest) {
   try {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY is not configured. Please add it in Vercel Environment Variables and redeploy.' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
     const body = await request.json()
     const { message, visitor_id, tour_list, scores, schedule } = body
     const visitorId = visitor_id || request.headers.get('x-visitor-id') || 'default'
@@ -103,7 +115,7 @@ export async function POST(request: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          const anthropicStream = client.messages.stream({
+          const anthropicStream = getClient().messages.stream({
             model: 'claude-sonnet-4-20250514',
             max_tokens: 1024,
             system: SYSTEM_PROMPT,
