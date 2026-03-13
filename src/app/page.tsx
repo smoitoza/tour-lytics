@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState, useEffect, useRef } from 'react'
 
-/* ── SVG Logo ── */
+/* -- SVG Logo -- */
 function Logo({ className = '', size = 32 }: { className?: string; size?: number }) {
   return (
     <svg
@@ -22,7 +22,7 @@ function Logo({ className = '', size = 32 }: { className?: string; size?: number
   )
 }
 
-/* ── Animated counter ── */
+/* -- Animated counter -- */
 function Counter({ end, prefix = '', suffix = '' }: { end: number; prefix?: string; suffix?: string }) {
   const [count, setCount] = useState(0)
   const ref = useRef<HTMLDivElement>(null)
@@ -57,103 +57,28 @@ function Counter({ end, prefix = '', suffix = '' }: { end: number; prefix?: stri
   )
 }
 
-/* ── Feature cards data ── */
-const features = [
-  {
-    icon: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-        <polyline points="14 2 14 8 20 8" />
-      </svg>
-    ),
-    title: 'Any Survey Format',
-    description: 'Upload a broker survey PDF, CSV, or spreadsheet. Our engine parses every building, deal term, and floor plan automatically.',
-    badge: 'AI-Powered',
-    badgeColor: '#2563eb',
-  },
-  {
-    icon: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
-        <circle cx="12" cy="10" r="3" />
-      </svg>
-    ),
-    title: 'Interactive Market Maps',
-    description: 'Every building plotted with real-time availability data. Click any pin for full details, financials, and direct links to survey pages.',
-  },
-  {
-    icon: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-        <polyline points="14 2 14 8 20 8" />
-        <line x1="16" y1="13" x2="8" y2="13" />
-        <line x1="16" y1="17" x2="8" y2="17" />
-      </svg>
-    ),
-    title: 'Smart Tour Book',
-    description: 'Score, rank, and annotate every building you tour. Drag to reorder, add notes and photos, schedule visits, and invite your team.',
-    badge: 'New',
-    badgeColor: '#0ea5e9',
-  },
-  {
-    icon: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
-        <line x1="1" y1="10" x2="23" y2="10" />
-      </svg>
-    ),
-    title: 'GAAP-Ready Financials',
-    description: 'Cash flow, straight-line P&L, and OpEx rolled up the way your CFO wants to see them. Not the way your broker formats them.',
-    badge: 'Core Feature',
-    badgeColor: '#2563eb',
-  },
-  {
-    icon: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-      </svg>
-    ),
-    title: 'AI Lease Analyst',
-    description: 'Ask anything about your buildings, financials, or market. The chatbot knows your entire shortlist and scores in real time.',
-    badge: 'AI-Powered',
-    badgeColor: '#2563eb',
-  },
-  {
-    icon: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M23 21v-2a4 4 0 00-3-3.87" />
-        <path d="M16 3.13a4 4 0 010 7.75" />
-      </svg>
-    ),
-    title: 'Team Projects',
-    description: 'Invite your entire deal team. Everyone sees the same map, scores, and financials. No more email chains with outdated attachments.',
-  },
-]
-
-/* ── How It Works ── */
-const steps = [
-  {
-    num: '01',
-    title: 'Upload Your Market',
-    desc: 'Drop in a broker survey PDF, CSV, or just tell us the market. We parse and structure every building, every deal term, every floor plan.',
-  },
-  {
-    num: '02',
-    title: 'Analyze & Score',
-    desc: 'Interactive map, GAAP financials, weighted scoring criteria. All connected, all live. Compare buildings side by side in seconds.',
-  },
-  {
-    num: '03',
-    title: 'Tour & Decide',
-    desc: 'Build your tour book, schedule visits, invite your team. Go from broker survey to signed lease with full financial visibility.',
-  },
-]
+/* -- Star rating component -- */
+function StarRating({ filled, total = 5 }: { filled: number; total?: number }) {
+  return (
+    <div className="flex" style={{ gap: '2px' }}>
+      {Array.from({ length: total }, (_, i) => (
+        <span key={i} style={{ color: i < filled ? '#f59e0b' : '#d1d5db' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style={{ display: 'block' }}>
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+          </svg>
+        </span>
+      ))}
+    </div>
+  )
+}
 
 export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [activeFinTab, setActiveFinTab] = useState<'comparison' | 'cashflow' | 'straightline'>('comparison')
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [formState, setFormState] = useState<'idle' | 'sending' | 'success' | 'error'>('idle')
+  const [formData, setFormData] = useState({ name: '', email: '', company: '', message: '' })
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20)
@@ -161,33 +86,78 @@ export default function LandingPage() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
+  // Escape key to close fullscreen
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) setIsFullscreen(false)
+    }
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [isFullscreen])
+
+  // Lock body scroll when fullscreen
+  useEffect(() => {
+    document.body.style.overflow = isFullscreen ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [isFullscreen])
+
+  const handleDemoRequest = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setFormState('sending')
+    try {
+      const res = await fetch('https://lsckcmvoqmwxovqejvyl.supabase.co/rest/v1/demo_requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxzY2tjbXZvcW13eG92cWVqdnlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMzYxMzYsImV4cCI6MjA4ODkxMjEzNn0.JT3c9zakHYv0mIJmflLk15NXlaLoqvSYAPro4lr6eDs',
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxzY2tjbXZvcW13eG92cWVqdnlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMzYxMzYsImV4cCI6MjA4ODkxMjEzNn0.JT3c9zakHYv0mIJmflLk15NXlaLoqvSYAPro4lr6eDs',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          full_name: formData.name,
+          email: formData.email,
+          company: formData.company || null,
+          message: formData.message || null,
+          source: 'website'
+        })
+      })
+      if (!res.ok) throw new Error('Request failed')
+      setFormState('success')
+    } catch {
+      setFormState('error')
+    }
+  }
+
   return (
-    <div className="min-h-screen w-full overflow-x-hidden">
-      {/* ── NAV ── */}
+    <div style={{ minHeight: '100vh', width: '100%', overflowX: 'hidden' }}>
+      {/* == NAV == */}
       <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          scrolled
-            ? 'bg-[#0f172a]/95 backdrop-blur-md shadow-lg border-b border-white/[0.06]'
-            : 'bg-transparent'
-        }`}
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300`}
+        style={{
+          background: scrolled ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.92)',
+          backdropFilter: 'blur(12px)',
+          borderBottom: '1px solid #e2e8f0',
+          boxShadow: scrolled ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
+        }}
       >
-        <div className="py-4 flex items-center justify-between" style={{ maxWidth: '1280px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
-          <Link href="/" className="flex items-center gap-3 no-underline text-white">
-            <Logo size={32} className="text-white" />
-            <span className="font-bold text-lg tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
-              Tour<span className="text-[#2563eb]">-Lytics</span>
+        <div className="flex items-center justify-between" style={{ maxWidth: '1200px', margin: '0 auto', padding: '1rem 1.5rem' }}>
+          <Link href="/" className="flex items-center no-underline" style={{ gap: '0.75rem', color: '#0f172a' }}>
+            <Logo size={32} className="text-[#0f172a]" />
+            <span className="font-bold tracking-tight" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.125rem,1rem+0.75vw,1.5rem)' }}>
+              Tour<span style={{ color: '#2563eb' }}>-Lytics</span>
             </span>
           </Link>
-          <div className="hidden md:flex items-center gap-8">
-            <a href="#demo" className="text-sm font-medium text-[#9ca3af] hover:text-white transition-colors no-underline">Map Demo</a>
-            <a href="#problem" className="text-sm font-medium text-[#9ca3af] hover:text-white transition-colors no-underline">The Problem</a>
-            <a href="#features" className="text-sm font-medium text-[#9ca3af] hover:text-white transition-colors no-underline">Features</a>
-            <a href="#how" className="text-sm font-medium text-[#9ca3af] hover:text-white transition-colors no-underline">How It Works</a>
-            <Link href="/investors" className="text-sm font-medium text-[#9ca3af] hover:text-white transition-colors no-underline">Investors</Link>
+          <div className="hidden md:flex items-center" style={{ gap: '2rem' }}>
+            <a href="#demo" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Map Demo</a>
+            <a href="#tourbook-demo" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Tour Book</a>
+            <a href="#problem" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>The Problem</a>
+            <a href="#analysis" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Analysis</a>
+            <a href="#features" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Features</a>
+            <Link href="/investors" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }}>Investors</Link>
             <Link
               href="/login"
-              className="text-white px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-[#1d4ed8] transition-all hover:-translate-y-px hover:shadow-[0_8px_24px_rgba(37,99,235,0.35)] no-underline"
-              style={{ backgroundColor: '#2563eb', color: '#ffffff', position: 'relative', zIndex: 10 }}
+              className="font-semibold text-sm no-underline transition-all"
+              style={{ backgroundColor: '#2563eb', color: '#ffffff', padding: '0.5rem 1.25rem', borderRadius: '0.75rem' }}
             >
               Sign In
             </Link>
@@ -195,7 +165,8 @@ export default function LandingPage() {
           {/* Mobile menu button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden text-white bg-transparent border-none cursor-pointer p-2"
+            className="md:hidden bg-transparent border-none cursor-pointer"
+            style={{ padding: '0.5rem', color: '#0f172a' }}
             aria-label="Toggle menu"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -216,25 +187,28 @@ export default function LandingPage() {
         </div>
         {/* Mobile menu dropdown */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-[#0f172a]/98 backdrop-blur-lg border-t border-white/[0.06] px-6 py-6 space-y-4">
-            <a href="#demo" onClick={() => setMobileMenuOpen(false)} className="block text-base text-[#9ca3af] hover:text-white no-underline">Map Demo</a>
-            <a href="#problem" onClick={() => setMobileMenuOpen(false)} className="block text-base text-[#9ca3af] hover:text-white no-underline">The Problem</a>
-            <a href="#features" onClick={() => setMobileMenuOpen(false)} className="block text-base text-[#9ca3af] hover:text-white no-underline">Features</a>
-            <a href="#how" onClick={() => setMobileMenuOpen(false)} className="block text-base text-[#9ca3af] hover:text-white no-underline">How It Works</a>
-            <Link href="/investors" className="block text-base text-[#9ca3af] hover:text-white no-underline">Investors</Link>
-            <Link href="/login" className="block bg-[#2563eb] text-white px-6 py-3 rounded-lg font-semibold text-center text-sm no-underline mt-4">Sign In</Link>
+          <div className="md:hidden" style={{ background: 'rgba(255,255,255,0.98)', backdropFilter: 'blur(16px)', borderTop: '1px solid #e2e8f0', padding: '1.5rem' }}>
+            <div className="flex flex-col" style={{ gap: '1rem' }}>
+              <a href="#demo" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Map Demo</a>
+              <a href="#tourbook-demo" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Tour Book</a>
+              <a href="#problem" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>The Problem</a>
+              <a href="#analysis" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Analysis</a>
+              <a href="#features" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Features</a>
+              <Link href="/investors" className="text-base no-underline" style={{ color: '#475569' }}>Investors</Link>
+              <Link href="/login" className="text-center font-semibold text-sm no-underline" style={{ backgroundColor: '#2563eb', color: '#fff', padding: '0.75rem 1.5rem', borderRadius: '0.75rem', marginTop: '0.5rem' }}>Sign In</Link>
+            </div>
           </div>
         )}
       </nav>
 
-      {/* ── HERO ── */}
-      <section className="bg-[#0f172a] relative overflow-hidden" style={{ paddingTop: '220px', paddingBottom: '96px' }}>
+      {/* == HERO == */}
+      <section className="relative overflow-hidden" style={{ background: 'linear-gradient(180deg, #0f172a 0%, #0a0f1a 100%)', paddingTop: 'calc(80px + 5rem)', paddingBottom: '4rem' }}>
         {/* Grid overlay */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
             backgroundImage:
-              'linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)',
+              'linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)',
             backgroundSize: '60px 60px',
           }}
         />
@@ -242,229 +216,772 @@ export default function LandingPage() {
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            background: 'radial-gradient(ellipse 80% 50% at 50% 20%, rgba(37,99,235,0.15) 0%, transparent 70%)',
+            background: 'radial-gradient(ellipse 80% 60% at 50% 20%, rgba(37,99,235,0.12) 0%, transparent 70%)',
           }}
         />
 
-        <div className="relative z-10 text-center" style={{ maxWidth: '1000px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
+        <div className="relative z-10 text-center" style={{ maxWidth: '900px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 bg-white/[0.06] border border-white/[0.1] px-5 py-2 rounded-full text-xs text-[#9ca3af] uppercase tracking-[0.15em] font-medium" style={{ marginBottom: '56px' }}>
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            Now in Private Beta
+          <div className="inline-flex items-center" style={{ gap: '0.5rem', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', padding: '0.25rem 1rem', borderRadius: '1.25rem', fontSize: 'clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem)', color: '#cbd5e1', marginBottom: '2rem', letterSpacing: '0.04em', textTransform: 'uppercase' as const, fontWeight: 500 }}>
+            <span className="rounded-full bg-green-500" style={{ width: '6px', height: '6px', animation: 'pulse 2s infinite' }} />
+            Now in private beta
           </div>
 
-          <h1 className="text-[clamp(2.5rem,1.5rem+4vw,4.5rem)] font-extrabold text-white tracking-tight leading-[1.1]" style={{ fontFamily: 'var(--font-display)', marginBottom: '40px' }}>
+          <h1 className="font-extrabold text-white" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2.5rem, 1rem + 4vw, 5rem)', letterSpacing: '-0.03em', lineHeight: 1.15, marginBottom: '1.5rem', maxWidth: '900px', marginLeft: 'auto', marginRight: 'auto' }}>
             Turn static surveys into{' '}
-            <span className="bg-gradient-to-r from-[#2563eb] to-[#60a5fa] bg-clip-text text-transparent" style={{ filter: 'drop-shadow(0 0 20px rgba(37,99,235,0.3))' }}>
+            <span style={{ color: '#2563eb' }}>
               actionable intelligence
             </span>
           </h1>
 
-          <p className="text-[clamp(1.125rem,1rem+0.75vw,1.375rem)] text-[#9ca3af] leading-relaxed" style={{ maxWidth: '700px', margin: '0 auto 48px auto' }}>
+          <p style={{ fontSize: 'clamp(1.125rem, 1rem + 0.75vw, 1.5rem)', color: '#94a3b8', maxWidth: '600px', margin: '0 auto 2.5rem auto', lineHeight: 1.5 }}>
             Upload your broker survey PDF. Get an interactive map with every building
             plotted, tooltips with deal terms, and linked financials - in minutes, not days.
           </p>
 
           {/* CTAs */}
-          <div className="flex gap-4 justify-center flex-wrap mb-20">
-            <Link
-              href="/login"
-              className="inline-flex items-center gap-2 rounded-lg font-semibold text-base transition-all hover:-translate-y-px no-underline"
-              style={{ backgroundColor: '#2563eb', color: '#ffffff', padding: '16px 32px', boxShadow: '0 4px 16px rgba(37,99,235,0.3)' }}
+          <div className="flex justify-center flex-wrap" style={{ gap: '1rem', marginBottom: '4rem' }}>
+            <a
+              href="#contact"
+              className="inline-flex items-center font-semibold no-underline transition-all"
+              style={{ gap: '0.5rem', backgroundColor: '#2563eb', color: '#ffffff', padding: '0.75rem 2rem', borderRadius: '0.75rem', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', border: 'none', cursor: 'pointer' }}
             >
               Request Demo
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            </Link>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+            </a>
             <a
               href="#demo"
-              className="inline-flex items-center gap-2 rounded-lg font-medium text-base transition-all no-underline"
-              style={{ backgroundColor: 'transparent', color: '#ffffff', padding: '16px 32px', border: '1px solid rgba(255,255,255,0.2)' }}
+              className="inline-flex items-center font-medium no-underline transition-all"
+              style={{ gap: '0.5rem', backgroundColor: 'transparent', color: '#cbd5e1', padding: '0.75rem 2rem', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '0.75rem', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', cursor: 'pointer' }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="5 3 19 12 5 21 5 3" />
-              </svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none" /></svg>
               See It Live
             </a>
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 pt-12 border-t border-white/[0.08]">
+          <div className="flex justify-center flex-wrap" style={{ gap: '3rem', paddingTop: '2.5rem', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
             {[
-              { display: '33', label: 'Buildings Mapped' },
-              { display: '4', label: 'Shortlisted' },
+              { end: 33, label: 'Buildings Mapped' },
+              { end: 4, label: 'Shortlisted' },
               { display: '$3.8M', label: 'Total Lease Value Analyzed' },
-              { display: '129', label: 'PDF Pages Parsed' },
+              { end: 129, label: 'PDF Pages Parsed' },
             ].map((s) => (
               <div key={s.label} className="text-center">
-                <div className="text-[clamp(2rem,1.5rem+2vw,3.5rem)] font-extrabold text-white" style={{ fontFamily: 'var(--font-display)' }}>
-                  {s.display}
-                </div>
-                <div className="text-xs text-[#6b7280] mt-2 uppercase tracking-wider font-medium">{s.label}</div>
+                {'end' in s && s.end !== undefined ? (
+                  <Counter end={s.end} />
+                ) : (
+                  <div className="text-[clamp(2rem,1.5rem+2vw,3.5rem)] font-extrabold text-white" style={{ fontFamily: 'var(--font-display)' }}>
+                    {s.display}
+                  </div>
+                )}
+                <div className="text-xs font-medium uppercase" style={{ color: '#94a3b8', marginTop: '0.25rem', letterSpacing: '0.04em' }}>{s.label}</div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── LIVE DEMO ── */}
-      <section id="demo" className="py-24 bg-[#f9fafb]">
-        <div style={{ maxWidth: '1280px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
-          <div className="text-center mb-12">
-            <span className="inline-block text-xs font-semibold text-[#2563eb] uppercase tracking-[0.15em] mb-4">
-              Live Demo
-            </span>
-            <h2 className="text-[clamp(1.75rem,1.2rem+2vw,3rem)] font-bold text-[#111827] tracking-tight mb-4" style={{ fontFamily: 'var(--font-display)' }}>
-              Interactive Survey Map
-            </h2>
-            <p className="text-base text-[#6b7280] max-w-[600px] mx-auto leading-relaxed">
-              33 buildings with availability, pricing, and direct links to survey details.
-              Full financial models for every option.
-            </p>
-          </div>
-
-          {/* Browser frame with actual app screenshot */}
-          <div className="rounded-2xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.15)] border border-[#e5e7eb] bg-white" style={{ maxWidth: '1100px', margin: '0 auto' }}>
-            {/* Chrome bar */}
-            <div className="flex items-center gap-2 px-5 py-3 bg-[#f3f4f6] border-b border-[#e5e7eb]">
-              <span className="w-3 h-3 rounded-full bg-[#ef4444]" />
-              <span className="w-3 h-3 rounded-full bg-[#f59e0b]" />
-              <span className="w-3 h-3 rounded-full bg-[#22c55e]" />
-              <span className="flex-1 ml-4 bg-white rounded-md px-4 py-1.5 text-xs text-[#6b7280] border border-[#e5e7eb]">
-                tour-lytics.com/project/sf-office-search
-              </span>
-            </div>
-            {/* App preview as iframe */}
-            <div className="relative bg-white">
-              <div className="aspect-[16/9] overflow-hidden">
-                <iframe
-                  src="/app/index.html"
-                  className="w-full h-full border-none pointer-events-none"
-                  title="Tour-Lytics App Preview"
-                  loading="lazy"
-                  style={{ transform: 'scale(1)', transformOrigin: 'top left' }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── THE PROBLEM ── */}
-      <section id="problem" className="py-24 bg-white">
-        <div style={{ maxWidth: '1100px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
-          <span className="inline-block text-xs font-semibold text-[#2563eb] uppercase tracking-[0.15em] mb-4">
-            The Problem
+      {/* == LIVE DEMO (Map) == */}
+      <section id="demo" style={{ padding: '5rem 0', background: '#f8fafc' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
+          <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
+            Live Demo
           </span>
-          <h2 className="text-[clamp(1.75rem,1.2rem+2vw,3rem)] font-bold text-[#111827] tracking-tight mb-6 max-w-[800px]" style={{ fontFamily: 'var(--font-display)' }}>
-            You can&apos;t build a tour list from a 129-page PDF.
+          <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3.5rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.75rem' }}>
+            Interactive Survey Map
           </h2>
-          <p className="text-lg text-[#6b7280] leading-relaxed max-w-[700px] mb-12">
-            Every corporate real estate team gets the same thing from their broker: a massive PDF
-            with no map, no sorting, no filtering. You print it out, flip through it, and try to
-            build a shortlist from memory. Then you do the financials by hand in Excel.
+          <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', marginBottom: '2.5rem', maxWidth: '600px', lineHeight: 1.6 }}>
+            A real output from a 129-page broker survey. Every building geocoded, categorized, and linked back to the source document. Hover to explore. Click &quot;Tour List&quot; to start building your shortlist right from the map.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Problem card */}
-            <div className="bg-[#fef2f2] border border-[#fecaca] rounded-xl p-8">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#fee2e2] mb-5">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5" strokeLinecap="round">
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-[#991b1b] mb-4" style={{ fontFamily: 'var(--font-display)' }}>What brokers send you</h3>
-              <ul className="space-y-3">
-                {[
-                  'A static 129-page PDF',
-                  'No map, no sorting, no filtering',
-                  'Can\'t build a tour list from it',
-                  'Paper tour folders and handwritten notes',
-                  'No cash flow or GAAP financials',
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-3 text-[#991b1b]">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#dc2626] mt-2 flex-shrink-0" />
-                    <span className="text-base">{item}</span>
-                  </li>
-                ))}
-              </ul>
+          {/* Browser frame */}
+          <div
+            className="overflow-hidden bg-white"
+            style={{
+              borderRadius: isFullscreen ? 0 : '1.25rem',
+              boxShadow: isFullscreen ? 'none' : '0 24px 48px rgba(0,0,0,0.16)',
+              border: isFullscreen ? 'none' : '1px solid #e2e8f0',
+              ...(isFullscreen ? { position: 'fixed' as const, top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 99999, borderRadius: 0 } : {}),
+            }}
+          >
+            {/* Chrome bar */}
+            <div className="flex items-center" style={{
+              gap: '0.5rem',
+              padding: '0.75rem 1rem',
+              background: isFullscreen ? '#0f172a' : '#f1f5f9',
+              borderBottom: isFullscreen ? '1px solid rgba(255,255,255,0.1)' : '1px solid #e2e8f0',
+            }}>
+              <span className="rounded-full" style={{ width: '10px', height: '10px', background: '#ef4444' }} />
+              <span className="rounded-full" style={{ width: '10px', height: '10px', background: '#f59e0b' }} />
+              <span className="rounded-full" style={{ width: '10px', height: '10px', background: '#22c55e' }} />
+              <span className="flex-1 text-xs" style={{
+                marginLeft: '1rem',
+                background: isFullscreen ? 'rgba(255,255,255,0.08)' : '#fff',
+                borderRadius: '0.5rem',
+                padding: '0.25rem 0.75rem',
+                color: isFullscreen ? '#cbd5e1' : '#94a3b8',
+                border: isFullscreen ? '1px solid rgba(255,255,255,0.15)' : '1px solid #e2e8f0',
+              }}>
+                tour-lytics.com/projects/sf-office-search/map
+              </span>
+              <button
+                onClick={() => setIsFullscreen(!isFullscreen)}
+                className="flex items-center cursor-pointer"
+                style={{
+                  marginLeft: 'auto',
+                  background: 'none',
+                  border: isFullscreen ? '1px solid rgba(255,255,255,0.2)' : '1px solid #cbd5e1',
+                  borderRadius: '0.5rem',
+                  padding: '0.25rem 0.75rem',
+                  fontSize: 'clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem)',
+                  fontWeight: 500,
+                  color: isFullscreen ? 'rgba(255,255,255,0.7)' : '#64748b',
+                  gap: '0.25rem',
+                  cursor: 'pointer',
+                }}
+                title="Toggle fullscreen"
+              >
+                {isFullscreen ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="4 14 10 14 10 20" /><polyline points="20 10 14 10 14 4" /><line x1="14" y1="10" x2="21" y2="3" /><line x1="3" y1="21" x2="10" y2="14" /></svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" /><line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" /></svg>
+                )}
+                <span>{isFullscreen ? 'Exit' : 'Fullscreen'}</span>
+              </button>
+            </div>
+            {/* iframe */}
+            <iframe
+              src="/app/index.html"
+              loading="lazy"
+              title="SF Office Search Map Demo"
+              style={{
+                width: '100%',
+                height: isFullscreen ? 'calc(100vh - 44px)' : '80vh',
+                minHeight: isFullscreen ? 'unset' : '600px',
+                border: 'none',
+                display: 'block',
+              }}
+            />
+          </div>
+          <div className="flex items-center" style={{ gap: '0.5rem', marginTop: '1rem', fontSize: 'clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem)', color: '#94a3b8' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
+            Live interactive map - hover buildings for deal terms, click names to jump to the survey PDF, and build your tour list directly from the map
+          </div>
+        </div>
+      </section>
+
+      {/* == TOUR BOOK DEMO == */}
+      <section id="tourbook-demo" style={{ padding: '0 0 5rem 0', background: '#f8fafc' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
+          <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
+            Live Demo
+          </span>
+          <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3.5rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.75rem' }}>
+            Digital Tour Book
+          </h2>
+          <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', marginBottom: '2.5rem', maxWidth: '600px', lineHeight: 1.6 }}>
+            Score every space during the tour. Rate location, price, parking, natural light, and more. Add notes and photos from your phone. When you&apos;re done, export a ranked report instead of flipping through paper folders.
+          </p>
+
+          {/* Tour Book Demo Frame */}
+          <div className="bg-white overflow-hidden" style={{ borderRadius: '1.25rem', boxShadow: '0 24px 48px rgba(0,0,0,0.16)', border: '1px solid #e2e8f0' }}>
+            {/* Chrome bar */}
+            <div className="flex items-center" style={{ gap: '0.5rem', padding: '0.75rem 1rem', background: '#f1f5f9', borderBottom: '1px solid #e2e8f0' }}>
+              <span className="rounded-full" style={{ width: '10px', height: '10px', background: '#ef4444' }} />
+              <span className="rounded-full" style={{ width: '10px', height: '10px', background: '#f59e0b' }} />
+              <span className="rounded-full" style={{ width: '10px', height: '10px', background: '#22c55e' }} />
+              <span className="flex-1 text-xs" style={{ marginLeft: '1rem', background: '#fff', borderRadius: '0.5rem', padding: '0.25rem 0.75rem', color: '#94a3b8', border: '1px solid #e2e8f0' }}>
+                tour-lytics.com/projects/sf-office-search/tourbook
+              </span>
             </div>
 
-            {/* Solution card */}
-            <div className="bg-[#f0fdf4] border border-[#bbf7d0] rounded-xl p-8">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#dcfce7] mb-5">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
+            {/* Tour Book Content */}
+            <div style={{ padding: '2rem' }}>
+              {/* Building Header */}
+              <div className="flex items-center flex-wrap" style={{ gap: '1rem', marginBottom: '2rem', paddingBottom: '1.5rem', borderBottom: '1px solid #f1f5f9' }}>
+                <div className="flex items-center justify-center rounded-full font-bold text-white" style={{ width: '40px', height: '40px', background: '#f47920', fontSize: '1rem', flexShrink: 0 }}>1</div>
+                <div style={{ flex: 1 }}>
+                  <h3 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.125rem, 1rem + 0.75vw, 1.5rem)', color: '#0f172a' }}>250 Brannan</h3>
+                  <div className="text-sm" style={{ color: '#94a3b8', marginTop: '2px' }}>Suite 3B, Partial 3rd Floor &middot; 16,000 RSF</div>
+                  <div className="flex" style={{ gap: '0.5rem', marginTop: '0.5rem' }}>
+                    <span className="font-semibold uppercase" style={{ padding: '2px 10px', borderRadius: '999px', fontSize: '0.7rem', letterSpacing: '0.04em', background: 'rgba(34,197,94,0.12)', color: '#16a34a' }}>Negotiating</span>
+                    <span className="font-semibold uppercase" style={{ padding: '2px 10px', borderRadius: '999px', fontSize: '0.7rem', letterSpacing: '0.04em', background: 'rgba(244,121,32,0.12)', color: '#f47920' }}>Shortlisted</span>
+                  </div>
+                </div>
+                <div className="flex flex-col items-center" style={{ padding: '0.75rem 1.25rem', background: 'linear-gradient(135deg, #fff7ed 0%, #fff 100%)', borderRadius: '0.75rem', border: '1px solid rgba(244,121,32,0.2)' }}>
+                  <div className="font-extrabold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.75rem, 1.5rem + 1vw, 2.25rem)', color: '#f47920', lineHeight: 1 }}>4.1</div>
+                  <div className="font-semibold uppercase" style={{ fontSize: '0.65rem', letterSpacing: '0.08em', color: '#94a3b8', marginTop: '2px' }}>Overall</div>
+                </div>
               </div>
-              <h3 className="text-xl font-bold text-[#166534] mb-4" style={{ fontFamily: 'var(--font-display)' }}>What Tour-Lytics gives you</h3>
-              <ul className="space-y-3">
+
+              {/* Score Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: '1rem', marginBottom: '2rem' }}>
                 {[
-                  'Interactive map with every building',
-                  'Click any name to jump to survey page',
-                  'Build your tour list from the map',
-                  'Tour Book with scores, photos, and notes',
-                  'Monthly cash flow and GAAP P&L',
+                  { icon: '\u{1F4CD}', label: 'Location', stars: 5, score: 5 },
+                  { icon: '\u{1F4B0}', label: 'Price', stars: 3, score: 3 },
+                  { icon: '\u{1F17F}\uFE0F', label: 'Parking', stars: 4, score: 4 },
+                  { icon: '\u{1F512}', label: 'Security', stars: 5, score: 5 },
+                  { icon: '\u{1F3D7}\uFE0F', label: 'Interior Fit Out', stars: 4, score: 4 },
+                  { icon: '\u{1FA91}', label: 'Furniture / Vibe', stars: 3, score: 3 },
+                  { icon: '\u2600\uFE0F', label: 'Natural Light', stars: 5, score: 5 },
+                  { icon: '\u{1F3EA}', label: 'Amenities', stars: 4, score: 4 },
+                  { icon: '\u2728', label: 'Overall Feel', stars: 4, score: 4 },
+                  { icon: '\u{1F3AF}', label: 'The Davis Effect', stars: 4, score: 4, special: true },
                 ].map((item) => (
-                  <li key={item} className="flex items-start gap-3 text-[#166534]">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#16a34a] mt-2 flex-shrink-0" />
-                    <span className="text-base">{item}</span>
-                  </li>
+                  <div key={item.label} className="flex items-center" style={{
+                    gap: '0.75rem',
+                    padding: '0.75rem 1rem',
+                    background: item.special ? 'linear-gradient(135deg, #fef3c7 0%, #fefce8 100%)' : '#f8fafc',
+                    borderRadius: '0.75rem',
+                    border: item.special ? '1px solid rgba(245,158,11,0.2)' : '1px solid #f1f5f9',
+                  }}>
+                    <span style={{ width: '28px', textAlign: 'center', fontSize: '1.1rem', flexShrink: 0 }}>{item.icon}</span>
+                    <span className="text-sm" style={{ fontWeight: item.special ? 600 : 500, color: '#334155', flex: 1 }}>{item.label}</span>
+                    <StarRating filled={item.stars} />
+                    <span className="font-bold text-sm" style={{ fontFamily: 'var(--font-display)', color: '#0f172a', minWidth: '28px', textAlign: 'right' }}>{item.score}</span>
+                  </div>
                 ))}
-              </ul>
+              </div>
+
+              {/* Notes & Photos Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: '1.5rem', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid #f1f5f9' }}>
+                <div>
+                  <h4 className="flex items-center text-sm font-semibold" style={{ color: '#334155', marginBottom: '0.75rem', gap: '0.5rem' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
+                    Tour Notes
+                  </h4>
+                  <div className="text-sm" style={{ background: '#f8fafc', borderRadius: '0.75rem', border: '1px solid #f1f5f9', padding: '1rem', color: '#475569', lineHeight: 1.65, minHeight: '120px' }}>
+                    Great natural light on the 3rd floor, especially the south-facing windows. Existing furniture from Splunk is in solid condition and included in the sublease. Loading dock access is a plus. Parking garage entrance is tight but workable. Lobby recently renovated. Walking distance to Caltrain. Conference rooms need minor updating but layout works well for our team size.
+                  </div>
+                </div>
+                <div>
+                  <h4 className="flex items-center text-sm font-semibold" style={{ color: '#334155', marginBottom: '0.75rem', gap: '0.5rem' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
+                    Tour Photos
+                  </h4>
+                  <div className="grid grid-cols-3" style={{ gap: '0.5rem' }}>
+                    {['Lobby', 'Open Floor', 'Conference', 'Kitchen', 'Views', 'Parking'].map((label) => (
+                      <div key={label} className="flex flex-col items-center justify-center" style={{ aspectRatio: '4/3', background: '#f8fafc', borderRadius: '0.5rem', border: '1px solid #f1f5f9', color: '#cbd5e1', fontSize: '0.65rem', fontWeight: 500, textTransform: 'uppercase' as const, letterSpacing: '0.05em', gap: '4px' }}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.4 }}><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
+                        {label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Ranking Strip */}
+              <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid #f1f5f9' }}>
+                <h4 className="flex items-center text-sm font-semibold" style={{ color: '#334155', marginBottom: '1rem', gap: '0.5rem' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20V10M18 20V4M6 20v-4" /></svg>
+                  Tour Ranking
+                </h4>
+                <div className="flex flex-col" style={{ gap: '0.5rem' }}>
+                  {[
+                    { pos: 1, name: '250 Brannan', score: '4.1', width: '82%', first: true },
+                    { pos: 2, name: '123 Townsend', score: '3.6', width: '72%', first: false },
+                    { pos: 3, name: '301 Brannan', score: '3.2', width: '64%', first: false },
+                  ].map((item) => (
+                    <div key={item.pos} className="flex items-center" style={{
+                      gap: '0.75rem',
+                      padding: '0.75rem 1rem',
+                      borderRadius: '0.75rem',
+                      background: item.first ? 'linear-gradient(135deg, #fff7ed 0%, #fff 100%)' : '#f8fafc',
+                      border: item.first ? '1px solid rgba(244,121,32,0.25)' : '1px solid #f1f5f9',
+                    }}>
+                      <div className="flex items-center justify-center rounded-full font-bold" style={{ width: '28px', height: '28px', fontSize: '0.75rem', flexShrink: 0, background: item.first ? '#f47920' : '#e2e8f0', color: item.first ? '#fff' : '#475569' }}>{item.pos}</div>
+                      <span className="text-sm font-semibold" style={{ color: '#1e293b', flex: 1 }}>{item.name}</span>
+                      <div style={{ width: '80px', height: '6px', background: '#f1f5f9', borderRadius: '3px', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', borderRadius: '3px', width: item.width, background: item.first ? '#f47920' : item.pos === 2 ? '#94a3b8' : '#cbd5e1' }} />
+                      </div>
+                      <span className="font-bold text-sm" style={{ fontFamily: 'var(--font-display)', color: '#0f172a', minWidth: '36px', textAlign: 'right' }}>{item.score}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center" style={{ gap: '0.5rem', marginTop: '1rem', fontSize: 'clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem)', color: '#94a3b8' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
+            Score from your phone during the tour. Notes, photos, and rankings sync automatically and export to PDF or CSV.
+          </div>
+        </div>
+      </section>
+
+      {/* == HOW IT WORKS == */}
+      <section id="how" style={{ padding: '6rem 0', background: '#ffffff' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
+          <div className="text-center" style={{ marginBottom: '3rem' }}>
+            <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
+              How It Works
+            </span>
+            <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3.5rem)', color: '#0f172a', letterSpacing: '-0.02em' }}>
+              From PDF to insight in 3 steps
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 relative" style={{ gap: '2rem' }}>
+            {/* Connecting line (desktop only) */}
+            <div className="hidden md:block absolute" style={{ top: '40px', left: '16.67%', right: '16.67%', height: '2px', background: '#e2e8f0', zIndex: 0 }} />
+            {[
+              { num: '1', title: 'Upload Your Survey', desc: 'Drop in any broker survey or tour book PDF - Savills, CBRE, JLL, Cushman, or custom formats. Our AI reads every page.' },
+              { num: '2', title: 'Auto-Extract & Map', desc: 'Buildings are identified, addresses geocoded, and deal terms pulled automatically. Your interactive map generates in minutes.' },
+              { num: '3', title: 'Analyze & Share', desc: 'Build your tour list right from the map. Upload RFPs or LOIs for instant financial analysis. Share everything with stakeholders via a single link.' },
+            ].map((step) => (
+              <div key={step.num} className="relative z-10 text-center" style={{ padding: '1.5rem' }}>
+                <div className="flex items-center justify-center rounded-full text-white font-bold" style={{ width: '56px', height: '56px', background: '#2563eb', fontFamily: 'var(--font-display)', fontSize: 'clamp(1.125rem, 1rem + 0.75vw, 1.5rem)', margin: '0 auto 1.5rem auto', boxShadow: '0 4px 12px rgba(37,99,235,0.25)' }}>
+                  {step.num}
+                </div>
+                <h3 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.125rem, 1rem + 0.75vw, 1.5rem)', color: '#0f172a', marginBottom: '0.75rem' }}>{step.title}</h3>
+                <p className="text-sm" style={{ color: '#64748b', margin: '0 auto', maxWidth: '72ch' }}>{step.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* == THE PROBLEM == */}
+      <section id="problem" style={{ padding: '6rem 0', background: '#ffffff' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 items-center" style={{ gap: '3rem' }}>
+            <div>
+              <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
+                The Problem
+              </span>
+              <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3.5rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '1rem' }}>
+                You can&apos;t build a tour list<br />from a 129-page PDF.
+              </h2>
+              <p className="font-medium" style={{ fontSize: 'clamp(1.125rem, 1rem + 0.75vw, 1.5rem)', color: '#475569', lineHeight: 1.4, marginBottom: '1rem' }}>
+                For San Francisco - and really any market - broker surveys arrive the same way: a static, 129-page PDF. You&apos;re stuck on page one, scrolling through the deck, trying to remember which building was where on the map. You&apos;ve done this before.
+              </p>
+              <p style={{ color: '#64748b', lineHeight: 1.7 }}>
+                We asked our brokers to do better. Three days later, what came back was a clunky Tableau dashboard we could have built ourselves. So we built something real: an app that parses the entire PDF, maps every building, and sorts what you&apos;re negotiating, touring, and passing on. Click any building name and you&apos;re looking at its page in the survey instantly.
+              </p>
+              <p style={{ color: '#64748b', lineHeight: 1.7, marginTop: '1rem' }}>
+                And then there&apos;s the financial side. Tell me the last time a broker sent you a spreadsheet that matches what your CFO actually wants to see - cash flow, straight-line P&amp;L, GAAP format. It doesn&apos;t happen. Brokers care about the payday. They&apos;ll send a glossy proposal with an asking rate and a nice rendering - but your finance team is left rebuilding everything from scratch. Tour-Lytics generates it all automatically the moment you upload a deal.
+              </p>
+              <p style={{ color: '#64748b', lineHeight: 1.7, marginTop: '1rem' }}>
+                And touring? That process is even worse. Every time you tour, you get handed a large paper folder. You take notes by hand, snap photos on your phone, then try to recall everything you saw three buildings later. It&apos;s a 40-year-old process that hasn&apos;t changed. Our Tour Book tab links directly to the locations on your map - score every space on price, parking, security, fit-out, and more. Add photos and notes from your phone while you&apos;re standing in the lobby. When you&apos;re done, you have a ranked, exportable tour report instead of a stack of scribbled-on paper.
+              </p>
+            </div>
+            <div className="flex flex-col" style={{ gap: '1rem' }}>
+              {/* Problem Card */}
+              <div style={{ padding: '1.5rem', borderRadius: '1rem', border: '1px solid #fecaca', background: '#fef2f2' }}>
+                <div className="inline-flex items-center justify-center rounded-full font-bold" style={{ width: '28px', height: '28px', background: '#fee2e2', color: '#dc2626', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', marginBottom: '0.75rem' }}>&#x2717;</div>
+                <h4 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', color: '#991b1b', marginBottom: '0.75rem' }}>What brokers send you</h4>
+                <ul className="flex flex-col" style={{ listStyle: 'none', padding: 0, gap: '0.5rem' }}>
+                  {[
+                    'A static 129-page PDF',
+                    'No map, no sorting, no filtering',
+                    "Can't build a tour list",
+                    'Paper tour folders and handwritten notes',
+                    'No cash flow or GAAP financials',
+                  ].map((item) => (
+                    <li key={item} className="text-sm relative" style={{ color: '#64748b', paddingLeft: '1.25rem' }}>
+                      <span className="absolute rounded-full" style={{ left: 0, top: '7px', width: '8px', height: '8px', background: '#fca5a5' }} />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              {/* Solution Card */}
+              <div style={{ padding: '1.5rem', borderRadius: '1rem', border: '1px solid #bbf7d0', background: '#f0fdf4' }}>
+                <div className="inline-flex items-center justify-center rounded-full font-bold" style={{ width: '28px', height: '28px', background: '#dcfce7', color: '#16a34a', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', marginBottom: '0.75rem' }}>&#x2713;</div>
+                <h4 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', color: '#166534', marginBottom: '0.75rem' }}>What Tour-Lytics gives you</h4>
+                <ul className="flex flex-col" style={{ listStyle: 'none', padding: 0, gap: '0.5rem' }}>
+                  {[
+                    'Interactive map with every building',
+                    'Click any name \u2192 jump to survey page',
+                    'Build your tour list from the map',
+                    'Tour Book with scores, photos, and notes',
+                    'Monthly cash flow & GAAP P&L',
+                  ].map((item) => (
+                    <li key={item} className="text-sm relative" style={{ color: '#64748b', paddingLeft: '1.25rem' }}>
+                      <span className="absolute rounded-full" style={{ left: 0, top: '7px', width: '8px', height: '8px', background: '#86efac' }} />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── PAIN POINT QUOTE ── */}
-      <section className="py-20 bg-[#f9fafb]">
-        <div className="text-center" style={{ maxWidth: '800px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" className="mx-auto mb-8 text-[#2563eb]/20">
-            <path d="M10 8c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2h2l-2 4h2l2-4V8h-4zm8 0c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2h2l-2 4h2l2-4V8h-4z" fill="currentColor" />
-          </svg>
-          <blockquote className="text-[clamp(1.25rem,1rem+1vw,1.5rem)] font-medium text-[#111827] leading-relaxed mb-8">
-            &ldquo;Tell me the last time a broker has sent you a spreadsheet that matches what your CFO
-            really wants to see...cash flow, straight-line P&L, GAAP format...it doesn&apos;t happen.
-            Brokers only care about the pay day, they don&apos;t care about your financial reports.&rdquo;
-          </blockquote>
-          <div className="text-sm text-[#6b7280] font-medium">The problem Tour-Lytics solves</div>
+      {/* == BROKERS NEED THIS TOO == */}
+      <section id="brokers" style={{ padding: '4rem 0 6rem 0', background: '#ffffff' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 items-center" style={{ gap: '3rem' }}>
+            <div>
+              <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#b45309', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
+                But here&apos;s the thing
+              </span>
+              <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '1rem' }}>
+                Brokers need this too.
+              </h2>
+              <p className="font-medium" style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#475569', lineHeight: 1.5, marginBottom: '1rem' }}>
+                The same brokers producing those static PDFs? They hate making them. Every survey is assembled from scratch: gathering listings, formatting pages, printing decks, emailing them out, and hoping someone reads past page three.
+              </p>
+              <p style={{ color: '#64748b', lineHeight: 1.7 }}>
+                Tour-Lytics is not just a tool for the people receiving surveys. It is a competitive weapon for the brokers creating them. Publish an interactive survey instead of a PDF. Know which buildings your clients actually looked at. Move faster than the broker down the street who is still printing decks. The tool makes everyone better at what they do.
+              </p>
+            </div>
+            <div className="flex flex-col" style={{ gap: '1rem' }}>
+              {/* Amber Card */}
+              <div style={{ padding: '1.5rem', borderRadius: '1rem', border: '1px solid #fde68a', background: '#fffbeb' }}>
+                <div className="inline-flex items-center justify-center rounded-full font-bold" style={{ width: '28px', height: '28px', background: '#fef3c7', color: '#b45309', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', marginBottom: '0.75rem' }}>!</div>
+                <h4 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', color: '#92400e', marginBottom: '0.75rem' }}>What brokers deal with today</h4>
+                <ul className="flex flex-col" style={{ listStyle: 'none', padding: 0, gap: '0.5rem' }}>
+                  {[
+                    'Build surveys from scratch every time',
+                    'Print, bind, ship, and email PDFs',
+                    'No idea what clients looked at',
+                    'Compete on speed with no tools',
+                    'Clients ask for better - nothing changes',
+                  ].map((item) => (
+                    <li key={item} className="text-sm relative" style={{ color: '#64748b', paddingLeft: '1.25rem' }}>
+                      <span className="absolute rounded-full" style={{ left: 0, top: '7px', width: '8px', height: '8px', background: '#fcd34d' }} />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              {/* Green Card */}
+              <div style={{ padding: '1.5rem', borderRadius: '1rem', border: '1px solid #bbf7d0', background: '#f0fdf4' }}>
+                <div className="inline-flex items-center justify-center rounded-full font-bold" style={{ width: '28px', height: '28px', background: '#dcfce7', color: '#16a34a', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', marginBottom: '0.75rem' }}>&#x2713;</div>
+                <h4 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', color: '#166534', marginBottom: '0.75rem' }}>What Tour-Lytics gives brokers</h4>
+                <ul className="flex flex-col" style={{ listStyle: 'none', padding: 0, gap: '0.5rem' }}>
+                  {[
+                    'Publish interactive surveys instantly',
+                    'Client engagement analytics',
+                    'Branded, professional deliverables',
+                    'Stand out in competitive pitches',
+                    'Better alignment to client needs',
+                  ].map((item) => (
+                    <li key={item} className="text-sm relative" style={{ color: '#64748b', paddingLeft: '1.25rem' }}>
+                      <span className="absolute rounded-full" style={{ left: 0, top: '7px', width: '8px', height: '8px', background: '#86efac' }} />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* ── FEATURES ── */}
-      <section id="features" className="py-24 bg-white">
-        <div style={{ maxWidth: '1280px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
-          <div className="text-center mb-16">
-            <span className="inline-block text-xs font-semibold text-[#2563eb] uppercase tracking-[0.15em] mb-4">
-              Platform
+      {/* == FINANCIAL ANALYSIS ENGINE == */}
+      <section id="analysis" style={{ padding: '6rem 0', background: '#f8fafc' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
+          <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
+            Financial Analysis Engine
+          </span>
+          <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3.5rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.75rem' }}>
+            Upload an RFP. Get CFO-ready financials.
+          </h2>
+          <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', marginBottom: '2.5rem', maxWidth: '640px', lineHeight: 1.6 }}>
+            Drop in any broker proposal, RFP, or LOI. Tour-Lytics builds the full financial model automatically - cash flow, straight-line P&amp;L, GAAP format, deal comparisons. The spreadsheet your finance team has been building by hand.
+          </p>
+
+          {/* Financial Demo Card */}
+          <div className="bg-white overflow-hidden" style={{ borderRadius: '1.25rem', boxShadow: '0 12px 32px rgba(0,0,0,0.12)', border: '1px solid #e2e8f0' }}>
+            {/* Dark Header */}
+            <div className="flex items-start justify-between flex-wrap" style={{ background: '#0f172a', padding: '1.5rem 2rem', gap: '1rem' }}>
+              <div>
+                <div className="font-bold text-white" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.125rem, 1rem + 0.75vw, 1.5rem)' }}>250 Brannan Street - Lease Analysis</div>
+                <div className="text-sm" style={{ color: '#94a3b8', marginTop: '0.25rem' }}>Sample Client | 16,000 RSF | 63-Month Sublease | Modified Gross</div>
+              </div>
+              <div className="flex items-center font-semibold" style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', padding: '0.25rem 0.75rem', borderRadius: '1.25rem', fontSize: 'clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem)', gap: '0.25rem' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
+                Best Value
+              </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex" style={{ borderBottom: '2px solid #e2e8f0', padding: '0 1.5rem' }}>
+              {[
+                { key: 'comparison' as const, label: 'Deal Comparison' },
+                { key: 'cashflow' as const, label: 'Cash Flow' },
+                { key: 'straightline' as const, label: 'Straight-Line P&L' },
+              ].map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveFinTab(tab.key)}
+                  className="font-semibold cursor-pointer relative"
+                  style={{
+                    padding: '0.75rem 1.25rem',
+                    fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)',
+                    color: activeFinTab === tab.key ? '#2563eb' : '#94a3b8',
+                    background: 'none',
+                    border: 'none',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {tab.label}
+                  {activeFinTab === tab.key && (
+                    <span className="absolute" style={{ bottom: '-2px', left: 0, right: 0, height: '2px', background: '#2563eb' }} />
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab: Deal Comparison */}
+            {activeFinTab === 'comparison' && (
+              <div>
+                {/* KPI Row */}
+                <div className="grid grid-cols-2 md:grid-cols-4" style={{ borderBottom: '1px solid #e2e8f0' }}>
+                  {[
+                    { label: 'Base Rent', value: '$43', unit: '/RSF/yr' },
+                    { label: 'Effective Rent (GAAP)', value: '$42.45', unit: '/RSF/yr' },
+                    { label: 'All-In Occupancy', value: '$79.95', unit: '/RSF/yr' },
+                    { label: 'Free Rent Value', value: '$287K', unit: '' },
+                  ].map((kpi, i) => (
+                    <div key={kpi.label} className="text-center" style={{ padding: '1.25rem 1.5rem', borderRight: i < 3 ? '1px solid #e2e8f0' : 'none' }}>
+                      <div className="text-xs font-medium uppercase" style={{ color: '#94a3b8', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>{kpi.label}</div>
+                      <div className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem)', color: '#0f172a' }}>
+                        {kpi.value}{kpi.unit && <span style={{ fontSize: '0.5em', fontWeight: 400, color: '#64748b' }}>{kpi.unit}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Comparison Table */}
+                <div style={{ padding: '1.5rem 2rem', overflowX: 'auto' }}>
+                  <h4 className="font-bold uppercase" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', color: '#0f172a', marginBottom: '1rem', letterSpacing: '0.04em' }}>
+                    Deal Comparison - 5-Year Total Occupancy Cost
+                  </h4>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)' }}>
+                    <thead>
+                      <tr>
+                        <th className="text-left font-semibold uppercase text-xs" style={{ padding: '0.75rem 1rem', color: '#64748b', letterSpacing: '0.04em', borderBottom: '2px solid #e2e8f0', width: '25%' }}>Metric</th>
+                        <th className="text-left font-semibold uppercase text-xs" style={{ padding: '0.75rem 1rem', color: '#2563eb', letterSpacing: '0.04em', borderBottom: '2px solid #2563eb', width: '25%', background: 'rgba(37,99,235,0.04)' }}>Option A - Sublease ($43)</th>
+                        <th className="text-left font-semibold uppercase text-xs" style={{ padding: '0.75rem 1rem', color: '#64748b', letterSpacing: '0.04em', borderBottom: '2px solid #e2e8f0', width: '25%' }}>Option B - Sublease ($49.50)</th>
+                        <th className="text-left font-semibold uppercase text-xs" style={{ padding: '0.75rem 1rem', color: '#64748b', letterSpacing: '0.04em', borderBottom: '2px solid #e2e8f0', width: '25%' }}>Option C - Direct ($64)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { metric: 'Structure', a: 'Sublease', b: 'Sublease', c: 'Direct Lease' },
+                        { metric: 'Premises (RSF)', a: '16,000', b: '16,000', c: '23,031' },
+                        { metric: 'Free Rent', a: '5 months', b: '3 months', c: '5 mo + 3.75 TI' },
+                        { metric: 'TI Allowance', a: 'None (turnkey)', b: 'None (turnkey)', c: '$20/RSF ($461K)' },
+                        { metric: 'Escalation', a: '3%/yr', b: '3%/yr', c: '3%/yr' },
+                        { metric: 'Total Rent (63 mo)', a: '$3.57M', b: '$4.24M', c: '$7.40M', bold: true },
+                        { metric: 'Total Occupancy', a: '$6.67M', b: '$7.34M', c: '$10.50M', bold: true },
+                        { metric: 'All-In $/RSF/yr', a: '$79.35', b: '$87.34', c: '$84.18', bold: true },
+                      ].map((row, i) => (
+                        <tr key={i}>
+                          <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>{row.metric}</td>
+                          <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', background: 'rgba(37,99,235,0.04)', fontWeight: row.bold ? 600 : 400 }}>{row.a}</td>
+                          <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>{row.b}</td>
+                          <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>{row.c}</td>
+                        </tr>
+                      ))}
+                      {/* Savings row */}
+                      <tr>
+                        <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#334155', background: '#dcfce7' }}>Savings vs. Option C</td>
+                        <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#22c55e', background: '#dcfce7' }}>$3.84M (36.5%)</td>
+                        <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#22c55e', background: '#dcfce7' }}>$3.16M (30.1%)</td>
+                        <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#22c55e', background: '#dcfce7' }}>-</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Tab: Cash Flow */}
+            {activeFinTab === 'cashflow' && (
+              <div style={{ padding: '1.5rem 2rem', overflowX: 'auto', position: 'relative' }}>
+                <h4 className="font-bold uppercase" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', color: '#0f172a', marginBottom: '1rem', letterSpacing: '0.04em' }}>
+                  Monthly Cash Flow Schedule (First 18 Months)
+                </h4>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)' }}>
+                  <thead>
+                    <tr>
+                      {['Period', 'Yr', 'Base Rent', 'Free Rent', 'Net Cash Rent', 'Cumulative'].map((h) => (
+                        <th key={h} className="text-left font-semibold uppercase text-xs" style={{ padding: '0.75rem 1rem', color: '#64748b', letterSpacing: '0.04em', borderBottom: '2px solid #e2e8f0' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { period: 'Jun 2026', yr: '1', base: '$57,333', free: '($57,333)', net: '$0', cum: '$0', freeRent: true },
+                      { period: 'Jul 2026', yr: '1', base: '$57,333', free: '($57,333)', net: '$0', cum: '$0', freeRent: true },
+                      { period: 'Aug 2026', yr: '1', base: '$57,333', free: '($57,333)', net: '$0', cum: '$0', freeRent: true },
+                      { period: 'Sep 2026', yr: '1', base: '$57,333', free: '($57,333)', net: '$0', cum: '$0', freeRent: true },
+                      { period: 'Oct 2026', yr: '1', base: '$57,333', free: '($57,333)', net: '$0', cum: '$0', freeRent: true },
+                      { period: 'Nov 2026', yr: '1', base: '$57,333', free: '-', net: '$57,333', cum: '$57,333', highlight: true },
+                      { period: 'Dec 2026', yr: '1', base: '$57,333', free: '-', net: '$57,333', cum: '$114,667' },
+                      { period: 'Jan 2027', yr: '1', base: '$57,333', free: '-', net: '$57,333', cum: '$172,000' },
+                      { period: 'Feb 2027', yr: '1', base: '$57,333', free: '-', net: '$57,333', cum: '$229,333' },
+                      { period: 'Mar 2027', yr: '1', base: '$57,333', free: '-', net: '$57,333', cum: '$286,667' },
+                      { period: 'Apr 2027', yr: '1', base: '$57,333', free: '-', net: '$57,333', cum: '$344,000' },
+                      { period: 'May 2027', yr: '1', base: '$57,333', free: '-', net: '$57,333', cum: '$401,333' },
+                      { period: 'Jun 2027', yr: '2', base: '$59,053', free: '-', net: '$59,053', cum: '$460,387', yr2start: true },
+                      { period: 'Jul 2027', yr: '2', base: '$59,053', free: '-', net: '$59,053', cum: '$519,440' },
+                      { period: 'Aug 2027', yr: '2', base: '$59,053', free: '-', net: '$59,053', cum: '$578,493' },
+                      { period: 'Sep 2027', yr: '2', base: '$59,053', free: '-', net: '$59,053', cum: '$637,547' },
+                      { period: 'Oct 2027', yr: '2', base: '$59,053', free: '-', net: '$59,053', cum: '$696,600' },
+                      { period: 'Nov 2027', yr: '2', base: '$59,053', free: '-', net: '$59,053', cum: '$755,653' },
+                    ].map((row) => (
+                      <tr key={row.period} style={{ background: row.yr2start ? '#dbeafe' : row.highlight ? '#f8fafc' : 'transparent' }}>
+                        <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', fontVariantNumeric: 'tabular-nums' }}>{row.period}</td>
+                        <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>{row.yr}</td>
+                        <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', fontVariantNumeric: 'tabular-nums' }}>{row.base}</td>
+                        <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: row.freeRent ? '#22c55e' : '#334155', fontVariantNumeric: 'tabular-nums' }}>{row.free}</td>
+                        <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{row.net}</td>
+                        <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', fontVariantNumeric: 'tabular-nums' }}>{row.cum}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {/* Fade overlay */}
+                <div className="pointer-events-none" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '60px', background: 'linear-gradient(transparent, #fff)' }} />
+              </div>
+            )}
+
+            {/* Tab: Straight-Line P&L */}
+            {activeFinTab === 'straightline' && (
+              <div style={{ padding: '1.5rem 2rem', overflowX: 'auto' }}>
+                <h4 className="font-bold uppercase" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', color: '#0f172a', marginBottom: '1rem', letterSpacing: '0.04em' }}>
+                  Straight-Line (GAAP) P&amp;L - By Lease Year
+                </h4>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)' }}>
+                  <thead>
+                    <tr>
+                      {['Category', 'Yr 1', 'Yr 2', 'Yr 3', 'Yr 4', 'Yr 5', 'Total'].map((h) => (
+                        <th key={h} className="text-left font-semibold uppercase text-xs" style={{ padding: '0.75rem 1rem', color: '#64748b', letterSpacing: '0.04em', borderBottom: '2px solid #e2e8f0', fontWeight: h === 'Total' ? 700 : 600 }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>Straight-Line Rent</td>
+                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>$679K</td>
+                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>$679K</td>
+                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>$679K</td>
+                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>$679K</td>
+                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>$679K</td>
+                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', fontWeight: 700 }}>$3.57M</td>
+                    </tr>
+                    <tr>
+                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>Cash Rent Paid</td>
+                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>$401K</td>
+                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>$709K</td>
+                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>$730K</td>
+                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>$752K</td>
+                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>$774K</td>
+                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', fontWeight: 700 }}>$3.57M</td>
+                    </tr>
+                    <tr>
+                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>Deferred Rent (Liability)</td>
+                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#2563eb' }}>$278K</td>
+                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>($30K)</td>
+                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>($51K)</td>
+                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>($73K)</td>
+                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>($95K)</td>
+                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', fontWeight: 700 }}>$0</td>
+                    </tr>
+                    <tr style={{ background: '#f8fafc' }}>
+                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', fontWeight: 600 }}>Total Occupancy</td>
+                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', fontWeight: 600 }}>$696K</td>
+                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', fontWeight: 600 }}>$1.28M</td>
+                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', fontWeight: 600 }}>$1.28M</td>
+                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', fontWeight: 600 }}>$1.28M</td>
+                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', fontWeight: 600 }}>$1.28M</td>
+                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', fontWeight: 700 }}>$6.67M</td>
+                    </tr>
+                    <tr>
+                      <td style={{ padding: '0.75rem 1rem', color: '#334155' }}>Per RSF/yr</td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#334155' }}>$79.95</td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#334155' }}>$79.95</td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#334155' }}>$79.95</td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#334155' }}>$79.95</td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#334155' }}>$79.95</td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#334155', fontWeight: 700 }}>$79.35</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Footer */}
+            <div className="text-xs" style={{ padding: '1rem 2rem', background: '#f8fafc', borderTop: '1px solid #e2e8f0', color: '#94a3b8' }}>
+              Auto-generated from uploaded RFP/LOI - cash flow, straight-line, and GAAP calculations performed automatically
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* == PLATFORM FEATURES == */}
+      <section id="features" style={{ padding: '6rem 0', background: '#ffffff' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
+          <div className="text-center" style={{ marginBottom: '3rem' }}>
+            <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
+              Platform Features
             </span>
-            <h2 className="text-[clamp(1.75rem,1.2rem+2vw,3rem)] font-bold text-[#111827] tracking-tight mb-4" style={{ fontFamily: 'var(--font-display)' }}>
+            <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3.5rem)', color: '#0f172a', letterSpacing: '-0.02em' }}>
               Built for corporate real estate teams
             </h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((f) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3" style={{ gap: '1.5rem' }}>
+            {[
+              {
+                icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>,
+                title: 'Any Survey Format',
+                desc: 'Handles PDFs from Savills, CBRE, JLL, Cushman & Wakefield, Newmark, and custom broker formats.',
+                tag: 'AI-Powered Parsing',
+              },
+              {
+                icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" /><line x1="8" y1="2" x2="8" y2="18" /><line x1="16" y1="6" x2="16" y2="22" /></svg>,
+                title: 'Interactive Maps',
+                desc: 'Every building geocoded with rich tooltips - deal terms, building specs, and direct links to the source survey page.',
+              },
+              {
+                icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>,
+                title: 'Tour List + Tour Book',
+                desc: "Add buildings to your tour list from the map, then open the Tour Book to score each space on price, parking, interior fit-out, and more. Add photos and notes from your phone during the walk-through. Export a ranked tour report when you're done.",
+                tag: 'New',
+              },
+              {
+                icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>,
+                title: 'Financial Analysis',
+                desc: 'Upload an RFP or LOI. Get straight-line rent, occupancy costs, NPV analysis, and side-by-side deal comparisons.',
+                tag: 'Core Feature',
+              },
+              {
+                icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
+                title: 'Team Projects',
+                desc: 'Each team member gets their own workspace. Create projects, save maps, and collaborate with your brokerage or client.',
+              },
+              {
+                icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" /></svg>,
+                title: 'Shareable Links',
+                desc: 'Send clients and executives a single URL to view the interactive map and financials - no login required.',
+              },
+              {
+                icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>,
+                title: 'Mobile Ready',
+                desc: 'Fully responsive maps and analysis. Pull it up on your phone during a building tour or in a client meeting.',
+              },
+            ].map((f) => (
               <div
                 key={f.title}
-                className="bg-white rounded-xl p-8 border border-[#e5e7eb] hover:border-[#2563eb]/30 hover:shadow-lg transition-all duration-200 group"
+                className="transition-all"
+                style={{ padding: '2rem', border: '1px solid #e2e8f0', borderRadius: '1rem' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#cbd5e1'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#e2e8f0'; (e.currentTarget as HTMLElement).style.boxShadow = 'none' }}
               >
-                <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-[#dbeafe] text-[#2563eb] mb-6 group-hover:bg-[#2563eb] group-hover:text-white transition-all duration-200">
+                <div className="flex items-center justify-center" style={{ width: '44px', height: '44px', background: '#dbeafe', borderRadius: '0.75rem', color: '#2563eb', marginBottom: '1.25rem' }}>
                   {f.icon}
                 </div>
-                <h3 className="text-lg font-bold text-[#111827] mb-3" style={{ fontFamily: 'var(--font-display)' }}>{f.title}</h3>
-                <p className="text-sm text-[#6b7280] leading-relaxed mb-4">{f.description}</p>
-                {f.badge && (
-                  <span
-                    className="inline-block px-3 py-1 rounded-full text-xs font-semibold"
-                    style={{
-                      background: `${f.badgeColor}15`,
-                      color: f.badgeColor,
-                    }}
-                  >
-                    {f.badge}
+                <h3 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#0f172a', marginBottom: '0.5rem' }}>{f.title}</h3>
+                <p className="text-sm" style={{ color: '#64748b' }}>{f.desc}</p>
+                {f.tag && (
+                  <span className="inline-block text-xs font-semibold" style={{ marginTop: '0.75rem', color: '#2563eb', background: '#dbeafe', padding: '0.25rem 0.75rem', borderRadius: '1.25rem' }}>
+                    {f.tag}
                   </span>
                 )}
               </div>
@@ -473,83 +990,113 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ── */}
-      <section id="how" className="py-24 bg-[#f9fafb]">
-        <div style={{ maxWidth: '1100px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
-          <div className="text-center mb-16">
-            <span className="inline-block text-xs font-semibold text-[#2563eb] uppercase tracking-[0.15em] mb-4">
-              How It Works
-            </span>
-            <h2 className="text-[clamp(1.75rem,1.2rem+2vw,3rem)] font-bold text-[#111827] tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
-              From PDF to insight in 3 steps
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-            {steps.map((s) => (
-              <div key={s.num} className="text-center">
-                <div className="w-20 h-20 rounded-full bg-[#2563eb] flex items-center justify-center mx-auto mb-8">
-                  <span className="text-2xl font-bold text-white" style={{ fontFamily: 'var(--font-display)' }}>{s.num}</span>
-                </div>
-                <h3 className="text-xl font-bold text-[#111827] mb-4" style={{ fontFamily: 'var(--font-display)' }}>{s.title}</h3>
-                <p className="text-base text-[#6b7280] leading-relaxed">{s.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── BOTTOM CTA ── */}
-      <section className="py-28 bg-[#0f172a] relative overflow-hidden">
+      {/* == CTA FORM == */}
+      <section id="contact" className="relative overflow-hidden" style={{ padding: '6rem 0', background: '#0f172a', textAlign: 'center' }}>
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            background: 'radial-gradient(ellipse 60% 50% at 50% 50%, rgba(37,99,235,0.12) 0%, transparent 70%)',
+            background: 'radial-gradient(ellipse 60% 80% at 50% 100%, rgba(37,99,235,0.15) 0%, transparent 70%)',
           }}
         />
-        <div className="relative z-10 text-center" style={{ maxWidth: '600px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
-          <h2 className="text-[clamp(1.75rem,1.2rem+2vw,3rem)] font-bold text-white tracking-tight mb-6" style={{ fontFamily: 'var(--font-display)' }}>
+        <div className="relative z-10" style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
+          <h2 className="font-bold text-white" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3.5rem)', letterSpacing: '-0.02em', marginBottom: '1rem' }}>
             Ready to see your data on a map?
           </h2>
-          <p className="text-[#9ca3af] mb-10 text-lg leading-relaxed">
-            Join the corporate real estate teams replacing broker spreadsheets
-            with real financial intelligence.
+          <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#94a3b8', maxWidth: '500px', margin: '0 auto 2rem auto' }}>
+            We&apos;re onboarding select CRE teams for private beta. Tell us about your team and we&apos;ll reach out.
           </p>
-          <Link
-            href="/login"
-            className="inline-flex items-center gap-2 bg-[#2563eb] text-white px-10 py-4 rounded-lg font-semibold text-base hover:bg-[#1d4ed8] transition-all hover:-translate-y-px hover:shadow-[0_12px_32px_rgba(37,99,235,0.35)] no-underline"
-          >
-            Request Demo
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
-          </Link>
-          <p className="text-sm text-[#6b7280] mt-6">
-            No credit card required. We&apos;ll be in touch within 24 hours.
-          </p>
+
+          {formState !== 'success' ? (
+            <form
+              onSubmit={handleDemoRequest}
+              className="flex flex-col"
+              style={{ maxWidth: '480px', margin: '0 auto', gap: '0.75rem' }}
+            >
+              <div className="flex flex-col sm:flex-row" style={{ gap: '0.75rem' }}>
+                <input
+                  type="text"
+                  placeholder="Full name"
+                  required
+                  value={formData.name}
+                  onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
+                  className="outline-none"
+                  style={{ flex: 1, padding: '0.75rem 1.25rem', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '0.75rem', color: '#fff', fontFamily: 'inherit', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)' }}
+                />
+                <input
+                  type="email"
+                  placeholder="Work email"
+                  required
+                  value={formData.email}
+                  onChange={e => setFormData(p => ({ ...p, email: e.target.value }))}
+                  className="outline-none"
+                  style={{ flex: 1, padding: '0.75rem 1.25rem', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '0.75rem', color: '#fff', fontFamily: 'inherit', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)' }}
+                />
+              </div>
+              <input
+                type="text"
+                placeholder="Company (optional)"
+                value={formData.company}
+                onChange={e => setFormData(p => ({ ...p, company: e.target.value }))}
+                className="outline-none"
+                style={{ padding: '0.75rem 1.25rem', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '0.75rem', color: '#fff', fontFamily: 'inherit', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)' }}
+              />
+              <textarea
+                placeholder="Tell us about your use case (optional)"
+                value={formData.message}
+                onChange={e => setFormData(p => ({ ...p, message: e.target.value }))}
+                className="outline-none"
+                style={{ padding: '0.75rem 1.25rem', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '0.75rem', color: '#fff', fontFamily: 'inherit', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', resize: 'vertical', minHeight: '80px' }}
+              />
+              <button
+                type="submit"
+                disabled={formState === 'sending'}
+                className="font-semibold cursor-pointer transition-all"
+                style={{ background: '#2563eb', color: '#fff', padding: '1rem 1.5rem', borderRadius: '0.75rem', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', border: 'none', opacity: formState === 'sending' ? 0.6 : 1 }}
+              >
+                {formState === 'sending' ? 'Sending...' : 'Request Demo'}
+              </button>
+              {formState === 'error' && (
+                <div className="text-center text-xs" style={{ padding: '0.75rem', borderRadius: '0.5rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444' }}>
+                  Something went wrong. Please email samoitoza@gmail.com directly.
+                </div>
+              )}
+            </form>
+          ) : (
+            <div className="text-center" style={{ padding: '1.5rem', borderRadius: '0.75rem', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', maxWidth: '480px', margin: '0 auto' }}>
+              <h3 className="font-bold" style={{ fontFamily: 'var(--font-display)', color: '#22c55e', fontSize: 'clamp(1.125rem, 1rem + 0.75vw, 1.5rem)', marginBottom: '0.5rem' }}>You&apos;re on the list.</h3>
+              <p className="text-sm" style={{ color: '#94a3b8', margin: 0 }}>We&apos;ll reach out within 24 hours to schedule a walkthrough.</p>
+            </div>
+          )}
+          <p className="text-xs" style={{ color: '#475569', marginTop: '1rem' }}>No credit card required. We&apos;ll be in touch within 24 hours.</p>
         </div>
       </section>
 
-      {/* ── FOOTER ── */}
-      <footer className="py-8 bg-[#0f172a] border-t border-white/[0.05]">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4" style={{ maxWidth: '1280px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
-          <div className="flex items-center gap-3">
-            <Logo size={24} className="text-[#6b7280]" />
-            <span className="text-sm text-[#6b7280]">&copy; 2026 Tour-Lytics. All rights reserved.</span>
-          </div>
-          <div className="flex items-center gap-6 text-xs text-[#6b7280]">
-            <Link href="/investors" className="hover:text-[#9ca3af] transition-colors no-underline text-[#6b7280]">Investors</Link>
-            <span className="text-[#374151]">|</span>
+      {/* == FOOTER == */}
+      <footer style={{ padding: '2rem 0', background: '#0a0f1a', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="flex flex-col md:flex-row items-center justify-between flex-wrap" style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem', gap: '1rem' }}>
+          <div className="text-xs" style={{ color: '#64748b' }}>&copy; 2026 Tour-Lytics. All rights reserved.</div>
+          <div className="flex items-center" style={{ gap: '1.5rem' }}>
+            <Link href="/investors" className="text-xs no-underline transition-colors" style={{ color: '#64748b' }}>Investors</Link>
             <a
               href="https://www.perplexity.ai/computer"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-[#9ca3af] transition-colors no-underline text-[#6b7280]"
+              className="text-xs no-underline transition-colors"
+              style={{ color: '#64748b' }}
             >
               Created with Perplexity Computer
             </a>
           </div>
         </div>
       </footer>
+
+      {/* Keyframe animation for pulse */}
+      <style jsx global>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.4; }
+        }
+      `}</style>
     </div>
   )
 }
