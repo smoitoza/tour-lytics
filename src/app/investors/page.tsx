@@ -1,3 +1,4 @@
+/* Investors page - rebuilt 2026-03-13 */
 'use client'
 
 import Link from 'next/link'
