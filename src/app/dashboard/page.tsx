@@ -14,6 +14,7 @@ const projects = [
     market: 'San Francisco, CA',
     buildings: 33,
     sqft: '2.8M+',
+    shortlisted: 4,
     status: 'Active',
     lastUpdated: 'Mar 13, 2026',
     color: '#f47920',
@@ -46,34 +47,46 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-navy-50 flex items-center justify-center">
-        <div className="animate-pulse text-navy-400">Loading...</div>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
+        <div style={{ color: '#94a3b8', fontFamily: 'var(--font-display)' }}>Loading...</div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-navy-50">
+    <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
-      <header className="bg-white border-b border-navy-200">
-        <div className="max-w-[1200px] mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/dashboard" className="flex items-center gap-3 no-underline text-navy-900">
+      <header style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Link href="/dashboard" className="no-underline" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#0f172a', textDecoration: 'none' }}>
             <svg width="28" height="28" viewBox="0 0 40 40" fill="none" aria-label="Tour-Lytics logo">
               <rect x="2" y="2" width="36" height="36" rx="8" stroke="currentColor" strokeWidth="2.5" />
               <path d="M12 14h16M20 14v14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
               <circle cx="20" cy="10" r="2" fill="#2563eb" />
               <path d="M10 28l6-8 4 5 4-6 6 9" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <span className="font-bold text-base tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
-              Tour<span className="text-accent">-Lytics</span>
+            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.02em' }}>
+              Tour<span style={{ color: '#2563eb' }}>-Lytics</span>
             </span>
           </Link>
 
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-navy-500">{user?.email}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <span style={{ fontSize: '0.875rem', color: '#64748b' }}>{user?.email}</span>
             <button
               onClick={handleSignOut}
-              className="text-sm text-navy-500 hover:text-navy-700 bg-transparent border border-navy-200 rounded-lg px-3 py-1.5 cursor-pointer transition-colors"
+              style={{
+                fontSize: '0.875rem',
+                color: '#64748b',
+                background: 'transparent',
+                border: '1px solid #e2e8f0',
+                borderRadius: '0.5rem',
+                padding: '0.375rem 0.75rem',
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+                fontFamily: 'inherit',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#94a3b8'; e.currentTarget.style.color = '#334155' }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#64748b' }}
             >
               Sign Out
             </button>
@@ -82,96 +95,140 @@ export default function DashboardPage() {
       </header>
 
       {/* Main content */}
-      <main className="max-w-[1200px] mx-auto px-6 py-12">
-        <div className="mb-8">
-          <h1
-            className="text-2xl font-bold text-navy-900 mb-2"
-            style={{ fontFamily: 'var(--font-display)' }}
-          >
+      <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '3rem 1.5rem', width: '100%', flex: 1 }}>
+        {/* Welcome section */}
+        <div style={{ marginBottom: '2.5rem' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem' }}>
+            Dashboard
+          </div>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem', letterSpacing: '-0.02em' }}>
             Your Projects
           </h1>
-          <p className="text-sm text-navy-500">Select a project to view your market analysis, financials, and tour book.</p>
+          <p style={{ fontSize: '0.9375rem', color: '#64748b', lineHeight: 1.6 }}>
+            Select a project to view your market analysis, financials, and tour book.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
           {projects.map((project) => (
             <Link
               key={project.id}
               href={`/project/${project.id}`}
-              className="group bg-white rounded-xl border border-navy-200 p-6 hover:border-accent/30 hover:shadow-lg transition-all duration-200 no-underline"
+              className="no-underline"
+              style={{
+                display: 'block',
+                background: '#ffffff',
+                borderRadius: '1rem',
+                border: '1px solid #e2e8f0',
+                padding: '1.5rem',
+                textDecoration: 'none',
+                transition: 'all 0.2s',
+                cursor: 'pointer',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(37,99,235,0.3)'
+                e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)'
+                e.currentTarget.style.transform = 'translateY(-2px)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = '#e2e8f0'
+                e.currentTarget.style.boxShadow = 'none'
+                e.currentTarget.style.transform = 'translateY(0)'
+              }}
             >
-              {/* Status badge */}
-              <div className="flex items-center justify-between mb-4">
-                <span
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[0.7rem] font-semibold uppercase tracking-wide"
-                  style={{
-                    background: `${project.color}15`,
-                    color: project.color,
-                  }}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: project.color }} />
+              {/* Status + arrow */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.375rem',
+                  padding: '0.25rem 0.75rem',
+                  borderRadius: '9999px',
+                  fontSize: '0.7rem',
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  background: `${project.color}15`,
+                  color: project.color,
+                }}>
+                  <span style={{ width: '0.375rem', height: '0.375rem', borderRadius: '50%', background: project.color }} />
                   {project.status}
                 </span>
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="text-navy-300 group-hover:text-accent group-hover:translate-x-1 transition-all duration-200"
-                >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="9 18 15 12 9 6" />
                 </svg>
               </div>
 
               {/* Project info */}
-              <h2 className="text-lg font-bold text-navy-900 mb-1 group-hover:text-accent transition-colors" style={{ fontFamily: 'var(--font-display)' }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.125rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.25rem', letterSpacing: '-0.01em' }}>
                 {project.name}
               </h2>
-              <p className="text-sm text-navy-500 mb-4">{project.market}</p>
+              <p style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '1.25rem' }}>{project.market}</p>
 
-              {/* Stats */}
-              <div className="flex gap-6 pt-4 border-t border-navy-100">
+              {/* Stats row */}
+              <div style={{ display: 'flex', gap: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #f1f5f9', alignItems: 'flex-end' }}>
                 <div>
-                  <div className="text-lg font-bold text-navy-900" style={{ fontFamily: 'var(--font-display)' }}>{project.buildings}</div>
-                  <div className="text-[0.7rem] text-navy-400 uppercase tracking-wide font-medium">Buildings</div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700, color: '#0f172a' }}>{project.buildings}</div>
+                  <div style={{ fontSize: '0.65rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>Buildings</div>
                 </div>
                 <div>
-                  <div className="text-lg font-bold text-navy-900" style={{ fontFamily: 'var(--font-display)' }}>{project.sqft}</div>
-                  <div className="text-[0.7rem] text-navy-400 uppercase tracking-wide font-medium">Sq Ft</div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700, color: '#0f172a' }}>{project.sqft}</div>
+                  <div style={{ fontSize: '0.65rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>Sq Ft</div>
                 </div>
-                <div className="ml-auto text-right">
-                  <div className="text-xs text-navy-400">Updated</div>
-                  <div className="text-xs font-medium text-navy-600">{project.lastUpdated}</div>
+                <div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700, color: '#2563eb' }}>{project.shortlisted}</div>
+                  <div style={{ fontSize: '0.65rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>Shortlisted</div>
+                </div>
+                <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Updated</div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 500, color: '#475569' }}>{project.lastUpdated}</div>
                 </div>
               </div>
             </Link>
           ))}
 
-          {/* Add new project card (placeholder) */}
-          <div className="rounded-xl border-2 border-dashed border-navy-200 p-6 flex flex-col items-center justify-center min-h-[220px] text-center hover:border-accent/40 transition-colors cursor-default">
-            <div className="w-12 h-12 rounded-full bg-navy-100 flex items-center justify-center mb-3">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-navy-400">
+          {/* Add new project card */}
+          <div style={{
+            borderRadius: '1rem',
+            border: '2px dashed #e2e8f0',
+            padding: '1.5rem',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '240px',
+            textAlign: 'center',
+            transition: 'border-color 0.2s',
+            cursor: 'default',
+          }}>
+            <div style={{
+              width: '3rem',
+              height: '3rem',
+              borderRadius: '50%',
+              background: '#f1f5f9',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '0.75rem',
+            }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round">
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
               </svg>
             </div>
-            <p className="text-sm font-medium text-navy-500">New Project</p>
-            <p className="text-xs text-navy-400 mt-1">Coming soon</p>
+            <p style={{ fontSize: '0.875rem', fontWeight: 500, color: '#64748b' }}>New Project</p>
+            <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>Coming soon</p>
           </div>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="mt-auto py-6 text-center text-xs text-navy-400">
+      <footer style={{ padding: '1.5rem', textAlign: 'center', fontSize: '0.75rem', color: '#94a3b8' }}>
         <a
           href="https://www.perplexity.ai/computer"
           target="_blank"
           rel="noopener noreferrer"
-          className="hover:text-navy-500 transition-colors no-underline text-navy-400"
+          style={{ color: '#94a3b8', textDecoration: 'none', transition: 'color 0.15s' }}
         >
           Created with Perplexity Computer
         </a>

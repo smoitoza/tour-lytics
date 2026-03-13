@@ -34,19 +34,19 @@ export default function ProjectPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-navy-50 flex items-center justify-center">
-        <div className="animate-pulse text-navy-400">Loading project...</div>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
+        <div style={{ color: '#94a3b8', fontFamily: 'var(--font-display)' }}>Loading project...</div>
       </div>
     )
   }
 
   return (
-    <div className="h-screen flex flex-col bg-navy-50">
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#f8fafc' }}>
       {/* Compact top bar */}
-      <header className="bg-white border-b border-navy-200 flex-shrink-0">
-        <div className="px-4 py-2.5 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="flex items-center gap-2 no-underline text-navy-900 hover:text-accent transition-colors">
+      <header style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
+        <div style={{ padding: '0.625rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <Link href="/dashboard" className="no-underline" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#0f172a', textDecoration: 'none' }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="15 18 9 12 15 6" />
               </svg>
@@ -57,20 +57,29 @@ export default function ProjectPage() {
                 <path d="M10 28l6-8 4 5 4-6 6 9" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </Link>
-            <div className="h-5 w-px bg-navy-200" />
+            <div style={{ height: '1.25rem', width: '1px', background: '#e2e8f0' }} />
             <div>
-              <h1 className="text-sm font-semibold text-navy-900" style={{ fontFamily: 'var(--font-display)' }}>
+              <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '0.875rem', fontWeight: 600, color: '#0f172a', margin: 0 }}>
                 SF Office Search
               </h1>
-              <p className="text-[0.7rem] text-navy-400">San Francisco, CA</p>
+              <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: 0 }}>San Francisco, CA</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-navy-400 hidden sm:inline">{user?.email}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{user?.email}</span>
             <button
               onClick={handleSignOut}
-              className="text-xs text-navy-500 hover:text-navy-700 bg-transparent border border-navy-200 rounded-md px-2.5 py-1 cursor-pointer transition-colors"
+              style={{
+                fontSize: '0.75rem',
+                color: '#64748b',
+                background: 'transparent',
+                border: '1px solid #e2e8f0',
+                borderRadius: '0.375rem',
+                padding: '0.25rem 0.625rem',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
             >
               Sign Out
             </button>
@@ -79,10 +88,10 @@ export default function ProjectPage() {
       </header>
 
       {/* Full app iframe */}
-      <div className="flex-1 relative">
+      <div style={{ flex: 1, position: 'relative' }}>
         <iframe
           src="/app/index.html"
-          className="absolute inset-0 w-full h-full border-none"
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
           title="SF Office Search Application"
         />
       </div>
