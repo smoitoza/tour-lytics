@@ -10,6 +10,78 @@ function getClient() {
   })
 }
 
+// ---- Google Directions helper ----
+async function getDirections(
+  origin: string,
+  destination: string,
+  mode: 'walking' | 'driving' | 'transit' | 'bicycling' = 'walking'
+): Promise<string> {
+  const apiKey = process.env.GOOGLE_PLACES_API_KEY
+  if (!apiKey) {
+    return 'Google Maps API key is not configured. Unable to get directions.'
+  }
+
+  try {
+    const params = new URLSearchParams({
+      origin,
+      destination,
+      mode,
+      key: apiKey,
+    })
+
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/directions/json?${params.toString()}`
+    )
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Google Directions API error:', response.status, errorText)
+      return `Google Directions API returned an error (status ${response.status}). Unable to get directions at this time.`
+    }
+
+    const data = await response.json()
+
+    if (data.status !== 'OK') {
+      if (data.status === 'ZERO_RESULTS') {
+        return `No ${mode} route found between these locations.`
+      }
+      console.error('Directions API status:', data.status, data.error_message)
+      return `Directions API error: ${data.status}. ${data.error_message || ''}`
+    }
+
+    const route = data.routes[0]
+    const leg = route.legs[0]
+
+    const result = {
+      origin: leg.start_address,
+      destination: leg.end_address,
+      mode,
+      distance: leg.distance.text,
+      duration: leg.duration.text,
+      steps: leg.steps.map((step: { html_instructions: string; distance: { text: string }; duration: { text: string }; travel_mode: string; transit_details?: { line?: { short_name?: string; name?: string; vehicle?: { type?: string } }; departure_stop?: { name?: string }; arrival_stop?: { name?: string }; num_stops?: number } }) => {
+        const info: Record<string, unknown> = {
+          instruction: step.html_instructions.replace(/<[^>]*>/g, ''),
+          distance: step.distance.text,
+          duration: step.duration.text,
+        }
+        if (step.travel_mode === 'TRANSIT' && step.transit_details) {
+          info.transit_line = step.transit_details.line?.short_name || step.transit_details.line?.name
+          info.transit_type = step.transit_details.line?.vehicle?.type
+          info.departure_stop = step.transit_details.departure_stop?.name
+          info.arrival_stop = step.transit_details.arrival_stop?.name
+          info.num_stops = step.transit_details.num_stops
+        }
+        return info
+      }),
+    }
+
+    return JSON.stringify(result, null, 2)
+  } catch (err) {
+    console.error('Directions error:', err)
+    return `Error getting directions: ${String(err)}`
+  }
+}
+
 // ---- Google Places helper ----
 async function searchNearbyPlaces(query: string, maxResults = 5): Promise<string> {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY
@@ -111,6 +183,33 @@ const TOOLS: Anthropic.Tool[] = [
       required: ['query'],
     },
   },
+  {
+    name: 'get_directions',
+    description:
+      'Get walking, driving, transit, or bicycling directions between two locations. Returns travel time, distance, and step-by-step directions. Use this when a user asks how far apart two buildings are, how long it takes to walk/drive between locations, or asks for directions between any two addresses or buildings. Always use full street addresses with "San Francisco, CA" for best results.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        origin: {
+          type: 'string',
+          description:
+            'Starting address, e.g. "250 Brannan Street, San Francisco, CA"',
+        },
+        destination: {
+          type: 'string',
+          description:
+            'Destination address, e.g. "505 Howard Street, San Francisco, CA"',
+        },
+        mode: {
+          type: 'string',
+          enum: ['walking', 'driving', 'transit', 'bicycling'],
+          description:
+            'Travel mode. Default is walking. Use "transit" for public transportation (Muni, BART, bus).',
+        },
+      },
+      required: ['origin', 'destination'],
+    },
+  },
 ]
 
 const SYSTEM_PROMPT = `You are the Tour-Lytics Tour Book Assistant -- an AI concierge for a commercial real estate office search in San Francisco.
@@ -157,6 +256,22 @@ You have access to a tool called search_nearby_places that uses Google Places to
 2. Call search_nearby_places with a query like "coffee shops near [address], San Francisco"
 3. Present the results in a clean, helpful format with name, rating, distance context, and Google Maps link if available
 4. If the user asks about their "first tour" or "next tour", check the LIVE TOUR SCHEDULE data to identify which building, then search near that address
+
+DIRECTIONS & TRAVEL TIME CAPABILITY:
+You have access to a tool called get_directions that uses Google Maps to calculate travel time and step-by-step directions between any two locations. Use this when a user asks:
+- How far apart two buildings are (walking, driving, transit, or biking)
+- How long it takes to get between tours or buildings
+- Directions from one building to another, or from a building to a nearby place
+- Whether they can walk between tours, or if they should drive/take transit
+- How to get to a building from a landmark, hotel, or other location
+
+When using get_directions:
+1. Look up the full street addresses of both locations from your building data
+2. Always include "San Francisco, CA" in the addresses
+3. Default to walking mode unless the user specifies driving, transit, or biking
+4. Present the results conversationally: lead with the travel time and distance, then offer key directions if helpful
+5. If the user asks about travel between consecutive tours on their schedule, check the LIVE TOUR SCHEDULE to identify the buildings and times, then calculate the route
+6. For transit directions, mention specific bus/train lines and stops from the step data
 
 GUIDELINES:
 - Be concise but thorough. Use specific numbers (rates, SF, etc.) when available.
@@ -285,6 +400,18 @@ export async function POST(request: NextRequest) {
                     const result = await searchNearbyPlaces(
                       toolInput.query,
                       toolInput.max_results || 5
+                    )
+                    toolResults.push({
+                      type: 'tool_result',
+                      tool_use_id: id,
+                      content: result,
+                    })
+                  } else if (name === 'get_directions') {
+                    const dirInput = input as { origin: string; destination: string; mode?: string }
+                    const result = await getDirections(
+                      dirInput.origin,
+                      dirInput.destination,
+                      (dirInput.mode as 'walking' | 'driving' | 'transit' | 'bicycling') || 'walking'
                     )
                     toolResults.push({
                       type: 'tool_result',
