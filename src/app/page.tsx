@@ -228,7 +228,7 @@ export default function LandingPage() {
       </nav>
 
       {/* ── HERO ── */}
-      <section className="pt-[220px] pb-24 bg-[#0f172a] relative overflow-hidden">
+      <section className="bg-[#0f172a] relative overflow-hidden" style={{ paddingTop: '220px', paddingBottom: '96px' }}>
         {/* Grid overlay */}
         <div
           className="absolute inset-0 pointer-events-none"
@@ -248,19 +248,19 @@ export default function LandingPage() {
 
         <div className="relative z-10 text-center" style={{ maxWidth: '1000px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 bg-white/[0.06] border border-white/[0.1] px-5 py-2 rounded-full text-xs text-[#9ca3af] uppercase tracking-[0.15em] font-medium mb-14">
+          <div className="inline-flex items-center gap-2 bg-white/[0.06] border border-white/[0.1] px-5 py-2 rounded-full text-xs text-[#9ca3af] uppercase tracking-[0.15em] font-medium" style={{ marginBottom: '56px' }}>
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
             Now in Private Beta
           </div>
 
-          <h1 className="text-[clamp(2.5rem,1.5rem+4vw,4.5rem)] font-extrabold text-white tracking-tight mb-10 leading-[1.1]" style={{ fontFamily: 'var(--font-display)' }}>
+          <h1 className="text-[clamp(2.5rem,1.5rem+4vw,4.5rem)] font-extrabold text-white tracking-tight leading-[1.1]" style={{ fontFamily: 'var(--font-display)', marginBottom: '40px' }}>
             Turn static surveys into{' '}
             <span className="bg-gradient-to-r from-[#2563eb] to-[#60a5fa] bg-clip-text text-transparent" style={{ filter: 'drop-shadow(0 0 20px rgba(37,99,235,0.3))' }}>
               actionable intelligence
             </span>
           </h1>
 
-          <p className="text-[clamp(1.125rem,1rem+0.75vw,1.375rem)] text-[#9ca3af] max-w-[700px] mx-auto mb-12 leading-relaxed">
+          <p className="text-[clamp(1.125rem,1rem+0.75vw,1.375rem)] text-[#9ca3af] leading-relaxed" style={{ maxWidth: '700px', margin: '0 auto 48px auto' }}>
             Upload your broker survey PDF. Get an interactive map with every building
             plotted, tooltips with deal terms, and linked financials - in minutes, not days.
           </p>
