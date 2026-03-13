@@ -1,0 +1,1238 @@
+{
+  "survey_buildings": [
+    {
+      "num": 1,
+      "address": "300 Mission Street",
+      "neighborhood": "Financial District",
+      "owner": "Rithm Capital Corp.",
+      "yearBuiltClass": "1968; Renovated 2021 / Class A Office",
+      "buildingSF": "668,197 SF",
+      "stories": "23",
+      "spaceAvailable": "223,413 SF",
+      "rentalRate": "Mid $80's FSG",
+      "directSublease": "Direct",
+      "available_floors": [
+        {
+          "floor": "3",
+          "sqft": "14,485",
+          "rate": "Mid $80's FSG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 2,
+      "address": "535 Mission Street",
+      "neighborhood": "Financial District",
+      "owner": "BXP, Inc.",
+      "yearBuiltClass": "2015 / Class A Office",
+      "buildingSF": "307,235 SF",
+      "stories": "27",
+      "spaceAvailable": "35,648 SF",
+      "rentalRate": "Upper $70's FSG",
+      "directSublease": "Direct",
+      "available_floors": [
+        {
+          "floor": "5",
+          "sqft": "13,211",
+          "rate": "Upper $70's FSG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 3,
+      "address": "85 2nd Street",
+      "neighborhood": "Financial District",
+      "owner": "Conner Properties",
+      "yearBuiltClass": "1899; Renovated 1996 / Class B Office",
+      "buildingSF": "124,245 SF",
+      "stories": "8",
+      "spaceAvailable": "49,114 SF",
+      "rentalRate": "Mid $60's FSG",
+      "directSublease": "Direct",
+      "available_floors": [
+        {
+          "floor": "4",
+          "sqft": "16,111",
+          "rate": "Mid $60's FSG",
+          "term": "Negotiable",
+          "availability": "Sept 2026",
+          "type": "Direct",
+          "tis": "Negotiable"
+        },
+        {
+          "floor": "6",
+          "sqft": "16,117",
+          "rate": "Mid $60's FSG",
+          "term": "Negotiable",
+          "availability": "Sept 2026",
+          "type": "Direct",
+          "tis": "Negotiable"
+        },
+        {
+          "floor": "8",
+          "sqft": "16,886",
+          "rate": "Mid $60's FSG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 4,
+      "address": "116-118 New Montgomery Street",
+      "neighborhood": "Financial District",
+      "owner": "Jamestown LP",
+      "yearBuiltClass": "1902 / Class B Office",
+      "buildingSF": "141,145 SF",
+      "stories": "9",
+      "spaceAvailable": "14,414 SF",
+      "rentalRate": "Mid $60's FSG",
+      "directSublease": "Direct",
+      "available_floors": [
+        {
+          "floor": "3",
+          "sqft": "14,414",
+          "rate": "Mid $60's FSG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 5,
+      "address": "140 New Montgomery Street",
+      "neighborhood": "Financial District",
+      "owner": "Pembroke Real Estate",
+      "yearBuiltClass": "1925; Renovated 2013 / Class A Office",
+      "buildingSF": "342,574 SF",
+      "stories": "26",
+      "spaceAvailable": "23,365 SF",
+      "rentalRate": "High $80's NOE",
+      "directSublease": "Direct",
+      "available_floors": [
+        {
+          "floor": "8",
+          "sqft": "12,620",
+          "rate": "High $80's NOE",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        },
+        {
+          "floor": "9",
+          "sqft": "4,373",
+          "rate": "High $80's NOE",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 6,
+      "address": "222 2nd Street",
+      "neighborhood": "Financial District",
+      "owner": "Tishman Speyer",
+      "yearBuiltClass": "2015 / Class A Office",
+      "buildingSF": "453,000 SF",
+      "stories": "26",
+      "spaceAvailable": "12,702 SF",
+      "rentalRate": "Mid $70's FSG",
+      "directSublease": "Sublease",
+      "available_floors": [
+        {
+          "floor": "23",
+          "sqft": "12,702",
+          "rate": "Mid $70's FSG",
+          "term": "Thru Dec 2027",
+          "availability": "Immediate",
+          "type": "Sublease",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 7,
+      "address": "631 Howard Street",
+      "neighborhood": "Financial District",
+      "owner": "Flynn Properties, Inc.; Ellis Partners",
+      "yearBuiltClass": "1929; Renovated 1968 / Class B Office",
+      "buildingSF": "108,785 SF",
+      "stories": "5",
+      "spaceAvailable": "42,349 SF",
+      "rentalRate": "Mid $60's FSG",
+      "directSublease": "Direct",
+      "available_floors": [
+        {
+          "floor": "Ground",
+          "sqft": "16,142",
+          "rate": "Mid $60's FSG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        },
+        {
+          "floor": "2",
+          "sqft": "8,052",
+          "rate": "Mid $60's FSG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 8,
+      "address": "657 Howard Street",
+      "neighborhood": "Financial District",
+      "owner": "Kathan Brown",
+      "yearBuiltClass": "1922 / Class C Office",
+      "buildingSF": "27,600 SF",
+      "stories": "2",
+      "spaceAvailable": "13,800 SF",
+      "rentalRate": "Low $40's NNN",
+      "directSublease": "Direct",
+      "available_floors": [
+        {
+          "floor": "2",
+          "sqft": "7,000-13,800",
+          "rate": "Low $40's NNN",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 9,
+      "address": "620 Folsom Street",
+      "neighborhood": "Financial District",
+      "owner": "Conner Group",
+      "yearBuiltClass": "1922; Renovated 1996 / Class B Office",
+      "buildingSF": "49,800 SF",
+      "stories": "3",
+      "spaceAvailable": "49,800 SF",
+      "rentalRate": "Upper $30's FSG",
+      "directSublease": "Direct",
+      "available_floors": [
+        {
+          "floor": "1",
+          "sqft": "16,600",
+          "rate": "Upper $30's FSG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        },
+        {
+          "floor": "2",
+          "sqft": "16,600",
+          "rate": "Upper $30's FSG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        },
+        {
+          "floor": "3",
+          "sqft": "16,600",
+          "rate": "Upper $30's FSG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 10,
+      "address": "201 3rd Street",
+      "neighborhood": "Financial District",
+      "owner": "Kilroy Realty Corporation",
+      "yearBuiltClass": "1982; Renovated 2022 / Class A Office",
+      "buildingSF": "402,194 SF",
+      "stories": "13",
+      "spaceAvailable": "129,725 SF",
+      "rentalRate": "Upper $70's FSG",
+      "directSublease": "Direct",
+      "available_floors": [
+        {
+          "floor": "10 Suite 1000",
+          "sqft": "15,587",
+          "rate": "Upper $70's FSG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        },
+        {
+          "floor": "10 Suite 1050",
+          "sqft": "15,304",
+          "rate": "Upper $70's FSG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 11,
+      "address": "22 4th Street",
+      "neighborhood": "Yerba Buena",
+      "owner": "Ponte Gadea USA, Inc.",
+      "yearBuiltClass": "1980; Renovated 1999 / Class A Office",
+      "buildingSF": "262,872 SF",
+      "stories": "16",
+      "spaceAvailable": "220,629 SF",
+      "rentalRate": "Mid $60's FSG",
+      "directSublease": "Direct",
+      "available_floors": [
+        {
+          "floor": "3-16",
+          "sqft": "10,443-16,392",
+          "rate": "Mid $60's FSG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 12,
+      "address": "132-140 Hawthorne Street",
+      "neighborhood": "Rincon/South Beach",
+      "owner": "WCM Ventures LLC",
+      "yearBuiltClass": "1948 / Class B Office",
+      "buildingSF": "14,250 SF",
+      "stories": "2",
+      "spaceAvailable": "14,250 SF",
+      "rentalRate": "High $60's iG",
+      "directSublease": "Direct",
+      "available_floors": [
+        {
+          "floor": "Full Building",
+          "sqft": "14,250",
+          "rate": "High $60's iG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 13,
+      "address": "360 3rd Street",
+      "neighborhood": "Yerba Buena",
+      "owner": "Kilroy Realty Corporation",
+      "yearBuiltClass": "1976; Renovated 2008 / Class A Office",
+      "buildingSF": "429,726 SF",
+      "stories": "7",
+      "spaceAvailable": "436,806 SF",
+      "rentalRate": "Mid $60's FSG",
+      "directSublease": "Direct",
+      "available_floors": [
+        {
+          "floor": "3 Suite B",
+          "sqft": "16,000",
+          "rate": "High $40's NOJ",
+          "term": "Thru Nov 2031",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 14,
+      "address": "625 2nd Street",
+      "neighborhood": "SoMa",
+      "owner": "Ventas Inc.",
+      "yearBuiltClass": "2000 / Class B Office",
+      "buildingSF": "60,000 SF",
+      "stories": "5",
+      "spaceAvailable": "26,960 SF",
+      "rentalRate": "Mid $60's FSG",
+      "directSublease": "Direct",
+      "available_floors": [
+        {
+          "floor": "4 Suite 425",
+          "sqft": "16,029",
+          "rate": "Mid $60's FSG",
+          "term": "Negotiable",
+          "availability": "May 2026",
+          "type": "Direct",
+          "tis": "Negotiable"
+        },
+        {
+          "floor": "5 Suite 475",
+          "sqft": "10,931",
+          "rate": "Mid $60's FSG",
+          "term": "Negotiable",
+          "availability": "May 2026",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 15,
+      "address": "500-520 3rd Street",
+      "neighborhood": "SoMa",
+      "owner": "ARE-San Francisco No. 31, LLC",
+      "yearBuiltClass": "1906; Renovated 2001 / Class B Office",
+      "buildingSF": "78,000 SF",
+      "stories": "4",
+      "spaceAvailable": "33,337 SF",
+      "rentalRate": "$45.00 IG",
+      "directSublease": "Direct",
+      "available_floors": [
+        {
+          "floor": "2 Suite 203",
+          "sqft": "3,625",
+          "rate": "$45.00 IG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        },
+        {
+          "floor": "2 Suite 204",
+          "sqft": "8,323",
+          "rate": "$45.00 IG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        },
+        {
+          "floor": "4 A or B",
+          "sqft": "7,014-21,690",
+          "rate": "$65.00 IG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 16,
+      "address": "539 Bryant Street",
+      "neighborhood": "SoMa",
+      "owner": "The DuPont Company",
+      "yearBuiltClass": "1907; Renovated 2014 / Class B Office",
+      "buildingSF": "85,570 SF",
+      "stories": "6",
+      "spaceAvailable": "85,570 SF",
+      "rentalRate": "Mid-High $50's IG",
+      "directSublease": "Sublease",
+      "available_floors": [
+        {
+          "floor": "1",
+          "sqft": "11,504",
+          "rate": "Mid-High $50's IG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Sublease",
+          "tis": "Negotiable"
+        },
+        {
+          "floor": "2-6",
+          "sqft": "14,266",
+          "rate": "Mid-High $50's IG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Sublease",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 17,
+      "address": "144 Townsend Street",
+      "neighborhood": "SoMa",
+      "owner": "ARE-San Francisco No. 31, LLC",
+      "yearBuiltClass": "1908; Renovated 2020 / Class B Office",
+      "buildingSF": "79,200 SF",
+      "stories": "5",
+      "spaceAvailable": "15,142 SF",
+      "rentalRate": "$45 IG",
+      "directSublease": "Direct",
+      "available_floors": [
+        {
+          "floor": "5",
+          "sqft": "15,142",
+          "rate": "$45 IG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 18,
+      "address": "625 3rd Street",
+      "neighborhood": "SoMa",
+      "owner": "Columbia Pacific Advisors",
+      "yearBuiltClass": "1906; Renovated 2000 / Class B Office",
+      "buildingSF": "55,000 SF",
+      "stories": "4",
+      "spaceAvailable": "24,388 SF",
+      "rentalRate": "Low $60's IG",
+      "directSublease": "Direct",
+      "available_floors": [
+        {
+          "floor": "1",
+          "sqft": "11,264",
+          "rate": "Low $60's IG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        },
+        {
+          "floor": "4",
+          "sqft": "13,124",
+          "rate": "Low $60's IG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 19,
+      "address": "135 Townsend Street",
+      "neighborhood": "SoMa",
+      "owner": "Kilroy Realty Corporation",
+      "yearBuiltClass": "2002 / Class A Office",
+      "buildingSF": "167,750 SF",
+      "stories": "4",
+      "spaceAvailable": "15,000 SF",
+      "rentalRate": "Deal Pending",
+      "directSublease": "Sublease",
+      "available_floors": [
+        {
+          "floor": "2",
+          "sqft": "15,000",
+          "rate": "Deal Pending",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Sublease",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 20,
+      "address": "139 Townsend Street",
+      "neighborhood": "SoMa",
+      "owner": "Kilroy Realty Corporation",
+      "yearBuiltClass": "2003 / Class A Office",
+      "buildingSF": "110,000 SF",
+      "stories": "4",
+      "spaceAvailable": "10,980 SF",
+      "rentalRate": "High $60's IG",
+      "directSublease": "Direct",
+      "available_floors": [
+        {
+          "floor": "3",
+          "sqft": "10,980",
+          "rate": "High $60's IG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 21,
+      "address": "665 3rd Street",
+      "neighborhood": "SoMa",
+      "owner": "Alexandria Real Estate Equities",
+      "yearBuiltClass": "2002 / Class B Office",
+      "buildingSF": "64,000 SF",
+      "stories": "3",
+      "spaceAvailable": "39,778 SF",
+      "rentalRate": "Low $30's IG / High $60's IG",
+      "directSublease": "Sublease/Direct",
+      "available_floors": [
+        {
+          "floor": "2",
+          "sqft": "16,778",
+          "rate": "Low $30's IG",
+          "term": "Thru Sept 2029",
+          "availability": "Immediate",
+          "type": "Sublease",
+          "tis": "Negotiable"
+        },
+        {
+          "floor": "3",
+          "sqft": "15,300-23,000",
+          "rate": "High $60's IG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 22,
+      "address": "660 3rd Street",
+      "neighborhood": "SoMa",
+      "owner": "Bay West Development",
+      "yearBuiltClass": "2000 / Class B Office",
+      "buildingSF": "65,000 SF",
+      "stories": "5",
+      "spaceAvailable": "20,500 SF",
+      "rentalRate": "Negotiable",
+      "directSublease": "Direct",
+      "available_floors": [
+        {
+          "floor": "4",
+          "sqft": "10,250",
+          "rate": "Negotiable",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        },
+        {
+          "floor": "5",
+          "sqft": "10,250",
+          "rate": "Negotiable",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 23,
+      "address": "185 Berry Street",
+      "neighborhood": "Mission Bay",
+      "owner": "UCSF / Wareham Property Group",
+      "yearBuiltClass": "2002 / Class A Office",
+      "buildingSF": "107,500 SF",
+      "stories": "4",
+      "spaceAvailable": "19,780 SF",
+      "rentalRate": "High $30's FSG",
+      "directSublease": "Sublease/Direct",
+      "available_floors": [
+        {
+          "floor": "1",
+          "sqft": "4,598",
+          "rate": "High $30's FSG",
+          "term": "Thru April 2027",
+          "availability": "Immediate",
+          "type": "Sublease",
+          "tis": "Negotiable"
+        },
+        {
+          "floor": "Mezzanine",
+          "sqft": "4,130",
+          "rate": "High $30's FSG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        },
+        {
+          "floor": "2",
+          "sqft": "11,052",
+          "rate": "High $30's FSG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 24,
+      "address": "410 Townsend Street",
+      "neighborhood": "SoMa",
+      "owner": "Harvest Properties",
+      "yearBuiltClass": "1924; Renovated 2016 / Class B Office",
+      "buildingSF": "74,200 SF",
+      "stories": "3",
+      "spaceAvailable": "12,602 SF",
+      "rentalRate": "Mid $30's IG",
+      "directSublease": "Direct",
+      "available_floors": [
+        {
+          "floor": "2",
+          "sqft": "12,602",
+          "rate": "Mid $30's IG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 25,
+      "address": "444 Townsend Street",
+      "neighborhood": "SoMa",
+      "owner": "Harvest Properties",
+      "yearBuiltClass": "1926; Renovated 2015 / Class B Office",
+      "buildingSF": "64,000 SF",
+      "stories": "2",
+      "spaceAvailable": "20,467 SF",
+      "rentalRate": "Mid $30's IG",
+      "directSublease": "Direct",
+      "available_floors": [
+        {
+          "floor": "2",
+          "sqft": "15,000-20,467",
+          "rate": "Mid $30s IG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 26,
+      "address": "600 Townsend Street",
+      "neighborhood": "SoMa/Dogpatch",
+      "owner": "The Sobrato Organization",
+      "yearBuiltClass": "2001 / Class A Office",
+      "buildingSF": "152,725 SF",
+      "stories": "5",
+      "spaceAvailable": "30,332 SF",
+      "rentalRate": "$50's IG",
+      "directSublease": "Direct",
+      "available_floors": [
+        {
+          "floor": "3",
+          "sqft": "15,257",
+          "rate": "$50's IG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        },
+        {
+          "floor": "4",
+          "sqft": "15,075",
+          "rate": "$50's IG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 27,
+      "address": "650 Townsend Street",
+      "neighborhood": "SoMa/Dogpatch",
+      "owner": "Kilroy Realty Corporation",
+      "yearBuiltClass": "2021 / Class A Office",
+      "buildingSF": "237,000 SF",
+      "stories": "4",
+      "spaceAvailable": "11,000 SF",
+      "rentalRate": "$100-110",
+      "directSublease": "Direct",
+      "available_floors": [
+        {
+          "floor": "2",
+          "sqft": "11,000",
+          "rate": "$100-110",
+          "term": "Negotiable",
+          "availability": "March 2026",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 28,
+      "address": "1550 Bryant Street",
+      "neighborhood": "SoMa/Potrero",
+      "owner": "ARE-San Francisco No. 25, LLC",
+      "yearBuiltClass": "2015 / Class A Office",
+      "buildingSF": "41,000 SF",
+      "stories": "3",
+      "spaceAvailable": "10,388 SF",
+      "rentalRate": "Mid $50's IG",
+      "directSublease": "Direct",
+      "available_floors": [
+        {
+          "floor": "3",
+          "sqft": "10,388",
+          "rate": "Mid $50's IG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 29,
+      "address": "2525-2545 16th Street",
+      "neighborhood": "SoMa/Potrero",
+      "owner": "Prologis",
+      "yearBuiltClass": "1920; Renovated 2016 / Class B Office",
+      "buildingSF": "130,000 SF",
+      "stories": "2",
+      "spaceAvailable": "29,000 SF",
+      "rentalRate": "Negotiable",
+      "directSublease": "Direct",
+      "available_floors": [
+        {
+          "floor": "2",
+          "sqft": "14,500-29,000",
+          "rate": "Negotiable",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 30,
+      "address": "250 Brannan Street",
+      "neighborhood": "SoMa",
+      "owner": "Brookfield Properties",
+      "yearBuiltClass": "2000 / Class A Office",
+      "buildingSF": "195,762 SF",
+      "stories": "5",
+      "spaceAvailable": "15,238 SF",
+      "rentalRate": "Upper $60's IG",
+      "directSublease": "Direct",
+      "available_floors": [
+        {
+          "floor": "1",
+          "sqft": "15,238",
+          "rate": "Upper $60's IG",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 31,
+      "address": "123 Townsend Street",
+      "neighborhood": "SoMa",
+      "owner": "Brookfield Properties",
+      "yearBuiltClass": "2002 / Class A Office",
+      "buildingSF": "134,000 SF",
+      "stories": "4",
+      "spaceAvailable": "14,323 SF",
+      "rentalRate": "Negotiable",
+      "directSublease": "Sublease",
+      "available_floors": [
+        {
+          "floor": "4",
+          "sqft": "14,323",
+          "rate": "Negotiable",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Sublease",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 32,
+      "address": "301 Brannan Street",
+      "neighborhood": "SoMa",
+      "owner": "TMG Partners",
+      "yearBuiltClass": "2001 / Class A Office",
+      "buildingSF": "243,000 SF",
+      "stories": "5",
+      "spaceAvailable": "15,241 SF",
+      "rentalRate": "Negotiable",
+      "directSublease": "Direct",
+      "available_floors": [
+        {
+          "floor": "5",
+          "sqft": "15,241",
+          "rate": "Negotiable",
+          "term": "2-3 Years",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    },
+    {
+      "num": 33,
+      "address": "475 Brannan Street",
+      "neighborhood": "SoMa",
+      "owner": "Kilroy Realty Corporation",
+      "yearBuiltClass": "1910; Renovated 2016 / Class A Office",
+      "buildingSF": "143,000 SF",
+      "stories": "3",
+      "spaceAvailable": "26,175 SF",
+      "rentalRate": "Mid $40's",
+      "directSublease": "Direct",
+      "available_floors": [
+        {
+          "floor": "3 Suite 310",
+          "sqft": "12,083",
+          "rate": "Mid $40's",
+          "term": "Negotiable",
+          "availability": "May 2026",
+          "type": "Direct",
+          "tis": "Negotiable"
+        },
+        {
+          "floor": "3 Suite 316",
+          "sqft": "14,092",
+          "rate": "Mid $40's",
+          "term": "Negotiable",
+          "availability": "Immediate",
+          "type": "Direct",
+          "tis": "Negotiable"
+        }
+      ]
+    }
+  ],
+  "active_deals": [
+    {
+      "id": "DEAL-A",
+      "name": "250 Brannan (Deal)",
+      "address": "250 Brannan St",
+      "status": "Client Counter",
+      "dealType": "Sublease",
+      "premisesRSF": "16,000 RSF",
+      "suiteFloor": "Suite 3B, Partial 3rd Floor",
+      "baseRent": "$43.00/RSF/yr",
+      "rentBasis": "Modified Gross (net of janitorial)",
+      "escalation": "3% annually",
+      "leaseTerm": "63 months",
+      "commencement": "June 1, 2026 (est.)",
+      "expiration": "August 31, 2031",
+      "freeRent": "5 months",
+      "tiAllowance": "None (as-is with FF&E)",
+      "parking": "5 spots @ $437/mo (flat)",
+      "ffAndE": "Included, $1 buyout at expiry",
+      "netCashRent": "$3,565,414",
+      "slRentPSF": "$42.45/RSF/yr",
+      "monthlyPL": "$106,594",
+      "totalOccupancy": "$6,715,414",
+      "allInPSF": "$79.95/RSF/yr"
+    },
+    {
+      "id": "DEAL-B",
+      "name": "123 Townsend (Deal)",
+      "address": "123 Townsend St",
+      "status": "LL Counter",
+      "dealType": "Direct Lease",
+      "premisesRSF": "23,031 RSF",
+      "suiteFloor": "Suite 300, 3rd Floor",
+      "baseRent": "$67.00/RSF/yr",
+      "rentBasis": "Industrial Gross",
+      "escalation": "3% annually",
+      "leaseTerm": "60 months",
+      "commencement": "June 1, 2026 (rebased)",
+      "expiration": "May 31, 2031",
+      "freeRent": "4 months",
+      "phasedOccupancy": "50% for first 6 months",
+      "tiAllowance": "$20/RSF ($460,620)",
+      "parking": "TBD",
+      "ffAndE": "Included, return at expiry",
+      "netCashRent": "$7,088,837",
+      "slRentPSF": "$61.56/RSF/yr",
+      "monthlyPL": "$168,147",
+      "totalOccupancy": "$10,088,837",
+      "allInPSF": "$87.61/RSF/yr"
+    },
+    {
+      "id": "DEAL-C",
+      "name": "301 Brannan (Tour)",
+      "address": "301 Brannan St",
+      "status": "Tour Week of 3/16",
+      "dealType": "TBD",
+      "note": "All terms TBD pending tour"
+    },
+    {
+      "id": "DEAL-D",
+      "name": "475 Brannan (Tour)",
+      "address": "475 Brannan St",
+      "status": "Tour Week of 3/16",
+      "dealType": "TBD",
+      "note": "All terms TBD pending tour"
+    }
+  ],
+  "financial_models": {
+    "250_brannan_procore_counter": {
+      "label": "250 Brannan - Procore Counter #3 ($43/RSF, 5 Mo Free)",
+      "key_assumptions": {
+        "premises_rsf": 16000,
+        "lease_term_months": 63,
+        "commencement": "June 1, 2026",
+        "expiration": "August 31, 2031",
+        "base_rent_rsf_yr": "$43.00",
+        "rent_basis": "Modified Gross (net of janitorial)",
+        "annual_escalation": "3.0%",
+        "free_rent_months": 5,
+        "ti_allowance": "None (delivered as-is with existing FF&E)",
+        "security_deposit": "TBD",
+        "sublandlord": "Splunk Inc.",
+        "master_landlord": "Brannan Propco, LLC",
+        "ff_and_e": "$1 purchase option at term end"
+      },
+      "operational_expenses_monthly": {
+        "food_and_beverage": "$30,000 (catering, kitchen, snacks)",
+        "workplace_experience": "$10,000 (WPE headcount/staffing)",
+        "general_maintenance_security": "$10,000 (maintenance, security, misc)",
+        "total_monthly_opex": "$50,000",
+        "annual_opex": "$600,000"
+      },
+      "parking": {
+        "spots": 5,
+        "monthly_rate_per_spot": "$437",
+        "annual_escalation": "3.0%",
+        "monthly_parking_cost_yr1": "$2,185"
+      },
+      "calculated_metrics": {
+        "annual_base_rent_yr1": "$688,000",
+        "monthly_base_rent_yr1": "$57,333",
+        "free_rent_value": "$286,667"
+      },
+      "annual_all_in_occupancy": {
+        "2026": {
+          "rent": "$396,157",
+          "fb": "$160,000",
+          "wpe": "$70,000",
+          "maint": "$70,000",
+          "total": "$696,157",
+          "per_rsf": "$75"
+        },
+        "2027": {
+          "rent": "$679,126",
+          "fb": "$360,000",
+          "wpe": "$120,000",
+          "maint": "$120,000",
+          "total": "$1,279,126",
+          "per_rsf": "$80"
+        },
+        "2028": {
+          "rent": "$679,126",
+          "fb": "$360,000",
+          "wpe": "$120,000",
+          "maint": "$120,000",
+          "total": "$1,279,126",
+          "per_rsf": "$80"
+        },
+        "2029": {
+          "rent": "$679,126",
+          "fb": "$360,000",
+          "wpe": "$120,000",
+          "maint": "$120,000",
+          "total": "$1,279,126",
+          "per_rsf": "$80"
+        },
+        "2030": {
+          "rent": "$679,126",
+          "fb": "$360,000",
+          "wpe": "$120,000",
+          "maint": "$120,000",
+          "total": "$1,279,126",
+          "per_rsf": "$80"
+        },
+        "2031": {
+          "rent": "$452,751",
+          "fb": "$240,000",
+          "wpe": "$80,000",
+          "maint": "$80,000",
+          "total": "$852,751",
+          "per_rsf": "$80"
+        },
+        "total_lease": {
+          "rent": "$3,565,414",
+          "fb": "$1,840,000",
+          "wpe": "$630,000",
+          "maint": "$630,000",
+          "total": "$6,665,414",
+          "per_rsf": "$79"
+        }
+      },
+      "monthly_breakdown": {
+        "monthly_rent": "$56,594",
+        "monthly_opex_internal": "$50,000 (full year) / $42,857 (partial 2026)",
+        "total_monthly_pl": "$106,594"
+      },
+      "note": "The Monthly P&L of $106,594 IS the all-in number. It INCLUDES both rent ($56,594) AND Procore internal OpEx ($50,000). This is NOT lease-only. In 2026 (partial year, 7 months), OpEx is $42,857/mo so total monthly is $99,451."
+    },
+    "250_brannan_splunk_counter": {
+      "label": "250 Brannan - Splunk Counter ($49.50/RSF, 3 Mo Free)",
+      "key_assumptions": {
+        "base_rent_rsf_yr": "$49.50",
+        "free_rent_months": 3
+      },
+      "annual_all_in_occupancy": {
+        "2026": {
+          "total": "$770,708",
+          "per_rsf": "$83"
+        },
+        "2027": {
+          "total": "$1,406,928",
+          "per_rsf": "$88"
+        },
+        "total_lease": {
+          "total": "$7,336,372",
+          "per_rsf": "$87"
+        }
+      }
+    },
+    "123_townsend": {
+      "label": "123 Townsend Street (Direct Lease, $64/RSF)",
+      "key_assumptions": {
+        "premises_rsf": 23031,
+        "lease_term_months": 60,
+        "base_rent_rsf_yr": "$67.00 (counter) / $64.00 (model)",
+        "rent_basis": "Industrial Gross",
+        "free_rent_months": 4,
+        "ti_allowance": "$20/RSF ($460,620)",
+        "phased_occupancy": "50% for first 6 months"
+      },
+      "operational_expenses_monthly": {
+        "food_and_beverage": "$30,000",
+        "workplace_experience": "$10,000",
+        "general_maintenance_security": "$10,000",
+        "total_monthly_opex": "$50,000",
+        "annual_opex": "$600,000"
+      },
+      "annual_all_in_occupancy": {
+        "2026": {
+          "rent": "$1,024,803",
+          "fb": "$160,000",
+          "wpe": "$70,000",
+          "maint": "$70,000",
+          "total": "$1,324,803",
+          "per_rsf": "$77"
+        },
+        "2027": {
+          "rent": "$1,366,404",
+          "fb": "$360,000",
+          "wpe": "$120,000",
+          "maint": "$120,000",
+          "total": "$1,966,404",
+          "per_rsf": "$85"
+        },
+        "2028": {
+          "rent": "$1,366,404",
+          "fb": "$360,000",
+          "wpe": "$120,000",
+          "maint": "$120,000",
+          "total": "$1,966,404",
+          "per_rsf": "$85"
+        },
+        "2029": {
+          "rent": "$1,366,404",
+          "fb": "$360,000",
+          "wpe": "$120,000",
+          "maint": "$120,000",
+          "total": "$1,966,404",
+          "per_rsf": "$85"
+        },
+        "2030": {
+          "rent": "$1,366,404",
+          "fb": "$360,000",
+          "wpe": "$120,000",
+          "maint": "$120,000",
+          "total": "$1,966,404",
+          "per_rsf": "$85"
+        },
+        "2031": {
+          "rent": "$910,936",
+          "fb": "$240,000",
+          "wpe": "$80,000",
+          "maint": "$80,000",
+          "total": "$1,310,936",
+          "per_rsf": "$85"
+        },
+        "total_lease": {
+          "rent": "$7,401,355",
+          "fb": "$1,840,000",
+          "wpe": "$630,000",
+          "maint": "$630,000",
+          "total": "$10,501,355",
+          "per_rsf": "$84"
+        }
+      },
+      "monthly_breakdown": {
+        "monthly_rent": "$168,147 (straight-line basis)",
+        "monthly_opex_internal": "$50,000",
+        "total_monthly_pl": "~$218,147"
+      },
+      "note": "For 123 Townsend, the monthly rent straight-line is $168,147 and with OpEx ($50,000/mo) the all-in monthly P&L would be ~$218,147. The Townsend model follows the same OpEx structure as Brannan."
+    },
+    "deal_comparison": {
+      "savings_procore_counter_vs_townsend": {
+        "total": "$3,835,941",
+        "pct": "36.5%",
+        "by_year": {
+          "2026": "$628,646 (47.5%)",
+          "2027": "$687,278 (35.0%)",
+          "2028": "$687,278 (35.0%)",
+          "2029": "$687,278 (35.0%)",
+          "2030": "$687,278 (35.0%)",
+          "2031": "$458,185 (35.0%)"
+        }
+      },
+      "savings_procore_counter_vs_splunk_counter": {
+        "total": "$670,958",
+        "pct": "9.1%",
+        "by_year": {
+          "2026": "$74,551 (9.7%)",
+          "2027": "$127,802 (9.1%)"
+        }
+      },
+      "sources": "Splunk counter 3/10/26 | Savills recommendation (Denis Karas) | Townsend counter 3/5/26 | OpEx per Procore RE"
+    },
+    "key_deal_terms": {
+      "250_brannan": {
+        "structure": "Sublease from Splunk Inc. (Master LL consent required: Brannan Propco)",
+        "delivery": "May 15, 2026 (estimated), 2 weeks early access, no rent",
+        "ff_and_e": "Free during term, $1 Bill of Sale at expiration",
+        "rent_basis": "Modified Gross, net of janitor (includes pro-rata utilities, OpEx, taxes)",
+        "alterations": "Subject to LL + SLL approval, restoration for Subtenant improvements",
+        "assignment_sublease": "Subject to LL consent"
+      },
+      "123_townsend": {
+        "structure": "Direct Lease from Brookfield Properties",
+        "delivery": "TBD",
+        "ff_and_e": "Included, must return at expiry",
+        "rent_basis": "Industrial Gross",
+        "ti_treatment": "Taken as free rent credit ($20/RSF = $460,620)"
+      }
+    }
+  }
+}

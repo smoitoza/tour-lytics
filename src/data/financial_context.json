@@ -1,0 +1,131 @@
+{
+  "financial_models": {
+    "250_brannan_procore_counter": {
+      "label": "250 Brannan - Procore Counter #3 ($43/RSF, 5 Mo Free)",
+      "key_assumptions": {
+        "premises_rsf": 16000,
+        "lease_term_months": 63,
+        "commencement": "June 1, 2026",
+        "expiration": "August 31, 2031",
+        "base_rent_rsf_yr": "$43.00",
+        "rent_basis": "Modified Gross (net of janitorial)",
+        "annual_escalation": "3.0%",
+        "free_rent_months": 5,
+        "ti_allowance": "None (delivered as-is with existing FF&E)",
+        "security_deposit": "TBD",
+        "sublandlord": "Splunk Inc.",
+        "master_landlord": "Brannan Propco, LLC",
+        "ff_and_e": "$1 purchase option at term end"
+      },
+      "operational_expenses_monthly": {
+        "food_and_beverage": "$30,000 (catering, kitchen, snacks)",
+        "workplace_experience": "$10,000 (WPE headcount/staffing)",
+        "general_maintenance_security": "$10,000 (maintenance, security, misc)",
+        "total_monthly_opex": "$50,000",
+        "annual_opex": "$600,000"
+      },
+      "parking": {
+        "spots": 5,
+        "monthly_rate_per_spot": "$437",
+        "annual_escalation": "3.0%",
+        "monthly_parking_cost_yr1": "$2,185"
+      },
+      "calculated_metrics": {
+        "annual_base_rent_yr1": "$688,000",
+        "monthly_base_rent_yr1": "$57,333",
+        "free_rent_value": "$286,667"
+      },
+      "annual_all_in_occupancy": {
+        "2026": {"rent": "$396,157", "fb": "$160,000", "wpe": "$70,000", "maint": "$70,000", "total": "$696,157", "per_rsf": "$75"},
+        "2027": {"rent": "$679,126", "fb": "$360,000", "wpe": "$120,000", "maint": "$120,000", "total": "$1,279,126", "per_rsf": "$80"},
+        "2028": {"rent": "$679,126", "fb": "$360,000", "wpe": "$120,000", "maint": "$120,000", "total": "$1,279,126", "per_rsf": "$80"},
+        "2029": {"rent": "$679,126", "fb": "$360,000", "wpe": "$120,000", "maint": "$120,000", "total": "$1,279,126", "per_rsf": "$80"},
+        "2030": {"rent": "$679,126", "fb": "$360,000", "wpe": "$120,000", "maint": "$120,000", "total": "$1,279,126", "per_rsf": "$80"},
+        "2031": {"rent": "$452,751", "fb": "$240,000", "wpe": "$80,000", "maint": "$80,000", "total": "$852,751", "per_rsf": "$80"},
+        "total_lease": {"rent": "$3,565,414", "fb": "$1,840,000", "wpe": "$630,000", "maint": "$630,000", "total": "$6,665,414", "per_rsf": "$79"}
+      },
+      "monthly_breakdown": {
+        "monthly_rent": "$56,594",
+        "monthly_opex_internal": "$50,000 (full year) / $42,857 (partial 2026)",
+        "total_monthly_pl": "$106,594"
+      },
+      "note": "The Monthly P&L of $106,594 IS the all-in number. It INCLUDES both rent ($56,594) AND Procore internal OpEx ($50,000). This is NOT lease-only. In 2026 (partial year, 7 months), OpEx is $42,857/mo so total monthly is $99,451."
+    },
+    "250_brannan_splunk_counter": {
+      "label": "250 Brannan - Splunk Counter ($49.50/RSF, 3 Mo Free)",
+      "key_assumptions": {
+        "base_rent_rsf_yr": "$49.50",
+        "free_rent_months": 3
+      },
+      "annual_all_in_occupancy": {
+        "2026": {"total": "$770,708", "per_rsf": "$83"},
+        "2027": {"total": "$1,406,928", "per_rsf": "$88"},
+        "total_lease": {"total": "$7,336,372", "per_rsf": "$87"}
+      }
+    },
+    "123_townsend": {
+      "label": "123 Townsend Street (Direct Lease, $64/RSF)",
+      "key_assumptions": {
+        "premises_rsf": 23031,
+        "lease_term_months": 60,
+        "base_rent_rsf_yr": "$67.00 (counter) / $64.00 (model)",
+        "rent_basis": "Industrial Gross",
+        "free_rent_months": 4,
+        "ti_allowance": "$20/RSF ($460,620)",
+        "phased_occupancy": "50% for first 6 months"
+      },
+      "operational_expenses_monthly": {
+        "food_and_beverage": "$30,000",
+        "workplace_experience": "$10,000",
+        "general_maintenance_security": "$10,000",
+        "total_monthly_opex": "$50,000",
+        "annual_opex": "$600,000"
+      },
+      "annual_all_in_occupancy": {
+        "2026": {"rent": "$1,024,803", "fb": "$160,000", "wpe": "$70,000", "maint": "$70,000", "total": "$1,324,803", "per_rsf": "$77"},
+        "2027": {"rent": "$1,366,404", "fb": "$360,000", "wpe": "$120,000", "maint": "$120,000", "total": "$1,966,404", "per_rsf": "$85"},
+        "2028": {"rent": "$1,366,404", "fb": "$360,000", "wpe": "$120,000", "maint": "$120,000", "total": "$1,966,404", "per_rsf": "$85"},
+        "2029": {"rent": "$1,366,404", "fb": "$360,000", "wpe": "$120,000", "maint": "$120,000", "total": "$1,966,404", "per_rsf": "$85"},
+        "2030": {"rent": "$1,366,404", "fb": "$360,000", "wpe": "$120,000", "maint": "$120,000", "total": "$1,966,404", "per_rsf": "$85"},
+        "2031": {"rent": "$910,936", "fb": "$240,000", "wpe": "$80,000", "maint": "$80,000", "total": "$1,310,936", "per_rsf": "$85"},
+        "total_lease": {"rent": "$7,401,355", "fb": "$1,840,000", "wpe": "$630,000", "maint": "$630,000", "total": "$10,501,355", "per_rsf": "$84"}
+      },
+      "monthly_breakdown": {
+        "monthly_rent": "$168,147 (straight-line basis)",
+        "monthly_opex_internal": "$50,000",
+        "total_monthly_pl": "~$218,147"
+      },
+      "note": "For 123 Townsend, the monthly rent straight-line is $168,147 and with OpEx ($50,000/mo) the all-in monthly P&L would be ~$218,147. The Townsend model follows the same OpEx structure as Brannan."
+    },
+    "deal_comparison": {
+      "savings_procore_counter_vs_townsend": {
+        "total": "$3,835,941",
+        "pct": "36.5%",
+        "by_year": {"2026": "$628,646 (47.5%)", "2027": "$687,278 (35.0%)", "2028": "$687,278 (35.0%)", "2029": "$687,278 (35.0%)", "2030": "$687,278 (35.0%)", "2031": "$458,185 (35.0%)"}
+      },
+      "savings_procore_counter_vs_splunk_counter": {
+        "total": "$670,958",
+        "pct": "9.1%",
+        "by_year": {"2026": "$74,551 (9.7%)", "2027": "$127,802 (9.1%)"}
+      },
+      "sources": "Splunk counter 3/10/26 | Savills recommendation (Denis Karas) | Townsend counter 3/5/26 | OpEx per Procore RE"
+    },
+    "key_deal_terms": {
+      "250_brannan": {
+        "structure": "Sublease from Splunk Inc. (Master LL consent required: Brannan Propco)",
+        "delivery": "May 15, 2026 (estimated), 2 weeks early access, no rent",
+        "ff_and_e": "Free during term, $1 Bill of Sale at expiration",
+        "rent_basis": "Modified Gross, net of janitor (includes pro-rata utilities, OpEx, taxes)",
+        "alterations": "Subject to LL + SLL approval, restoration for Subtenant improvements",
+        "assignment_sublease": "Subject to LL consent"
+      },
+      "123_townsend": {
+        "structure": "Direct Lease from Brookfield Properties",
+        "delivery": "TBD",
+        "ff_and_e": "Included, must return at expiry",
+        "rent_basis": "Industrial Gross",
+        "ti_treatment": "Taken as free rent credit ($20/RSF = $460,620)"
+      }
+    }
+  }
+}
