@@ -186,7 +186,8 @@ export default function LandingPage() {
             <Link href="/investors" className="text-sm font-medium text-[#9ca3af] hover:text-white transition-colors no-underline">Investors</Link>
             <Link
               href="/login"
-              className="bg-[#2563eb] text-white px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-[#1d4ed8] transition-all hover:-translate-y-px hover:shadow-[0_8px_24px_rgba(37,99,235,0.35)] no-underline"
+              className="text-white px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-[#1d4ed8] transition-all hover:-translate-y-px hover:shadow-[0_8px_24px_rgba(37,99,235,0.35)] no-underline"
+              style={{ backgroundColor: '#2563eb', color: '#ffffff', position: 'relative', zIndex: 10 }}
             >
               Sign In
             </Link>
@@ -227,7 +228,7 @@ export default function LandingPage() {
       </nav>
 
       {/* ── HERO ── */}
-      <section className="pt-[180px] pb-24 bg-[#0f172a] relative overflow-hidden">
+      <section className="pt-[220px] pb-24 bg-[#0f172a] relative overflow-hidden">
         {/* Grid overlay */}
         <div
           className="absolute inset-0 pointer-events-none"
@@ -247,7 +248,7 @@ export default function LandingPage() {
 
         <div className="relative z-10 text-center" style={{ maxWidth: '1000px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 bg-white/[0.06] border border-white/[0.1] px-5 py-2 rounded-full text-xs text-[#9ca3af] uppercase tracking-[0.15em] font-medium mb-12">
+          <div className="inline-flex items-center gap-2 bg-white/[0.06] border border-white/[0.1] px-5 py-2 rounded-full text-xs text-[#9ca3af] uppercase tracking-[0.15em] font-medium mb-14">
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
             Now in Private Beta
           </div>
@@ -268,7 +269,8 @@ export default function LandingPage() {
           <div className="flex gap-4 justify-center flex-wrap mb-20">
             <Link
               href="/login"
-              className="inline-flex items-center gap-2 bg-[#2563eb] text-white px-8 py-4 rounded-lg font-semibold text-base hover:bg-[#1d4ed8] transition-all hover:-translate-y-px hover:shadow-[0_12px_32px_rgba(37,99,235,0.35)] no-underline"
+              className="inline-flex items-center gap-2 rounded-lg font-semibold text-base transition-all hover:-translate-y-px no-underline"
+              style={{ backgroundColor: '#2563eb', color: '#ffffff', padding: '16px 32px', boxShadow: '0 4px 16px rgba(37,99,235,0.3)' }}
             >
               Request Demo
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -277,7 +279,8 @@ export default function LandingPage() {
             </Link>
             <a
               href="#demo"
-              className="inline-flex items-center gap-2 bg-transparent text-white px-8 py-4 border border-white/20 rounded-lg font-medium text-base hover:bg-white/[0.06] hover:border-white/30 transition-all no-underline"
+              className="inline-flex items-center gap-2 rounded-lg font-medium text-base transition-all no-underline"
+              style={{ backgroundColor: 'transparent', color: '#ffffff', padding: '16px 32px', border: '1px solid rgba(255,255,255,0.2)' }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polygon points="5 3 19 12 5 21 5 3" />
