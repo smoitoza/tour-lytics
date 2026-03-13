@@ -171,7 +171,7 @@ export default function LandingPage() {
             : 'bg-transparent'
         }`}
       >
-        <div className="max-w-[1280px] mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="py-4 flex items-center justify-between" style={{ maxWidth: '1280px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
           <Link href="/" className="flex items-center gap-3 no-underline text-white">
             <Logo size={32} className="text-white" />
             <span className="font-bold text-lg tracking-tight" style={{ fontFamily: 'var(--font-display)' }}>
@@ -245,7 +245,7 @@ export default function LandingPage() {
           }}
         />
 
-        <div className="relative z-10 max-w-[1000px] mx-auto px-6 text-center">
+        <div className="relative z-10 text-center" style={{ maxWidth: '1000px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
           {/* Badge */}
           <div className="inline-flex items-center gap-2 bg-white/[0.06] border border-white/[0.1] px-5 py-2 rounded-full text-xs text-[#9ca3af] uppercase tracking-[0.15em] font-medium mb-10">
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
@@ -307,7 +307,7 @@ export default function LandingPage() {
 
       {/* ── LIVE DEMO ── */}
       <section id="demo" className="py-24 bg-[#f9fafb]">
-        <div className="max-w-[1280px] mx-auto px-6">
+        <div style={{ maxWidth: '1280px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
           <div className="text-center mb-12">
             <span className="inline-block text-xs font-semibold text-[#2563eb] uppercase tracking-[0.15em] mb-4">
               Live Demo
@@ -322,7 +322,7 @@ export default function LandingPage() {
           </div>
 
           {/* Browser frame with actual app screenshot */}
-          <div className="rounded-2xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.15)] border border-[#e5e7eb] bg-white max-w-[1100px] mx-auto">
+          <div className="rounded-2xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.15)] border border-[#e5e7eb] bg-white" style={{ maxWidth: '1100px', margin: '0 auto' }}>
             {/* Chrome bar */}
             <div className="flex items-center gap-2 px-5 py-3 bg-[#f3f4f6] border-b border-[#e5e7eb]">
               <span className="w-3 h-3 rounded-full bg-[#ef4444]" />
@@ -350,7 +350,7 @@ export default function LandingPage() {
 
       {/* ── THE PROBLEM ── */}
       <section id="problem" className="py-24 bg-white">
-        <div className="max-w-[1100px] mx-auto px-6">
+        <div style={{ maxWidth: '1100px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
           <span className="inline-block text-xs font-semibold text-[#2563eb] uppercase tracking-[0.15em] mb-4">
             The Problem
           </span>
@@ -418,7 +418,7 @@ export default function LandingPage() {
 
       {/* ── PAIN POINT QUOTE ── */}
       <section className="py-20 bg-[#f9fafb]">
-        <div className="max-w-[800px] mx-auto px-6 text-center">
+        <div className="text-center" style={{ maxWidth: '800px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" className="mx-auto mb-8 text-[#2563eb]/20">
             <path d="M10 8c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2h2l-2 4h2l2-4V8h-4zm8 0c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2h2l-2 4h2l2-4V8h-4z" fill="currentColor" />
           </svg>
@@ -433,7 +433,7 @@ export default function LandingPage() {
 
       {/* ── FEATURES ── */}
       <section id="features" className="py-24 bg-white">
-        <div className="max-w-[1280px] mx-auto px-6">
+        <div style={{ maxWidth: '1280px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
           <div className="text-center mb-16">
             <span className="inline-block text-xs font-semibold text-[#2563eb] uppercase tracking-[0.15em] mb-4">
               Platform
@@ -472,7 +472,7 @@ export default function LandingPage() {
 
       {/* ── HOW IT WORKS ── */}
       <section id="how" className="py-24 bg-[#f9fafb]">
-        <div className="max-w-[1100px] mx-auto px-6">
+        <div style={{ maxWidth: '1100px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
           <div className="text-center mb-16">
             <span className="inline-block text-xs font-semibold text-[#2563eb] uppercase tracking-[0.15em] mb-4">
               How It Works
@@ -503,7 +503,7 @@ export default function LandingPage() {
             background: 'radial-gradient(ellipse 60% 50% at 50% 50%, rgba(37,99,235,0.12) 0%, transparent 70%)',
           }}
         />
-        <div className="relative z-10 max-w-[600px] mx-auto px-6 text-center">
+        <div className="relative z-10 text-center" style={{ maxWidth: '600px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
           <h2 className="text-[clamp(1.75rem,1.2rem+2vw,3rem)] font-bold text-white tracking-tight mb-6" style={{ fontFamily: 'var(--font-display)' }}>
             Ready to see your data on a map?
           </h2>
@@ -528,7 +528,7 @@ export default function LandingPage() {
 
       {/* ── FOOTER ── */}
       <footer className="py-8 bg-[#0f172a] border-t border-white/[0.05]">
-        <div className="max-w-[1280px] mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4" style={{ maxWidth: '1280px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
           <div className="flex items-center gap-3">
             <Logo size={24} className="text-[#6b7280]" />
             <span className="text-sm text-[#6b7280]">&copy; 2026 Tour-Lytics. All rights reserved.</span>
