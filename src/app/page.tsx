@@ -289,16 +289,15 @@ export default function LandingPage() {
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 pt-12 border-t border-white/[0.08]">
             {[
-              { value: 33, label: 'Buildings Mapped', prefix: '', suffix: '' },
-              { value: 4, label: 'Shortlisted', prefix: '', suffix: '' },
-              { value: 3.8, label: 'Total Lease Value Analyzed', prefix: '$', suffix: 'M' },
-              { value: 129, label: 'PDF Pages Parsed', prefix: '', suffix: '' },
+              { display: '33', label: 'Buildings Mapped' },
+              { display: '4', label: 'Shortlisted' },
+              { display: '$3.8M', label: 'Total Lease Value Analyzed' },
+              { display: '129', label: 'PDF Pages Parsed' },
             ].map((s) => (
               <div key={s.label} className="text-center">
-                <Counter end={s.value === 3.8 ? 38 : s.value} prefix={s.prefix} suffix={s.value === 3.8 ? '' : s.suffix} />
-                {s.value === 3.8 && (
-                  <span className="text-[clamp(2rem,1.5rem+2vw,3.5rem)] font-extrabold text-white" style={{ fontFamily: 'var(--font-display)' }}>.8M</span>
-                )}
+                <div className="text-[clamp(2rem,1.5rem+2vw,3.5rem)] font-extrabold text-white" style={{ fontFamily: 'var(--font-display)' }}>
+                  {s.display}
+                </div>
                 <div className="text-xs text-[#6b7280] mt-2 uppercase tracking-wider font-medium">{s.label}</div>
               </div>
             ))}
