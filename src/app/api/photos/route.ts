@@ -52,32 +52,20 @@ export async function POST(req: Request) {
       )
     }
 
-    // Convert HEIC/HEIF to JPEG, and resize large images
+    // HEIC files are converted to JPEG client-side before upload.
+    // Server-side: just resize large images if possible.
     const arrayBuffer = await file.arrayBuffer()
     let buffer: Uint8Array
-    let contentType = file.type || 'image/jpeg'
-    let finalExt = (file.name.split('.').pop() || 'jpg').toLowerCase()
-    const isHEIC = finalExt === 'heic' || finalExt === 'heif' || contentType === 'image/heic' || contentType === 'image/heif'
+    const contentType = file.type || 'image/jpeg'
 
-    if (isHEIC) {
-      // Convert HEIC to JPEG using sharp
-      const jpegBuffer = await sharp(Buffer.from(arrayBuffer))
-        .jpeg({ quality: 85 })
+    try {
+      const resized = await sharp(Buffer.from(arrayBuffer))
         .resize({ width: 2400, height: 2400, fit: 'inside', withoutEnlargement: true })
         .toBuffer()
-      buffer = new Uint8Array(jpegBuffer)
-      contentType = 'image/jpeg'
-      finalExt = 'jpg'
-    } else {
-      // Resize if very large, otherwise pass through
-      try {
-        const resized = await sharp(Buffer.from(arrayBuffer))
-          .resize({ width: 2400, height: 2400, fit: 'inside', withoutEnlargement: true })
-          .toBuffer()
-        buffer = new Uint8Array(resized)
-      } catch {
-        buffer = new Uint8Array(arrayBuffer)
-      }
+      buffer = new Uint8Array(resized)
+    } catch {
+      // If sharp fails (unsupported format, etc.), pass through the original
+      buffer = new Uint8Array(arrayBuffer)
     }
 
     // Generate unique file path

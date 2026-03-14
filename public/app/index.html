@@ -3435,6 +3435,7 @@ body {
 
 <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/heic-to@1.2.2/dist/iife/heic-to.js"></script>
 <script>
 // Storage abstraction for sandboxed environments
 var _storeMem = {};
@@ -6618,8 +6619,25 @@ async function submitPhotoUpload() {
     statusEl.textContent = 'Uploading ' + file.name + '...';
 
     try {
+      // Convert HEIC/HEIF to JPEG in the browser before uploading
+      var fileToUpload = file;
+      var isHeic = file.name.match(/\.(heic|heif)$/i);
+      if (isHeic && typeof HeicTo !== 'undefined') {
+        try {
+          if (itemStatus) { itemStatus.textContent = 'Converting HEIC...'; }
+          statusEl.textContent = 'Converting ' + file.name + ' from HEIC...';
+          var jpegBlob = await HeicTo({ blob: file, type: 'image/jpeg', quality: 0.85 });
+          var convertedName = file.name.replace(/\.(heic|heif)$/i, '.jpg');
+          fileToUpload = new File([jpegBlob], convertedName, { type: 'image/jpeg' });
+          if (itemStatus) { itemStatus.textContent = 'Uploading...'; }
+        } catch(convErr) {
+          console.error('HEIC conversion failed for ' + file.name + ':', convErr);
+          throw new Error('HEIC conversion failed: ' + convErr.message);
+        }
+      }
+
       var formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', fileToUpload);
       formData.append('projectId', 'sf-office-search');
       formData.append('buildingType', modal._buildingType);
       formData.append('buildingId', String(modal._buildingId));
