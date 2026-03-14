@@ -166,6 +166,8 @@ export default function DashboardPage() {
   const [newPersona, setNewPersona] = useState('touree')
   const [addingMember, setAddingMember] = useState(false)
   const [addError, setAddError] = useState<string | null>(null)
+  const [inviteSent, setInviteSent] = useState<string | null>(null)
+  const [copiedLink, setCopiedLink] = useState<string | null>(null)
 
   /* ---- Combined scores state ---- */
   const [scores, setScores] = useState<Array<{
@@ -256,7 +258,10 @@ export default function DashboardPage() {
         setAddError(err.error || 'Failed to add member.')
       } else {
         const added = await res.json()
-        setTeamMembers((prev) => [...prev, added.member || added || { email: newEmail.trim(), display_name: newDisplayName.trim(), persona: newPersona }])
+        const addedMember = added.member || added || { email: newEmail.trim(), display_name: newDisplayName.trim(), persona: newPersona }
+        setTeamMembers((prev) => [...prev, addedMember])
+        // Auto-open invite email
+        handleSendInvite(newEmail.trim(), newDisplayName.trim(), newPersona)
         setNewEmail('')
         setNewDisplayName('')
         setNewPersona('touree')
@@ -277,6 +282,44 @@ export default function DashboardPage() {
       setTeamMembers((prev) => prev.filter((m) => m.email !== email))
     } catch {
       /* silently ignore */
+    }
+  }
+
+  const getSignupUrl = () => 'https://tour-lytics.com/login'
+  const getProjectUrl = () => 'https://tour-lytics.com/project/sf-office-search'
+
+  const buildInviteEmail = (email: string, displayName: string, persona: string) => {
+    const firstName = displayName ? displayName.split(' ')[0] : ''
+    const greeting = firstName ? `Hi ${firstName},` : 'Hi,'
+    const roleName = persona === 'broker' ? 'broker' : 'tour reviewer'
+    const subject = encodeURIComponent('You\'re invited to Tour-Lytics - SF Office Search')
+    const body = encodeURIComponent(
+      `${greeting}\n\n` +
+      `You've been added as a ${roleName} on our San Francisco Office Search project in Tour-Lytics.\n\n` +
+      `To get started:\n` +
+      `1. Create your account: ${getSignupUrl()}\n` +
+      `2. Sign in with this email (${email})\n` +
+      `3. You'll see the project dashboard with all 33 buildings to review\n\n` +
+      `Once you're in, head to the Tour Book to score each building we visit. Your scores will be combined with the rest of the team's so we can compare locations side by side.\n\n` +
+      `Let me know if you have any questions.\n\n` +
+      `Best,\nScott`
+    )
+    return `mailto:${email}?subject=${subject}&body=${body}`
+  }
+
+  const handleSendInvite = (email: string, displayName: string, persona: string) => {
+    window.open(buildInviteEmail(email, displayName, persona), '_blank')
+    setInviteSent(email)
+    setTimeout(() => setInviteSent(null), 3000)
+  }
+
+  const handleCopyLink = async (email: string) => {
+    try {
+      await navigator.clipboard.writeText(`${getSignupUrl()}\n\nSign up with ${email} to access the SF Office Search project on Tour-Lytics.`)
+      setCopiedLink(email)
+      setTimeout(() => setCopiedLink(null), 2000)
+    } catch {
+      /* fallback: select text */
     }
   }
 
@@ -337,6 +380,7 @@ export default function DashboardPage() {
         .team-select:focus { outline: none; border-color: #2563eb !important; box-shadow: 0 0 0 3px rgba(37,99,235,0.08); }
         .remove-btn:hover { background: rgba(220,38,38,0.08) !important; color: #dc2626 !important; border-color: rgba(220,38,38,0.2) !important; }
         .details-btn:hover { background: rgba(37,99,235,0.08) !important; color: #2563eb !important; border-color: rgba(37,99,235,0.2) !important; }
+        .invite-btn:hover { opacity: 0.85; }
       `}</style>
 
       {/* -- Top bar -- */}
@@ -674,7 +718,7 @@ export default function DashboardPage() {
                   {/* Header row */}
                   <div style={{
                     display: 'grid',
-                    gridTemplateColumns: '1fr 1fr auto auto',
+                    gridTemplateColumns: '1fr 1fr auto auto auto',
                     gap: '0.75rem',
                     padding: '0.625rem 1.25rem',
                     background: '#f8fafc',
@@ -684,6 +728,7 @@ export default function DashboardPage() {
                     <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Email</div>
                     <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Display Name</div>
                     <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Role</div>
+                    <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Invite</div>
                     <div style={{ width: '1.75rem' }} />
                   </div>
 
@@ -695,7 +740,7 @@ export default function DashboardPage() {
                         key={member.email}
                         style={{
                           display: 'grid',
-                          gridTemplateColumns: '1fr 1fr auto auto',
+                          gridTemplateColumns: '1fr 1fr auto auto auto',
                           gap: '0.75rem',
                           padding: '0.875rem 1.25rem',
                           borderBottom: i < teamMembers.length - 1 ? '1px solid #f1f5f9' : 'none',
@@ -728,6 +773,75 @@ export default function DashboardPage() {
                         }}>
                           {member.persona}
                         </span>
+                        {/* Invite actions */}
+                        <div style={{ display: 'flex', gap: '0.375rem', alignItems: 'center' }}>
+                          {!isOwner ? (
+                            <>
+                              <button
+                                className="invite-btn"
+                                onClick={() => handleSendInvite(member.email, member.display_name, member.persona)}
+                                title={`Email invite to ${member.email}`}
+                                style={{
+                                  padding: '0.3125rem 0.625rem',
+                                  fontSize: '0.6875rem',
+                                  fontWeight: 600,
+                                  color: inviteSent === member.email ? '#16a34a' : '#2563eb',
+                                  background: inviteSent === member.email ? 'rgba(22,163,74,0.08)' : 'rgba(37,99,235,0.06)',
+                                  border: inviteSent === member.email ? '1px solid rgba(22,163,74,0.2)' : '1px solid rgba(37,99,235,0.15)',
+                                  borderRadius: '0.375rem',
+                                  cursor: 'pointer',
+                                  fontFamily: 'inherit',
+                                  transition: 'all 0.15s',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                                  <polyline points="22,6 12,13 2,6" />
+                                </svg>
+                                {inviteSent === member.email ? 'Sent' : 'Email'}
+                              </button>
+                              <button
+                                className="invite-btn"
+                                onClick={() => handleCopyLink(member.email)}
+                                title="Copy signup link"
+                                style={{
+                                  padding: '0.3125rem 0.625rem',
+                                  fontSize: '0.6875rem',
+                                  fontWeight: 600,
+                                  color: copiedLink === member.email ? '#16a34a' : '#64748b',
+                                  background: copiedLink === member.email ? 'rgba(22,163,74,0.08)' : '#f8fafc',
+                                  border: copiedLink === member.email ? '1px solid rgba(22,163,74,0.2)' : '1px solid #e2e8f0',
+                                  borderRadius: '0.375rem',
+                                  cursor: 'pointer',
+                                  fontFamily: 'inherit',
+                                  transition: 'all 0.15s',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  {copiedLink === member.email ? (
+                                    <polyline points="20 6 9 17 4 12" />
+                                  ) : (
+                                    <>
+                                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                      <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                                    </>
+                                  )}
+                                </svg>
+                                {copiedLink === member.email ? 'Copied' : 'Link'}
+                              </button>
+                            </>
+                          ) : (
+                            <span style={{ fontSize: '0.6875rem', color: '#cbd5e1' }}>&mdash;</span>
+                          )}
+                        </div>
                         <div style={{ width: '1.75rem', display: 'flex', justifyContent: 'center' }}>
                           {!isOwner && (
                             <button
@@ -1276,6 +1390,9 @@ export default function DashboardPage() {
             grid-template-columns: 1fr !important;
           }
           [style*="grid-template-columns: 1fr 1fr auto auto"] {
+            grid-template-columns: 1fr !important;
+          }
+          [style*="grid-template-columns: 1fr 1fr auto auto auto"] {
             grid-template-columns: 1fr !important;
           }
         }
