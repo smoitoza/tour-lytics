@@ -603,12 +603,13 @@ body {
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-tooltip);
   border: 1px solid var(--color-border);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .building-popup-wrapper .leaflet-popup-content {
   margin: 0;
   min-width: 300px;
+  overflow: visible !important;
 }
 
 .building-popup-wrapper .leaflet-popup-content .tooltip-inner {
@@ -925,13 +926,14 @@ body {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
   border: 1px solid var(--color-border);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .survey-popup-wrapper .leaflet-popup-content {
   margin: 0;
   min-width: 260px;
   max-width: 320px;
+  overflow: visible !important;
 }
 
 .survey-popup-wrapper .leaflet-popup-close-button {
@@ -956,6 +958,7 @@ body {
 .survey-tooltip {
   background: var(--color-surface);
   font-family: var(--font-body);
+  border-radius: var(--radius-lg);
 }
 
 .survey-tooltip-bar {
