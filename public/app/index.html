@@ -603,13 +603,12 @@ body {
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-tooltip);
   border: 1px solid var(--color-border);
-  overflow: visible;
+  overflow: hidden;
 }
 
 .building-popup-wrapper .leaflet-popup-content {
   margin: 0;
   min-width: 300px;
-  overflow: visible !important;
 }
 
 .building-popup-wrapper .leaflet-popup-content .tooltip-inner {
@@ -926,14 +925,13 @@ body {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
   border: 1px solid var(--color-border);
-  overflow: visible;
+  overflow: hidden;
 }
 
 .survey-popup-wrapper .leaflet-popup-content {
   margin: 0;
   min-width: 260px;
   max-width: 320px;
-  overflow: visible !important;
 }
 
 .survey-popup-wrapper .leaflet-popup-close-button {
@@ -958,7 +956,6 @@ body {
 .survey-tooltip {
   background: var(--color-surface);
   font-family: var(--font-body);
-  border-radius: var(--radius-lg);
 }
 
 .survey-tooltip-bar {
@@ -5124,6 +5121,12 @@ map.on('popupopen', function(e) {
   setTimeout(refreshAllTooltipButtons, 50);
 });
 
+// --- Role & Centralized Tour List (must be before initTourList) ---
+var ADMIN_EMAIL = 'samoitoza@gmail.com';
+var _userRole = null; // 'admin', 'broker', 'touree', or null
+var _centralTourList = null; // fetched from server
+var _centralTourListLoaded = false;
+
 // Initialize on load -- fetch centralized tour list if logged in
 (async function initTourList() {
   var email = getCurrentUserEmail();
@@ -5556,11 +5559,7 @@ function getCurrentUserEmail() {
   } catch(e) { return ''; }
 }
 
-// --- Role & Centralized Tour List ---
-var ADMIN_EMAIL = 'samoitoza@gmail.com';
-var _userRole = null; // 'admin', 'broker', 'touree', or null
-var _centralTourList = null; // fetched from server
-var _centralTourListLoaded = false;
+// (ADMIN_EMAIL, _userRole, _centralTourList, _centralTourListLoaded moved above initTourList)
 
 function isAdmin() {
   return getCurrentUserEmail().toLowerCase() === ADMIN_EMAIL;
