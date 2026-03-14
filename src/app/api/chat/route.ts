@@ -1,7 +1,50 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 import buildingContext from '@/data/building_context.json'
 import financialContext from '@/data/financial_context.json'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
+// Fetch photo descriptions for chatbot context
+async function getPhotoContext(): Promise<string> {
+  try {
+    const { data, error } = await supabase
+      .from('building_photos')
+      .select('building_name, building_address, area_tag, ai_description, ai_tags, ai_area_suggestion, uploaded_by, created_at')
+      .eq('project_id', 'sf-office-search')
+      .not('ai_description', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(100)
+
+    if (error || !data || data.length === 0) return ''
+
+    // Group by building
+    const byBuilding: Record<string, typeof data> = {}
+    data.forEach(p => {
+      const key = p.building_name
+      if (!byBuilding[key]) byBuilding[key] = []
+      byBuilding[key].push(p)
+    })
+
+    let context = '\n\nTOUR PHOTOS (AI-analyzed photos taken during building tours):\n'
+    for (const [building, photos] of Object.entries(byBuilding)) {
+      context += `\n${building}:\n`
+      photos.forEach(p => {
+        const area = p.ai_area_suggestion || p.area_tag || 'general'
+        const tags = p.ai_tags?.join(', ') || ''
+        context += `  - [${area}] ${p.ai_description}${tags ? ' (tags: ' + tags + ')' : ''} (by ${p.uploaded_by})\n`
+      })
+    }
+    return context
+  } catch (e) {
+    console.error('Failed to fetch photo context:', e)
+    return ''
+  }
+}
 
 // Initialize client inside handler to pick up env vars after redeploy
 function getClient() {
@@ -282,7 +325,21 @@ GUIDELINES:
 - Do not use em dashes in your responses. Use commas, periods, or semicolons instead.
 - Be conversational and professional, like a sharp real estate analyst.
 - Keep responses focused. Don't dump all data unless asked for a full comparison.
-- When asked about costs, always distinguish between lease-only P&L and all-in occupancy cost (which includes OpEx).`
+- When asked about costs, always distinguish between lease-only P&L and all-in occupancy cost (which includes OpEx).
+
+TOUR PHOTOS CAPABILITY:
+Team members can upload photos during building tours. Each photo is analyzed by AI (Gemini Vision) which provides:
+- A description of what's in the photo (finishes, natural light, condition, etc.)
+- Area tags (lobby, kitchen, open floor, etc.)
+- Feature tags (natural_light, modern_finishes, high_ceilings, etc.)
+
+When a user asks about photos, what spaces looked like, or visual aspects of buildings, reference the TOUR PHOTOS data. You can answer questions like:
+- "What did the lobby look like at 250 Brannan?"
+- "Which buildings had the best natural light?"
+- "Compare the kitchens across our tour list"
+- "What condition was the flooring at 301 Brannan?"
+
+If no photos have been uploaded yet for a building, let the user know photos haven't been added yet.`
 
 // In-memory conversation store
 const conversations = new Map<string, Array<{ role: string; content: string | Anthropic.ContentBlockParam[] }>>()
@@ -342,6 +399,10 @@ export async function POST(request: NextRequest) {
       history = history.slice(-MAX_HISTORY)
     }
 
+    // Fetch photo context for RAG
+    const photoContext = await getPhotoContext()
+    const systemPromptWithPhotos = SYSTEM_PROMPT + photoContext
+
     // Stream response with tool use support
     const encoder = new TextEncoder()
     const stream = new ReadableStream({
@@ -362,7 +423,7 @@ export async function POST(request: NextRequest) {
             const response = await getClient().messages.create({
               model: 'claude-sonnet-4-20250514',
               max_tokens: 1024,
-              system: SYSTEM_PROMPT,
+              system: systemPromptWithPhotos,
               tools: TOOLS,
               messages: apiMessages,
             })
