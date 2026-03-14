@@ -187,3 +187,4 @@ Respond in this exact JSON format:
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 }
+// SDK migration: @google/genai v1.45+
