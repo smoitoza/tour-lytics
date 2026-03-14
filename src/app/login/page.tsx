@@ -23,7 +23,7 @@ export default function LoginPage() {
     const supabase = createClient()
 
     if (isSignUp) {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -32,8 +32,16 @@ export default function LoginPage() {
       })
       if (error) {
         setError(error.message)
-      } else {
-        setMessage('Check your email for a confirmation link.')
+      } else if (data?.user) {
+        // Email verification is disabled, so sign them in directly
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+        if (signInError) {
+          setMessage('Account created. Please sign in with your credentials.')
+          setIsSignUp(false)
+        } else {
+          router.push('/dashboard')
+          router.refresh()
+        }
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({

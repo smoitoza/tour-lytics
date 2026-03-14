@@ -243,25 +243,26 @@ export default function DashboardPage() {
     setAddingMember(true)
     setAddError(null)
     try {
-      const res = await fetch('/api/team', {
+      const res = await fetch('/api/team/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           projectId: 'sf-office-search',
           email: newEmail.trim(),
-          display_name: newDisplayName.trim(),
+          displayName: newDisplayName.trim(),
           persona: newPersona,
+          addedBy: user?.email,
         }),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
         setAddError(err.error || 'Failed to add member.')
       } else {
-        const added = await res.json()
-        const addedMember = added.member || added || { email: newEmail.trim(), display_name: newDisplayName.trim(), persona: newPersona }
+        const result = await res.json()
+        const addedMember = result.member || { email: newEmail.trim(), display_name: newDisplayName.trim(), persona: newPersona }
         setTeamMembers((prev) => [...prev, addedMember])
-        // Auto-open invite email
-        handleSendInvite(newEmail.trim(), newDisplayName.trim(), newPersona)
+        // Auto-open invite email with login credentials
+        handleSendInvite(newEmail.trim(), newDisplayName.trim(), newPersona, result.tempPassword)
         setNewEmail('')
         setNewDisplayName('')
         setNewPersona('touree')
@@ -288,27 +289,40 @@ export default function DashboardPage() {
   const getSignupUrl = () => 'https://tour-lytics.com/login'
   const getProjectUrl = () => 'https://tour-lytics.com/project/sf-office-search'
 
-  const buildInviteEmail = (email: string, displayName: string, persona: string) => {
+  const buildInviteEmail = (email: string, displayName: string, persona: string, tempPassword?: string) => {
     const firstName = displayName ? displayName.split(' ')[0] : ''
     const greeting = firstName ? `Hi ${firstName},` : 'Hi,'
     const roleName = persona === 'broker' ? 'broker' : 'tour reviewer'
     const subject = encodeURIComponent('You\'re invited to Tour-Lytics - SF Office Search')
-    const body = encodeURIComponent(
-      `${greeting}\n\n` +
-      `You've been added as a ${roleName} on our San Francisco Office Search project in Tour-Lytics.\n\n` +
-      `To get started:\n` +
-      `1. Create your account: ${getSignupUrl()}\n` +
-      `2. Sign in with this email (${email})\n` +
-      `3. You'll see the project dashboard with all 33 buildings to review\n\n` +
+
+    let bodyText = `${greeting}\n\n` +
+      `You've been added as a ${roleName} on our San Francisco Office Search project in Tour-Lytics.\n\n`
+
+    if (tempPassword) {
+      bodyText +=
+        `Your account is ready to go. Here are your login credentials:\n\n` +
+        `Login page: ${getSignupUrl()}\n` +
+        `Email: ${email}\n` +
+        `Password: ${tempPassword}\n\n` +
+        `You can change your password after signing in.\n\n`
+    } else {
+      bodyText +=
+        `To get started:\n` +
+        `1. Go to: ${getSignupUrl()}\n` +
+        `2. Sign in with this email (${email})\n\n`
+    }
+
+    bodyText +=
       `Once you're in, head to the Tour Book to score each building we visit. Your scores will be combined with the rest of the team's so we can compare locations side by side.\n\n` +
       `Let me know if you have any questions.\n\n` +
       `Best,\nScott`
-    )
+
+    const body = encodeURIComponent(bodyText)
     return `mailto:${email}?subject=${subject}&body=${body}`
   }
 
-  const handleSendInvite = (email: string, displayName: string, persona: string) => {
-    window.open(buildInviteEmail(email, displayName, persona), '_blank')
+  const handleSendInvite = (email: string, displayName: string, persona: string, tempPassword?: string) => {
+    window.open(buildInviteEmail(email, displayName, persona, tempPassword), '_blank')
     setInviteSent(email)
     setTimeout(() => setInviteSent(null), 3000)
   }
