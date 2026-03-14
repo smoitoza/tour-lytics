@@ -1997,6 +1997,141 @@ body {
     .photo-lightbox-nav.prev { left: -48px; }
     .photo-lightbox-nav.next { right: -48px; }
 
+    /* ============================================================
+       Photos Gallery Page
+       ============================================================ */
+    .photos-page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: var(--space-4) var(--space-4) var(--space-8);
+    }
+    .photos-filters {
+      display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: flex-end;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+      margin-bottom: var(--space-4);
+    }
+    .photos-filter-group {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .photos-filter-label {
+      font-size: var(--text-xs); font-weight: 600; color: var(--color-text-muted);
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .photos-filter-select, .photos-filter-input {
+      font-family: var(--font-body); font-size: var(--text-sm);
+      padding: 6px 10px; border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm); background: var(--color-surface);
+      color: var(--color-text); min-width: 180px;
+    }
+    .photos-filter-select:focus, .photos-filter-input:focus {
+      outline: none; border-color: var(--color-primary);
+      box-shadow: 0 0 0 2px rgba(244,121,32,0.15);
+    }
+    .photos-filter-search { flex: 1; min-width: 200px; }
+    .photos-filter-input { width: 100%; }
+    .photos-stats {
+      font-size: var(--text-sm); color: var(--color-text-muted);
+      margin-left: auto; align-self: flex-end; white-space: nowrap;
+    }
+
+    .photos-building-group {
+      margin-bottom: var(--space-6);
+    }
+    .photos-building-header {
+      display: flex; align-items: baseline; gap: var(--space-3);
+      margin-bottom: var(--space-3);
+      padding-bottom: var(--space-2);
+      border-bottom: 2px solid var(--color-primary);
+    }
+    .photos-building-name {
+      font-family: var(--font-display); font-size: var(--text-lg);
+      font-weight: 700; color: var(--color-text);
+    }
+    .photos-building-address {
+      font-size: var(--text-sm); color: var(--color-text-muted);
+    }
+    .photos-building-count {
+      font-size: var(--text-xs); color: var(--color-text-faint);
+      margin-left: auto;
+    }
+
+    .photos-area-group {
+      margin-bottom: var(--space-4);
+    }
+    .photos-area-label {
+      font-size: var(--text-xs); font-weight: 600; color: var(--color-primary);
+      text-transform: uppercase; letter-spacing: 0.05em;
+      margin-bottom: var(--space-2); display: flex; align-items: center; gap: 6px;
+    }
+    .photos-area-label::after {
+      content: ''; flex: 1; height: 1px; background: var(--color-divider);
+    }
+
+    .photos-grid-inner {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: var(--space-3);
+    }
+    .photos-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform var(--transition), box-shadow var(--transition);
+    }
+    .photos-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+    .photos-card-img {
+      width: 100%; height: 170px; object-fit: cover;
+      display: block; background: var(--color-surface-2);
+    }
+    .photos-card-body {
+      padding: var(--space-2) var(--space-3) var(--space-3);
+    }
+    .photos-card-area {
+      font-size: var(--text-xs); font-weight: 600;
+      color: var(--color-primary); margin-bottom: 2px;
+    }
+    .photos-card-desc {
+      font-size: var(--text-xs); color: var(--color-text-muted);
+      line-height: 1.45; display: -webkit-box;
+      -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .photos-card-tags {
+      display: flex; flex-wrap: wrap; gap: 3px; margin-top: 6px;
+    }
+    .photos-card-tag {
+      font-size: 0.6rem; background: var(--color-surface-2);
+      color: var(--color-text-muted); padding: 1px 6px;
+      border-radius: 3px; border: 1px solid var(--color-divider);
+    }
+    .photos-loading {
+      text-align: center; padding: var(--space-8);
+      color: var(--color-text-muted); font-size: var(--text-sm);
+    }
+    .photos-empty {
+      text-align: center; padding: var(--space-8) var(--space-4);
+      color: var(--color-text-faint); font-size: var(--text-sm);
+    }
+
+    @media (max-width: 640px) {
+      .photos-filters { flex-direction: column; }
+      .photos-filter-select, .photos-filter-input { min-width: 100%; }
+      .photos-stats { margin-left: 0; }
+      .photos-grid-inner {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: var(--space-2);
+      }
+      .photos-card-img { height: 130px; }
+    }
+
     /* Summary comparison bar */
     .tourbook-summary {
       background: var(--color-surface);
@@ -3107,6 +3242,10 @@ body {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><line x1="12" y1="6" x2="12" y2="13"/><line x1="8" y1="10" x2="16" y2="10"/></svg>
     Tour Book
   </button>
+  <button class="page-tab" onclick="switchPageTab('photos')" data-page-tab="photos">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    Photos
+  </button>
 </nav>
 
 <div class="tab-content active" id="tab-map">
@@ -3424,6 +3563,36 @@ body {
 <div class="tab-content" id="tab-tourbook">
   <div class="tourbook-container" id="tourbookContainer">
     <!-- Populated by JS -->
+  </div>
+</div>
+
+<div class="tab-content" id="tab-photos">
+  <div class="photos-page">
+    <!-- Filter bar -->
+    <div class="photos-filters">
+      <div class="photos-filter-group">
+        <label class="photos-filter-label">Building</label>
+        <select class="photos-filter-select" id="photoFilterBuilding" onchange="applyPhotoFilters()">
+          <option value="">All Buildings</option>
+        </select>
+      </div>
+      <div class="photos-filter-group">
+        <label class="photos-filter-label">Area</label>
+        <select class="photos-filter-select" id="photoFilterArea" onchange="applyPhotoFilters()">
+          <option value="">All Areas</option>
+        </select>
+      </div>
+      <div class="photos-filter-group photos-filter-search">
+        <label class="photos-filter-label">Search</label>
+        <input type="text" class="photos-filter-input" id="photoFilterSearch" placeholder="Search descriptions or tags..." oninput="applyPhotoFilters()" />
+      </div>
+      <div class="photos-stats" id="photosStats"></div>
+    </div>
+
+    <!-- Photo grid -->
+    <div class="photos-grid" id="photosGrid">
+      <div class="photos-loading">Loading photos...</div>
+    </div>
   </div>
 </div>
 
@@ -6794,6 +6963,180 @@ map.on('popupopen', async function(e) {
     });
   }, 100);
 });
+
+// ============================================================
+// Photos Gallery Page
+// ============================================================
+
+var _allGalleryPhotos = [];
+var _galleryLoaded = false;
+
+async function loadPhotosGallery() {
+  if (_galleryLoaded) return;
+  _galleryLoaded = true;
+  try {
+    var res = await fetch('/api/photos?projectId=sf-office-search');
+    if (!res.ok) throw new Error('Failed to load photos');
+    _allGalleryPhotos = await res.json();
+    populatePhotoFilters();
+    applyPhotoFilters();
+  } catch(e) {
+    console.error('Failed to load gallery:', e);
+    document.getElementById('photosGrid').innerHTML = '<div class="photos-empty">Failed to load photos. Please try again.</div>';
+  }
+}
+
+function populatePhotoFilters() {
+  var buildings = {};
+  var areas = {};
+  _allGalleryPhotos.forEach(function(p) {
+    var bName = p.building_name || 'Unknown';
+    buildings[bName] = (buildings[bName] || 0) + 1;
+    var area = p.ai_area_suggestion || p.area_tag || 'general';
+    areas[area] = (areas[area] || 0) + 1;
+  });
+
+  var bSelect = document.getElementById('photoFilterBuilding');
+  bSelect.innerHTML = '<option value="">All Buildings (' + _allGalleryPhotos.length + ')</option>';
+  Object.keys(buildings).sort().forEach(function(b) {
+    bSelect.innerHTML += '<option value="' + b + '">' + b + ' (' + buildings[b] + ')</option>';
+  });
+
+  var aSelect = document.getElementById('photoFilterArea');
+  aSelect.innerHTML = '<option value="">All Areas</option>';
+  Object.keys(areas).sort().forEach(function(a) {
+    var label = AREA_LABELS[a] || a;
+    aSelect.innerHTML += '<option value="' + a + '">' + label + ' (' + areas[a] + ')</option>';
+  });
+}
+
+function applyPhotoFilters() {
+  var buildingFilter = document.getElementById('photoFilterBuilding').value;
+  var areaFilter = document.getElementById('photoFilterArea').value;
+  var searchFilter = (document.getElementById('photoFilterSearch').value || '').toLowerCase().trim();
+
+  var filtered = _allGalleryPhotos.filter(function(p) {
+    if (buildingFilter && p.building_name !== buildingFilter) return false;
+    var area = p.ai_area_suggestion || p.area_tag || 'general';
+    if (areaFilter && area !== areaFilter) return false;
+    if (searchFilter) {
+      var haystack = [
+        p.ai_description || '',
+        (p.ai_tags || []).join(' '),
+        p.building_name || '',
+        area,
+        AREA_LABELS[area] || ''
+      ].join(' ').toLowerCase();
+      if (haystack.indexOf(searchFilter) === -1) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('photosStats').textContent = filtered.length + ' of ' + _allGalleryPhotos.length + ' photos';
+  renderPhotosGrid(filtered);
+}
+
+function renderPhotosGrid(photos) {
+  var grid = document.getElementById('photosGrid');
+
+  if (photos.length === 0) {
+    grid.innerHTML = '<div class="photos-empty">No photos match your filters.</div>';
+    return;
+  }
+
+  // Group by building
+  var byBuilding = {};
+  photos.forEach(function(p) {
+    var key = p.building_name || 'Unknown';
+    if (!byBuilding[key]) byBuilding[key] = { address: p.building_address, photos: [] };
+    byBuilding[key].photos.push(p);
+  });
+
+  var html = '';
+  Object.keys(byBuilding).sort().forEach(function(bName) {
+    var group = byBuilding[bName];
+    html += '<div class="photos-building-group">';
+    html += '<div class="photos-building-header">';
+    html += '<span class="photos-building-name">' + bName + '</span>';
+    if (group.address) html += '<span class="photos-building-address">' + group.address + '</span>';
+    html += '<span class="photos-building-count">' + group.photos.length + ' photos</span>';
+    html += '</div>';
+
+    // Group by area within building
+    var byArea = {};
+    group.photos.forEach(function(p) {
+      var area = p.ai_area_suggestion || p.area_tag || 'general';
+      if (!byArea[area]) byArea[area] = [];
+      byArea[area].push(p);
+    });
+
+    Object.keys(byArea).sort().forEach(function(area) {
+      var areaPhotos = byArea[area];
+      html += '<div class="photos-area-group">';
+      html += '<div class="photos-area-label">' + (AREA_LABELS[area] || area) + ' (' + areaPhotos.length + ')</div>';
+      html += '<div class="photos-grid-inner">';
+
+      areaPhotos.forEach(function(p, idx) {
+        var desc = p.ai_description || 'Photo not yet analyzed';
+        var tags = p.ai_tags || [];
+        var areaLabel = AREA_LABELS[p.ai_area_suggestion || p.area_tag || 'general'] || area;
+
+        html += '<div class="photos-card" onclick="openGalleryLightbox(\'' + encodeURIComponent(JSON.stringify({
+          url: p.file_url, desc: desc, tags: tags, area: areaLabel, building: p.building_name
+        })) + '\')">'; 
+        html += '<img class="photos-card-img" src="' + p.file_url + '" alt="' + areaLabel + '" loading="lazy" />';
+        html += '<div class="photos-card-body">';
+        html += '<div class="photos-card-area">' + areaLabel + '</div>';
+        html += '<div class="photos-card-desc">' + desc + '</div>';
+        if (tags.length > 0) {
+          html += '<div class="photos-card-tags">';
+          tags.slice(0, 5).forEach(function(t) {
+            html += '<span class="photos-card-tag">' + t.replace(/_/g, ' ') + '</span>';
+          });
+          html += '</div>';
+        }
+        html += '</div></div>';
+      });
+
+      html += '</div></div>';
+    });
+
+    html += '</div>';
+  });
+
+  grid.innerHTML = html;
+}
+
+function openGalleryLightbox(encoded) {
+  try {
+    var data = JSON.parse(decodeURIComponent(encoded));
+    var overlay = document.createElement('div');
+    overlay.className = 'photo-lightbox';
+    overlay.onclick = function(e) { if (e.target === overlay) { overlay.remove(); } };
+    overlay.innerHTML = '<div class="photo-lightbox-content">' +
+      '<button class="photo-lightbox-close" onclick="this.closest(\'.photo-lightbox\').remove()">&times;</button>' +
+      '<img src="' + data.url + '" alt="' + (data.area || '') + '" />' +
+      '<div class="photo-lightbox-info">' +
+        '<div class="ai-desc">' + (data.desc || '') + '</div>' +
+        (data.tags && data.tags.length > 0 ? '<div class="ai-tags">' + data.tags.map(function(t) {
+          return '<span class="ai-tag">' + t.replace(/_/g, ' ') + '</span>';
+        }).join('') + '</div>' : '') +
+      '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+  } catch(e) {
+    console.error('Lightbox error:', e);
+  }
+}
+
+// Hook into tab switching to lazy-load photos
+var _origSwitchPageTab = switchPageTab;
+switchPageTab = function(tabId) {
+  _origSwitchPageTab(tabId);
+  if (tabId === 'photos') {
+    loadPhotosGallery();
+  }
+};
 
 </script>
 
