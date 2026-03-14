@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleGenAI } from '@google/genai'
 import { NextResponse } from 'next/server'
 
 const supabase = createClient(
@@ -50,9 +50,8 @@ export async function POST(req: Request) {
     const base64Image = Buffer.from(imageBuffer).toString('base64')
     const mimeType = photo.mime_type || 'image/jpeg'
 
-    // Initialize Gemini
-    const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+    // Initialize Gemini (new SDK)
+    const ai = new GoogleGenAI({ apiKey })
 
     // Analyze the image
     const prompt = `You are analyzing a photo taken during a commercial office space tour in San Francisco. 
@@ -83,17 +82,18 @@ Respond in this exact JSON format:
   "tags": ["...", "..."]
 }`
 
-    const result = await model.generateContent([
-      { text: prompt },
-      {
-        inlineData: {
-          mimeType,
-          data: base64Image,
-        },
-      },
-    ])
+    const result = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [{
+        role: 'user',
+        parts: [
+          { text: prompt },
+          { inlineData: { mimeType, data: base64Image } },
+        ]
+      }],
+    })
 
-    const responseText = result.response.text()
+    const responseText = result.text || ''
 
     // Parse the JSON response
     let analysis: { description: string; area_suggestion: string; tags: string[] }
@@ -115,11 +115,12 @@ Respond in this exact JSON format:
     // Generate embedding for the description (for RAG search)
     let embedding: number[] | null = null
     try {
-      const embeddingModel = genAI.getGenerativeModel({ model: 'text-embedding-004' })
-      const embeddingResult = await embeddingModel.embedContent(
-        `Photo of ${photo.building_name} ${photo.area_tag} area: ${analysis.description}. Tags: ${analysis.tags.join(', ')}`
-      )
-      embedding = embeddingResult.embedding.values
+      const embeddingResult = await ai.models.embedContent({
+        model: 'gemini-embedding-001',
+        contents: `Photo of ${photo.building_name} ${photo.area_tag} area: ${analysis.description}. Tags: ${analysis.tags.join(', ')}`,
+        outputDimensionality: 768,
+      })
+      embedding = embeddingResult.embeddings?.[0]?.values || null
     } catch (embErr) {
       console.error('Embedding generation failed:', embErr)
     }
