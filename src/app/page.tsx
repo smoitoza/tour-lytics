@@ -237,7 +237,7 @@ export default function LandingPage() {
           </h1>
 
           <p style={{ fontSize: 'clamp(1.125rem, 1rem + 0.75vw, 1.5rem)', color: '#94a3b8', maxWidth: '600px', margin: '0 auto 2.5rem auto', lineHeight: 1.5 }}>
-            Upload your broker survey PDF. Get an interactive map, linked financials, and an AI assistant that knows every building, deal term, and dollar amount in your project.
+            Upload your broker survey PDF. Get an interactive map, linked financials, and an AI assistant that knows every building, deal term, and dollar amount in your project. It will even find you coffee shops and lunch spots between tours.
           </p>
 
           {/* CTAs */}
