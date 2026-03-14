@@ -14,13 +14,25 @@ async function getPhotoContext(): Promise<string> {
   try {
     const { data, error } = await supabase
       .from('building_photos')
-      .select('building_name, building_address, area_tag, ai_description, ai_tags, ai_area_suggestion, uploaded_by, created_at')
+      .select('building_name, building_address, area_tag, ai_description, ai_tags, ai_area_suggestion, uploaded_by, created_at, file_url')
       .eq('project_id', 'sf-office-search')
       .not('ai_description', 'is', null)
       .order('created_at', { ascending: false })
       .limit(100)
 
-    if (error || !data || data.length === 0) return ''
+    if (error || !data || data.length === 0) {
+      // Also check if there are photos pending analysis
+      const { count } = await supabase
+        .from('building_photos')
+        .select('id', { count: 'exact', head: true })
+        .eq('project_id', 'sf-office-search')
+        .is('ai_analyzed_at', null)
+
+      if (count && count > 0) {
+        return `\n\nTOUR PHOTOS: ${count} photos have been uploaded but AI analysis is still pending. Photos will be available once analysis completes.`
+      }
+      return ''
+    }
 
     // Group by building
     const byBuilding: Record<string, typeof data> = {}
@@ -32,11 +44,11 @@ async function getPhotoContext(): Promise<string> {
 
     let context = '\n\nTOUR PHOTOS (AI-analyzed photos taken during building tours):\n'
     for (const [building, photos] of Object.entries(byBuilding)) {
-      context += `\n${building}:\n`
+      context += `\n${building} (${photos.length} photos):\n`
       photos.forEach(p => {
         const area = p.ai_area_suggestion || p.area_tag || 'general'
         const tags = p.ai_tags?.join(', ') || ''
-        context += `  - [${area}] ${p.ai_description}${tags ? ' (tags: ' + tags + ')' : ''} (by ${p.uploaded_by})\n`
+        context += `  - [${area}] ${p.ai_description}${tags ? ' (tags: ' + tags + ')' : ''} | image: ${p.file_url}\n`
       })
     }
     return context
@@ -332,14 +344,22 @@ Team members can upload photos during building tours. Each photo is analyzed by 
 - A description of what's in the photo (finishes, natural light, condition, etc.)
 - Area tags (lobby, kitchen, open floor, etc.)
 - Feature tags (natural_light, modern_finishes, high_ceilings, etc.)
+- A direct image URL you can display
 
 When a user asks about photos, what spaces looked like, or visual aspects of buildings, reference the TOUR PHOTOS data. You can answer questions like:
 - "What did the lobby look like at 250 Brannan?"
 - "Which buildings had the best natural light?"
 - "Compare the kitchens across our tour list"
 - "What condition was the flooring at 301 Brannan?"
+- "Show me pictures of the kitchen"
 
-If no photos have been uploaded yet for a building, let the user know photos haven't been added yet.`
+DISPLAYING PHOTOS:
+Each photo in the TOUR PHOTOS data includes an image URL after "image:". When the user asks to see a photo, show it using markdown image syntax: ![description](url)
+Show up to 3-4 relevant photos at a time. Always include a brief description with each image.
+Example: Here is the kitchen at 250 Brannan:\n![Kitchen with modern appliances](https://...url...)
+
+If photos exist but AI analysis is still pending, let the user know that photos have been uploaded and analysis is in progress.
+If no photos have been uploaded for a building, let the user know photos haven't been added yet.`
 
 // In-memory conversation store
 const conversations = new Map<string, Array<{ role: string; content: string | Anthropic.ContentBlockParam[] }>>()

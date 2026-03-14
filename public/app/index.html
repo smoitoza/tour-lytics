@@ -6964,6 +6964,12 @@ map.on('popupopen', async function(e) {
     // Bold
     html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 
+    // Images (markdown: ![alt](url))
+    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:8px;margin:8px 0;cursor:pointer;" onclick="window.open(this.src)" title="$1" />');
+
+    // Links (markdown: [text](url))
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:var(--color-primary);text-decoration:underline;">$1</a>');
+
     // Inline code
     html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
 
