@@ -1676,6 +1676,18 @@ body {
     .tourbook-submit-status.error { color: #dc2626; }
     .tourbook-submit-status.info { color: #2563eb; }
 
+    /* Role-based visibility */
+    body.touree-mode .tooltip-tour-btn,
+    body.touree-mode .tour-item-remove,
+    body.touree-mode .tour-btn-secondary,
+    body.touree-mode .admin-only {
+      display: none !important;
+    }
+    body.touree-mode .tour-schedule-input {
+      pointer-events: none;
+      opacity: 0.7;
+    }
+
     /* Photo upload */
     .tourbook-photos {
       margin-bottom: var(--space-3);
@@ -4880,6 +4892,11 @@ legend.addTo(map);
 const TOUR_LIST_KEY = 'sf-office-tour-list';
 
 function getTourList() {
+  // If we have a centralized list loaded from server, use it
+  if (_centralTourListLoaded && _centralTourList && getCurrentUserEmail()) {
+    return _centralTourList.map(serverToLocalItem);
+  }
+  // Fallback to localStorage (for unauthenticated / standalone use)
   try {
     return JSON.parse(_storeApi.getItem(TOUR_LIST_KEY)) || [];
   } catch(e) { return []; }
@@ -4924,14 +4941,48 @@ function getBuildingInfo(type, id) {
 }
 
 function toggleTourItem(type, id) {
+  // Tourees cannot modify the tour list
+  if (isReadOnlyTourList()) return;
+
   let list = getTourList();
   const idx = list.findIndex(item => item.type === type && item.id === id);
 
   if (idx >= 0) {
     list.splice(idx, 1);
+    // Sync removal to server if admin
+    if (isAdmin()) {
+      removeFromCentralTourList(type, id);
+      // Also remove from cached central list
+      if (_centralTourList) {
+        _centralTourList = _centralTourList.filter(item => !(item.building_type === type && item.building_id === id));
+      }
+    }
   } else {
     const info = getBuildingInfo(type, id);
-    if (info) list.push(info);
+    if (info) {
+      list.push(info);
+      // Sync addition to server if admin
+      if (isAdmin()) {
+        addToCentralTourList(info);
+        // Also add to cached central list
+        if (_centralTourList) {
+          _centralTourList.push({
+            building_type: info.type,
+            building_id: info.id,
+            building_name: info.name,
+            building_address: info.address,
+            building_color: info.color,
+            building_meta: info.meta,
+            building_tags: info.tags,
+            lat: info.lat,
+            lng: info.lng,
+            pdf_page: info.pdfPage,
+            tour_date: '',
+            tour_time: ''
+          });
+        }
+      }
+    }
   }
 
   saveTourList(list);
@@ -4964,7 +5015,7 @@ function refreshTourUI() {
       <div class="tour-panel-empty">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
         <p><strong>No buildings yet</strong>
-        Click "Add to Tour List" in any building tooltip to start building your list.</p>
+        ${isReadOnlyTourList() ? 'The admin has not added any buildings to the tour list yet.' : 'Click "Add to Tour List" in any building tooltip to start building your list.'}</p>
       </div>
     `;
     footer.style.display = 'none';
@@ -5038,6 +5089,7 @@ function closeTourPanel() {
 }
 
 function clearTourList() {
+  if (isReadOnlyTourList()) return;
   if (confirm('Remove all buildings from your tour list?')) {
     saveTourList([]);
     refreshTourUI();
@@ -5069,8 +5121,19 @@ map.on('popupopen', function(e) {
   setTimeout(refreshAllTooltipButtons, 50);
 });
 
-// Initialize on load
-refreshTourUI();
+// Initialize on load -- fetch centralized tour list if logged in
+(async function initTourList() {
+  var email = getCurrentUserEmail();
+  if (email) {
+    // Set touree mode CSS class for non-admin users
+    if (email.toLowerCase() !== ADMIN_EMAIL) {
+      document.body.classList.add('touree-mode');
+    }
+    // Fetch centralized tour list from server
+    await fetchCentralTourList();
+  }
+  refreshTourUI();
+})();
 
 
 // ===== PAGE TAB SWITCHING =====
@@ -5296,7 +5359,7 @@ function renderTourBook() {
     container.innerHTML = 
       '<div class="tourbook-empty">' +
         '<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>' +
-        '<p><strong>No buildings on your tour list</strong><br>Add buildings from the Map tab to start building your tour book.</p>' +
+        '<p><strong>No buildings on your tour list</strong><br>' + (isReadOnlyTourList() ? 'The admin has not set up the tour list yet. Check back soon.' : 'Add buildings from the Map tab to start building your tour book.') + '</p>' +
       '</div>';
     return;
   }
@@ -5382,11 +5445,11 @@ function renderTourBook() {
           '<div class="tourbook-schedule">' +
             '<div class="tourbook-schedule-field">' +
               '<label>Tour Date</label>' +
-              '<input type="date" value="' + (sched.date || '') + '" onchange="setTourDateTime(\'' + key + '\', \'date\', this.value)">' +
+              '<input type="date" class="tour-schedule-input" value="' + (sched.date || '') + '" onchange="setTourDateTime(\'' + key + '\', \'date\', this.value)">' +
             '</div>' +
             '<div class="tourbook-schedule-field">' +
               '<label>Tour Time</label>' +
-              '<input type="time" value="' + (sched.time || '') + '" onchange="setTourDateTime(\'' + key + '\', \'time\', this.value)">' +
+              '<input type="time" class="tour-schedule-input" value="' + (sched.time || '') + '" onchange="setTourDateTime(\'' + key + '\', \'time\', this.value)">' +
             '</div>' +
           '</div>' +
           // Overall score bar
@@ -5490,6 +5553,102 @@ function getCurrentUserEmail() {
   } catch(e) { return ''; }
 }
 
+// --- Role & Centralized Tour List ---
+var ADMIN_EMAIL = 'samoitoza@gmail.com';
+var _userRole = null; // 'admin', 'broker', 'touree', or null
+var _centralTourList = null; // fetched from server
+var _centralTourListLoaded = false;
+
+function isAdmin() {
+  return getCurrentUserEmail().toLowerCase() === ADMIN_EMAIL;
+}
+
+function isReadOnlyTourList() {
+  return !isAdmin() && getCurrentUserEmail() !== '';
+}
+
+// Fetch centralized tour list from server
+async function fetchCentralTourList() {
+  try {
+    var res = await fetch('/api/tour-list?projectId=sf-office-search');
+    if (!res.ok) return [];
+    var data = await res.json();
+    _centralTourList = Array.isArray(data) ? data : [];
+    _centralTourListLoaded = true;
+    return _centralTourList;
+  } catch(e) {
+    console.error('Failed to fetch tour list:', e);
+    return [];
+  }
+}
+
+// Convert server tour list item to local format
+function serverToLocalItem(item) {
+  return {
+    type: item.building_type,
+    id: item.building_id,
+    name: item.building_name,
+    address: item.building_address || '',
+    color: item.building_color || '#9ca3af',
+    meta: item.building_meta || '',
+    tags: item.building_tags || [],
+    lat: item.lat,
+    lng: item.lng,
+    pdfPage: item.pdf_page
+  };
+}
+
+// Save a building to the centralized tour list (admin only)
+async function addToCentralTourList(info) {
+  try {
+    await fetch('/api/tour-list', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        projectId: 'sf-office-search',
+        buildingType: info.type,
+        buildingId: info.id,
+        buildingName: info.name,
+        buildingAddress: info.address || '',
+        buildingColor: info.color || '#9ca3af',
+        buildingMeta: info.meta || '',
+        buildingTags: info.tags || [],
+        lat: info.lat,
+        lng: info.lng,
+        pdfPage: info.pdfPage,
+        addedBy: getCurrentUserEmail()
+      })
+    });
+  } catch(e) { console.error('Failed to add to central tour list:', e); }
+}
+
+// Remove a building from the centralized tour list (admin only)
+async function removeFromCentralTourList(type, id) {
+  try {
+    await fetch('/api/tour-list?projectId=sf-office-search&buildingType=' + encodeURIComponent(type) + '&buildingId=' + id, {
+      method: 'DELETE'
+    });
+  } catch(e) { console.error('Failed to remove from central tour list:', e); }
+}
+
+// Save tour date/time to centralized list (admin only)
+async function saveCentralTourSchedule(buildingType, buildingId, field, value) {
+  try {
+    var body = {
+      projectId: 'sf-office-search',
+      buildingType: buildingType,
+      buildingId: buildingId
+    };
+    if (field === 'date') body.tourDate = value;
+    if (field === 'time') body.tourTime = value;
+    await fetch('/api/tour-list', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+  } catch(e) { console.error('Failed to save schedule:', e); }
+}
+
 // --- Submit survey to Supabase ---
 async function submitSurvey() {
   var btn = document.getElementById('tourbook-submit-btn');
@@ -5560,6 +5719,7 @@ async function submitSurvey() {
 }
 
 function removeFromTourBook(type, id, name) {
+  if (isReadOnlyTourList()) return;
   if (!confirm('Remove ' + name + ' from your tour list?')) return;
   toggleTourItem(type, id);
   renderTourBook();
@@ -5574,6 +5734,15 @@ function toggleTourBookCard(key) {
 const TOUR_SCHEDULE_KEY = 'sf-office-tour-schedule';
 
 function getTourSchedule() {
+  // If centralized list loaded, build schedule from server data
+  if (_centralTourListLoaded && _centralTourList && getCurrentUserEmail()) {
+    var schedule = {};
+    _centralTourList.forEach(function(item) {
+      var key = item.building_type + '-' + item.building_id;
+      schedule[key] = { date: item.tour_date || '', time: item.tour_time || '' };
+    });
+    return schedule;
+  }
   try {
     return JSON.parse(_storeApi.getItem('sf-office-tour-schedule')) || {};
   } catch(e) { return {}; }
@@ -5584,10 +5753,29 @@ function saveTourSchedule(data) {
 }
 
 function setTourDateTime(buildingKey, field, value) {
+  // Tourees cannot modify schedule
+  if (isReadOnlyTourList()) return;
+
   var schedule = getTourSchedule();
   if (!schedule[buildingKey]) schedule[buildingKey] = { date: '', time: '' };
   schedule[buildingKey][field] = value;
   saveTourSchedule(schedule);
+
+  // Sync to server if admin
+  if (isAdmin() && _centralTourList) {
+    // Parse buildingKey like 'shortlist-1' or 'survey-5'
+    var parts = buildingKey.split('-');
+    var bType = parts[0];
+    var bId = parseInt(parts.slice(1).join('-'), 10);
+    saveCentralTourSchedule(bType, bId, field, value);
+    // Update cached central list
+    var cItem = _centralTourList.find(function(x) { return x.building_type === bType && x.building_id === bId; });
+    if (cItem) {
+      if (field === 'date') cItem.tour_date = value;
+      if (field === 'time') cItem.tour_time = value;
+    }
+  }
+
   // Update the header datetime display without full re-render
   updateCardDatetimeDisplay(buildingKey);
   // Update invite button state (needs at least one tour with a date)
