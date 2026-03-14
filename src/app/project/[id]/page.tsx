@@ -87,10 +87,10 @@ export default function ProjectPage() {
         </div>
       </header>
 
-      {/* Full app iframe */}
+      {/* Full app iframe - pass user email for survey submission */}
       <div style={{ flex: 1, position: 'relative' }}>
         <iframe
-          src="/app/index.html"
+          src={`/app/index.html?userEmail=${encodeURIComponent(user?.email || '')}`}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
           title="SF Office Search Application"
         />
