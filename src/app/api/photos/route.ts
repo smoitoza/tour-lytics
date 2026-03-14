@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import sharp from 'sharp'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -51,20 +52,43 @@ export async function POST(req: Request) {
       )
     }
 
+    // Convert HEIC/HEIF to JPEG, and resize large images
+    const arrayBuffer = await file.arrayBuffer()
+    let buffer: Uint8Array
+    let contentType = file.type || 'image/jpeg'
+    let finalExt = (file.name.split('.').pop() || 'jpg').toLowerCase()
+    const isHEIC = finalExt === 'heic' || finalExt === 'heif' || contentType === 'image/heic' || contentType === 'image/heif'
+
+    if (isHEIC) {
+      // Convert HEIC to JPEG using sharp
+      const jpegBuffer = await sharp(Buffer.from(arrayBuffer))
+        .jpeg({ quality: 85 })
+        .resize({ width: 2400, height: 2400, fit: 'inside', withoutEnlargement: true })
+        .toBuffer()
+      buffer = new Uint8Array(jpegBuffer)
+      contentType = 'image/jpeg'
+      finalExt = 'jpg'
+    } else {
+      // Resize if very large, otherwise pass through
+      try {
+        const resized = await sharp(Buffer.from(arrayBuffer))
+          .resize({ width: 2400, height: 2400, fit: 'inside', withoutEnlargement: true })
+          .toBuffer()
+        buffer = new Uint8Array(resized)
+      } catch {
+        buffer = new Uint8Array(arrayBuffer)
+      }
+    }
+
     // Generate unique file path
     const timestamp = Date.now()
-    const ext = file.name.split('.').pop() || 'jpg'
-    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+    const safeName = file.name.replace(/\.(heic|heif)$/i, '.jpg').replace(/[^a-zA-Z0-9.-]/g, '_')
     const storagePath = `${projectId}/${buildingType}-${buildingId}/${timestamp}-${safeName}`
-
-    // Upload to Supabase Storage
-    const arrayBuffer = await file.arrayBuffer()
-    const buffer = new Uint8Array(arrayBuffer)
 
     const { error: uploadError } = await supabase.storage
       .from('tour-photos')
       .upload(storagePath, buffer, {
-        contentType: file.type || 'image/jpeg',
+        contentType,
         upsert: false,
       })
 
