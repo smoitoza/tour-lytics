@@ -1692,15 +1692,41 @@ body {
     .tourbook-photos {
       margin-bottom: var(--space-3);
     }
-    .tourbook-photos label {
+    .tourbook-photos-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      margin-bottom: var(--space-2);
+    }
+    .tourbook-photos-header label {
       display: block;
       font-size: var(--text-xs);
       font-weight: 600;
       color: var(--color-text-muted);
       text-transform: uppercase;
       letter-spacing: 0.04em;
-      margin-bottom: var(--space-2);
+      margin: 0;
     }
+    .tourbook-photos-count-badge {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: white;
+      background: var(--color-primary);
+      border-radius: 999px;
+      padding: 1px 7px;
+      line-height: 1.4;
+    }
+    .tourbook-photos-viewall {
+      font-size: var(--text-xs);
+      color: var(--color-primary);
+      cursor: pointer;
+      font-weight: 600;
+      border: none;
+      background: none;
+      padding: 0;
+      margin-left: auto;
+    }
+    .tourbook-photos-viewall:hover { text-decoration: underline; }
     .tourbook-photo-grid {
       display: flex;
       gap: var(--space-2);
@@ -5688,22 +5714,56 @@ function openLightbox(src) {
 }
 
 function renderPhotoGrid(buildingKey) {
-  const grid = document.getElementById('photos-' + buildingKey);
+  // Old local-only photo grid - replaced by loadTourBookPhotos below
+}
+
+// Load Supabase photos for a tour book card and render preview grid
+async function loadTourBookPhotos(item) {
+  var key = getBuildingKey(item);
+  var grid = document.getElementById('photos-' + key);
+  var countBadge = document.getElementById('tb-photo-count-' + key);
   if (!grid) return;
-  const photos = getTourBookPhotos();
-  const items = photos[buildingKey] || [];
-  
-  grid.innerHTML = items.map((src, i) => 
-    '<div class="tourbook-photo-wrap">' +
-      '<img class="tourbook-photo-thumb" src="' + src + '" onclick="openLightbox(this.src)">' +
-      '<button class="tourbook-photo-remove" onclick="event.stopPropagation(); removePhoto(\'' + buildingKey + '\', ' + i + ')">x</button>' +
-    '</div>'
-  ).join('') +
-  (items.length < 10 ? 
-    '<label class="tourbook-photo-add">' +
+
+  try {
+    var photos = await fetchBuildingPhotos(item.type, item.id);
+    var total = photos.length;
+    var MAX_PREVIEW = 10;
+    var preview = photos.slice(0, MAX_PREVIEW);
+    var cacheKey = item.type + '-' + item.id;
+
+    var html = '';
+
+    if (total > 0 && countBadge) {
+      countBadge.textContent = total;
+      countBadge.style.display = 'inline';
+    }
+
+    // Thumbnail grid
+    preview.forEach(function(p) {
+      var desc = p.ai_description ? ' title="' + p.ai_description.replace(/"/g, '&quot;').substring(0, 120) + '"' : '';
+      html += '<img class="tourbook-photo-thumb" src="' + p.file_url + '"' + desc + ' onclick="openPhotoLightbox(\'' + cacheKey + '\', \'' + p.id + '\')">';
+    });
+
+    // Upload button
+    html += '<div class="tourbook-photo-add" onclick="openPhotoUpload(\'' + item.type + '\', ' + item.id + ', \'' + item.name.replace(/'/g, "\\'") + '\', \'' + (item.address || '').replace(/'/g, "\\'") + '\')" title="Add Photo">' +
       '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
-      '<input type="file" accept="image/*" multiple style="display:none" onchange="handlePhotoUpload(\'' + buildingKey + '\', this)">' +
-    '</label>' : '');
+    '</div>';
+
+    // "View all" link if more than preview
+    if (total > MAX_PREVIEW) {
+      html += '<button class="tourbook-photos-viewall" onclick="switchPageTab(\'photos\'); setTimeout(function(){ var sel = document.getElementById(\'photoFilterBuilding\'); if(sel){ sel.value=\'' + item.name.replace(/'/g, "\\'") + '\'; applyPhotoFilters(); }}, 300);">View all ' + total + ' photos</button>';
+    } else if (total > 0) {
+      html += '<button class="tourbook-photos-viewall" onclick="switchPageTab(\'photos\'); setTimeout(function(){ var sel = document.getElementById(\'photoFilterBuilding\'); if(sel){ sel.value=\'' + item.name.replace(/'/g, "\\'") + '\'; applyPhotoFilters(); }}, 300);">View in gallery</button>';
+    }
+
+    grid.innerHTML = html;
+  } catch(e) {
+    console.error('Failed to load tourbook photos for', key, e);
+    grid.innerHTML =
+      '<div class="tourbook-photo-add" onclick="openPhotoUpload(\'' + item.type + '\', ' + item.id + ', \'' + item.name.replace(/'/g, "\\'") + '\', \'' + (item.address || '').replace(/'/g, "\\'") + '\')" title="Add Photo">' +
+        '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
+      '</div>';
+  }
 }
 
 function updateRankingSummary() {
@@ -5884,15 +5944,15 @@ function renderTourBook() {
         '<textarea id="notes-' + key + '" placeholder="Walk-through observations, questions for landlord, team feedback..." oninput="setNotes(\'' + key + '\', this.value)">' + (entry.notes || '') + '</textarea>' +
       '</div>';
     
-    // Photos
+    // Photos - fetch from Supabase and show preview grid
     html += 
       '<div class="tourbook-photos">' +
-        '<label>Photos</label>' +
+        '<div class="tourbook-photos-header">' +
+          '<label>Photos</label>' +
+          '<span class="tourbook-photos-count-badge" id="tb-photo-count-' + key + '" style="display:none;"></span>' +
+        '</div>' +
         '<div class="tourbook-photo-grid" id="photos-' + key + '">' +
-          '<label class="tourbook-photo-add">' +
-            '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
-            '<input type="file" accept="image/*" multiple style="display:none" onchange="handlePhotoUpload(\'' + key + '\', this)">' +
-          '</label>' +
+          '<div style="font-size:var(--text-xs);color:var(--color-text-faint);">Loading photos...</div>' +
         '</div>' +
       '</div>';
     
@@ -5932,9 +5992,9 @@ function renderTourBook() {
 
   container.innerHTML = html;
   
-  // Render photos for each building
+  // Load Supabase photos for each building (async, fills in as they load)
   list.forEach(item => {
-    renderPhotoGrid(getBuildingKey(item));
+    loadTourBookPhotos(item);
   });
   
   // Render ranking
