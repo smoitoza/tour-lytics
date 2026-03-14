@@ -12,25 +12,15 @@ const supabase = createClient(
 // Fetch photo descriptions for chatbot context
 async function getPhotoContext(): Promise<string> {
   try {
+    // Fetch ALL photos (both analyzed and un-analyzed) so the chatbot can show images
     const { data, error } = await supabase
       .from('building_photos')
-      .select('building_name, building_address, area_tag, ai_description, ai_tags, ai_area_suggestion, uploaded_by, created_at, file_url')
+      .select('building_name, building_address, area_tag, ai_description, ai_tags, ai_area_suggestion, uploaded_by, created_at, file_url, ai_analyzed_at')
       .eq('project_id', 'sf-office-search')
-      .not('ai_description', 'is', null)
       .order('created_at', { ascending: false })
       .limit(100)
 
     if (error || !data || data.length === 0) {
-      // Also check if there are photos pending analysis
-      const { count } = await supabase
-        .from('building_photos')
-        .select('id', { count: 'exact', head: true })
-        .eq('project_id', 'sf-office-search')
-        .is('ai_analyzed_at', null)
-
-      if (count && count > 0) {
-        return `\n\nTOUR PHOTOS: ${count} photos have been uploaded but AI analysis is still pending. Photos will be available once analysis completes.`
-      }
       return ''
     }
 
@@ -42,13 +32,20 @@ async function getPhotoContext(): Promise<string> {
       byBuilding[key].push(p)
     })
 
-    let context = '\n\nTOUR PHOTOS (AI-analyzed photos taken during building tours):\n'
+    let context = '\n\nTOUR PHOTOS (photos taken during building tours):\n'
     for (const [building, photos] of Object.entries(byBuilding)) {
-      context += `\n${building} (${photos.length} photos):\n`
+      const analyzed = photos.filter(p => p.ai_analyzed_at)
+      const pending = photos.filter(p => !p.ai_analyzed_at)
+      context += `\n${building} (${photos.length} photos${pending.length > 0 ? `, ${pending.length} pending AI analysis` : ''}):\n`
       photos.forEach(p => {
         const area = p.ai_area_suggestion || p.area_tag || 'general'
-        const tags = p.ai_tags?.join(', ') || ''
-        context += `  - [${area}] ${p.ai_description}${tags ? ' (tags: ' + tags + ')' : ''} | image: ${p.file_url}\n`
+        if (p.ai_description) {
+          const tags = p.ai_tags?.join(', ') || ''
+          context += `  - [${area}] ${p.ai_description}${tags ? ' (tags: ' + tags + ')' : ''} | image: ${p.file_url}\n`
+        } else {
+          // Photo uploaded but not yet AI-analyzed; still include it with area tag so chatbot can show it
+          context += `  - [${area}] (photo not yet analyzed) | image: ${p.file_url}\n`
+        }
       })
     }
     return context
@@ -340,11 +337,13 @@ GUIDELINES:
 - When asked about costs, always distinguish between lease-only P&L and all-in occupancy cost (which includes OpEx).
 
 TOUR PHOTOS CAPABILITY:
-Team members can upload photos during building tours. Each photo is analyzed by AI (Gemini Vision) which provides:
+Team members can upload photos during building tours. Photos may be AI-analyzed (Gemini Vision) which provides:
 - A description of what's in the photo (finishes, natural light, condition, etc.)
 - Area tags (lobby, kitchen, open floor, etc.)
 - Feature tags (natural_light, modern_finishes, high_ceilings, etc.)
 - A direct image URL you can display
+
+Some photos may say "(photo not yet analyzed)" which means AI hasn't processed them yet, but they still have an area tag and image URL. You can still show these photos to the user.
 
 When a user asks about photos, what spaces looked like, or visual aspects of buildings, reference the TOUR PHOTOS data. You can answer questions like:
 - "What did the lobby look like at 250 Brannan?"
@@ -354,11 +353,10 @@ When a user asks about photos, what spaces looked like, or visual aspects of bui
 - "Show me pictures of the kitchen"
 
 DISPLAYING PHOTOS:
-Each photo in the TOUR PHOTOS data includes an image URL after "image:". When the user asks to see a photo, show it using markdown image syntax: ![description](url)
-Show up to 3-4 relevant photos at a time. Always include a brief description with each image.
-Example: Here is the kitchen at 250 Brannan:\n![Kitchen with modern appliances](https://...url...)
+Each photo in the TOUR PHOTOS data includes an image URL after "image:". When the user asks to see a photo or asks about a building with photos, show the photos using markdown image syntax: ![description](url)
+Show up to 3-4 relevant photos at a time. Always include a brief description with each image. For un-analyzed photos, use the area tag as the description.
+Example: Here is the kitchen at 250 Brannan:\n![Kitchen at 250 Brannan](https://...url...)
 
-If photos exist but AI analysis is still pending, let the user know that photos have been uploaded and analysis is in progress.
 If no photos have been uploaded for a building, let the user know photos haven't been added yet.`
 
 // In-memory conversation store
