@@ -118,7 +118,7 @@ Respond in this exact JSON format:
       const embeddingResult = await ai.models.embedContent({
         model: 'gemini-embedding-001',
         contents: `Photo of ${photo.building_name} ${photo.area_tag} area: ${analysis.description}. Tags: ${analysis.tags.join(', ')}`,
-        outputDimensionality: 768,
+        config: { outputDimensionality: 768 },
       })
       embedding = embeddingResult.embeddings?.[0]?.values || null
     } catch (embErr) {
