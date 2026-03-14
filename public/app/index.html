@@ -6531,20 +6531,24 @@ function openPhotoUpload(buildingType, buildingId, buildingName, buildingAddress
       var item = document.createElement('div');
       item.className = 'photo-batch-item';
       item.id = 'batch-item-' + idx;
-      var isHeic = file.name.match(/\.(heic|heif)$/i);
-      if (isHeic) {
-        item.innerHTML = '<div class="heic-placeholder">HEIC</div>' +
-          '<div class="batch-name">' + file.name + '</div>' +
-          '<button class="batch-remove" data-idx="' + idx + '">&times;</button>';
-      } else {
-        item.innerHTML = '<img src="" alt="" />' +
-          '<div class="batch-name">' + file.name + '</div>' +
-          '<button class="batch-remove" data-idx="' + idx + '">&times;</button>';
-        // Generate thumbnail
-        var img = item.querySelector('img');
-        var reader = new FileReader();
-        reader.onload = function(e) { img.src = e.target.result; };
-        reader.readAsDataURL(file);
+      item.innerHTML = '<img src="" alt="" style="display:none" />' +
+        '<div class="heic-placeholder" style="display:none">HEIC</div>' +
+        '<div class="batch-name">' + file.name + '</div>' +
+        '<button class="batch-remove" data-idx="' + idx + '">&times;</button>';
+      // Try to generate a thumbnail; if it fails (HEIC content), show placeholder
+      var img = item.querySelector('img');
+      var placeholder = item.querySelector('.heic-placeholder');
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        img.src = e.target.result;
+        img.onload = function() { img.style.display = 'block'; };
+        img.onerror = function() { placeholder.style.display = 'flex'; };
+      };
+      reader.onerror = function() { placeholder.style.display = 'flex'; };
+      reader.readAsDataURL(file);
+      // If HEIC by extension, show placeholder immediately
+      if (file.name.match(/\.(heic|heif)$/i)) {
+        placeholder.style.display = 'flex';
       }
       listEl.appendChild(item);
     });
@@ -6619,20 +6623,22 @@ async function submitPhotoUpload() {
     statusEl.textContent = 'Uploading ' + file.name + '...';
 
     try {
-      // Convert HEIC/HEIF to JPEG in the browser before uploading
+      // Detect HEIC by content (iPhones often label HEIC as .jpeg)
       var fileToUpload = file;
-      var isHeic = file.name.match(/\.(heic|heif)$/i);
-      if (isHeic && typeof HeicTo !== 'undefined') {
+      if (typeof HeicTo !== 'undefined') {
         try {
-          if (itemStatus) { itemStatus.textContent = 'Converting HEIC...'; }
-          statusEl.textContent = 'Converting ' + file.name + ' from HEIC...';
-          var jpegBlob = await HeicTo({ blob: file, type: 'image/jpeg', quality: 0.85 });
-          var convertedName = file.name.replace(/\.(heic|heif)$/i, '.jpg');
-          fileToUpload = new File([jpegBlob], convertedName, { type: 'image/jpeg' });
-          if (itemStatus) { itemStatus.textContent = 'Uploading...'; }
+          var actuallyHeic = await HeicTo.isHeic(file);
+          if (actuallyHeic) {
+            if (itemStatus) { itemStatus.textContent = 'Converting HEIC...'; }
+            statusEl.textContent = 'Converting ' + file.name + ' from HEIC...';
+            var jpegBlob = await HeicTo({ blob: file, type: 'image/jpeg', quality: 0.85 });
+            var convertedName = file.name.replace(/\.(heic|heif)$/i, '').replace(/\.jpeg$/i, '').replace(/\.jpg$/i, '') + '.jpg';
+            fileToUpload = new File([jpegBlob], convertedName, { type: 'image/jpeg' });
+            if (itemStatus) { itemStatus.textContent = 'Uploading...'; }
+          }
         } catch(convErr) {
-          console.error('HEIC conversion failed for ' + file.name + ':', convErr);
-          throw new Error('HEIC conversion failed: ' + convErr.message);
+          console.error('HEIC detection/conversion failed for ' + file.name + ':', convErr);
+          // If detection fails, try uploading as-is -- server will resize if possible
         }
       }
 
