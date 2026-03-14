@@ -150,6 +150,7 @@ export default function LandingPage() {
           <div className="hidden md:flex items-center" style={{ gap: '2rem' }}>
             <a href="#demo" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Map Demo</a>
             <a href="#tourbook-demo" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Tour Book</a>
+            <a href="#ai-chat" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>AI Chat</a>
             <a href="#problem" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>The Problem</a>
             <a href="#analysis" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Analysis</a>
             <a href="#features" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Features</a>
@@ -191,6 +192,7 @@ export default function LandingPage() {
             <div className="flex flex-col" style={{ gap: '1rem' }}>
               <a href="#demo" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Map Demo</a>
               <a href="#tourbook-demo" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Tour Book</a>
+              <a href="#ai-chat" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>AI Chat</a>
               <a href="#problem" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>The Problem</a>
               <a href="#analysis" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Analysis</a>
               <a href="#features" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Features</a>
@@ -235,8 +237,7 @@ export default function LandingPage() {
           </h1>
 
           <p style={{ fontSize: 'clamp(1.125rem, 1rem + 0.75vw, 1.5rem)', color: '#94a3b8', maxWidth: '600px', margin: '0 auto 2.5rem auto', lineHeight: 1.5 }}>
-            Upload your broker survey PDF. Get an interactive map with every building
-            plotted, tooltips with deal terms, and linked financials - in minutes, not days.
+            Upload your broker survey PDF. Get an interactive map, linked financials, and an AI assistant that knows every building, deal term, and dollar amount in your project.
           </p>
 
           {/* CTAs */}
@@ -510,6 +511,101 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* == AI CHAT ASSISTANT DEMO == */}
+      <section id="ai-chat" style={{ padding: '5rem 0', background: '#ffffff' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
+          <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
+            AI-Powered
+          </span>
+          <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3.5rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.75rem' }}>
+            Ask your data anything
+          </h2>
+          <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', marginBottom: '2.5rem', maxWidth: '600px', lineHeight: 1.6 }}>
+            Every project comes with an AI assistant that has deep knowledge of all your buildings, deal terms, financials, and tour schedule. Ask it to compare buildings, find nearby restaurants, calculate walking times between tours, or break down your lease costs.
+          </p>
+
+          {/* Chat mockup */}
+          <div className="bg-white overflow-hidden" style={{ borderRadius: '1.25rem', boxShadow: '0 24px 48px rgba(0,0,0,0.16)', border: '1px solid #e2e8f0', maxWidth: '720px' }}>
+            {/* Chrome bar */}
+            <div className="flex items-center" style={{ gap: '0.5rem', padding: '0.75rem 1rem', background: '#f1f5f9', borderBottom: '1px solid #e2e8f0' }}>
+              <span className="rounded-full" style={{ width: '10px', height: '10px', background: '#ef4444' }} />
+              <span className="rounded-full" style={{ width: '10px', height: '10px', background: '#f59e0b' }} />
+              <span className="rounded-full" style={{ width: '10px', height: '10px', background: '#22c55e' }} />
+              <span className="flex-1 text-xs" style={{ marginLeft: '1rem', background: '#fff', borderRadius: '0.5rem', padding: '0.25rem 0.75rem', color: '#94a3b8', border: '1px solid #e2e8f0' }}>
+                tour-lytics.com/projects/sf-office-search/chat
+              </span>
+            </div>
+
+            {/* Chat messages */}
+            <div style={{ background: '#0f172a', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {/* User message 1 */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <div style={{ background: '#2563eb', color: '#ffffff', padding: '0.75rem 1rem', borderRadius: '1rem 1rem 0.25rem 1rem', maxWidth: '80%', fontSize: '0.875rem', lineHeight: 1.5 }}>
+                  Compare 250 Brannan and 123 Townsend on total cost
+                </div>
+              </div>
+
+              {/* AI response 1 */}
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(37,99,235,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2"><path d="M12 2a4 4 0 014 4c0 1.95-2 4-4 6-2-2-4-4.05-4-6a4 4 0 014-4z" /><path d="M8.5 14.5A9 9 0 003 21h18a9 9 0 00-5.5-6.5" /></svg>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: '#e2e8f0', padding: '0.75rem 1rem', borderRadius: '0.25rem 1rem 1rem 1rem', maxWidth: '85%', fontSize: '0.875rem', lineHeight: 1.65 }}>
+                  <strong style={{ color: '#ffffff' }}>250 Brannan</strong> comes in at <strong style={{ color: '#22c55e' }}>$106,594/mo all-in</strong> ($56,594 rent + $50,000 OpEx). That&apos;s $79.95/RSF/yr for 16,000 SF.<br /><br />
+                  <strong style={{ color: '#ffffff' }}>123 Townsend</strong> would run about <strong style={{ color: '#f59e0b' }}>$218,147/mo all-in</strong> ($168,147 rent + $50,000 OpEx). That&apos;s 23,031 SF at a higher rate.<br /><br />
+                  250 Brannan saves you roughly <strong style={{ color: '#22c55e' }}>$111,553/month</strong>, or about $1.34M per year. The sublease structure and included furniture make it significantly more cost-effective.
+                </div>
+              </div>
+
+              {/* User message 2 */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <div style={{ background: '#2563eb', color: '#ffffff', padding: '0.75rem 1rem', borderRadius: '1rem 1rem 0.25rem 1rem', maxWidth: '80%', fontSize: '0.875rem', lineHeight: 1.5 }}>
+                  Find coffee shops near my first tour and how long to walk to the second one
+                </div>
+              </div>
+
+              {/* AI response 2 */}
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(37,99,235,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2"><path d="M12 2a4 4 0 014 4c0 1.95-2 4-4 6-2-2-4-4.05-4-6a4 4 0 014-4z" /><path d="M8.5 14.5A9 9 0 003 21h18a9 9 0 00-5.5-6.5" /></svg>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: '#e2e8f0', padding: '0.75rem 1rem', borderRadius: '0.25rem 1rem 1rem 1rem', maxWidth: '85%', fontSize: '0.875rem', lineHeight: 1.65 }}>
+                  Your first tour is at <strong style={{ color: '#ffffff' }}>250 Brannan</strong>. Here are the top coffee spots nearby:<br /><br />
+                  &#9749; <strong>Sightglass</strong> (4.5 stars, 2 min walk) - 270 7th St<br />
+                  &#9749; <strong>Philz Coffee</strong> (4.4 stars, 4 min walk) - 201 Berry St<br />
+                  &#9749; <strong>Equator Coffees</strong> (4.3 stars, 5 min walk) - 986 Market St<br /><br />
+                  From 250 Brannan to your second tour at <strong style={{ color: '#ffffff' }}>301 Brannan</strong>, it&apos;s a <strong style={{ color: '#22c55e' }}>3-minute walk</strong> (0.1 miles). You can easily grab coffee and make it with time to spare.
+                </div>
+              </div>
+            </div>
+
+            {/* Fake input bar */}
+            <div style={{ padding: '0.75rem 1rem', background: '#0f172a', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+              <div style={{ flex: 1, padding: '0.625rem 1rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.75rem', color: '#475569', fontSize: '0.875rem' }}>
+                Ask about buildings, costs, tours, nearby places...
+              </div>
+              <div style={{ width: '36px', height: '36px', borderRadius: '0.625rem', background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
+              </div>
+            </div>
+          </div>
+
+          {/* Capability chips */}
+          <div className="flex flex-wrap" style={{ gap: '0.5rem', marginTop: '1.5rem' }}>
+            {['Financial comparisons', 'Nearby places (Google Places)', 'Walking & driving times', 'Tour schedule awareness', 'Lease term breakdowns', 'Building specifications'].map((cap) => (
+              <span key={cap} className="text-xs font-medium" style={{ padding: '0.375rem 0.75rem', background: '#f1f5f9', color: '#475569', borderRadius: '1.25rem', border: '1px solid #e2e8f0' }}>
+                {cap}
+              </span>
+            ))}
+          </div>
+
+          <div className="flex items-center" style={{ gap: '0.5rem', marginTop: '1rem', fontSize: 'clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem)', color: '#94a3b8' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
+            Powered by Claude AI with real-time Google Maps and Places integration. Every answer is grounded in your actual project data.
+          </div>
+        </div>
+      </section>
+
       {/* == HOW IT WORKS == */}
       <section id="how" style={{ padding: '6rem 0', background: '#ffffff' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
@@ -527,7 +623,7 @@ export default function LandingPage() {
             {[
               { num: '1', title: 'Upload Your Survey', desc: 'Drop in any broker survey or tour book PDF - Savills, CBRE, JLL, Cushman, or custom formats. Our AI reads every page.' },
               { num: '2', title: 'Auto-Extract & Map', desc: 'Buildings are identified, addresses geocoded, and deal terms pulled automatically. Your interactive map generates in minutes.' },
-              { num: '3', title: 'Analyze & Share', desc: 'Build your tour list right from the map. Upload RFPs or LOIs for instant financial analysis. Share everything with stakeholders via a single link.' },
+              { num: '3', title: 'Analyze & Share', desc: 'Build your tour list right from the map. Upload RFPs or LOIs for instant financial analysis. Ask the AI assistant anything about your buildings, costs, or tours. Share everything with stakeholders via a single link.' },
             ].map((step) => (
               <div key={step.num} className="relative z-10 text-center" style={{ padding: '1.5rem' }}>
                 <div className="flex items-center justify-center rounded-full text-white font-bold" style={{ width: '56px', height: '56px', background: '#2563eb', fontFamily: 'var(--font-display)', fontSize: 'clamp(1.125rem, 1rem + 0.75vw, 1.5rem)', margin: '0 auto 1.5rem auto', boxShadow: '0 4px 12px rgba(37,99,235,0.25)' }}>
@@ -596,6 +692,7 @@ export default function LandingPage() {
                     'Build your tour list from the map',
                     'Tour Book with scores, photos, and notes',
                     'Monthly cash flow & GAAP P&L',
+                    'AI assistant that answers questions about any building or deal',
                   ].map((item) => (
                     <li key={item} className="text-sm relative" style={{ color: '#64748b', paddingLeft: '1.25rem' }}>
                       <span className="absolute rounded-full" style={{ left: 0, top: '7px', width: '8px', height: '8px', background: '#86efac' }} />
@@ -950,6 +1047,12 @@ export default function LandingPage() {
                 title: 'Financial Analysis',
                 desc: 'Upload an RFP or LOI. Get straight-line rent, occupancy costs, NPV analysis, and side-by-side deal comparisons.',
                 tag: 'Core Feature',
+              },
+              {
+                icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" /></svg>,
+                title: 'AI Chat Assistant',
+                desc: 'Ask your project anything. Compare buildings, break down lease costs, find nearby restaurants, calculate walking times between tours. Connected to Google Maps and Places for real-time local data.',
+                tag: 'New',
               },
               {
                 icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,

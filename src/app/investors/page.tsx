@@ -177,7 +177,7 @@ export default function InvestorsPage() {
           </h1>
 
           <p style={{ fontSize: 'clamp(1.125rem, 1rem + 0.75vw, 1.5rem)', color: '#94a3b8', maxWidth: '640px', margin: '0 auto 2.5rem auto', lineHeight: 1.5 }}>
-            Transforming how corporate real estate teams analyze markets, compare buildings, and make lease decisions.
+            AI-powered intelligence that transforms how corporate real estate teams analyze markets, compare buildings, and make lease decisions.
           </p>
 
           {/* CTAs */}
@@ -322,7 +322,7 @@ export default function InvestorsPage() {
                   </svg>
                 ),
                 title: 'AI-Powered Analysis',
-                desc: 'Natural language Q&A over your entire market data, financial models, and tour notes.',
+                desc: 'An AI assistant built into every project. Ask it to compare buildings on cost, find coffee shops near your next tour, calculate walking times between buildings, or break down your lease terms. Connected to Google Maps and Google Places for real-time local intelligence.',
                 accent: '#ede9fe',
               },
             ].map((card) => (
@@ -351,6 +351,88 @@ export default function InvestorsPage() {
                 <p style={{ fontSize: '0.9375rem', color: '#64748b', lineHeight: 1.65, margin: 0 }}>{card.desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===================== AI INTELLIGENCE LAYER ===================== */}
+      <section style={{ padding: '6rem 0', background: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+        <div style={{ maxWidth: '1000px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
+          <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: '4rem', alignItems: 'start' }}>
+            {/* Left: Narrative */}
+            <div>
+              <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
+                AI Intelligence Layer
+              </span>
+              <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.75rem, 1.2rem + 2vw, 2.75rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '1.25rem', lineHeight: 1.15 }}>
+                Every project gets a personal AI analyst
+              </h2>
+              <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', lineHeight: 1.7, marginBottom: '1.5rem' }}>
+                Tour-Lytics embeds an AI assistant directly into every project workspace. It has deep knowledge of all 33 buildings, every deal term, all financial models, and the user&apos;s live tour schedule. This is not a generic chatbot. It is a CRE analyst that knows your specific data.
+              </p>
+              <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', lineHeight: 1.7, marginBottom: '1.5rem' }}>
+                Connected to Google Maps and Google Places APIs, the assistant can find nearby restaurants, calculate walking and driving times between buildings, and pull real-time local data. Users ask questions in plain English and get answers grounded in their actual project data.
+              </p>
+
+              {/* Capability list */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1.5rem' }}>
+                {[
+                  { icon: '💬', text: 'Compare any two buildings on cost, size, location, or deal structure' },
+                  { icon: '📊', text: 'Break down all-in occupancy costs, GAAP rent, and OpEx line items' },
+                  { icon: '☕', text: 'Find nearby coffee shops, restaurants, or parking with ratings and hours' },
+                  { icon: '🚶', text: 'Calculate walking, driving, or transit times between tour stops' },
+                  { icon: '📅', text: 'Aware of the live tour schedule, scores, and shortlist in real time' },
+                  { icon: '🔗', text: 'Powered by Claude AI with Google Maps and Places integration' },
+                ].map((item) => (
+                  <div key={item.text} className="flex items-start" style={{ gap: '0.75rem' }}>
+                    <span style={{ fontSize: '1rem', flexShrink: 0, marginTop: '2px' }}>{item.icon}</span>
+                    <span style={{ fontSize: '0.9375rem', color: '#475569', lineHeight: 1.5 }}>{item.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right: Mini chat mockup */}
+            <div style={{ borderRadius: '1.25rem', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 8px 24px rgba(0,0,0,0.06)' }}>
+              {/* Dark chat header */}
+              <div style={{ padding: '1rem 1.25rem', background: '#0f172a', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', animation: 'pulse 2s infinite' }} />
+                <span className="font-semibold" style={{ color: '#e2e8f0', fontSize: '0.8125rem', fontFamily: 'var(--font-display)' }}>Tour-Lytics AI Assistant</span>
+              </div>
+
+              {/* Chat messages */}
+              <div style={{ background: '#0f172a', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <div style={{ background: '#2563eb', color: '#fff', padding: '0.625rem 0.875rem', borderRadius: '0.875rem 0.875rem 0.25rem 0.875rem', fontSize: '0.8125rem', lineHeight: 1.5, maxWidth: '85%' }}>
+                    What&apos;s the all-in monthly cost for 250 Brannan?
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '0.375rem', alignItems: 'flex-start' }}>
+                  <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(37,99,235,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px' }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2"><path d="M12 2a4 4 0 014 4c0 1.95-2 4-4 6-2-2-4-4.05-4-6a4 4 0 014-4z" /><path d="M8.5 14.5A9 9 0 003 21h18a9 9 0 00-5.5-6.5" /></svg>
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: '#cbd5e1', padding: '0.625rem 0.875rem', borderRadius: '0.25rem 0.875rem 0.875rem 0.875rem', fontSize: '0.8125rem', lineHeight: 1.6, maxWidth: '90%' }}>
+                    The all-in monthly P&amp;L for 250 Brannan is <strong style={{ color: '#22c55e' }}>$106,594</strong>. That includes $56,594 rent + $50,000 OpEx (F&amp;B, Workplace Experience, Maintenance). That&apos;s $79.95/RSF/yr.
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <div style={{ background: '#2563eb', color: '#fff', padding: '0.625rem 0.875rem', borderRadius: '0.875rem 0.875rem 0.25rem 0.875rem', fontSize: '0.8125rem', lineHeight: 1.5, maxWidth: '85%' }}>
+                    Find me lunch spots near there
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '0.375rem', alignItems: 'flex-start' }}>
+                  <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(37,99,235,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px' }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2"><path d="M12 2a4 4 0 014 4c0 1.95-2 4-4 6-2-2-4-4.05-4-6a4 4 0 014-4z" /><path d="M8.5 14.5A9 9 0 003 21h18a9 9 0 00-5.5-6.5" /></svg>
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: '#cbd5e1', padding: '0.625rem 0.875rem', borderRadius: '0.25rem 0.875rem 0.875rem 0.875rem', fontSize: '0.8125rem', lineHeight: 1.6, maxWidth: '90%' }}>
+                    Near 250 Brannan, I found:<br />
+                    &#127869; <strong>The Deli Board</strong> (4.6 stars) - 1058 Folsom<br />
+                    &#127869; <strong>Marlowe</strong> (4.4 stars) - 330 Townsend<br />
+                    &#127869; <strong>Tres</strong> (4.3 stars) - 130 Townsend
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -396,6 +478,98 @@ export default function InvestorsPage() {
                 <p style={{ fontSize: '0.9375rem', color: '#64748b', lineHeight: 1.65, margin: 0 }}>{item.desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===================== BUSINESS MODEL ===================== */}
+      <section style={{ padding: '6rem 0', background: '#ffffff', borderTop: '1px solid #e2e8f0' }}>
+        <div style={{ maxWidth: '1000px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
+          <div className="text-center" style={{ marginBottom: '3.5rem' }}>
+            <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
+              Business Model
+            </span>
+            <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.75rem' }}>
+              Usage-based pricing that scales with value
+            </h2>
+            <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', maxWidth: '640px', margin: '0 auto', lineHeight: 1.6 }}>
+              Tour-Lytics uses a credit-based model. Teams pay for what they use: AI queries, financial model generation, survey parsing, and data exports. No flat subscription fees. Revenue scales directly with engagement.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3" style={{ gap: '1.5rem' }}>
+            {[
+              {
+                icon: (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                  </svg>
+                ),
+                title: 'AI Credits',
+                desc: 'Each AI query, building comparison, nearby search, or directions lookup consumes credits. Teams purchase credit packs or auto-refill as needed.',
+                metric: 'Primary revenue driver',
+                metricColor: '#2563eb',
+              },
+              {
+                icon: (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                  </svg>
+                ),
+                title: 'Document Processing',
+                desc: 'Credits consumed when parsing broker surveys, generating financial models from RFPs/LOIs, or exporting reports to PDF and CSV.',
+                metric: 'Per-document pricing',
+                metricColor: '#16a34a',
+              },
+              {
+                icon: (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="3" width="20" height="18" rx="2" />
+                    <path d="M2 9h20M10 3v18" />
+                  </svg>
+                ),
+                title: 'Platform Access',
+                desc: 'Free tier includes map viewing and basic tour book. Credit purchases unlock AI assistant, financial modeling, advanced exports, and team collaboration.',
+                metric: 'Freemium + usage',
+                metricColor: '#b45309',
+              },
+            ].map((card) => (
+              <div key={card.title} style={{ padding: '2rem', borderRadius: '1rem', background: '#ffffff', border: '1px solid #e2e8f0', transition: 'box-shadow 0.2s, border-color 0.2s' }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(0,0,0,0.06)';
+                  (e.currentTarget as HTMLElement).style.borderColor = '#bfdbfe';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.boxShadow = 'none';
+                  (e.currentTarget as HTMLElement).style.borderColor = '#e2e8f0';
+                }}
+              >
+                <div style={{ width: '48px', height: '48px', borderRadius: '0.75rem', background: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.25rem' }}>
+                  {card.icon}
+                </div>
+                <h3 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.125rem, 1rem + 0.5vw, 1.25rem)', color: '#0f172a', marginBottom: '0.5rem' }}>{card.title}</h3>
+                <p style={{ fontSize: '0.9375rem', color: '#64748b', lineHeight: 1.65, margin: 0, marginBottom: '1rem' }}>{card.desc}</p>
+                <span className="inline-block text-xs font-semibold" style={{ color: card.metricColor, background: card.metricColor === '#2563eb' ? '#dbeafe' : card.metricColor === '#16a34a' ? '#dcfce7' : '#fef3c7', padding: '0.25rem 0.75rem', borderRadius: '1.25rem' }}>
+                  {card.metric}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Revenue model note */}
+          <div style={{ marginTop: '2rem', padding: '1.5rem 2rem', borderRadius: '1rem', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+            <div className="flex items-start" style={{ gap: '1rem' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '0.75rem', background: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></svg>
+              </div>
+              <div>
+                <h4 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: '#0f172a', marginBottom: '0.375rem' }}>Why usage-based pricing</h4>
+                <p style={{ fontSize: '0.9375rem', color: '#64748b', lineHeight: 1.65, margin: 0 }}>
+                  CRE teams are active in waves: heavy usage during market surveys and tours, lighter between deals. A credit model matches how teams actually work, eliminates friction on adoption, and creates a natural expansion loop as teams use AI more deeply across each project. Early data shows AI queries are the highest-engagement feature, making them the ideal billing anchor.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -448,7 +622,7 @@ export default function InvestorsPage() {
                   <span className="font-semibold" style={{ fontFamily: 'var(--font-display)', color: '#166534', fontSize: '0.9375rem' }}>With Tour-Lytics</span>
                 </div>
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-                  {['Upload broker survey PDF', 'Instant interactive map + building data', 'Auto-generated GAAP financials', 'Minutes instead of weeks'].map((item) => (
+                  {['Upload broker survey PDF', 'Instant interactive map + building data', 'Auto-generated GAAP financials', 'AI assistant for instant answers on any building or deal', 'Minutes instead of weeks'].map((item) => (
                     <li key={item} className="text-sm" style={{ color: '#64748b', paddingLeft: '1.25rem', position: 'relative' }}>
                       <span style={{ position: 'absolute', left: 0, top: '6px', width: '6px', height: '6px', borderRadius: '50%', background: '#86efac' }} />
                       {item}
