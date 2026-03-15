@@ -2736,6 +2736,12 @@ body {
       line-height: 1.5;
       margin: 0;
     }
+    .commute-saved-banner {
+      display: flex; align-items: center; justify-content: space-between;
+      background: rgba(22,163,74,0.05); border: 1px solid rgba(22,163,74,0.2);
+      border-radius: var(--radius-lg); padding: 12px 16px;
+      margin-bottom: var(--space-4);
+    }
     .commute-upload-card {
       background: var(--color-surface);
       border-radius: var(--radius-xl);
@@ -4640,6 +4646,15 @@ body {
         <h2 class="commute-page-title">Commute Study</h2>
         <p class="commute-page-subtitle">Upload employee locations to calculate average drive and transit times to each building on the tour list.</p>
       </div>
+    </div>
+
+    <!-- Saved study banner (shown when loaded from server) -->
+    <div class="commute-saved-banner" id="commuteSavedBanner" style="display:none;">
+      <div style="display:flex;align-items:center;gap:0.5rem;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <span id="commuteSavedInfo" style="font-size:var(--text-sm);color:var(--color-text);"></span>
+      </div>
+      <button class="commute-clear-btn" id="commuteNewStudyBtn" onclick="commuteStartNew()" style="display:none;">Upload New File</button>
     </div>
 
     <!-- Upload section -->
@@ -6734,7 +6749,8 @@ function switchPageTab(tabId) {
   // Initialize commute tab drag-drop when switching to it
   if (tabId === 'commute') {
     initCommuteDropzone();
-    commuteCheckStale();
+    commuteLoadSaved();
+    commuteApplyRoleAccess();
   }
 }
 
@@ -8875,6 +8891,131 @@ var _commuteGroupCol = null; // auto-detected group-by column (e.g. Business Uni
 var _commuteDropzoneInit = false;
 var _commuteLastBuildingCount = 0; // track building count from last run
 var _commuteLastBuildingNames = []; // track building names from last run
+var _commuteSavedLoaded = false; // whether we've tried loading from server
+var _commuteFilename = ''; // uploaded filename for persistence
+
+// Load saved commute study from server
+async function commuteLoadSaved() {
+  if (_commuteSavedLoaded) return;
+  _commuteSavedLoaded = true;
+  try {
+    var res = await fetch('/api/commute-study?projectId=sf-office-search');
+    var data = await res.json();
+    if (!data || !data.employees || !data.employees.length) return;
+
+    // Restore state from saved data
+    _commuteEmployees = data.employees;
+    _commuteResults = data.results;
+    _commuteHeaders = data.headers || [];
+    _commuteLatCol = data.lat_col || 0;
+    _commuteLngCol = data.lng_col || 0;
+
+    // Snapshot building info from results for stale detection
+    if (_commuteResults && _commuteResults.summaries) {
+      _commuteLastBuildingCount = _commuteResults.summaries.length;
+      _commuteLastBuildingNames = _commuteResults.summaries.map(function(s) { return s.building; }).sort();
+    }
+
+    // Show saved banner
+    var banner = document.getElementById('commuteSavedBanner');
+    var info = document.getElementById('commuteSavedInfo');
+    if (banner && info) {
+      var empCount = _commuteEmployees.length;
+      var filename = data.filename || 'Employee data';
+      info.innerHTML = '<strong>' + filename + '</strong> - ' + empCount + ' employees';
+      banner.style.display = 'flex';
+    }
+
+    // Show "Upload New" button only for admin/cre_team
+    var newBtn = document.getElementById('commuteNewStudyBtn');
+    if (newBtn && hasAdminAccess()) {
+      newBtn.style.display = '';
+    }
+
+    // Hide upload card since we have saved data
+    document.getElementById('commuteUploadCard').style.display = 'none';
+
+    // Render results
+    renderCommuteResults();
+    commuteCheckStale();
+  } catch(e) {
+    console.warn('Failed to load saved commute study:', e);
+  }
+}
+
+// Save commute study to server
+async function commuteSaveToServer(filename) {
+  try {
+    await fetch('/api/commute-study', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        projectId: 'sf-office-search',
+        filename: filename || '',
+        headers: _commuteHeaders,
+        latCol: _commuteLatCol,
+        lngCol: _commuteLngCol,
+        employees: _commuteEmployees,
+        results: _commuteResults,
+        uploadedBy: getCurrentUserEmail() || ''
+      })
+    });
+  } catch(e) {
+    console.warn('Failed to save commute study:', e);
+  }
+}
+
+// Delete saved commute study from server
+async function commuteDeleteFromServer() {
+  try {
+    await fetch('/api/commute-study?projectId=sf-office-search', { method: 'DELETE' });
+  } catch(e) {
+    console.warn('Failed to delete commute study:', e);
+  }
+}
+
+// Admin/CRE: start a new study (show upload, hide saved banner)
+function commuteStartNew() {
+  document.getElementById('commuteSavedBanner').style.display = 'none';
+  document.getElementById('commuteUploadCard').style.display = '';
+  document.getElementById('commuteResults').style.display = 'none';
+  _commuteEmployees = [];
+  _commuteResults = null;
+  _commuteHeaders = [];
+  _commuteLatCol = -1;
+  _commuteLngCol = -1;
+  _commuteGroupCol = null;
+  // Re-init dropzone state
+  document.getElementById('commuteDropzone').style.display = '';
+  document.getElementById('commuteFileInfo').style.display = 'none';
+  document.getElementById('commutePreview').style.display = 'none';
+  document.getElementById('commuteActions').style.display = 'none';
+}
+
+// Apply role-based access to commute UI
+function commuteApplyRoleAccess() {
+  var canUpload = hasAdminAccess(); // admin, broker, cre_team
+  // Actually: only admin and cre_team can upload. Brokers and tourees are view-only.
+  canUpload = ['admin', 'cre_team'].includes(_userRole);
+
+  // Hide upload card for view-only users when there's saved data
+  var uploadCard = document.getElementById('commuteUploadCard');
+  var clearBtn = document.querySelectorAll('.commute-clear-btn');
+  var newBtn = document.getElementById('commuteNewStudyBtn');
+
+  if (!canUpload) {
+    // Hide upload section entirely for brokers/tourees
+    uploadCard.style.display = 'none';
+    if (newBtn) newBtn.style.display = 'none';
+    // Hide clear buttons
+    clearBtn.forEach(function(b) { b.style.display = 'none'; });
+    // Update subtitle
+    var sub = document.querySelector('.commute-page-subtitle');
+    if (sub && _commuteResults) {
+      sub.textContent = 'View employee commute times to each building on the tour list.';
+    }
+  }
+}
 
 function initCommuteDropzone() {
   if (_commuteDropzoneInit) return;
@@ -8965,6 +9106,7 @@ function commuteHandleFile(file) {
 }
 
 function commuteProcessRows(rows, filename) {
+  _commuteFilename = filename || '';
   // rows[0] = headers, rows[1+] = data
   var rawHeaders = rows[0].map(function(h) { return String(h).trim(); });
   
@@ -9104,6 +9246,7 @@ function commuteClearFile() {
   _commuteLatCol = -1;
   _commuteLngCol = -1;
   _commuteGroupCol = null;
+  _commuteFilename = '';
   document.getElementById('commuteDropzone').style.display = '';
   document.getElementById('commuteFileInfo').style.display = 'none';
   document.getElementById('commutePreview').style.display = 'none';
@@ -9111,6 +9254,9 @@ function commuteClearFile() {
   document.getElementById('commuteResults').style.display = 'none';
   document.getElementById('commuteLoading').style.display = 'none';
   document.getElementById('commuteFileInput').value = '';
+  document.getElementById('commuteSavedBanner').style.display = 'none';
+  // Also delete from server
+  commuteDeleteFromServer();
 }
 
 async function commuteRunStudy() {
@@ -9152,6 +9298,17 @@ async function commuteRunStudy() {
     _commuteLastBuildingCount = buildings.length;
     _commuteLastBuildingNames = buildings.map(function(b) { return b.name; }).sort();
     renderCommuteResults();
+    // Persist to server so everyone can see it
+    commuteSaveToServer(_commuteFilename);
+    // Show saved banner
+    var banner = document.getElementById('commuteSavedBanner');
+    var info = document.getElementById('commuteSavedInfo');
+    if (banner && info) {
+      info.innerHTML = '<strong>' + (_commuteFilename || 'Employee data') + '</strong> - ' + _commuteEmployees.length + ' employees';
+      banner.style.display = 'flex';
+      var newBtn = document.getElementById('commuteNewStudyBtn');
+      if (newBtn && hasAdminAccess()) newBtn.style.display = '';
+    }
   } catch(e) {
     alert('Commute calculation failed: ' + e.message);
   } finally {
