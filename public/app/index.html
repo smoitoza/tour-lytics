@@ -3094,10 +3094,22 @@ body {
     }
 
     @media (max-width: 640px) {
-      .commute-page { padding: var(--space-3); }
+      .commute-page { padding: var(--space-3); overflow-x: hidden; }
       .commute-summary-grid { grid-template-columns: 1fr; }
       .commute-upload-card { padding: var(--space-4); }
       .commute-dropzone { padding: 1.5rem 1rem; }
+      .commute-ranked-section { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .commute-ranked-table { min-width: 520px; font-size: 0.78rem; }
+      .commute-ranked-table th, .commute-ranked-table td { padding: 0.5rem 0.625rem; }
+      .commute-heatmap { min-width: 500px; }
+      .commute-group-cards { grid-template-columns: 1fr; }
+      .commute-group-card-table { font-size: 0.72rem; }
+      .commute-saved-banner { flex-direction: column; gap: 0.5rem; align-items: flex-start; }
+      .commute-section-title { font-size: 0.625rem; }
+      .commute-summary-card { padding: 0.875rem; }
+      .commute-summary-value { font-size: var(--text-lg); }
+      .commute-preview { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .commute-preview table { min-width: 400px; }
     }
 
     /* Summary comparison bar */
@@ -3510,7 +3522,12 @@ body {
       position: sticky;
       top: 0;
       z-index: 600;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      flex-wrap: nowrap;
     }
+    .page-tabs::-webkit-scrollbar { display: none; }
     .page-tab {
       display: flex;
       align-items: center;
@@ -3526,6 +3543,7 @@ body {
       cursor: pointer;
       transition: all var(--transition);
       white-space: nowrap;
+      flex-shrink: 0;
     }
     .page-tab:hover {
       color: var(--color-text);
@@ -3540,9 +3558,10 @@ body {
       height: 16px;
       flex-shrink: 0;
     }
-    .tab-content { display: none; flex: 1; flex-direction: column; min-height: 0; }
+    .tab-content { display: none; flex: 1; flex-direction: column; min-height: 0; overflow-x: hidden; }
     .tab-content.active { display: flex; }
     #tab-financials { overflow-y: auto; }
+    #tab-commute { overflow-y: auto; }
 
     /* ===== FINANCIALS VIEW ===== */
     .financials-view {
