@@ -705,310 +705,82 @@ export default function DashboardPage() {
         </div>
 
         {/* ================================================================
-            SECTION 1: MANAGE TEAM (admin only)
+            SECTION 1: PROJECT TEAM - quick summary, full management in app Team tab
         ================================================================ */}
         {isAdmin && (
           <div className="dash-fade dash-fade-6" style={{ marginBottom: '2rem' }}>
             <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
-              Manage Team
+              Project Team
             </div>
 
             <div style={{
               background: '#ffffff',
               borderRadius: '1rem',
               border: '1px solid #e2e8f0',
-              overflow: 'hidden',
+              padding: '1.25rem',
             }}>
-              {/* Team member list */}
               {teamLoading ? (
-                <div style={{ padding: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', color: '#94a3b8' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#94a3b8' }}>
                   <div style={{ width: '1rem', height: '1rem', border: '2px solid #e2e8f0', borderTopColor: '#2563eb', borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
-                  <span style={{ fontSize: '0.875rem' }}>Loading team members...</span>
+                  <span style={{ fontSize: '0.875rem' }}>Loading...</span>
                 </div>
-              ) : teamError ? (
-                <div style={{ padding: '1.5rem', textAlign: 'center', color: '#dc2626', fontSize: '0.875rem' }}>{teamError}</div>
-              ) : teamMembers.length === 0 ? (
-                <div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.875rem' }}>No team members yet.</div>
               ) : (
                 <div>
-                  {/* Header row */}
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr auto auto auto',
-                    gap: '0.75rem',
-                    padding: '0.625rem 1.25rem',
-                    background: '#f8fafc',
-                    borderBottom: '1px solid #e2e8f0',
-                    alignItems: 'center',
-                  }}>
-                    <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Email</div>
-                    <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Display Name</div>
-                    <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Role</div>
-                    <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Invite</div>
-                    <div style={{ width: '1.75rem' }} />
-                  </div>
-
-                  {teamMembers.map((member, i) => {
-                    const badge = personaConfig[member.persona] || personaConfig.touree
-                    const isOwner = member.email === 'samoitoza@gmail.com'
-                    return (
-                      <div
-                        key={member.email}
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns: '1fr 1fr auto auto auto',
-                          gap: '0.75rem',
-                          padding: '0.875rem 1.25rem',
-                          borderBottom: i < teamMembers.length - 1 ? '1px solid #f1f5f9' : 'none',
-                          alignItems: 'center',
-                          transition: 'background 0.15s',
-                        }}
-                      >
-                        <div style={{ fontSize: '0.8125rem', color: '#334155', fontWeight: isOwner ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {member.email}
-                          {isOwner && (
-                            <span style={{ marginLeft: '0.5rem', fontSize: '0.625rem', color: '#2563eb', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>you</span>
-                          )}
-                        </div>
-                        <div style={{ fontSize: '0.8125rem', color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {member.display_name || <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>No name set</span>}
-                        </div>
-                        <span style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          padding: '0.1875rem 0.625rem',
-                          borderRadius: '9999px',
-                          fontSize: '0.6875rem',
-                          fontWeight: 600,
-                          textTransform: 'capitalize',
-                          letterSpacing: '0.03em',
-                          background: badge.bg,
-                          color: badge.color,
-                          border: `1px solid ${badge.border}`,
-                          whiteSpace: 'nowrap',
-                        }}>
-                          {badge.label || member.persona}
-                        </span>
-                        {/* Invite actions */}
-                        <div style={{ display: 'flex', gap: '0.375rem', alignItems: 'center' }}>
-                          {!isOwner ? (
-                            <>
-                              <button
-                                className="invite-btn"
-                                onClick={() => handleSendInvite(member.email, member.display_name, member.persona)}
-                                title={`Email invite to ${member.email}`}
-                                style={{
-                                  padding: '0.3125rem 0.625rem',
-                                  fontSize: '0.6875rem',
-                                  fontWeight: 600,
-                                  color: inviteSent === member.email ? '#16a34a' : '#2563eb',
-                                  background: inviteSent === member.email ? 'rgba(22,163,74,0.08)' : 'rgba(37,99,235,0.06)',
-                                  border: inviteSent === member.email ? '1px solid rgba(22,163,74,0.2)' : '1px solid rgba(37,99,235,0.15)',
-                                  borderRadius: '0.375rem',
-                                  cursor: 'pointer',
-                                  fontFamily: 'inherit',
-                                  transition: 'all 0.15s',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '0.25rem',
-                                  whiteSpace: 'nowrap',
-                                }}
-                              >
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                                  <polyline points="22,6 12,13 2,6" />
-                                </svg>
-                                {inviteSent === member.email ? 'Sent' : 'Email'}
-                              </button>
-                              <button
-                                className="invite-btn"
-                                onClick={() => handleCopyLink(member.email)}
-                                title="Copy signup link"
-                                style={{
-                                  padding: '0.3125rem 0.625rem',
-                                  fontSize: '0.6875rem',
-                                  fontWeight: 600,
-                                  color: copiedLink === member.email ? '#16a34a' : '#64748b',
-                                  background: copiedLink === member.email ? 'rgba(22,163,74,0.08)' : '#f8fafc',
-                                  border: copiedLink === member.email ? '1px solid rgba(22,163,74,0.2)' : '1px solid #e2e8f0',
-                                  borderRadius: '0.375rem',
-                                  cursor: 'pointer',
-                                  fontFamily: 'inherit',
-                                  transition: 'all 0.15s',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '0.25rem',
-                                  whiteSpace: 'nowrap',
-                                }}
-                              >
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                  {copiedLink === member.email ? (
-                                    <polyline points="20 6 9 17 4 12" />
-                                  ) : (
-                                    <>
-                                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                                      <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-                                    </>
-                                  )}
-                                </svg>
-                                {copiedLink === member.email ? 'Copied' : 'Link'}
-                              </button>
-                            </>
-                          ) : (
-                            <span style={{ fontSize: '0.6875rem', color: '#cbd5e1' }}>&mdash;</span>
-                          )}
-                        </div>
-                        <div style={{ width: '1.75rem', display: 'flex', justifyContent: 'center' }}>
-                          {!isOwner && (
-                            <button
-                              className="remove-btn"
-                              onClick={() => handleRemoveMember(member.email)}
-                              title={`Remove ${member.email}`}
-                              style={{
-                                width: '1.75rem',
-                                height: '1.75rem',
-                                borderRadius: '0.375rem',
-                                border: '1px solid #e2e8f0',
-                                background: 'transparent',
-                                color: '#94a3b8',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s',
-                                padding: 0,
-                                lineHeight: 1,
-                                fontSize: '0.875rem',
-                              }}
-                            >
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                                <line x1="18" y1="6" x2="6" y2="18" />
-                                <line x1="6" y1="6" x2="18" y2="18" />
-                              </svg>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-
-              {/* Add member form */}
-              <div style={{
-                padding: '1.25rem',
-                borderTop: '1px solid #e2e8f0',
-                background: '#f8fafc',
-              }}>
-                <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.75rem' }}>
-                  Add Member
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: '0.625rem', alignItems: 'flex-end' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.6875rem', color: '#64748b', fontWeight: 500, marginBottom: '0.375rem' }}>Email</label>
-                    <input
-                      type="email"
-                      className="team-input"
-                      value={newEmail}
-                      onChange={(e) => setNewEmail(e.target.value)}
-                      placeholder="name@example.com"
-                      style={{
-                        width: '100%',
-                        padding: '0.5rem 0.75rem',
-                        fontSize: '0.8125rem',
-                        color: '#0f172a',
-                        background: '#ffffff',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '0.5rem',
-                        fontFamily: 'inherit',
-                        boxSizing: 'border-box',
-                        transition: 'border-color 0.15s, box-shadow 0.15s',
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#334155' }}>
+                      {teamMembers.length} team member{teamMembers.length !== 1 ? 's' : ''}
+                    </div>
+                    <a
+                      href={`/app/?userEmail=${encodeURIComponent(user?.email || '')}`}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        window.location.href = `/app/?userEmail=${encodeURIComponent(user?.email || '')}#team`
                       }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.6875rem', color: '#64748b', fontWeight: 500, marginBottom: '0.375rem' }}>Display Name</label>
-                    <input
-                      type="text"
-                      className="team-input"
-                      value={newDisplayName}
-                      onChange={(e) => setNewDisplayName(e.target.value)}
-                      placeholder="Jane Smith"
                       style={{
-                        width: '100%',
-                        padding: '0.5rem 0.75rem',
                         fontSize: '0.8125rem',
-                        color: '#0f172a',
-                        background: '#ffffff',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '0.5rem',
-                        fontFamily: 'inherit',
-                        boxSizing: 'border-box',
-                        transition: 'border-color 0.15s, box-shadow 0.15s',
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.6875rem', color: '#64748b', fontWeight: 500, marginBottom: '0.375rem' }}>Role</label>
-                    <select
-                      className="team-select"
-                      value={newPersona}
-                      onChange={(e) => setNewPersona(e.target.value)}
-                      style={{
-                        padding: '0.5rem 0.75rem',
-                        fontSize: '0.8125rem',
-                        color: '#0f172a',
-                        background: '#ffffff',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '0.5rem',
-                        fontFamily: 'inherit',
-                        cursor: 'pointer',
-                        transition: 'border-color 0.15s, box-shadow 0.15s',
-                        appearance: 'none',
-                        paddingRight: '2rem',
-                        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
-                        backgroundRepeat: 'no-repeat',
-                        backgroundPosition: 'right 0.625rem center',
+                        fontWeight: 600,
+                        color: '#2563eb',
+                        textDecoration: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
                       }}
                     >
-                      <option value="admin">Admin</option>
-                      <option value="broker">Broker</option>
-                      <option value="cre_team">CRE Team</option>
-                      <option value="touree">Touree</option>
-                    </select>
+                      Manage Team
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                    </a>
                   </div>
-                  <button
-                    onClick={handleAddMember}
-                    disabled={addingMember}
-                    style={{
-                      padding: '0.5rem 1.125rem',
-                      fontSize: '0.8125rem',
-                      fontWeight: 600,
-                      color: '#ffffff',
-                      background: addingMember ? '#93c5fd' : '#2563eb',
-                      border: 'none',
-                      borderRadius: '0.5rem',
-                      cursor: addingMember ? 'not-allowed' : 'pointer',
-                      fontFamily: 'inherit',
-                      transition: 'background 0.15s',
-                      whiteSpace: 'nowrap',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.375rem',
-                    }}
-                    onMouseEnter={(e) => { if (!addingMember) e.currentTarget.style.background = '#1d4ed8' }}
-                    onMouseLeave={(e) => { if (!addingMember) e.currentTarget.style.background = '#2563eb' }}
-                  >
-                    {addingMember && (
-                      <div style={{ width: '0.75rem', height: '0.75rem', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#ffffff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
-                    )}
-                    Add Member
-                  </button>
+                  {/* Role summary badges */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {Object.entries(
+                      teamMembers.reduce((acc: Record<string, number>, m) => {
+                        acc[m.persona] = (acc[m.persona] || 0) + 1
+                        return acc
+                      }, {})
+                    ).map(([persona, count]) => {
+                      const cfg = personaConfig[persona] || personaConfig.touree
+                      return (
+                        <span key={persona} style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.375rem',
+                          padding: '0.25rem 0.75rem',
+                          borderRadius: '9999px',
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          background: cfg.bg,
+                          color: cfg.color,
+                          border: `1px solid ${cfg.border}`,
+                        }}>
+                          {count} {cfg.label}{Number(count) !== 1 ? 's' : ''}
+                        </span>
+                      )
+                    })}
+                  </div>
                 </div>
-                {addError && (
-                  <p style={{ marginTop: '0.625rem', fontSize: '0.8125rem', color: '#dc2626' }}>{addError}</p>
-                )}
-              </div>
+              )}
             </div>
           </div>
         )}
