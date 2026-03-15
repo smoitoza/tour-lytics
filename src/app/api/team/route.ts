@@ -51,6 +51,35 @@ export async function POST(req: Request) {
   return NextResponse.json(data)
 }
 
+// PATCH - update a team member's role
+export async function PATCH(req: Request) {
+  try {
+    const body = await req.json()
+    const { email, persona, projectId = 'sf-office-search' } = body
+
+    if (!email || !persona) {
+      return NextResponse.json({ error: 'Email and persona are required' }, { status: 400 })
+    }
+
+    if (!['admin', 'broker', 'cre_team', 'touree'].includes(persona)) {
+      return NextResponse.json({ error: 'Invalid persona' }, { status: 400 })
+    }
+
+    const { data, error } = await supabase
+      .from('project_members')
+      .update({ persona })
+      .eq('email', email.toLowerCase().trim())
+      .eq('project_id', projectId)
+      .select()
+      .single()
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json(data)
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+  }
+}
+
 // DELETE - remove a team member
 export async function DELETE(req: Request) {
   const { searchParams } = new URL(req.url)
