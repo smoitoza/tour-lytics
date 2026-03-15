@@ -4563,9 +4563,9 @@ body {
           <polyline points="17 8 12 3 7 8"/>
           <line x1="12" y1="3" x2="12" y2="15"/>
         </svg>
-        <p class="commute-dropzone-title">Drop CSV file here</p>
-        <p class="commute-dropzone-desc">or click to browse. CSV should have columns: <strong>name, lat, lng</strong></p>
-        <input type="file" id="commuteFileInput" accept=".csv" style="display:none" />
+        <p class="commute-dropzone-title">Drop your employee file here</p>
+        <p class="commute-dropzone-desc">or click to browse. Supports <strong>.xlsx, .xls, .csv</strong> with latitude/longitude columns</p>
+        <input type="file" id="commuteFileInput" accept=".csv,.xlsx,.xls" style="display:none" />
         <button class="commute-browse-btn" onclick="document.getElementById('commuteFileInput').click()">Choose File</button>
       </div>
       <div class="commute-file-info" id="commuteFileInfo" style="display:none;">
@@ -4604,6 +4604,7 @@ body {
 <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/heic-to@1.2.2/dist/iife/heic-to.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script>
 // Storage abstraction for sandboxed environments
 var _storeMem = {};
@@ -8739,52 +8740,153 @@ function initCommuteDropzone() {
   });
 }
 
+// Column header patterns for auto-detection
+var _commuteLatPatterns = ['lat', 'latitude', 'latitude1', 'lat1', 'y', 'employee_lat'];
+var _commuteLngPatterns = ['lng', 'longitude', 'longitude1', 'lng1', 'lon', 'lon1', 'x', 'employee_lng', 'employee_lon'];
+var _commuteHeaders = []; // all column headers from the file
+var _commuteLatCol = -1;
+var _commuteLngCol = -1;
+
 function commuteHandleFile(file) {
-  if (!file.name.toLowerCase().endsWith('.csv')) {
-    alert('Please upload a CSV file.');
-    return;
+  var ext = file.name.toLowerCase().split('.').pop();
+  if (ext === 'csv') {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var text = e.target.result;
+      var lines = text.trim().split('\n');
+      if (lines.length < 2) { alert('File must have a header row and at least one data row.'); return; }
+      var rows = lines.map(function(line) {
+        // Simple CSV parse (handles quoted fields)
+        var result = []; var current = ''; var inQuotes = false;
+        for (var c = 0; c < line.length; c++) {
+          var ch = line[c];
+          if (ch === '"') { inQuotes = !inQuotes; }
+          else if (ch === ',' && !inQuotes) { result.push(current.trim()); current = ''; }
+          else { current += ch; }
+        }
+        result.push(current.trim());
+        return result;
+      });
+      commuteProcessRows(rows, file.name);
+    };
+    reader.readAsText(file);
+  } else if (ext === 'xlsx' || ext === 'xls') {
+    if (typeof XLSX === 'undefined') {
+      alert('Excel library not loaded. Please try again in a moment.');
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        var workbook = XLSX.read(e.target.result, { type: 'array' });
+        var sheetName = workbook.SheetNames[0];
+        var sheet = workbook.Sheets[sheetName];
+        var rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+        // Filter out completely empty rows
+        rows = rows.filter(function(r) { return r.some(function(c) { return c !== '' && c != null; }); });
+        if (rows.length < 2) { alert('File must have a header row and at least one data row.'); return; }
+        // Convert all values to strings for uniform processing
+        rows = rows.map(function(r) { return r.map(function(c) { return c == null ? '' : String(c); }); });
+        commuteProcessRows(rows, file.name);
+      } catch(err) {
+        alert('Could not parse Excel file: ' + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    alert('Unsupported file type. Please upload .xlsx, .xls, or .csv');
   }
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    var text = e.target.result;
-    commuteParseCSV(text, file.name);
-  };
-  reader.readAsText(file);
 }
 
-function commuteParseCSV(text, filename) {
-  var lines = text.trim().split('\n');
-  if (lines.length < 2) { alert('CSV must have a header row and at least one data row.'); return; }
-
-  var header = lines[0].split(',').map(function(h) { return h.trim().toLowerCase().replace(/["']/g, ''); });
-  var nameIdx = header.indexOf('name');
-  var latIdx = header.indexOf('lat');
-  var lngIdx = header.indexOf('lng');
-  if (latIdx < 0) latIdx = header.indexOf('latitude');
-  if (lngIdx < 0) lngIdx = header.indexOf('longitude');
-  if (lngIdx < 0) lngIdx = header.indexOf('lon');
-
-  if (nameIdx < 0 || latIdx < 0 || lngIdx < 0) {
-    alert('CSV must have columns: name, lat, lng (or latitude, longitude)');
-    return;
+function commuteProcessRows(rows, filename) {
+  // rows[0] = headers, rows[1+] = data
+  var rawHeaders = rows[0].map(function(h) { return String(h).trim(); });
+  
+  // Filter out empty/null columns
+  var validCols = [];
+  for (var ci = 0; ci < rawHeaders.length; ci++) {
+    if (rawHeaders[ci]) validCols.push(ci);
   }
-
-  _commuteEmployees = [];
-  for (var i = 1; i < lines.length; i++) {
-    var cols = lines[i].split(',').map(function(c) { return c.trim().replace(/["']/g, ''); });
-    var name = cols[nameIdx];
-    var lat = parseFloat(cols[latIdx]);
-    var lng = parseFloat(cols[lngIdx]);
-    if (name && !isNaN(lat) && !isNaN(lng)) {
-      _commuteEmployees.push({ name: name, lat: lat, lng: lng });
+  
+  _commuteHeaders = validCols.map(function(ci) { return rawHeaders[ci]; });
+  var headersLower = _commuteHeaders.map(function(h) { return h.toLowerCase().replace(/[\s_-]+/g, ''); });
+  
+  // Auto-detect lat column
+  _commuteLatCol = -1;
+  for (var p = 0; p < _commuteLatPatterns.length && _commuteLatCol < 0; p++) {
+    var pat = _commuteLatPatterns[p].replace(/[\s_-]+/g, '');
+    for (var hi = 0; hi < headersLower.length; hi++) {
+      if (headersLower[hi] === pat) { _commuteLatCol = hi; break; }
     }
   }
-
-  if (_commuteEmployees.length === 0) {
-    alert('No valid employee rows found. Check that lat/lng values are numbers.');
+  // Auto-detect lng column
+  _commuteLngCol = -1;
+  for (var p = 0; p < _commuteLngPatterns.length && _commuteLngCol < 0; p++) {
+    var pat = _commuteLngPatterns[p].replace(/[\s_-]+/g, '');
+    for (var hi = 0; hi < headersLower.length; hi++) {
+      if (headersLower[hi] === pat && hi !== _commuteLatCol) { _commuteLngCol = hi; break; }
+    }
+  }
+  
+  if (_commuteLatCol < 0 || _commuteLngCol < 0) {
+    alert('Could not find latitude/longitude columns. Make sure your file has columns with headers like Latitude, Longitude, Lat, Lng, etc.');
     return;
   }
-
+  
+  // Find a label column (first non-lat/lng text column, prefer "name" or "employee")
+  var labelCol = -1;
+  var labelPreferred = ['name', 'employee', 'employeename', 'fullname', 'person'];
+  for (var p = 0; p < labelPreferred.length && labelCol < 0; p++) {
+    for (var hi = 0; hi < headersLower.length; hi++) {
+      if (headersLower[hi] === labelPreferred[p] && hi !== _commuteLatCol && hi !== _commuteLngCol) {
+        labelCol = hi; break;
+      }
+    }
+  }
+  // If no preferred label column, use the first non-lat/lng column that has text values
+  if (labelCol < 0) {
+    for (var hi = 0; hi < _commuteHeaders.length; hi++) {
+      if (hi !== _commuteLatCol && hi !== _commuteLngCol) {
+        // Check if this column has non-numeric text
+        var hasText = false;
+        for (var ri = 1; ri < Math.min(rows.length, 10); ri++) {
+          var val = String(rows[ri][validCols[hi]] || '').trim();
+          if (val && isNaN(parseFloat(val))) { hasText = true; break; }
+        }
+        if (hasText) { labelCol = hi; break; }
+      }
+    }
+  }
+  
+  // Parse employee data
+  _commuteEmployees = [];
+  for (var ri = 1; ri < rows.length; ri++) {
+    var lat = parseFloat(rows[ri][validCols[_commuteLatCol]]);
+    var lng = parseFloat(rows[ri][validCols[_commuteLngCol]]);
+    if (isNaN(lat) || isNaN(lng)) continue;
+    // Validate coordinate ranges
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) continue;
+    
+    var label = labelCol >= 0 ? String(rows[ri][validCols[labelCol]] || '').trim() : '';
+    if (!label) label = 'Employee ' + _commuteEmployees.length;
+    
+    // Gather all extra metadata columns
+    var meta = {};
+    _commuteHeaders.forEach(function(h, hi) {
+      if (hi !== _commuteLatCol && hi !== _commuteLngCol) {
+        var val = String(rows[ri][validCols[hi]] || '').trim();
+        if (val) meta[h] = val;
+      }
+    });
+    
+    _commuteEmployees.push({ name: label, lat: lat, lng: lng, meta: meta });
+  }
+  
+  if (_commuteEmployees.length === 0) {
+    alert('No valid rows found with latitude/longitude values. Check that coordinates are numeric.');
+    return;
+  }
+  
   // Show file info
   var dropzone = document.getElementById('commuteDropzone');
   dropzone.style.display = 'none';
@@ -8792,23 +8894,33 @@ function commuteParseCSV(text, filename) {
   fileInfo.style.display = 'flex';
   document.getElementById('commuteFileBadge').innerHTML =
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> ' +
-    filename + ' - ' + _commuteEmployees.length + ' employees';
-
-  // Show preview table
+    filename + ' - <strong>' + _commuteEmployees.length + '</strong> employees' +
+    '<span style="color:var(--color-text-faint);margin-left:0.5rem;font-size:var(--text-xs);">Lat: ' + _commuteHeaders[_commuteLatCol] + ' / Lng: ' + _commuteHeaders[_commuteLngCol] + '</span>';
+  
+  // Build preview showing all columns (up to 10 rows)
   var preview = document.getElementById('commutePreview');
   preview.style.display = 'block';
-  var html = '<table><thead><tr><th>#</th><th>Name</th><th>Latitude</th><th>Longitude</th></tr></thead><tbody>';
-  _commuteEmployees.forEach(function(emp, i) {
-    html += '<tr><td>' + (i + 1) + '</td><td>' + emp.name + '</td><td>' + emp.lat.toFixed(4) + '</td><td>' + emp.lng.toFixed(4) + '</td></tr>';
-  });
-  html += '</tbody></table>';
-  preview.innerHTML = html;
-
+  var metaCols = _commuteHeaders.filter(function(h, hi) { return hi !== _commuteLatCol && hi !== _commuteLngCol; });
+  var previewHtml = '<table><thead><tr><th>#</th><th>Lat</th><th>Lng</th>';
+  metaCols.forEach(function(h) { previewHtml += '<th>' + h + '</th>'; });
+  previewHtml += '</tr></thead><tbody>';
+  var previewCount = Math.min(_commuteEmployees.length, 10);
+  for (var i = 0; i < previewCount; i++) {
+    var emp = _commuteEmployees[i];
+    previewHtml += '<tr><td>' + (i + 1) + '</td><td>' + emp.lat.toFixed(4) + '</td><td>' + emp.lng.toFixed(4) + '</td>';
+    metaCols.forEach(function(h) { previewHtml += '<td>' + (emp.meta[h] || '') + '</td>'; });
+    previewHtml += '</tr>';
+  }
+  if (_commuteEmployees.length > 10) {
+    previewHtml += '<tr><td colspan="' + (3 + metaCols.length) + '" style="text-align:center;color:var(--color-text-faint);font-style:italic;">... and ' + (_commuteEmployees.length - 10) + ' more employees</td></tr>';
+  }
+  previewHtml += '</tbody></table>';
+  preview.innerHTML = previewHtml;
+  
   // Show actions
   var actions = document.getElementById('commuteActions');
   actions.style.display = 'flex';
-
-  // Get building count from tour list
+  
   var buildingCount = (_centralTourList && _centralTourList.length) || 0;
   document.getElementById('commuteRunNote').textContent =
     _commuteEmployees.length + ' employees x ' + buildingCount + ' buildings on tour list';
@@ -8817,6 +8929,9 @@ function commuteParseCSV(text, filename) {
 function commuteClearFile() {
   _commuteEmployees = [];
   _commuteResults = null;
+  _commuteHeaders = [];
+  _commuteLatCol = -1;
+  _commuteLngCol = -1;
   document.getElementById('commuteDropzone').style.display = '';
   document.getElementById('commuteFileInfo').style.display = 'none';
   document.getElementById('commutePreview').style.display = 'none';
