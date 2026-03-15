@@ -178,14 +178,7 @@ body {
    ============================================================ */
 
 .summary-bar {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-6);
-  background: var(--color-surface);
-  border-top: 1px solid var(--color-border);
-  z-index: 100;
-  flex-shrink: 0;
+  display: none;
 }
 
 .summary-card {
@@ -1223,6 +1216,7 @@ body {
       transition: all 0.15s ease; position: relative;
     }
     .tour-item:hover { border-color: var(--color-primary); }
+    .tour-item.active { border-color: var(--color-primary); background: rgba(244,121,32,0.06); box-shadow: 0 0 0 2px rgba(244,121,32,0.15); }
     .tour-item-dot {
       width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; flex-shrink: 0;
     }
@@ -1247,6 +1241,48 @@ body {
       transition: all 0.15s ease; flex-shrink: 0;
     }
     .tour-item-remove:hover { background: #fef2f2; color: #ef4444; }
+
+    .tour-item-header-row {
+      display: flex; align-items: center; justify-content: space-between; gap: var(--space-2);
+    }
+    .tour-item-status-badge {
+      font-size: 0.625rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.04em; padding: 2px 8px; border-radius: 4px;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .tour-item-status-badge.negotiating {
+      background: #fef3c7; color: #d97706;
+    }
+    .tour-item-status-badge.touring {
+      background: #dbeafe; color: #2563eb;
+    }
+    .tour-item-terms {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 4px 12px; margin-top: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+      background: var(--color-surface); border-radius: 6px;
+      border: 1px solid var(--color-divider);
+    }
+    .tour-item-term {
+      display: flex; flex-direction: column; gap: 1px;
+    }
+    .tour-item-term-label {
+      font-size: 0.6rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.05em; color: var(--color-text-faint);
+    }
+    .tour-item-term-value {
+      font-size: 0.75rem; font-weight: 600; color: var(--color-text);
+    }
+    .tour-item-tbd {
+      display: flex; align-items: center; gap: 6px;
+      margin-top: var(--space-2); font-size: 0.75rem;
+      color: var(--color-text-muted); font-style: italic;
+    }
+    .tour-item-sched {
+      display: flex; align-items: center; gap: 6px;
+      margin-top: var(--space-2); font-size: 0.7rem;
+      color: var(--color-text-muted);
+    }
 
     .tour-panel-footer {
       padding: var(--space-4) var(--space-5);
@@ -1316,11 +1352,16 @@ body {
     /* Overlay when panel is open (mobile) */
     .tour-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.3); z-index: 9999;
+      background: rgba(0,0,0,0.15); z-index: 9999;
       opacity: 0; pointer-events: none;
       transition: opacity 0.3s ease;
     }
-    .tour-overlay.visible { opacity: 1; pointer-events: auto; }
+    @media (min-width: 601px) {
+      .tour-overlay.visible { opacity: 0; pointer-events: none; }
+    }
+    @media (max-width: 600px) {
+      .tour-overlay.visible { opacity: 1; pointer-events: auto; }
+    }
 
     @media (max-width: 600px) {
       .tour-panel { width: 100%; }
@@ -6414,19 +6455,63 @@ function refreshTourUI() {
     `;
     footer.style.display = 'none';
   } else {
-    body.innerHTML = list.map((item, i) => `
-      <div class="tour-item" onclick="flyToTourItem('${item.type}', ${item.id})" style="cursor:pointer;">
-        <div class="tour-item-dot" style="background:${item.color}"></div>
-        <div class="tour-item-info">
-          <div class="tour-item-name">${item.name}</div>
-          <div class="tour-item-meta">${item.meta}</div>
-          ${item.tags.length ? '<div class="tour-item-tags">' + item.tags.map(t => '<span class="tour-item-tag">' + t + '</span>').join('') + '</div>' : ''}
-        </div>
-        <button class="tour-item-remove" onclick="event.stopPropagation(); toggleTourItem('${item.type}', ${item.id})" title="Remove">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
-    `).join('');
+    body.innerHTML = list.map((item, i) => {
+      // Look up full building data for enriched display
+      var bData = null;
+      if (item.type === 'shortlist') {
+        bData = BUILDINGS.find(function(x) { return x.id === item.id; });
+      }
+      var isNeg = bData && bData.status === 'negotiating';
+      var statusBadge = '';
+      if (bData) {
+        if (isNeg) {
+          statusBadge = '<span class="tour-item-status-badge negotiating">Negotiating</span>';
+        } else if (bData.status === 'touring') {
+          statusBadge = '<span class="tour-item-status-badge touring">Tour Week of 3/16</span>';
+        }
+      }
+      // Build deal terms row (only for buildings with real data)
+      var termsHtml = '';
+      if (bData && isNeg) {
+        termsHtml = '<div class="tour-item-terms">' +
+          '<div class="tour-item-term"><span class="tour-item-term-label">Base Rent</span><span class="tour-item-term-value">' + bData.baseRent + '</span></div>' +
+          '<div class="tour-item-term"><span class="tour-item-term-label">All-In</span><span class="tour-item-term-value">' + (bData.allInPSF || 'TBD') + '</span></div>' +
+          '<div class="tour-item-term"><span class="tour-item-term-label">Term</span><span class="tour-item-term-value">' + bData.leaseTerm + '</span></div>' +
+          '<div class="tour-item-term"><span class="tour-item-term-label">Monthly P&L</span><span class="tour-item-term-value">' + (bData.monthlyPL || 'TBD') + '</span></div>' +
+          '</div>';
+      } else if (bData && !isNeg) {
+        termsHtml = '<div class="tour-item-tbd">' +
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' +
+          'Terms pending tour</div>';
+      }
+      // Schedule info
+      var sched = getTourSchedule();
+      var key = item.type + '-' + item.id;
+      var s = sched[key] || {};
+      var schedHtml = '';
+      if (s.date || s.time) {
+        schedHtml = '<div class="tour-item-sched">' +
+          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>' +
+          formatTourDateTime(s.date || '', s.time || '') +
+          '</div>';
+      }
+      return '<div class="tour-item" onclick="flyToTourItem(\'' + item.type + '\', ' + item.id + ')" style="cursor:pointer;">' +
+        '<div class="tour-item-dot" style="background:' + item.color + '"></div>' +
+        '<div class="tour-item-info">' +
+          '<div class="tour-item-header-row">' +
+            '<div class="tour-item-name">' + item.name + '</div>' +
+            statusBadge +
+          '</div>' +
+          '<div class="tour-item-meta">' + item.meta + '</div>' +
+          (item.tags.length ? '<div class="tour-item-tags">' + item.tags.map(function(t) { return '<span class="tour-item-tag">' + t + '</span>'; }).join('') + '</div>' : '') +
+          termsHtml +
+          schedHtml +
+        '</div>' +
+        '<button class="tour-item-remove" onclick="event.stopPropagation(); toggleTourItem(\'' + item.type + '\', ' + item.id + ')" title="Remove">' +
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+        '</button>' +
+      '</div>';
+    }).join('');
     footer.style.display = 'block';
   }
 }
@@ -6457,7 +6542,12 @@ function flyToTourItem(type, id) {
     if (b) { lat = b.lat; lng = b.lng; }
   }
   if (lat && lng) {
-    closeTourPanel();
+    // Highlight active tour item (don't close panel)
+    document.querySelectorAll('.tour-item').forEach(el => el.classList.remove('active'));
+    const idx = getTourList().findIndex(it => it.type === type && it.id === id);
+    const items = document.querySelectorAll('.tour-item');
+    if (idx >= 0 && items[idx]) items[idx].classList.add('active');
+
     map.flyTo([lat, lng], 17, { duration: 0.8 });
     // Open the popup
     setTimeout(() => {
