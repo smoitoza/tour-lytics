@@ -113,6 +113,16 @@ const quickActions = [
   {
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+      </svg>
+    ),
+    label: 'Tour Scores',
+    desc: 'Combined team ratings',
+    tab: 'scores',
+  },
+  {
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
       </svg>
     ),
@@ -139,13 +149,6 @@ const personaConfig: Record<string, { bg: string; color: string; border: string;
   touree:   { bg: 'rgba(22,163,74,0.08)',   color: '#16a34a', border: 'rgba(22,163,74,0.2)',  label: 'Touree' },
 }
 
-/* Score bar color */
-function scoreColor(score: number): string {
-  if (score >= 4) return '#16a34a'
-  if (score >= 3) return '#2563eb'
-  if (score >= 2) return '#d97706'
-  return '#dc2626'
-}
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null)
@@ -170,23 +173,6 @@ export default function DashboardPage() {
   const [inviteSent, setInviteSent] = useState<string | null>(null)
   const [copiedLink, setCopiedLink] = useState<string | null>(null)
 
-  /* ---- Combined scores state ---- */
-  const [scores, setScores] = useState<Array<{
-    building_name: string
-    overall_average: number
-    total_responses: number
-    category_averages: Record<string, number>
-    submissions?: Array<{ user_email: string; scores: Record<string, number>; submitted_at: string }>
-  }>>([])
-  const [scoresLoading, setScoresLoading] = useState(false)
-  const [scoresError, setScoresError] = useState<string | null>(null)
-  const [expandedBuilding, setExpandedBuilding] = useState<string | null>(null)
-  const [detailsData, setDetailsData] = useState<Record<string, Array<{
-    user_email: string
-    scores: Record<string, number>
-    submitted_at: string
-  }>>>({})
-  const [detailsLoading, setDetailsLoading] = useState<string | null>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -213,22 +199,6 @@ export default function DashboardPage() {
       .catch(() => {
         setTeamError('Could not load team members.')
         setTeamLoading(false)
-      })
-  }, [user])
-
-  /* Fetch combined scores once user is known */
-  useEffect(() => {
-    if (!user) return
-    setScoresLoading(true)
-    fetch('/api/surveys/combined?projectId=sf-office-search')
-      .then((r) => r.json())
-      .then((data) => {
-        setScores(Array.isArray(data) ? data : data.buildings || [])
-        setScoresLoading(false)
-      })
-      .catch(() => {
-        setScoresError('Could not load survey scores.')
-        setScoresLoading(false)
       })
   }, [user])
 
@@ -337,30 +307,6 @@ export default function DashboardPage() {
     } catch {
       /* fallback: select text */
     }
-  }
-
-  const handleViewDetails = async (buildingName: string) => {
-    if (expandedBuilding === buildingName) {
-      setExpandedBuilding(null)
-      return
-    }
-    setExpandedBuilding(buildingName)
-    if (detailsData[buildingName]) return
-    setDetailsLoading(buildingName)
-    try {
-      const res = await fetch(`/api/surveys/combined?projectId=sf-office-search&includeDetails=true`)
-      const data = await res.json()
-      const buildings: Array<{
-        building_name: string
-        submissions?: Array<{ user_email: string; scores: Record<string, number>; submitted_at: string }>
-      }> = Array.isArray(data) ? data : data.buildings || []
-      const map: Record<string, Array<{ user_email: string; scores: Record<string, number>; submitted_at: string }>> = {}
-      buildings.forEach((b) => { if (b.submissions) map[b.building_name] = b.submissions })
-      setDetailsData((prev) => ({ ...prev, ...map }))
-    } catch {
-      /* silently ignore */
-    }
-    setDetailsLoading(null)
   }
 
   if (loading) {
@@ -704,412 +650,13 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ================================================================
-            SECTION 1: PROJECT TEAM - quick summary, full management in app Team tab
-        ================================================================ */}
-        {isAdmin && (
-          <div className="dash-fade dash-fade-6" style={{ marginBottom: '2rem' }}>
-            <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
-              Project Team
-            </div>
-
-            <div style={{
-              background: '#ffffff',
-              borderRadius: '1rem',
-              border: '1px solid #e2e8f0',
-              padding: '1.25rem',
-            }}>
-              {teamLoading ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#94a3b8' }}>
-                  <div style={{ width: '1rem', height: '1rem', border: '2px solid #e2e8f0', borderTopColor: '#2563eb', borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
-                  <span style={{ fontSize: '0.875rem' }}>Loading...</span>
-                </div>
-              ) : (
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: '#334155' }}>
-                      {teamMembers.length} team member{teamMembers.length !== 1 ? 's' : ''}
-                    </div>
-                    <a
-                      href={`/app/?userEmail=${encodeURIComponent(user?.email || '')}`}
-                      onClick={(e) => {
-                        e.preventDefault()
-                        window.location.href = `/app/?userEmail=${encodeURIComponent(user?.email || '')}#team`
-                      }}
-                      style={{
-                        fontSize: '0.8125rem',
-                        fontWeight: 600,
-                        color: '#2563eb',
-                        textDecoration: 'none',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.25rem',
-                      }}
-                    >
-                      Manage Team
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="9 18 15 12 9 6" />
-                      </svg>
-                    </a>
-                  </div>
-                  {/* Role summary badges */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    {Object.entries(
-                      teamMembers.reduce((acc: Record<string, number>, m) => {
-                        acc[m.persona] = (acc[m.persona] || 0) + 1
-                        return acc
-                      }, {})
-                    ).map(([persona, count]) => {
-                      const cfg = personaConfig[persona] || personaConfig.touree
-                      return (
-                        <span key={persona} style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.375rem',
-                          padding: '0.25rem 0.75rem',
-                          borderRadius: '9999px',
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                          background: cfg.bg,
-                          color: cfg.color,
-                          border: `1px solid ${cfg.border}`,
-                        }}>
-                          {count} {cfg.label}{Number(count) !== 1 ? 's' : ''}
-                        </span>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ================================================================
-            SECTION 2: COMBINED TOUR SCORES (visible to everyone)
-        ================================================================ */}
-        <div className="dash-fade dash-fade-7" style={{ marginBottom: '2rem' }}>
-          <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
-            Combined Tour Scores
-          </div>
-
-          {scoresLoading ? (
-            <div style={{
-              background: '#ffffff',
-              borderRadius: '1rem',
-              border: '1px solid #e2e8f0',
-              padding: '2.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.75rem',
-              color: '#94a3b8',
-            }}>
-              <div style={{ width: '1rem', height: '1rem', border: '2px solid #e2e8f0', borderTopColor: '#2563eb', borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
-              <span style={{ fontSize: '0.875rem' }}>Loading survey scores...</span>
-            </div>
-          ) : scoresError ? (
-            <div style={{
-              background: '#ffffff',
-              borderRadius: '1rem',
-              border: '1px solid #e2e8f0',
-              padding: '2.5rem',
-              textAlign: 'center',
-              color: '#dc2626',
-              fontSize: '0.875rem',
-            }}>
-              {scoresError}
-            </div>
-          ) : scores.length === 0 ? (
-            /* Empty state */
-            <div style={{
-              background: '#ffffff',
-              borderRadius: '1rem',
-              border: '1px solid #e2e8f0',
-              padding: '3rem 2rem',
-              textAlign: 'center',
-            }}>
-              <div style={{
-                width: '3rem',
-                height: '3rem',
-                borderRadius: '0.875rem',
-                background: 'rgba(37,99,235,0.06)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 1rem',
-              }}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                </svg>
-              </div>
-              <p style={{ fontSize: '0.9375rem', fontWeight: 600, color: '#334155', marginBottom: '0.375rem' }}>No survey scores submitted yet</p>
-              <p style={{ fontSize: '0.8125rem', color: '#94a3b8', lineHeight: 1.6 }}>
-                Tourees can submit scores from the Tour Book.
-              </p>
-            </div>
-          ) : (
-            /* Ranked building list */
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {scores.map((building, i) => {
-                const rank = i + 1
-                const color = scoreColor(building.overall_average)
-                const barPct = Math.round((building.overall_average / 5) * 100)
-                const isExpanded = expandedBuilding === building.building_name
-                const categories = building.category_averages || {}
-                const catKeys = Object.keys(categories)
-
-                return (
-                  <div
-                    key={building.building_name}
-                    style={{
-                      background: '#ffffff',
-                      borderRadius: '1rem',
-                      border: '1px solid #e2e8f0',
-                      overflow: 'hidden',
-                      transition: 'box-shadow 0.2s',
-                    }}
-                  >
-                    {/* Main row */}
-                    <div style={{ padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-                      {/* Rank */}
-                      <div style={{
-                        width: '2.25rem',
-                        height: '2.25rem',
-                        borderRadius: '0.625rem',
-                        background: rank <= 3 ? 'rgba(37,99,235,0.08)' : '#f8fafc',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontFamily: 'var(--font-display)',
-                        fontSize: '0.9375rem',
-                        fontWeight: 800,
-                        color: rank <= 3 ? '#2563eb' : '#94a3b8',
-                        flexShrink: 0,
-                      }}>
-                        {rank}
-                      </div>
-
-                      {/* Building name + category pills */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.9375rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.5rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {building.building_name}
-                        </div>
-                        {catKeys.length > 0 && (
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
-                            {catKeys.map((cat) => {
-                              const catScore = categories[cat]
-                              const catColor = scoreColor(catScore)
-                              return (
-                                <span
-                                  key={cat}
-                                  style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '0.3rem',
-                                    padding: '0.125rem 0.5rem',
-                                    borderRadius: '9999px',
-                                    fontSize: '0.625rem',
-                                    fontWeight: 600,
-                                    color: catColor,
-                                    background: `${catColor}14`,
-                                    border: `1px solid ${catColor}33`,
-                                    textTransform: 'capitalize',
-                                    whiteSpace: 'nowrap',
-                                  }}
-                                >
-                                  {cat}: {typeof catScore === 'number' ? catScore.toFixed(1) : catScore}
-                                </span>
-                              )
-                            })}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Score + bar */}
-                      <div style={{ flexShrink: 0, textAlign: 'right', minWidth: '7rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem', justifyContent: 'flex-end', marginBottom: '0.375rem' }}>
-                          <span style={{
-                            fontFamily: 'var(--font-display)',
-                            fontSize: '1.5rem',
-                            fontWeight: 800,
-                            color,
-                            letterSpacing: '-0.02em',
-                            lineHeight: 1,
-                          }}>
-                            {typeof building.overall_average === 'number' ? building.overall_average.toFixed(1) : building.overall_average}
-                          </span>
-                          <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 500 }}>/5</span>
-                        </div>
-                        {/* Score bar */}
-                        <div style={{ width: '6rem', height: '0.375rem', background: '#f1f5f9', borderRadius: '9999px', overflow: 'hidden', marginLeft: 'auto' }}>
-                          <div style={{
-                            width: `${barPct}%`,
-                            height: '100%',
-                            background: color,
-                            borderRadius: '9999px',
-                            transition: 'width 0.6s ease-out',
-                          }} />
-                        </div>
-                        <div style={{ fontSize: '0.6875rem', color: '#94a3b8', marginTop: '0.25rem' }}>
-                          {building.total_responses} {building.total_responses === 1 ? 'response' : 'responses'}
-                        </div>
-                      </div>
-
-                      {/* Admin: View Details button */}
-                      {isAdmin && (
-                        <button
-                          className="details-btn"
-                          onClick={() => handleViewDetails(building.building_name)}
-                          style={{
-                            flexShrink: 0,
-                            padding: '0.4375rem 0.875rem',
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                            color: isExpanded ? '#2563eb' : '#64748b',
-                            background: isExpanded ? 'rgba(37,99,235,0.08)' : 'transparent',
-                            border: isExpanded ? '1px solid rgba(37,99,235,0.2)' : '1px solid #e2e8f0',
-                            borderRadius: '0.5rem',
-                            cursor: 'pointer',
-                            fontFamily: 'inherit',
-                            transition: 'all 0.15s',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.375rem',
-                          }}
-                        >
-                          {detailsLoading === building.building_name ? (
-                            <div style={{ width: '0.75rem', height: '0.75rem', border: '2px solid #e2e8f0', borderTopColor: '#2563eb', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                          ) : (
-                            <svg
-                              width="12"
-                              height="12"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2.5"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              style={{ transition: 'transform 0.2s', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                            >
-                              <polyline points="6 9 12 15 18 9" />
-                            </svg>
-                          )}
-                          {isExpanded ? 'Hide' : 'Details'}
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Expanded: individual submissions */}
-                    {isAdmin && isExpanded && (
-                      <div style={{
-                        borderTop: '1px solid #f1f5f9',
-                        background: '#f8fafc',
-                        padding: '1rem 1.5rem',
-                      }}>
-                        {!detailsData[building.building_name] ? (
-                          <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '0.8125rem', padding: '0.75rem 0' }}>
-                            Loading submissions...
-                          </div>
-                        ) : detailsData[building.building_name].length === 0 ? (
-                          <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '0.8125rem', padding: '0.75rem 0' }}>
-                            No individual submissions available.
-                          </div>
-                        ) : (
-                          <div>
-                            <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.625rem' }}>
-                              Individual Submissions
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                              {detailsData[building.building_name].map((sub, si) => {
-                                const subCats = sub.scores || {}
-                                const subCatKeys = Object.keys(subCats)
-                                return (
-                                  <div
-                                    key={si}
-                                    style={{
-                                      background: '#ffffff',
-                                      borderRadius: '0.625rem',
-                                      border: '1px solid #e2e8f0',
-                                      padding: '0.75rem 1rem',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '1rem',
-                                      flexWrap: 'wrap',
-                                    }}
-                                  >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
-                                      <div style={{
-                                        width: '1.5rem',
-                                        height: '1.5rem',
-                                        borderRadius: '50%',
-                                        background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        color: '#ffffff',
-                                        fontSize: '0.625rem',
-                                        fontWeight: 600,
-                                        flexShrink: 0,
-                                      }}>
-                                        {(sub.user_email || '?').charAt(0).toUpperCase()}
-                                      </div>
-                                      <span style={{ fontSize: '0.8125rem', color: '#334155', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                        {sub.user_email}
-                                      </span>
-                                    </div>
-                                    {subCatKeys.length > 0 && (
-                                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', flex: 1 }}>
-                                        {subCatKeys.map((cat) => {
-                                          const s = subCats[cat]
-                                          const c = scoreColor(s)
-                                          return (
-                                            <span key={cat} style={{
-                                              display: 'inline-flex',
-                                              alignItems: 'center',
-                                              gap: '0.25rem',
-                                              padding: '0.125rem 0.5rem',
-                                              borderRadius: '9999px',
-                                              fontSize: '0.625rem',
-                                              fontWeight: 600,
-                                              color: c,
-                                              background: `${c}14`,
-                                              border: `1px solid ${c}33`,
-                                              textTransform: 'capitalize',
-                                              whiteSpace: 'nowrap',
-                                            }}>
-                                              {cat}: {typeof s === 'number' ? s.toFixed(1) : s}
-                                            </span>
-                                          )
-                                        })}
-                                      </div>
-                                    )}
-                                    {sub.submitted_at && (
-                                      <span style={{ fontSize: '0.6875rem', color: '#94a3b8', whiteSpace: 'nowrap', flexShrink: 0, marginLeft: 'auto' }}>
-                                        {new Date(sub.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                      </span>
-                                    )}
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
 
         {/* -- Quick actions -- */}
         <div className="dash-fade dash-fade-5">
           <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
             Quick Access
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.75rem' }}>
             {quickActions.map((action, i) => (
               <Link
                 key={i}

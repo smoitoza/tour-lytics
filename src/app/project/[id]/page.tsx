@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase-browser'
 import { useEffect, useState } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import type { User } from '@supabase/supabase-js'
 
@@ -11,7 +11,9 @@ export default function ProjectPage() {
   const [loading, setLoading] = useState(true)
   const router = useRouter()
   const params = useParams()
+  const searchParams = useSearchParams()
   const projectId = params.id as string
+  const tabParam = searchParams.get('tab')
 
   useEffect(() => {
     const supabase = createClient()
@@ -90,7 +92,7 @@ export default function ProjectPage() {
       {/* Full app iframe - pass user email for survey submission */}
       <div style={{ flex: 1, position: 'relative' }}>
         <iframe
-          src={`/app/index.html?userEmail=${encodeURIComponent(user?.email || '')}`}
+          src={`/app/index.html?userEmail=${encodeURIComponent(user?.email || '')}${tabParam ? '#' + tabParam : ''}`}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
           title="SF Office Search Application"
         />
