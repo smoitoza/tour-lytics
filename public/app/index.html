@@ -1311,16 +1311,16 @@ body {
 
     /* ===== TOUR LIST TOGGLE BUTTON (on map) ===== */
     .tour-toggle {
-      position: absolute; top: 12px; left: 12px; z-index: 500;
+      position: fixed; bottom: 24px; right: 24px; z-index: 9000;
       display: flex; align-items: center; gap: var(--space-2);
-      padding: 8px 14px; background: var(--color-surface);
-      border: 1px solid var(--color-border); border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      padding: 10px 18px; background: var(--color-surface);
+      border: 1px solid var(--color-border); border-radius: 50px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.06);
       cursor: pointer; font-family: var(--font-body);
       font-size: var(--text-sm); font-weight: 600; color: var(--color-text);
-      transition: all 0.15s ease;
+      transition: all 0.2s ease;
     }
-    .tour-toggle:hover { border-color: var(--color-primary); box-shadow: 0 2px 12px rgba(0,0,0,0.12); }
+    .tour-toggle:hover { border-color: var(--color-primary); box-shadow: 0 6px 20px rgba(0,0,0,0.15); transform: translateY(-1px); }
     .tour-toggle svg { flex-shrink: 0; }
     .tour-toggle-count {
       display: inline-flex; align-items: center; justify-content: center;
@@ -1366,9 +1366,8 @@ body {
     @media (max-width: 600px) {
       .tour-panel { width: 100%; }
       .tour-toggle {
-        top: auto; bottom: 12px; left: 50%; transform: translateX(-50%);
-        padding: 10px 18px; border-radius: 24px;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        bottom: 16px; right: auto; left: 50%; transform: translateX(-50%);
+        padding: 10px 18px;
       }
     }
 
@@ -3020,6 +3019,51 @@ body {
     .commute-heat-red   { background: rgba(220,38,38,0.1); color: #dc2626; }
     .commute-heat-na    { background: #f8fafc; color: #94a3b8; }
 
+    /* Business Unit Breakdown */
+    .commute-group-section {
+      margin-top: 2rem;
+    }
+    .commute-group-header {
+      display: flex; align-items: center; gap: var(--space-3); margin-bottom: 1rem; flex-wrap: wrap;
+    }
+    .commute-group-select {
+      font-family: var(--font-body); font-size: var(--text-sm);
+      padding: 6px 12px; border: 1px solid var(--color-border);
+      border-radius: var(--radius-md); background: var(--color-surface);
+      color: var(--color-text); cursor: pointer;
+    }
+    .commute-group-cards {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem;
+    }
+    .commute-group-card {
+      background: var(--color-surface); border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg); padding: 1rem 1.25rem; overflow: hidden;
+    }
+    .commute-group-card-title {
+      font-weight: 700; font-size: var(--text-base); color: var(--color-text);
+      margin-bottom: 4px; display: flex; align-items: center; gap: var(--space-2);
+    }
+    .commute-group-card-count {
+      font-size: var(--text-xs); font-weight: 500; color: var(--color-text-muted);
+      background: var(--color-bg); padding: 2px 8px; border-radius: 20px;
+    }
+    .commute-group-card-table {
+      width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-size: 0.78rem;
+    }
+    .commute-group-card-table th {
+      text-align: left; font-weight: 600; color: var(--color-text-muted);
+      padding: 4px 6px; border-bottom: 1px solid var(--color-border);
+      text-transform: uppercase; font-size: 0.65rem; letter-spacing: 0.04em;
+    }
+    .commute-group-card-table td {
+      padding: 5px 6px; border-bottom: 1px solid var(--color-border-light, #f1f5f9);
+      color: var(--color-text);
+    }
+    .commute-group-card-table tr:last-child td { border-bottom: none; }
+    .commute-group-best {
+      font-weight: 700; color: #16a34a;
+    }
+
     .commute-mode-toggle {
       display: inline-flex;
       border-radius: var(--radius-md);
@@ -4126,6 +4170,13 @@ body {
   </div>
 </div>
 
+<!-- Floating Tour List Toggle (visible on all tabs) -->
+<button class="tour-toggle" id="tourToggle" onclick="openTourPanel()">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+  Tour List
+  <span class="tour-toggle-count" id="tourToggleCount" data-count="0"></span>
+</button>
+
 <header class="header">
   <div class="header-inner">
     <div class="header-left">
@@ -4182,12 +4233,7 @@ body {
 <main class="main">
   <div id="map"></div>
 
-  <!-- Tour List Toggle -->
-  <button class="tour-toggle" id="tourToggle" onclick="openTourPanel()">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-    Tour List
-    <span class="tour-toggle-count" id="tourToggleCount" data-count="0"></span>
-  </button>
+
 
 
   <!-- Summary cards at bottom -->
@@ -6569,11 +6615,13 @@ function openTourPanel() {
   refreshTourUI();
   document.getElementById('tourPanel').classList.add('open');
   document.getElementById('tourOverlay').classList.add('visible');
+  document.getElementById('tourToggle').style.display = 'none';
 }
 
 function closeTourPanel() {
   document.getElementById('tourPanel').classList.remove('open');
   document.getElementById('tourOverlay').classList.remove('visible');
+  document.getElementById('tourToggle').style.display = 'flex';
 }
 
 function clearTourList() {
@@ -8822,7 +8870,8 @@ function toggleScoreDetails(buildingName) {
 
 var _commuteEmployees = [];
 var _commuteResults = null;
-var _commuteHeatmapMode = 'driving'; // 'driving' or 'transit'
+var _commuteHeatmapMode = 'driving';
+var _commuteGroupCol = null; // auto-detected group-by column (e.g. Business Unit) // 'driving' or 'transit'
 var _commuteDropzoneInit = false;
 var _commuteLastBuildingCount = 0; // track building count from last run
 var _commuteLastBuildingNames = []; // track building names from last run
@@ -9054,6 +9103,7 @@ function commuteClearFile() {
   _commuteHeaders = [];
   _commuteLatCol = -1;
   _commuteLngCol = -1;
+  _commuteGroupCol = null;
   document.getElementById('commuteDropzone').style.display = '';
   document.getElementById('commuteFileInfo').style.display = 'none';
   document.getElementById('commutePreview').style.display = 'none';
@@ -9176,6 +9226,9 @@ function renderCommuteResults() {
   });
   html += '</tbody></table></div>';
 
+  // Business Unit / Group Breakdown
+  html += renderCommuteGroupBreakdown(summaries, details);
+
   // Heatmap
   html += '<div class="commute-heatmap-section">';
   html += '<div style="display:flex;align-items:center;margin-bottom:0.75rem">';
@@ -9291,6 +9344,149 @@ function commuteFormatDuration(seconds) {
   return mins + ' min';
 }
 
+
+// Business Unit / Group Breakdown for Commute Study
+// ============================================================
+var _commuteGroupMode = 'driving'; // independent mode toggle for group breakdown
+
+function renderCommuteGroupBreakdown(summaries, details) {
+  if (!_commuteEmployees.length || !details.length) return '';
+
+  // Find groupable meta columns (columns with 2-20 unique values, non-lat/lng)
+  var metaCols = _commuteHeaders.filter(function(h, hi) {
+    return hi !== _commuteLatCol && hi !== _commuteLngCol;
+  });
+  var groupableCols = [];
+  metaCols.forEach(function(col) {
+    var vals = {};
+    _commuteEmployees.forEach(function(emp) {
+      var v = (emp.meta[col] || '').trim();
+      if (v) vals[v] = true;
+    });
+    var uniqueCount = Object.keys(vals).length;
+    if (uniqueCount >= 2 && uniqueCount <= 30) {
+      groupableCols.push({ col: col, count: uniqueCount });
+    }
+  });
+
+  if (groupableCols.length === 0) return '';
+
+  // Auto-detect: prefer column with "business" or "unit" or "department" or "team" in name
+  if (!_commuteGroupCol || !groupableCols.find(function(g) { return g.col === _commuteGroupCol; })) {
+    var found = groupableCols.find(function(g) {
+      var lc = g.col.toLowerCase();
+      return lc.indexOf('business') >= 0 || lc.indexOf('unit') >= 0 ||
+             lc.indexOf('department') >= 0 || lc.indexOf('team') >= 0 || lc.indexOf('group') >= 0;
+    });
+    _commuteGroupCol = found ? found.col : groupableCols[0].col;
+  }
+
+  // Group employees by the selected column
+  var groups = {};
+  _commuteEmployees.forEach(function(emp) {
+    var key = (emp.meta[_commuteGroupCol] || 'Unknown').trim();
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(emp.name);
+  });
+
+  // Build employee name -> detail lookup
+  var detailMap = {};
+  details.forEach(function(d) { detailMap[d.employee] = d; });
+
+  // Build building order from summaries
+  var buildingOrder = summaries.map(function(s) { return s.building; });
+
+  // Calculate per-group, per-building averages
+  var groupNames = Object.keys(groups).sort();
+  var groupData = {};
+  var modeKey = _commuteGroupMode;
+  var durationKey = modeKey === 'driving' ? 'duration_seconds' : 'duration_seconds';
+
+  groupNames.forEach(function(gName) {
+    var empNames = groups[gName];
+    var buildingAvgs = [];
+    buildingOrder.forEach(function(bldName) {
+      var totalSec = 0, count = 0;
+      empNames.forEach(function(eName) {
+        var detail = detailMap[eName];
+        if (!detail) return;
+        var c = detail.commutes.find(function(x) { return x.building === bldName; });
+        var modeData = c ? c[modeKey] : null;
+        if (modeData && modeData.duration_seconds) {
+          totalSec += modeData.duration_seconds;
+          count++;
+        }
+      });
+      buildingAvgs.push({
+        building: bldName,
+        avgSec: count ? Math.round(totalSec / count) : null,
+        count: count
+      });
+    });
+    groupData[gName] = { empCount: empNames.length, buildings: buildingAvgs };
+  });
+
+  // Render
+  var html = '<div class="commute-group-section">';
+  html += '<div class="commute-group-header">';
+  html += '<span class="commute-section-title" style="margin-bottom:0">Breakdown by ';
+
+  // Dropdown to pick grouping column
+  if (groupableCols.length > 1) {
+    html += '<select class="commute-group-select" onchange="commuteSetGroupCol(this.value)">';
+    groupableCols.forEach(function(g) {
+      html += '<option value="' + g.col + '"' + (g.col === _commuteGroupCol ? ' selected' : '') + '>' + g.col + '</option>';
+    });
+    html += '</select>';
+  } else {
+    html += _commuteGroupCol;
+  }
+  html += '</span>';
+
+  // Mode toggle
+  html += '<div class="commute-mode-toggle">';
+  html += '<button class="commute-mode-btn' + (_commuteGroupMode === 'driving' ? ' active' : '') + '" onclick="commuteSetGroupMode(\'driving\')">Drive</button>';
+  html += '<button class="commute-mode-btn' + (_commuteGroupMode === 'transit' ? ' active' : '') + '" onclick="commuteSetGroupMode(\'transit\')">Transit</button>';
+  html += '</div></div>';
+
+  html += '<div class="commute-group-cards">';
+  groupNames.forEach(function(gName) {
+    var gd = groupData[gName];
+    // Find the best building for this group
+    var bestSec = Infinity;
+    gd.buildings.forEach(function(b) { if (b.avgSec !== null && b.avgSec < bestSec) bestSec = b.avgSec; });
+
+    html += '<div class="commute-group-card">';
+    html += '<div class="commute-group-card-title">' + gName +
+      ' <span class="commute-group-card-count">' + gd.empCount + ' employees</span></div>';
+    html += '<table class="commute-group-card-table">';
+    html += '<thead><tr><th>Building</th><th>Avg. ' + (modeKey === 'driving' ? 'Drive' : 'Transit') + '</th></tr></thead>';
+    html += '<tbody>';
+    gd.buildings.forEach(function(b) {
+      var isBest = b.avgSec !== null && b.avgSec === bestSec;
+      html += '<tr>';
+      html += '<td>' + b.building + '</td>';
+      html += '<td class="' + (isBest ? 'commute-group-best' : '') + '">' +
+        (b.avgSec !== null ? commuteFormatDuration(b.avgSec) : 'N/A') +
+        (isBest ? ' &#9733;' : '') + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+  });
+  html += '</div></div>';
+
+  return html;
+}
+
+function commuteSetGroupCol(col) {
+  _commuteGroupCol = col;
+  renderCommuteResults();
+}
+
+function commuteSetGroupMode(mode) {
+  _commuteGroupMode = mode;
+  renderCommuteResults();
+}
 
 // AI Chat Controller
 // ============================================================
