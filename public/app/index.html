@@ -6982,21 +6982,21 @@ function renderTourBook() {
     html += '</div></div>'; // end body, end card
   });
 
-  // Submit Survey section (only if user has scored at least 1 building)
+  // Submit Survey section - always visible for logged-in users (admin, broker, cre_team, touree)
   var hasAnyScores = list.some(function(item) { return getOverallScore(getBuildingKey(item)) > 0; });
   var currentUserEmail = getCurrentUserEmail();
-  if (hasAnyScores && currentUserEmail) {
+  if (currentUserEmail) {
     html +=
       '<div class="tourbook-submit-section" id="tourbook-submit-section">' +
-        '<h3>Ready to submit your tour scores?</h3>' +
-        '<p>Submit your scores so the team can see the combined results. You can update and re-submit anytime.</p>' +
-        '<button class="tourbook-submit-btn" id="tourbook-submit-btn" onclick="submitSurvey()">' +
+        '<h3>' + (hasAnyScores ? 'Ready to submit your tour scores?' : 'Rate buildings to submit your survey') + '</h3>' +
+        '<p>' + (hasAnyScores ? 'Submit your scores so the team can see the combined results. You can update and re-submit anytime.' : 'Click the stars above to rate each building, then submit your survey for the team to review.') + '</p>' +
+        '<button class="tourbook-submit-btn" id="tourbook-submit-btn" onclick="submitSurvey()"' + (hasAnyScores ? '' : ' disabled') + '>' +
           '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' +
           'Submit Survey' +
         '</button>' +
         '<div class="tourbook-submit-status" id="tourbook-submit-status"></div>' +
       '</div>';
-  } else if (!currentUserEmail && hasAnyScores) {
+  } else if (hasAnyScores) {
     html +=
       '<div class="tourbook-submit-section" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border-color:#bfdbfe;">' +
         '<h3 style="color:#1e40af;">Sign in to submit your scores</h3>' +
