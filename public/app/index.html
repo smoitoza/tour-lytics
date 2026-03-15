@@ -1358,11 +1358,15 @@ body {
     @media (max-width: 600px) {
       .tour-panel { width: 100%; }
       .tour-toggle {
-        bottom: 28px; left: 14px; transform: none;
-        padding: 8px 14px; font-size: var(--text-xs);
+        position: fixed; top: auto; bottom: auto;
+        /* Positioned by JS based on map offset + zoom control height */
+        top: 152px; left: 10px; transform: none;
+        padding: 6px 12px; font-size: 0.68rem;
+        border-radius: var(--radius-md);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
       }
       .tour-toggle svg { width: 14px; height: 14px; }
-      .tour-toggle-count { min-width: 18px; height: 18px; font-size: 0.6rem; }
+      .tour-toggle-count { min-width: 16px; height: 16px; font-size: 0.55rem; padding: 0 4px; }
     }
 
 
@@ -4137,15 +4141,15 @@ body {
 @media (max-width: 768px) {
   .chat-panel {
     width: calc(100vw - 24px);
-    right: 12px;
-    bottom: 76px;
-    max-height: calc(100dvh - 100px);
+    left: 12px; right: auto;
+    bottom: auto; top: 240px;
+    max-height: calc(100dvh - 260px);
   }
 
   .chat-panel.expanded {
     width: calc(100vw - 12px);
-    right: 6px;
-    bottom: 6px;
+    left: 6px; right: auto;
+    top: 6px; bottom: auto;
     max-height: calc(100dvh - 12px);
     border-radius: var(--radius-lg);
   }
@@ -4155,10 +4159,14 @@ body {
   }
   
   .chat-fab {
-    bottom: 28px;
-    right: 14px;
-    width: 48px;
-    height: 48px;
+    top: 192px; bottom: auto;
+    left: 10px; right: auto;
+    width: 40px;
+    height: 40px;
+  }
+  .chat-fab svg {
+    width: 20px;
+    height: 20px;
   }
 
   .chat-messages {
