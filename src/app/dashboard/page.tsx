@@ -132,10 +132,11 @@ const recentActivity = [
 ]
 
 /* Persona badge colors */
-const personaConfig: Record<string, { bg: string; color: string; border: string }> = {
-  admin:  { bg: 'rgba(37,99,235,0.08)',   color: '#2563eb', border: 'rgba(37,99,235,0.2)' },
-  broker: { bg: 'rgba(217,119,6,0.08)',   color: '#b45309', border: 'rgba(217,119,6,0.2)' },
-  touree: { bg: 'rgba(22,163,74,0.08)',   color: '#16a34a', border: 'rgba(22,163,74,0.2)' },
+const personaConfig: Record<string, { bg: string; color: string; border: string; label: string }> = {
+  admin:    { bg: 'rgba(37,99,235,0.08)',   color: '#2563eb', border: 'rgba(37,99,235,0.2)',  label: 'Admin' },
+  broker:   { bg: 'rgba(217,119,6,0.08)',   color: '#b45309', border: 'rgba(217,119,6,0.2)',  label: 'Broker' },
+  cre_team: { bg: 'rgba(124,58,237,0.08)',  color: '#7c3aed', border: 'rgba(124,58,237,0.2)', label: 'CRE Team' },
+  touree:   { bg: 'rgba(22,163,74,0.08)',   color: '#16a34a', border: 'rgba(22,163,74,0.2)',  label: 'Touree' },
 }
 
 /* Score bar color */
@@ -292,7 +293,8 @@ export default function DashboardPage() {
   const buildInviteEmail = (email: string, displayName: string, persona: string, tempPassword?: string) => {
     const firstName = displayName ? displayName.split(' ')[0] : ''
     const greeting = firstName ? `Hi ${firstName},` : 'Hi,'
-    const roleName = persona === 'broker' ? 'broker' : 'tour reviewer'
+    const roleNames: Record<string, string> = { admin: 'admin', broker: 'broker', cre_team: 'CRE team member', touree: 'tour reviewer' }
+    const roleName = roleNames[persona] || 'tour reviewer'
     const subject = encodeURIComponent('You\'re invited to Tour-Lytics - SF Office Search')
 
     let bodyText = `${greeting}\n\n` +
@@ -785,7 +787,7 @@ export default function DashboardPage() {
                           border: `1px solid ${badge.border}`,
                           whiteSpace: 'nowrap',
                         }}>
-                          {member.persona}
+                          {badge.label || member.persona}
                         </span>
                         {/* Invite actions */}
                         <div style={{ display: 'flex', gap: '0.375rem', alignItems: 'center' }}>
@@ -971,6 +973,7 @@ export default function DashboardPage() {
                     >
                       <option value="admin">Admin</option>
                       <option value="broker">Broker</option>
+                      <option value="cre_team">CRE Team</option>
                       <option value="touree">Touree</option>
                     </select>
                   </div>

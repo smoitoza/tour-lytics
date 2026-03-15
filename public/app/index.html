@@ -5369,8 +5369,8 @@ function toggleTourItem(type, id) {
 
   if (idx >= 0) {
     list.splice(idx, 1);
-    // Sync removal to server if admin
-    if (isAdmin()) {
+    // Sync removal to server if admin/broker/CRE team
+    if (hasAdminAccess()) {
       removeFromCentralTourList(type, id);
       // Also remove from cached central list
       if (_centralTourList) {
@@ -5381,8 +5381,8 @@ function toggleTourItem(type, id) {
     const info = getBuildingInfo(type, id);
     if (info) {
       list.push(info);
-      // Sync addition to server if admin
-      if (isAdmin()) {
+      // Sync addition to server if admin/broker/CRE team
+      if (hasAdminAccess()) {
         addToCentralTourList(info);
         // Also add to cached central list
         if (_centralTourList) {
@@ -5543,16 +5543,35 @@ map.on('popupopen', function(e) {
 
 // --- Role & Centralized Tour List (must be before initTourList) ---
 var ADMIN_EMAIL = 'samoitoza@gmail.com';
-var _userRole = null; // 'admin', 'broker', 'touree', or null
+var _userRole = null; // 'admin', 'broker', 'cre_team', 'touree', or null
 var _centralTourList = null; // fetched from server
 var _centralTourListLoaded = false;
 
-// Initialize on load -- fetch centralized tour list if logged in
+// Fetch the current user's persona from the team API
+async function fetchUserRole() {
+  var email = getCurrentUserEmail();
+  if (!email) return null;
+  try {
+    var res = await fetch('/api/team?projectId=sf-office-search');
+    if (!res.ok) return null;
+    var members = await res.json();
+    var me = members.find(function(m) { return m.email.toLowerCase() === email.toLowerCase(); });
+    if (me) {
+      _userRole = me.persona;
+      return me.persona;
+    }
+  } catch(e) { console.error('Failed to fetch user role:', e); }
+  return null;
+}
+
+// Initialize on load -- fetch role and centralized tour list if logged in
 (async function initTourList() {
   var email = getCurrentUserEmail();
   if (email) {
-    // Set touree mode CSS class for non-admin users
-    if (email.toLowerCase() !== ADMIN_EMAIL) {
+    // Fetch user's role first
+    await fetchUserRole();
+    // Set touree mode CSS class for non-admin-like users
+    if (!hasAdminAccess()) {
       document.body.classList.add('touree-mode');
     }
     // Fetch centralized tour list from server
@@ -6019,8 +6038,14 @@ function isAdmin() {
   return getCurrentUserEmail().toLowerCase() === ADMIN_EMAIL;
 }
 
+// Admin, Broker, and CRE Team all get full access (edit tour list, manage buildings, etc.)
+function hasAdminAccess() {
+  if (isAdmin()) return true;
+  return ['admin', 'broker', 'cre_team'].includes(_userRole);
+}
+
 function isReadOnlyTourList() {
-  return !isAdmin() && getCurrentUserEmail() !== '';
+  return !hasAdminAccess() && getCurrentUserEmail() !== '';
 }
 
 // Fetch centralized tour list from server
@@ -6217,8 +6242,8 @@ function setTourDateTime(buildingKey, field, value) {
   schedule[buildingKey][field] = value;
   saveTourSchedule(schedule);
 
-  // Sync to server if admin
-  if (isAdmin() && _centralTourList) {
+  // Sync to server if admin/broker/CRE team
+  if (hasAdminAccess() && _centralTourList) {
     // Parse buildingKey like 'shortlist-1' or 'survey-5'
     var parts = buildingKey.split('-');
     var bType = parts[0];

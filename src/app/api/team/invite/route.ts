@@ -29,7 +29,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Email and persona are required' }, { status: 400 })
     }
 
-    if (!['admin', 'broker', 'touree'].includes(persona)) {
+    if (!['admin', 'broker', 'cre_team', 'touree'].includes(persona)) {
       return NextResponse.json({ error: 'Invalid persona' }, { status: 400 })
     }
 
