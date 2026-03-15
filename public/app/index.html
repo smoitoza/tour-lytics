@@ -6592,6 +6592,7 @@ function switchPageTab(tabId) {
   // Initialize commute tab drag-drop when switching to it
   if (tabId === 'commute') {
     initCommuteDropzone();
+    commuteCheckStale();
   }
 }
 
@@ -8709,6 +8710,8 @@ var _commuteEmployees = [];
 var _commuteResults = null;
 var _commuteHeatmapMode = 'driving'; // 'driving' or 'transit'
 var _commuteDropzoneInit = false;
+var _commuteLastBuildingCount = 0; // track building count from last run
+var _commuteLastBuildingNames = []; // track building names from last run
 
 function initCommuteDropzone() {
   if (_commuteDropzoneInit) return;
@@ -8981,6 +8984,9 @@ async function commuteRunStudy() {
       throw new Error(err.error || 'API request failed');
     }
     _commuteResults = await res.json();
+    // Snapshot the building list used for this run
+    _commuteLastBuildingCount = buildings.length;
+    _commuteLastBuildingNames = buildings.map(function(b) { return b.name; }).sort();
     renderCommuteResults();
   } catch(e) {
     alert('Commute calculation failed: ' + e.message);
@@ -8994,6 +9000,10 @@ function renderCommuteResults() {
   if (!_commuteResults) return;
   var container = document.getElementById('commuteResults');
   container.style.display = 'block';
+
+  // Hide stale banner since we just (re)rendered fresh results
+  var staleBanner = document.getElementById('commuteStaleBanner');
+  if (staleBanner) staleBanner.style.display = 'none';
 
   var summaries = _commuteResults.summaries || [];
   var details = _commuteResults.details || [];
@@ -9097,6 +9107,60 @@ function renderCommuteResults() {
 function commuteSetHeatmapMode(mode) {
   _commuteHeatmapMode = mode;
   renderCommuteResults();
+}
+
+// Check if the tour list has changed since the last commute run
+function commuteCheckStale() {
+  if (!_commuteResults || !_commuteEmployees.length) return; // no results to go stale
+  if (!_centralTourList) return;
+
+  var currentNames = _centralTourList.map(function(b) {
+    return b.building_name || b.name || 'Unknown';
+  }).sort();
+  var currentCount = currentNames.length;
+
+  // Compare against last run
+  var changed = false;
+  if (currentCount !== _commuteLastBuildingCount) {
+    changed = true;
+  } else {
+    for (var i = 0; i < currentNames.length; i++) {
+      if (currentNames[i] !== _commuteLastBuildingNames[i]) { changed = true; break; }
+    }
+  }
+
+  var banner = document.getElementById('commuteStaleBanner');
+  if (!banner) {
+    // Create the banner element (inserted before results)
+    var resultsEl = document.getElementById('commuteResults');
+    if (!resultsEl) return;
+    banner = document.createElement('div');
+    banner.id = 'commuteStaleBanner';
+    banner.style.cssText = 'display:none;margin-bottom:1rem;padding:0.875rem 1.25rem;background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #f59e0b;border-radius:0.75rem;font-size:0.875rem;color:#92400e;';
+    resultsEl.parentNode.insertBefore(banner, resultsEl);
+  }
+
+  if (changed) {
+    // Figure out what changed for the message
+    var added = currentNames.filter(function(n) { return _commuteLastBuildingNames.indexOf(n) < 0; });
+    var removed = _commuteLastBuildingNames.filter(function(n) { return currentNames.indexOf(n) < 0; });
+    var parts = [];
+    if (added.length) parts.push('<strong>' + added.join(', ') + '</strong> added');
+    if (removed.length) parts.push('<strong>' + removed.join(', ') + '</strong> removed');
+    var changeText = parts.length ? parts.join(', ') : 'buildings changed';
+
+    banner.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">' +
+        '<div>' +
+          '<strong style="display:block;margin-bottom:0.25rem;">Tour list updated since last run</strong>' +
+          '<span style="font-size:0.8125rem;">' + changeText + ' (was ' + _commuteLastBuildingCount + ', now ' + currentCount + ' buildings)</span>' +
+        '</div>' +
+        '<button onclick="commuteRunStudy()" style="padding:0.5rem 1.25rem;background:#2563eb;color:#fff;border:none;border-radius:0.5rem;font-weight:600;font-size:0.8125rem;cursor:pointer;white-space:nowrap;">Recalculate Commutes</button>' +
+      '</div>';
+    banner.style.display = 'block';
+  } else {
+    banner.style.display = 'none';
+  }
 }
 
 function commuteHeatClass(minutes) {
