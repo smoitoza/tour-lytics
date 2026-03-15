@@ -2672,6 +2672,343 @@ body {
       .score-sub-date { margin-left: 0; }
     }
 
+    /* ============================================================
+       Commute Study Page
+       ============================================================ */
+    .commute-page {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: var(--space-6) var(--space-4);
+    }
+    .commute-page-header {
+      margin-bottom: var(--space-6);
+    }
+    .commute-page-title {
+      font-family: var(--font-display);
+      font-size: var(--text-xl);
+      font-weight: 700;
+      color: var(--color-text);
+      margin: 0 0 var(--space-1);
+    }
+    .commute-page-subtitle {
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+      line-height: 1.5;
+      margin: 0;
+    }
+    .commute-upload-card {
+      background: var(--color-surface);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--color-border);
+      padding: var(--space-6);
+      margin-bottom: var(--space-6);
+    }
+    .commute-dropzone {
+      border: 2px dashed var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 2.5rem 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .commute-dropzone:hover,
+    .commute-dropzone.dragover {
+      border-color: #2563eb;
+      background: rgba(37,99,235,0.03);
+    }
+    .commute-dropzone-title {
+      font-family: var(--font-display);
+      font-size: var(--text-base);
+      font-weight: 600;
+      color: var(--color-text);
+      margin: var(--space-3) 0 var(--space-1);
+    }
+    .commute-dropzone-desc {
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+      margin: 0 0 var(--space-4);
+      line-height: 1.5;
+    }
+    .commute-browse-btn {
+      padding: 0.5rem 1.25rem;
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: #ffffff;
+      background: var(--color-primary);
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .commute-browse-btn:hover { background: var(--color-primary-hover); }
+    .commute-file-info {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-top: var(--space-4);
+    }
+    .commute-file-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.375rem 0.75rem;
+      background: rgba(37,99,235,0.06);
+      color: #2563eb;
+      border-radius: 9999px;
+      font-size: var(--text-sm);
+      font-weight: 600;
+    }
+    .commute-clear-btn {
+      padding: 0.25rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #dc2626;
+      background: transparent;
+      border: 1px solid rgba(220,38,38,0.2);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .commute-clear-btn:hover { background: rgba(220,38,38,0.06); }
+    .commute-preview {
+      margin-top: var(--space-4);
+      max-height: 12rem;
+      overflow-y: auto;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+    }
+    .commute-preview table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8125rem;
+    }
+    .commute-preview th {
+      background: var(--color-surface-2);
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      font-size: 0.6875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      position: sticky;
+      top: 0;
+    }
+    .commute-preview td {
+      padding: 0.375rem 0.75rem;
+      border-top: 1px solid var(--color-divider);
+      color: var(--color-text);
+    }
+    .commute-actions {
+      margin-top: var(--space-4);
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+    .commute-run-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1.5rem;
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: #ffffff;
+      background: #2563eb;
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .commute-run-btn:hover { background: #1d4ed8; }
+    .commute-run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .commute-run-note {
+      font-size: 0.8125rem;
+      color: var(--color-text-muted);
+    }
+    .commute-loading {
+      text-align: center;
+      color: var(--color-text-faint);
+      font-size: var(--text-sm);
+      padding: var(--space-8);
+    }
+
+    /* Summary cards */
+    .commute-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+      margin-bottom: var(--space-6);
+    }
+    .commute-summary-card {
+      background: var(--color-surface);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--color-border);
+      padding: 1.25rem;
+    }
+    .commute-summary-label {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      color: var(--color-text-faint);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.5rem;
+    }
+    .commute-summary-value {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--color-text);
+      line-height: 1.2;
+    }
+    .commute-summary-sub {
+      font-size: 0.8125rem;
+      color: var(--color-text-muted);
+      margin-top: 0.25rem;
+    }
+
+    /* Ranked table */
+    .commute-ranked-section {
+      margin-bottom: var(--space-6);
+    }
+    .commute-section-title {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      color: var(--color-text-faint);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 0.75rem;
+    }
+    .commute-ranked-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      background: var(--color-surface);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--color-border);
+      overflow: hidden;
+    }
+    .commute-ranked-table th {
+      background: var(--color-surface-2);
+      padding: 0.75rem 1rem;
+      text-align: left;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .commute-ranked-table td {
+      padding: 0.875rem 1rem;
+      border-top: 1px solid var(--color-divider);
+      font-size: 0.875rem;
+    }
+    .commute-ranked-table tr:hover td {
+      background: rgba(37,99,235,0.02);
+    }
+    .commute-rank-num {
+      font-family: var(--font-display);
+      font-weight: 800;
+      width: 2rem;
+      text-align: center;
+    }
+    .commute-rank-top { color: #2563eb; }
+    .commute-rank-rest { color: #94a3b8; }
+    .commute-building-cell {
+      font-weight: 600;
+      color: #0f172a;
+    }
+    .commute-time-cell {
+      font-family: var(--font-display);
+      font-weight: 700;
+    }
+    .commute-dist-cell {
+      color: var(--color-text-muted);
+      font-size: 0.8125rem;
+    }
+
+    /* Heatmap */
+    .commute-heatmap-section {
+      margin-bottom: var(--space-6);
+    }
+    .commute-heatmap-wrapper {
+      overflow-x: auto;
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--color-border);
+      background: var(--color-surface);
+    }
+    .commute-heatmap {
+      width: 100%;
+      min-width: 600px;
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+    .commute-heatmap th {
+      background: var(--color-surface-2);
+      padding: 0.625rem 0.75rem;
+      font-size: 0.625rem;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+      position: sticky;
+      top: 0;
+    }
+    .commute-heatmap td {
+      padding: 0.5rem 0.625rem;
+      border-top: 1px solid var(--color-divider);
+      font-size: 0.75rem;
+      text-align: center;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .commute-heatmap td:first-child {
+      text-align: left;
+      font-weight: 600;
+      color: #334155;
+      white-space: nowrap;
+      position: sticky;
+      left: 0;
+      background: var(--color-surface);
+    }
+    .commute-heat-green { background: rgba(22,163,74,0.1); color: #16a34a; }
+    .commute-heat-lime  { background: rgba(132,204,22,0.1); color: #65a30d; }
+    .commute-heat-amber { background: rgba(217,119,6,0.1); color: #d97706; }
+    .commute-heat-red   { background: rgba(220,38,38,0.1); color: #dc2626; }
+    .commute-heat-na    { background: #f8fafc; color: #94a3b8; }
+
+    .commute-mode-toggle {
+      display: inline-flex;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      overflow: hidden;
+      margin-left: var(--space-3);
+    }
+    .commute-mode-btn {
+      padding: 0.25rem 0.75rem;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--color-text-muted);
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .commute-mode-btn.active {
+      background: #2563eb;
+      color: #ffffff;
+    }
+
+    @media (max-width: 640px) {
+      .commute-page { padding: var(--space-3); }
+      .commute-summary-grid { grid-template-columns: 1fr; }
+      .commute-upload-card { padding: var(--space-4); }
+      .commute-dropzone { padding: 1.5rem 1rem; }
+    }
+
     /* Summary comparison bar */
     .tourbook-summary {
       background: var(--color-surface);
@@ -3794,6 +4131,10 @@ body {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
     Scores
   </button>
+  <button class="page-tab" onclick="switchPageTab('commute')" data-page-tab="commute">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    Commute
+  </button>
 </nav>
 
 <div class="tab-content active" id="tab-map">
@@ -4202,6 +4543,55 @@ body {
     <div id="scoresContent">
       <div class="scores-loading">Loading survey scores...</div>
     </div>
+  </div>
+</div>
+
+<div class="tab-content" id="tab-commute">
+  <div class="commute-page">
+    <div class="commute-page-header">
+      <div>
+        <h2 class="commute-page-title">Commute Study</h2>
+        <p class="commute-page-subtitle">Upload employee locations to calculate average drive and transit times to each building on the tour list.</p>
+      </div>
+    </div>
+
+    <!-- Upload section -->
+    <div class="commute-upload-card" id="commuteUploadCard">
+      <div class="commute-dropzone" id="commuteDropzone">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <p class="commute-dropzone-title">Drop CSV file here</p>
+        <p class="commute-dropzone-desc">or click to browse. CSV should have columns: <strong>name, lat, lng</strong></p>
+        <input type="file" id="commuteFileInput" accept=".csv" style="display:none" />
+        <button class="commute-browse-btn" onclick="document.getElementById('commuteFileInput').click()">Choose File</button>
+      </div>
+      <div class="commute-file-info" id="commuteFileInfo" style="display:none;">
+        <div class="commute-file-badge" id="commuteFileBadge"></div>
+        <button class="commute-clear-btn" onclick="commuteClearFile()">Clear</button>
+      </div>
+      <div class="commute-preview" id="commutePreview" style="display:none;"></div>
+      <div class="commute-actions" id="commuteActions" style="display:none;">
+        <button class="commute-run-btn" id="commuteRunBtn" onclick="commuteRunStudy()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Calculate Commutes
+        </button>
+        <span class="commute-run-note" id="commuteRunNote"></span>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div class="commute-loading" id="commuteLoading" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:center;gap:0.75rem">
+        <div style="width:1rem;height:1rem;border:2px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div>
+        <span>Calculating commute times for all employees and buildings... This may take a moment.</span>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div id="commuteResults" style="display:none;"></div>
   </div>
 </div>
 
@@ -6164,7 +6554,7 @@ async function fetchUserRole() {
 
   // Handle hash-based tab routing (e.g., /app/?...#team)
   var hashTab = window.location.hash.replace('#', '');
-  if (hashTab && ['map','financials','tourbook','photos','team','scores'].indexOf(hashTab) >= 0) {
+  if (hashTab && ['map','financials','tourbook','photos','team','scores','commute'].indexOf(hashTab) >= 0) {
     switchPageTab(hashTab);
   }
 })();
@@ -6197,6 +6587,10 @@ function switchPageTab(tabId) {
   // Load combined scores when switching to scores tab
   if (tabId === 'scores') {
     loadCombinedScores();
+  }
+  // Initialize commute tab drag-drop when switching to it
+  if (tabId === 'commute') {
+    initCommuteDropzone();
   }
 }
 
@@ -8303,6 +8697,300 @@ function toggleScoreDetails(buildingName) {
     _scoresExpandedBuilding = buildingName;
   }
   renderScoresPage();
+}
+
+
+// ============================================================
+// Commute Study
+// ============================================================
+
+var _commuteEmployees = [];
+var _commuteResults = null;
+var _commuteHeatmapMode = 'driving'; // 'driving' or 'transit'
+var _commuteDropzoneInit = false;
+
+function initCommuteDropzone() {
+  if (_commuteDropzoneInit) return;
+  _commuteDropzoneInit = true;
+
+  var dropzone = document.getElementById('commuteDropzone');
+  var fileInput = document.getElementById('commuteFileInput');
+  if (!dropzone || !fileInput) return;
+
+  dropzone.addEventListener('click', function(e) {
+    if (e.target.tagName !== 'BUTTON') fileInput.click();
+  });
+
+  dropzone.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    dropzone.classList.add('dragover');
+  });
+  dropzone.addEventListener('dragleave', function() {
+    dropzone.classList.remove('dragover');
+  });
+  dropzone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) commuteHandleFile(e.dataTransfer.files[0]);
+  });
+
+  fileInput.addEventListener('change', function() {
+    if (fileInput.files.length) commuteHandleFile(fileInput.files[0]);
+  });
+}
+
+function commuteHandleFile(file) {
+  if (!file.name.toLowerCase().endsWith('.csv')) {
+    alert('Please upload a CSV file.');
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var text = e.target.result;
+    commuteParseCSV(text, file.name);
+  };
+  reader.readAsText(file);
+}
+
+function commuteParseCSV(text, filename) {
+  var lines = text.trim().split('\n');
+  if (lines.length < 2) { alert('CSV must have a header row and at least one data row.'); return; }
+
+  var header = lines[0].split(',').map(function(h) { return h.trim().toLowerCase().replace(/["']/g, ''); });
+  var nameIdx = header.indexOf('name');
+  var latIdx = header.indexOf('lat');
+  var lngIdx = header.indexOf('lng');
+  if (latIdx < 0) latIdx = header.indexOf('latitude');
+  if (lngIdx < 0) lngIdx = header.indexOf('longitude');
+  if (lngIdx < 0) lngIdx = header.indexOf('lon');
+
+  if (nameIdx < 0 || latIdx < 0 || lngIdx < 0) {
+    alert('CSV must have columns: name, lat, lng (or latitude, longitude)');
+    return;
+  }
+
+  _commuteEmployees = [];
+  for (var i = 1; i < lines.length; i++) {
+    var cols = lines[i].split(',').map(function(c) { return c.trim().replace(/["']/g, ''); });
+    var name = cols[nameIdx];
+    var lat = parseFloat(cols[latIdx]);
+    var lng = parseFloat(cols[lngIdx]);
+    if (name && !isNaN(lat) && !isNaN(lng)) {
+      _commuteEmployees.push({ name: name, lat: lat, lng: lng });
+    }
+  }
+
+  if (_commuteEmployees.length === 0) {
+    alert('No valid employee rows found. Check that lat/lng values are numbers.');
+    return;
+  }
+
+  // Show file info
+  var dropzone = document.getElementById('commuteDropzone');
+  dropzone.style.display = 'none';
+  var fileInfo = document.getElementById('commuteFileInfo');
+  fileInfo.style.display = 'flex';
+  document.getElementById('commuteFileBadge').innerHTML =
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> ' +
+    filename + ' - ' + _commuteEmployees.length + ' employees';
+
+  // Show preview table
+  var preview = document.getElementById('commutePreview');
+  preview.style.display = 'block';
+  var html = '<table><thead><tr><th>#</th><th>Name</th><th>Latitude</th><th>Longitude</th></tr></thead><tbody>';
+  _commuteEmployees.forEach(function(emp, i) {
+    html += '<tr><td>' + (i + 1) + '</td><td>' + emp.name + '</td><td>' + emp.lat.toFixed(4) + '</td><td>' + emp.lng.toFixed(4) + '</td></tr>';
+  });
+  html += '</tbody></table>';
+  preview.innerHTML = html;
+
+  // Show actions
+  var actions = document.getElementById('commuteActions');
+  actions.style.display = 'flex';
+
+  // Get building count from tour list
+  var buildingCount = (_centralTourList && _centralTourList.length) || 0;
+  document.getElementById('commuteRunNote').textContent =
+    _commuteEmployees.length + ' employees x ' + buildingCount + ' buildings on tour list';
+}
+
+function commuteClearFile() {
+  _commuteEmployees = [];
+  _commuteResults = null;
+  document.getElementById('commuteDropzone').style.display = '';
+  document.getElementById('commuteFileInfo').style.display = 'none';
+  document.getElementById('commutePreview').style.display = 'none';
+  document.getElementById('commuteActions').style.display = 'none';
+  document.getElementById('commuteResults').style.display = 'none';
+  document.getElementById('commuteLoading').style.display = 'none';
+  document.getElementById('commuteFileInput').value = '';
+}
+
+async function commuteRunStudy() {
+  if (!_commuteEmployees.length) return;
+  if (!_centralTourList || !_centralTourList.length) {
+    alert('No buildings on the tour list. Add buildings to the tour list first.');
+    return;
+  }
+
+  var btn = document.getElementById('commuteRunBtn');
+  btn.disabled = true;
+  document.getElementById('commuteLoading').style.display = 'block';
+  document.getElementById('commuteResults').style.display = 'none';
+
+  var buildings = _centralTourList.map(function(b) {
+    return {
+      name: b.name || b.address,
+      address: b.address || '',
+      lat: b.lat || null,
+      lng: b.lng || null
+    };
+  });
+
+  try {
+    var res = await fetch('/api/commute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        employees: _commuteEmployees,
+        buildings: buildings
+      })
+    });
+    if (!res.ok) {
+      var err = await res.json();
+      throw new Error(err.error || 'API request failed');
+    }
+    _commuteResults = await res.json();
+    renderCommuteResults();
+  } catch(e) {
+    alert('Commute calculation failed: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    document.getElementById('commuteLoading').style.display = 'none';
+  }
+}
+
+function renderCommuteResults() {
+  if (!_commuteResults) return;
+  var container = document.getElementById('commuteResults');
+  container.style.display = 'block';
+
+  var summaries = _commuteResults.summaries || [];
+  var details = _commuteResults.details || [];
+
+  // Find best buildings
+  var bestDrive = summaries[0] || {};
+  var bestTransit = [...summaries].sort(function(a, b) {
+    return (a.transit_avg_seconds || Infinity) - (b.transit_avg_seconds || Infinity);
+  })[0] || {};
+
+  // Overall average across all buildings
+  var totalDriveSec = 0, driveCount = 0;
+  summaries.forEach(function(s) {
+    if (s.driving_avg_seconds) { totalDriveSec += s.driving_avg_seconds; driveCount++; }
+  });
+  var overallAvg = driveCount ? Math.round(totalDriveSec / driveCount) : 0;
+
+  var html = '';
+
+  // Summary cards
+  html += '<div class="commute-summary-grid">';
+  html += '<div class="commute-summary-card">';
+  html += '<div class="commute-summary-label">Best Avg. Drive Time</div>';
+  html += '<div class="commute-summary-value">' + (bestDrive.driving_avg_text || 'N/A') + '</div>';
+  html += '<div class="commute-summary-sub">' + (bestDrive.building || '') + '</div>';
+  html += '</div>';
+
+  html += '<div class="commute-summary-card">';
+  html += '<div class="commute-summary-label">Best Avg. Transit Time</div>';
+  html += '<div class="commute-summary-value">' + (bestTransit.transit_avg_text || 'N/A') + '</div>';
+  html += '<div class="commute-summary-sub">' + (bestTransit.building || '') + '</div>';
+  html += '</div>';
+
+  html += '<div class="commute-summary-card">';
+  html += '<div class="commute-summary-label">Overall Avg. Drive</div>';
+  html += '<div class="commute-summary-value">' + commuteFormatDuration(overallAvg) + '</div>';
+  html += '<div class="commute-summary-sub">Across ' + summaries.length + ' buildings, ' + _commuteEmployees.length + ' employees</div>';
+  html += '</div>';
+  html += '</div>';
+
+  // Ranked table
+  html += '<div class="commute-ranked-section">';
+  html += '<div class="commute-section-title">Building Rankings by Average Drive Time</div>';
+  html += '<table class="commute-ranked-table">';
+  html += '<thead><tr><th>Rank</th><th>Building</th><th>Avg. Drive</th><th>Drive Dist.</th><th>Avg. Transit</th><th>Transit Dist.</th></tr></thead>';
+  html += '<tbody>';
+  summaries.forEach(function(s, i) {
+    html += '<tr>';
+    html += '<td class="commute-rank-num ' + (i < 3 ? 'commute-rank-top' : 'commute-rank-rest') + '">' + (i + 1) + '</td>';
+    html += '<td class="commute-building-cell">' + s.building + '</td>';
+    html += '<td class="commute-time-cell">' + (s.driving_avg_text || 'N/A') + '</td>';
+    html += '<td class="commute-dist-cell">' + (s.driving_avg_distance_text || 'N/A') + '</td>';
+    html += '<td class="commute-time-cell">' + (s.transit_avg_text || 'N/A') + '</td>';
+    html += '<td class="commute-dist-cell">' + (s.transit_avg_distance_text || 'N/A') + '</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+
+  // Heatmap
+  html += '<div class="commute-heatmap-section">';
+  html += '<div style="display:flex;align-items:center;margin-bottom:0.75rem">';
+  html += '<span class="commute-section-title" style="margin-bottom:0">Employee Commute Heatmap</span>';
+  html += '<div class="commute-mode-toggle">';
+  html += '<button class="commute-mode-btn' + (_commuteHeatmapMode === 'driving' ? ' active' : '') + '" onclick="commuteSetHeatmapMode(\'driving\')">Drive</button>';
+  html += '<button class="commute-mode-btn' + (_commuteHeatmapMode === 'transit' ? ' active' : '') + '" onclick="commuteSetHeatmapMode(\'transit\')">Transit</button>';
+  html += '</div></div>';
+
+  html += '<div class="commute-heatmap-wrapper">';
+  html += '<table class="commute-heatmap">';
+  html += '<thead><tr><th>Employee</th>';
+  // Use ranked order for column headers
+  summaries.forEach(function(s) {
+    html += '<th>' + s.building + '</th>';
+  });
+  html += '</tr></thead><tbody>';
+
+  // Build a lookup: building name -> column index in ranked summaries
+  var buildingOrder = summaries.map(function(s) { return s.building; });
+
+  details.forEach(function(emp) {
+    html += '<tr><td>' + emp.employee + '</td>';
+    buildingOrder.forEach(function(bldName) {
+      var c = emp.commutes.find(function(x) { return x.building === bldName; });
+      var modeData = c ? c[_commuteHeatmapMode] : null;
+      if (modeData) {
+        var mins = Math.round(modeData.duration_seconds / 60);
+        var cls = commuteHeatClass(mins);
+        html += '<td class="' + cls + '">' + modeData.duration_text + '</td>';
+      } else {
+        html += '<td class="commute-heat-na">N/A</td>';
+      }
+    });
+    html += '</tr>';
+  });
+
+  html += '</tbody></table></div></div>';
+
+  container.innerHTML = html;
+}
+
+function commuteSetHeatmapMode(mode) {
+  _commuteHeatmapMode = mode;
+  renderCommuteResults();
+}
+
+function commuteHeatClass(minutes) {
+  if (minutes <= 20) return 'commute-heat-green';
+  if (minutes <= 35) return 'commute-heat-lime';
+  if (minutes <= 50) return 'commute-heat-amber';
+  return 'commute-heat-red';
+}
+
+function commuteFormatDuration(seconds) {
+  var hrs = Math.floor(seconds / 3600);
+  var mins = Math.round((seconds % 3600) / 60);
+  if (hrs > 0) return hrs + 'h ' + mins + 'm';
+  return mins + ' min';
 }
 
 
