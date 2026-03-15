@@ -704,7 +704,7 @@ body {
 @media (max-width: 500px) {
   /* Map fills available space on mobile */
   #map {
-    min-height: calc(100dvh - 90px);
+    min-height: calc(100dvh - 100px);
   }
 
   /* Compact header on mobile */
@@ -1358,7 +1358,7 @@ body {
     @media (max-width: 600px) {
       .tour-panel { width: 100%; }
       .tour-toggle {
-        bottom: 14px; left: 14px; transform: none;
+        bottom: 28px; left: 14px; transform: none;
         padding: 8px 14px; font-size: var(--text-xs);
       }
       .tour-toggle svg { width: 14px; height: 14px; }
@@ -3733,11 +3733,11 @@ body {
       .fin-table .cell-label { min-width: 140px; }
     }
 
-    /* Extra-small screens: icon-only tabs */
+    /* Small screens: compact tabs with labels, horizontal scroll */
     @media (max-width: 500px) {
       .page-tabs { padding: var(--space-1) var(--space-2); gap: 2px; }
-      .page-tab { padding: 6px 8px; font-size: 0; gap: 0; }
-      .page-tab svg { width: 18px; height: 18px; }
+      .page-tab { padding: 5px 10px; font-size: 0.65rem; gap: 4px; }
+      .page-tab svg { width: 14px; height: 14px; }
     }
 
 /* ============================================================
@@ -4155,7 +4155,7 @@ body {
   }
   
   .chat-fab {
-    bottom: 14px;
+    bottom: 28px;
     right: 14px;
     width: 48px;
     height: 48px;
