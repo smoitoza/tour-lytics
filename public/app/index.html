@@ -8860,6 +8860,7 @@ function commuteProcessRows(rows, filename) {
   
   // Parse employee data
   _commuteEmployees = [];
+  var labelCounts = {}; // track duplicates for numbering
   for (var ri = 1; ri < rows.length; ri++) {
     var lat = parseFloat(rows[ri][validCols[_commuteLatCol]]);
     var lng = parseFloat(rows[ri][validCols[_commuteLngCol]]);
@@ -8868,7 +8869,11 @@ function commuteProcessRows(rows, filename) {
     if (lat < -90 || lat > 90 || lng < -180 || lng > 180) continue;
     
     var label = labelCol >= 0 ? String(rows[ri][validCols[labelCol]] || '').trim() : '';
-    if (!label) label = 'Employee ' + _commuteEmployees.length;
+    if (!label) label = 'Employee';
+    
+    // Number duplicate labels so each employee has a unique name in the heatmap
+    labelCounts[label] = (labelCounts[label] || 0) + 1;
+    var uniqueLabel = label + ' #' + labelCounts[label];
     
     // Gather all extra metadata columns
     var meta = {};
@@ -8879,7 +8884,7 @@ function commuteProcessRows(rows, filename) {
       }
     });
     
-    _commuteEmployees.push({ name: label, lat: lat, lng: lng, meta: meta });
+    _commuteEmployees.push({ name: uniqueLabel, lat: lat, lng: lng, meta: meta });
   }
   
   if (_commuteEmployees.length === 0) {
@@ -8955,8 +8960,8 @@ async function commuteRunStudy() {
 
   var buildings = _centralTourList.map(function(b) {
     return {
-      name: b.name || b.address,
-      address: b.address || '',
+      name: b.building_name || b.name || b.building_address || b.address || 'Unknown',
+      address: b.building_address || b.address || '',
       lat: b.lat || null,
       lng: b.lng || null
     };
