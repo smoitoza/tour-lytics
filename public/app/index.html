@@ -702,42 +702,34 @@ body {
 }
 
 @media (max-width: 500px) {
-  /* Map takes most of the screen on mobile */
+  /* Map fills available space on mobile */
   #map {
-    min-height: 60vh;
+    min-height: calc(100dvh - 90px);
   }
 
+  /* Compact header on mobile */
+  .header {
+    padding: var(--space-2) var(--space-3);
+  }
   .header-date {
     display: none;
   }
-
-  .header-title {
-    font-size: var(--text-base);
-  }
-
-  .header-subtitle {
-    font-size: 0.625rem;
-  }
-
-  /* Horizontal scrolling cards instead of stacking */
-  .summary-bar {
-    display: flex;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scroll-snap-type: x mandatory;
-    gap: var(--space-2);
-    padding: var(--space-3);
-    scrollbar-width: none;
-  }
-
-  .summary-bar::-webkit-scrollbar {
+  .header-right {
     display: none;
   }
+  .header-title {
+    font-size: var(--text-sm);
+  }
+  .header-subtitle {
+    display: none;
+  }
+  .logo {
+    width: 22px; height: 22px;
+  }
 
-  .summary-card {
-    min-width: 260px;
-    flex-shrink: 0;
-    scroll-snap-align: start;
+  /* Summary bar hidden - replaced by enriched tour list sidebar */
+  .summary-bar {
+    display: none !important;
   }
 
   /* Collapsible legend on mobile */
@@ -1366,9 +1358,11 @@ body {
     @media (max-width: 600px) {
       .tour-panel { width: 100%; }
       .tour-toggle {
-        bottom: 80px; left: 50%; transform: translateX(-50%);
-        padding: 10px 18px;
+        bottom: 14px; left: 14px; transform: none;
+        padding: 8px 14px; font-size: var(--text-xs);
       }
+      .tour-toggle svg { width: 14px; height: 14px; }
+      .tour-toggle-count { min-width: 18px; height: 18px; font-size: 0.6rem; }
     }
 
 
@@ -3733,9 +3727,17 @@ body {
       .fin-table th, .fin-table td { padding: 6px 10px; }
       .fin-sheet-tabs { gap: 0; }
       .fin-sheet-tab { padding: 6px 10px; font-size: 0.65rem; }
-      .page-tabs { padding: var(--space-2) var(--space-2); }
-      .page-tab { padding: 6px 12px; font-size: var(--text-xs); }
+      .page-tabs { padding: var(--space-1) var(--space-2); gap: var(--space-1); }
+      .page-tab { padding: 6px 10px; font-size: var(--text-xs); gap: 4px; }
+      .page-tab svg { width: 14px; height: 14px; }
       .fin-table .cell-label { min-width: 140px; }
+    }
+
+    /* Extra-small screens: icon-only tabs */
+    @media (max-width: 500px) {
+      .page-tabs { padding: var(--space-1) var(--space-2); gap: 2px; }
+      .page-tab { padding: 6px 8px; font-size: 0; gap: 0; }
+      .page-tab svg { width: 18px; height: 18px; }
     }
 
 /* ============================================================
