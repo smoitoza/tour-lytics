@@ -51,10 +51,10 @@ export async function POST(req: Request) {
 
   const finalBuildingNum = buildingNum ?? building_num
   const finalBuildingAddress = buildingAddress ?? building_address ?? ''
-  const finalDocType = docType ?? doc_type ?? 'rfp'
-  const finalDocName = docName ?? doc_name ?? ''
+  const finalDocType = (docType ?? doc_type ?? 'rfp').toLowerCase()
+  const finalDocName = docName ?? doc_name ?? (finalDocType.toUpperCase() + ' - ' + (finalBuildingAddress || 'Unknown'))
   const finalDocSource = docSource ?? doc_source ?? ''
-  const finalSubmittedBy = submittedBy ?? submitted_by ?? ''
+  const finalSubmittedBy = submittedBy ?? submitted_by ?? (new URL(req.url).searchParams.get('userEmail') || 'unknown')
   // Frontend review form sends camelCase terms; map to snake_case for analysis engine
   const rawTerms = dealTerms ?? terms ?? {}
   const finalDealTerms: DealTerms = {
