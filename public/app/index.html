@@ -5556,12 +5556,11 @@ body {
   Upload Survey
 </button>
 <script>
-// Immediately show Upload Survey button for admin (inline, no dependency on later code)
+// Immediately show Upload Survey button for admin (inline, runs as soon as button exists)
 (function() {
   try {
     var p = new URLSearchParams(window.location.search);
-    var email = (p.get('userEmail') || '').toLowerCase();
-    if (email === 'samoitoza@gmail.com') {
+    if ((p.get('userEmail') || '').toLowerCase() === 'samoitoza@gmail.com') {
       var btn = document.getElementById('surveyUploadToggle');
       if (btn) btn.style.display = '';
     }
@@ -5694,6 +5693,18 @@ body {
     AI Usage
   </button>
 </nav>
+<script>
+// Show AI Usage tab for admin (must be after nav element exists)
+(function() {
+  try {
+    var p = new URLSearchParams(window.location.search);
+    if ((p.get('userEmail') || '').toLowerCase() === 'samoitoza@gmail.com') {
+      var aiTab = document.getElementById('tabBtnAiUsage');
+      if (aiTab) aiTab.style.display = '';
+    }
+  } catch(e) {}
+})();
+</script>
 
 <div class="tab-content active" id="tab-map">
 <main class="main">
