@@ -11920,6 +11920,23 @@ var PERSONA_CONFIG = {
   touree:   { bg: 'rgba(22,163,74,0.08)',  color: '#16a34a', border: 'rgba(22,163,74,0.2)',  label: 'Touree',   avatarBg: '#16a34a' }
 };
 
+// Open email compose -- Gmail web for Gmail users, mailto fallback for others
+function openComposeEmail(to, subject, body) {
+  var senderEmail = getCurrentUserEmail().toLowerCase();
+  if (senderEmail.indexOf('@gmail.com') !== -1) {
+    // Open Gmail compose in browser
+    var gmailUrl = 'https://mail.google.com/mail/?view=cm' +
+      '&to=' + encodeURIComponent(to) +
+      '&su=' + subject +
+      '&body=' + encodeURIComponent(body);
+    window.open(gmailUrl, '_blank');
+  } else {
+    // Fallback to mailto for non-Gmail accounts
+    var mailtoUrl = 'mailto:' + encodeURIComponent(to) + '?subject=' + subject + '&body=' + encodeURIComponent(body);
+    window.open(mailtoUrl, '_blank');
+  }
+}
+
 async function loadTeamMembers() {
   if (_teamLoaded) { renderTeamPage(); return; }
   try {
@@ -12064,8 +12081,7 @@ async function teamAddMember() {
         'You can change your password after signing in.\n\n';
     }
     body += 'See you on the tour!';
-    var mailtoUrl = 'mailto:' + encodeURIComponent(email) + '?subject=' + subject + '&body=' + encodeURIComponent(body);
-    window.open(mailtoUrl, '_blank');
+    openComposeEmail(email, subject, body);
 
     // Refresh the member list
     _teamLoaded = false;
@@ -12103,8 +12119,7 @@ function teamResendInvite(email, displayName, persona) {
     'Login here: ' + appUrl + '\n\n' +
     'If you need a password reset, let me know.\n\n' +
     'See you on the tour!';
-  var mailtoUrl = 'mailto:' + encodeURIComponent(email) + '?subject=' + subject + '&body=' + encodeURIComponent(body);
-  window.open(mailtoUrl, '_blank');
+  openComposeEmail(email, subject, body);
 }
 
 async function teamResetPassword(email, displayName) {
@@ -12139,8 +12154,7 @@ async function teamResetPassword(email, displayName) {
       'Password: ' + tempPw + '\n\n' +
       'You can change your password after signing in.\n\n' +
       'See you on the tour!';
-    var mailtoUrl = 'mailto:' + encodeURIComponent(email) + '?subject=' + subject + '&body=' + encodeURIComponent(body);
-    window.open(mailtoUrl, '_blank');
+    openComposeEmail(email, subject, body);
 
     if (btn) { btn.textContent = 'Password Reset'; btn.style.color = '#16a34a'; btn.style.borderColor = 'rgba(22,163,74,0.3)'; }
     setTimeout(function() {
