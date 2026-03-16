@@ -11617,8 +11617,14 @@ function openSurveyUploadModal() {
   _surveyUploadFile = null;
   document.getElementById('surveyFileInfo').style.display = 'none';
   document.getElementById('surveyUploadStatus').style.display = 'none';
-  document.getElementById('surveySubmitBtn').disabled = true;
   document.getElementById('surveyDropzone').style.display = '';
+  document.getElementById('surveyFileInput').value = '';
+  // Reset action buttons to original state
+  var actionsEl = document.querySelector('.survey-upload-actions');
+  if (actionsEl) {
+    actionsEl.innerHTML = '<button class="survey-upload-submit" id="surveySubmitBtn" onclick="surveySubmitUpload()" disabled>Parse & Add to Map</button>' +
+      '<button class="survey-upload-cancel" onclick="closeSurveyUploadModal()">Cancel</button>';
+  }
   // Setup drag-drop
   surveyInitDropzone();
 }
@@ -11721,7 +11727,10 @@ async function surveySubmitUpload() {
 
     // Step 4: Show results
     var html = '<div class="survey-upload-results">';
-    html += '<h4>' + mergeResult.added + ' new building' + (mergeResult.added !== 1 ? 's' : '') + ' added, ' + mergeResult.skipped + ' duplicate' + (mergeResult.skipped !== 1 ? 's' : '') + ' skipped</h4>';
+    html += '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">';
+    html += '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+    html += '<h4 style="margin:0;">' + mergeResult.added + ' new building' + (mergeResult.added !== 1 ? 's' : '') + ' added, ' + mergeResult.skipped + ' duplicate' + (mergeResult.skipped !== 1 ? 's' : '') + ' skipped</h4>';
+    html += '</div>';
     html += '<ul>';
     mergeResult.details.forEach(function(d) {
       var cls = d.status === 'added' ? 'survey-result-new' : 'survey-result-dup';
@@ -11733,6 +11742,12 @@ async function surveySubmitUpload() {
 
     // Update legend count
     surveyUpdateLegendCount();
+
+    // Replace action buttons with "Done" button so user can close the modal
+    var actionsEl = document.querySelector('.survey-upload-actions');
+    if (actionsEl) {
+      actionsEl.innerHTML = '<button class="survey-upload-submit" onclick="closeSurveyUploadModal()" style="background:#16a34a;">Done - View Map</button>';
+    }
 
   } catch (err) {
     statusEl.innerHTML = '<div style="color:#dc2626;">Error: ' + (err.message || String(err)) + '</div>';
