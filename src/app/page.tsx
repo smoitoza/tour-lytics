@@ -231,15 +231,15 @@ export default function LandingPage() {
             Now in private beta
           </div>
 
-          <h1 className="font-extrabold text-white" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2.5rem, 1rem + 4vw, 5rem)', letterSpacing: '-0.03em', lineHeight: 1.15, marginBottom: '1.5rem', maxWidth: '900px', marginLeft: 'auto', marginRight: 'auto' }}>
-            Turn static surveys into{' '}
+          <h1 className="font-extrabold text-white" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2.5rem, 1rem + 4vw, 4.5rem)', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '1.5rem', maxWidth: '900px', marginLeft: 'auto', marginRight: 'auto' }}>
+            AI-powered intelligence for every{' '}
             <span style={{ color: '#2563eb' }}>
-              actionable intelligence
+              commercial real estate tour
             </span>
           </h1>
 
-          <p style={{ fontSize: 'clamp(1.125rem, 1rem + 0.75vw, 1.5rem)', color: '#94a3b8', maxWidth: '600px', margin: '0 auto 2.5rem auto', lineHeight: 1.5 }}>
-            Upload your broker survey PDF. Get an interactive map, linked financials, and an AI assistant that knows every building, deal term, and dollar amount in your project. It will even find you coffee shops and lunch spots between tours.
+          <p style={{ fontSize: 'clamp(1.125rem, 1rem + 0.75vw, 1.5rem)', color: '#94a3b8', maxWidth: '640px', margin: '0 auto 2.5rem auto', lineHeight: 1.5 }}>
+            Upload a broker survey PDF. Get an interactive map, GAAP-compliant financials, commute studies, and an AI assistant that knows every building, deal term, and dollar amount in your project.
           </p>
 
           {/* CTAs */}
@@ -847,22 +847,16 @@ export default function LandingPage() {
               The Problem
             </span>
             <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3.5rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '1.5rem' }}>
-              You can&apos;t build a tour list<br />from a 129-page PDF.
+              Commercial real estate decisions<br />still run on PDFs.
             </h2>
             <p className="font-medium" style={{ fontSize: 'clamp(1.125rem, 1rem + 0.75vw, 1.5rem)', color: '#475569', lineHeight: 1.4, marginBottom: '1.25rem' }}>
-              For San Francisco, and really any market, broker surveys still tend to arrive the same way: a static 129-page PDF. You start on page one and scroll through the deck, trying to keep track of which building sits where on the map. If you have been through a few searches, the process probably feels familiar.
+              Every corporate lease transaction follows the same broken workflow: a broker sends a static PDF survey, the tenant manually re-keys data into spreadsheets, and million-dollar decisions get made off disjointed files and email threads.
             </p>
             <p style={{ color: '#64748b', lineHeight: 1.7 }}>
-              We asked our brokers if there was a better way to present the information digitally. What came back a few days later was a Tableau dashboard. It was a step in the right direction, but it still felt limited. So we decided to build something purpose-built for the workflow: an app that parses the entire PDF, maps every building, and organizes what you&apos;re negotiating, touring, or passing on. Click any building name and you jump directly to its page in the survey.
+              There is no map, no sorting, no filtering. Commute studies require outside consultants. Financial models get rebuilt from scratch every time. Tour notes are handwritten on paper folders. And at the end of it all, the final decision often comes down to gut feel instead of structured intelligence.
             </p>
             <p style={{ color: '#64748b', lineHeight: 1.7, marginTop: '1rem' }}>
-              Once everything is mapped, another layer becomes possible that has historically been difficult to run: commute analysis. For years, running a true commute study meant hiring a consultant, exporting employee zip codes, and waiting days or weeks for a report. Even then, it was usually a one-time snapshot. Tour-Lytics runs that analysis in seconds. Upload employee locations and instantly see commute times to every building in the survey, at different times of day. What used to require a study can now be part of the normal decision process.
-            </p>
-            <p style={{ color: '#64748b', lineHeight: 1.7, marginTop: '1rem' }}>
-              The financial side has a similar challenge. Broker surveys typically focus on asking rates and visuals, which makes sense for marketing a building. But the format rarely matches how finance teams actually evaluate a deal. Most internal teams still end up rebuilding the numbers to see cash flow, straight-line P&amp;L, or GAAP views. Tour-Lytics bridges that gap by automatically generating those financial views the moment you upload a deal.
-            </p>
-            <p style={{ color: '#64748b', lineHeight: 1.7, marginTop: '1rem' }}>
-              Touring buildings is another place where the process has not changed much over time. You are usually handed a paper tour book, taking notes by hand while snapping photos on your phone and trying to remember details several stops later. Our Tour Book tab connects directly to the buildings on your map. While you are on site, you can score each space on price, parking, security, fit-out, and more, while adding photos and notes from your phone. When the tour is finished, you have a ranked, exportable report instead of a stack of marked-up pages.
+              Tour-Lytics replaces this entire workflow. Upload a broker survey PDF and get an interactive map with every building. Generate GAAP-compliant financials the moment a deal lands. Run commute studies in seconds instead of weeks. Score buildings during the tour from your phone. And ask an AI assistant anything about your buildings, costs, or schedule. From broker survey to signed lease, every step lives in one place.
             </p>
           </div>
 
