@@ -153,43 +153,113 @@ async function getCommuteContext(): Promise<string> {
     context += `File: ${data.filename || 'Unknown'} | ${employees.length} employees analyzed\n`
     if (data.uploaded_by) context += `Uploaded by: ${data.uploaded_by}\n`
 
-    // Summarize results per building
-    if (Object.keys(results).length > 0) {
-      context += '\nCommute Results by Building:\n'
-      for (const [buildingKey, buildingResults] of Object.entries(results)) {
-        const br = buildingResults as any
-        if (br.summary) {
-          context += `\n  ${br.buildingName || buildingKey}:\n`
-          const s = br.summary
-          if (s.avgDriveMin != null) context += `    Avg Drive: ${Math.round(s.avgDriveMin)} min (${(s.avgDriveMiles || 0).toFixed(1)} mi)\n`
-          if (s.avgTransitMin != null) context += `    Avg Transit: ${Math.round(s.avgTransitMin)} min\n`
-          if (s.under30minDrive != null) context += `    Within 30 min drive: ${s.under30minDrive} of ${employees.length} employees (${Math.round(s.under30minDrive / employees.length * 100)}%)\n`
-          if (s.under45minTransit != null) context += `    Within 45 min transit: ${s.under45minTransit} of ${employees.length} employees (${Math.round(s.under45minTransit / employees.length * 100)}%)\n`
-          if (s.under60minTransit != null) context += `    Within 60 min transit: ${s.under60minTransit} of ${employees.length} employees (${Math.round(s.under60minTransit / employees.length * 100)}%)\n`
-          if (s.medianDriveMin != null) context += `    Median Drive: ${Math.round(s.medianDriveMin)} min\n`
-          if (s.medianTransitMin != null) context += `    Median Transit: ${Math.round(s.medianTransitMin)} min\n`
-          if (s.maxDriveMin != null) context += `    Max Drive: ${Math.round(s.maxDriveMin)} min\n`
-          if (s.maxTransitMin != null) context += `    Max Transit: ${Math.round(s.maxTransitMin)} min\n`
+    // Data format: results.summaries[] has {building, driving_avg_seconds, transit_avg_seconds, driving_avg_text, transit_avg_text, ...}
+    // results.details[] has {employee, commutes: [{building, driving: {duration_seconds, ...}, transit: {duration_seconds, ...}}, ...]}
+    const summaries = results.summaries || []
+    const details = results.details || []
+
+    // Build employee name -> detail lookup for per-building stats
+    const detailMap: Record<string, any> = {}
+    details.forEach((d: any) => { if (d.employee) detailMap[d.employee] = d })
+    const buildingOrder = summaries.map((s: any) => s.building)
+
+    if (summaries.length > 0) {
+      context += '\nCommute Results by Building (all employees):\n'
+      for (const s of summaries) {
+        const avgDriveMin = s.driving_avg_seconds ? Math.round(s.driving_avg_seconds / 60) : null
+        const avgTransitMin = s.transit_avg_seconds ? Math.round(s.transit_avg_seconds / 60) : null
+
+        context += `\n  ${s.building || 'Unknown'}:\n`
+        if (avgDriveMin != null) context += `    Avg Drive: ${avgDriveMin} min (${s.driving_avg_distance_text || ''})\n`
+        if (avgTransitMin != null) context += `    Avg Transit: ${avgTransitMin} min\n`
+
+        // Compute under-30-min drive and under-45-min transit from details
+        let under30drive = 0, under45transit = 0, under60transit = 0
+        details.forEach((d: any) => {
+          const c = d.commutes?.find((x: any) => x.building === s.building)
+          if (c?.driving?.duration_seconds && c.driving.duration_seconds <= 1800) under30drive++
+          if (c?.transit?.duration_seconds && c.transit.duration_seconds <= 2700) under45transit++
+          if (c?.transit?.duration_seconds && c.transit.duration_seconds <= 3600) under60transit++
+        })
+        context += `    Within 30 min drive: ${under30drive} of ${employees.length} (${Math.round(under30drive / employees.length * 100)}%)\n`
+        context += `    Within 45 min transit: ${under45transit} of ${employees.length} (${Math.round(under45transit / employees.length * 100)}%)\n`
+        context += `    Within 60 min transit: ${under60transit} of ${employees.length} (${Math.round(under60transit / employees.length * 100)}%)\n`
+      }
+    }
+
+    // Detect groupable columns from employee meta (business unit, department, etc.)
+    const latCol = data.lat_col ?? 0
+    const lngCol = data.lng_col ?? 1
+    // headers that are not lat/lng
+    const metaCols = headers.filter((_: string, i: number) => i !== latCol && i !== lngCol)
+
+    // Find group-by columns with 2-30 unique values
+    const groupableCols: { col: string; values: string[] }[] = []
+    for (const col of metaCols) {
+      const vals: Record<string, boolean> = {}
+      employees.forEach((emp: any) => {
+        const v = (emp.meta?.[col] || '').trim()
+        if (v) vals[v] = true
+      })
+      const uniqueVals = Object.keys(vals)
+      if (uniqueVals.length >= 2 && uniqueVals.length <= 30) {
+        groupableCols.push({ col, values: uniqueVals.sort() })
+      }
+    }
+
+    // Build per-group commute breakdown (e.g. by Business Unit)
+    if (groupableCols.length > 0 && details.length > 0) {
+      for (const gc of groupableCols) {
+        context += `\nCommute Breakdown by ${gc.col}:\n`
+
+        // Group employees by this column
+        const groups: Record<string, string[]> = {}
+        employees.forEach((emp: any) => {
+          const key = (emp.meta?.[gc.col] || 'Unknown').trim()
+          if (!groups[key]) groups[key] = []
+          groups[key].push(emp.name)
+        })
+
+        for (const [groupName, empNames] of Object.entries(groups).sort()) {
+          context += `\n  ${groupName} (${empNames.length} employees):\n`
+
+          for (const bldName of buildingOrder) {
+            let totalDriveSec = 0, driveCount = 0
+            let totalTransitSec = 0, transitCount = 0
+
+            for (const eName of empNames) {
+              const detail = detailMap[eName]
+              if (!detail?.commutes) continue
+              const c = detail.commutes.find((x: any) => x.building === bldName)
+              if (c?.driving?.duration_seconds) {
+                totalDriveSec += c.driving.duration_seconds
+                driveCount++
+              }
+              if (c?.transit?.duration_seconds) {
+                totalTransitSec += c.transit.duration_seconds
+                transitCount++
+              }
+            }
+
+            const avgDrive = driveCount > 0 ? Math.round(totalDriveSec / driveCount / 60) : null
+            const avgTransit = transitCount > 0 ? Math.round(totalTransitSec / transitCount / 60) : null
+            const parts: string[] = []
+            if (avgDrive != null) parts.push(`Avg Drive: ${avgDrive} min`)
+            if (avgTransit != null) parts.push(`Avg Transit: ${avgTransit} min`)
+            if (parts.length > 0) {
+              context += `    ${bldName}: ${parts.join(', ')}\n`
+            }
+          }
         }
       }
     }
 
-    // Include employee list summary (names/locations, not full data)
-    if (employees.length > 0 && employees.length <= 50) {
-      context += '\nEmployee Locations (for commute reference):\n'
-      employees.forEach((emp: any, i: number) => {
-        // Include available identifying info and location
-        const parts: string[] = []
-        if (emp.name) parts.push(emp.name)
-        if (emp.city) parts.push(emp.city)
-        if (emp.state) parts.push(emp.state)
-        if (emp.zip) parts.push('ZIP: ' + emp.zip)
-        if (parts.length > 0) {
-          context += `  ${i + 1}. ${parts.join(', ')}\n`
-        }
-      })
-    } else if (employees.length > 50) {
-      context += `\n${employees.length} employees in commute study (too many to list individually).\n`
+    // For large datasets, list unique group values and skip individual employee list
+    if (employees.length > 50) {
+      context += `\n${employees.length} employees in commute study.\n`
+      for (const gc of groupableCols) {
+        context += `  ${gc.col} values: ${gc.values.join(', ')}\n`
+      }
     }
 
     return context
@@ -639,13 +709,23 @@ You have access to live team member data injected at the end of this prompt. You
 Group members by their persona/role when presenting team info. Personas are: Admin (project lead), Broker (real estate advisor), CRE Team (corporate real estate), Touree (tour participant).
 
 COMMUTE STUDY CAPABILITY:
-You have access to the commute study data (employee commute analysis to different office buildings). This data comes from an uploaded Excel file with employee locations, analyzed against each shortlisted building. You can answer questions like:
+You have access to the full commute study data (employee commute analysis to different office buildings). This data comes from an uploaded Excel file with employee locations, analyzed against each shortlisted building. The data includes:
+- Overall averages per building (drive and transit)
+- Percentage of employees within 30-min drive, 45-min transit, 60-min transit
+- Per-business-unit / per-department breakdowns with average commute times to each building
+- Individual employee commute details when available
+
+You can answer questions like:
 - "Which building has the best commute for our team?"
 - "What's the average drive time to 250 Brannan?"
 - "How many employees can get to 123 Townsend within 30 minutes?"
 - "Compare commute times across our shortlisted buildings"
 - "Which building is most accessible by transit?"
+- "What about by business unit?" or "Break down commutes by department"
+- "Which building works best for the AI Company team?"
+- "Compare commute times for Corp Dev vs Customer Success"
 When comparing buildings on commute, focus on average drive/transit time, percentage of employees within 30 min drive, and percentage within 45 min transit as the key metrics.
+When asked about breakdowns by business unit/department, use the per-group commute data in the COMMUTE STUDY DATA section. Each group shows average drive and transit times to each building.
 
 DISPLAYING PHOTOS:
 Each photo in the TOUR PHOTOS data includes an image URL after "image:". When the user asks to see a photo or asks about a building with photos, show the photos using markdown image syntax: ![description](url)
