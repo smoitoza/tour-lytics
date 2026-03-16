@@ -163,6 +163,84 @@ body {
   font-weight: 500;
 }
 
+/* User menu */
+.user-menu-wrap { position: relative; }
+.user-avatar-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--color-primary); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; border: none; cursor: pointer;
+  transition: box-shadow 0.15s;
+}
+.user-avatar-btn:hover { box-shadow: 0 0 0 2px rgba(234,124,28,0.3); }
+.user-dropdown {
+  display: none; position: absolute; right: 0; top: calc(100% + 6px);
+  background: #fff; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  min-width: 220px; z-index: 1000; overflow: hidden; border: 1px solid var(--color-divider);
+}
+.user-dropdown.open { display: block; }
+.user-dropdown-header {
+  padding: 12px 16px; border-bottom: 1px solid var(--color-divider);
+  font-size: 11px; color: var(--color-text-faint); font-weight: 500;
+}
+.user-dropdown-header strong {
+  display: block; font-size: 13px; color: var(--color-text); font-weight: 600; margin-bottom: 2px;
+}
+.user-dropdown-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px; font-size: 13px; color: var(--color-text);
+  cursor: pointer; border: none; background: none; width: 100%; text-align: left;
+  transition: background 0.1s;
+}
+.user-dropdown-item:hover { background: var(--color-surface-alt); }
+.user-dropdown-item svg { width: 16px; height: 16px; opacity: 0.5; flex-shrink: 0; }
+.user-dropdown-divider { height: 1px; background: var(--color-divider); margin: 0; }
+.user-dropdown-item.danger { color: #dc2626; }
+.user-dropdown-item.danger svg { opacity: 0.6; }
+
+/* Change Password Modal */
+.pw-modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+  z-index: 2000; align-items: center; justify-content: center;
+}
+.pw-modal-overlay.open { display: flex; }
+.pw-modal {
+  background: #fff; border-radius: 12px; padding: 28px;
+  width: 100%; max-width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+.pw-modal h3 { margin: 0 0 4px; font-size: 17px; font-weight: 700; color: var(--color-text); }
+.pw-modal .pw-modal-sub { margin: 0 0 20px; font-size: 13px; color: var(--color-text-muted); }
+.pw-modal label {
+  display: block; font-size: 13px; font-weight: 500; color: var(--color-text-muted);
+  margin-bottom: 5px;
+}
+.pw-modal input[type="password"] {
+  width: 100%; padding: 9px 12px; border-radius: 8px;
+  border: 1px solid var(--color-divider); font-size: 14px;
+  margin-bottom: 14px; box-sizing: border-box; font-family: inherit;
+  transition: border-color 0.15s;
+}
+.pw-modal input[type="password"]:focus {
+  outline: none; border-color: var(--color-primary);
+}
+.pw-modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 6px; }
+.pw-modal-btn {
+  padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  cursor: pointer; border: 1px solid var(--color-divider); background: #fff;
+  color: var(--color-text); transition: all 0.15s; font-family: inherit;
+}
+.pw-modal-btn:hover { background: var(--color-surface-alt); }
+.pw-modal-btn.primary {
+  background: var(--color-primary); color: #fff; border-color: var(--color-primary);
+}
+.pw-modal-btn.primary:hover { opacity: 0.9; }
+.pw-modal-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.pw-modal-status {
+  font-size: 13px; margin-top: 10px; padding: 8px 12px; border-radius: 8px; display: none;
+}
+.pw-modal-status.error { display: block; color: #dc2626; background: #fef2f2; }
+.pw-modal-status.success { display: block; color: #16a34a; background: #f0fdf4; }
+
 /* ============================================================
    Main & Map
    ============================================================ */
@@ -5520,9 +5598,46 @@ body {
     </div>
     <div class="header-right">
       <span class="header-date" id="dateDisplay"></span>
+      <div class="user-menu-wrap" id="userMenuWrap" style="display:none;">
+        <button class="user-avatar-btn" id="userAvatarBtn" onclick="toggleUserMenu()" title="Account"></button>
+        <div class="user-dropdown" id="userDropdown">
+          <div class="user-dropdown-header">
+            <strong id="userMenuName"></strong>
+            <span id="userMenuEmail"></span>
+          </div>
+          <button class="user-dropdown-item" onclick="openChangePassword()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Change Password
+          </button>
+          <div class="user-dropdown-divider"></div>
+          <button class="user-dropdown-item danger" onclick="signOutUser()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Sign Out
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </header>
+
+<!-- Change Password Modal -->
+<div class="pw-modal-overlay" id="pwModalOverlay" onclick="if(event.target===this)closeChangePassword()">
+  <div class="pw-modal">
+    <h3>Change Password</h3>
+    <p class="pw-modal-sub">Enter your current password and choose a new one.</p>
+    <label for="pwCurrent">Current Password</label>
+    <input type="password" id="pwCurrent" placeholder="Enter current password">
+    <label for="pwNew">New Password</label>
+    <input type="password" id="pwNew" placeholder="At least 6 characters">
+    <label for="pwConfirm">Confirm New Password</label>
+    <input type="password" id="pwConfirm" placeholder="Re-enter new password">
+    <div class="pw-modal-status" id="pwStatus"></div>
+    <div class="pw-modal-actions">
+      <button class="pw-modal-btn" onclick="closeChangePassword()">Cancel</button>
+      <button class="pw-modal-btn primary" id="pwSubmitBtn" onclick="submitChangePassword()">Update Password</button>
+    </div>
+  </div>
+</div>
 
 <nav class="page-tabs">
   <button class="page-tab active" onclick="switchPageTab('map')" data-page-tab="map">
@@ -7878,6 +7993,8 @@ async function fetchUserRole() {
     }
     // Fetch centralized tour list from server
     await fetchCentralTourList();
+    // Initialize user avatar menu in header
+    initUserMenu();
   }
   refreshTourUI();
 
@@ -8390,6 +8507,114 @@ function hasAdminAccess() {
 
 function isReadOnlyTourList() {
   return !hasAdminAccess() && getCurrentUserEmail() !== '';
+}
+
+// ---- User Menu & Change Password ----
+function initUserMenu() {
+  var email = getCurrentUserEmail();
+  if (!email) return;
+  var wrap = document.getElementById('userMenuWrap');
+  var avatarBtn = document.getElementById('userAvatarBtn');
+  var nameEl = document.getElementById('userMenuName');
+  var emailEl = document.getElementById('userMenuEmail');
+  if (!wrap) return;
+
+  // Try to get display name from team members
+  var displayName = email.split('@')[0];
+  if (window._teamMembers) {
+    var me = _teamMembers.find(function(m) { return m.email.toLowerCase() === email.toLowerCase(); });
+    if (me && me.display_name) displayName = me.display_name;
+  }
+
+  var initials = displayName.split(' ').map(function(w) { return w[0]; }).join('').substring(0, 2).toUpperCase();
+  avatarBtn.textContent = initials;
+  nameEl.textContent = displayName;
+  emailEl.textContent = email;
+  wrap.style.display = '';
+}
+
+function toggleUserMenu() {
+  var dd = document.getElementById('userDropdown');
+  dd.classList.toggle('open');
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+  var wrap = document.getElementById('userMenuWrap');
+  if (wrap && !wrap.contains(e.target)) {
+    var dd = document.getElementById('userDropdown');
+    if (dd) dd.classList.remove('open');
+  }
+});
+
+function openChangePassword() {
+  document.getElementById('userDropdown').classList.remove('open');
+  document.getElementById('pwCurrent').value = '';
+  document.getElementById('pwNew').value = '';
+  document.getElementById('pwConfirm').value = '';
+  var status = document.getElementById('pwStatus');
+  status.className = 'pw-modal-status'; status.textContent = '';
+  document.getElementById('pwSubmitBtn').disabled = false;
+  document.getElementById('pwSubmitBtn').textContent = 'Update Password';
+  document.getElementById('pwModalOverlay').classList.add('open');
+  setTimeout(function() { document.getElementById('pwCurrent').focus(); }, 100);
+}
+
+function closeChangePassword() {
+  document.getElementById('pwModalOverlay').classList.remove('open');
+}
+
+async function submitChangePassword() {
+  var currentPw = document.getElementById('pwCurrent').value;
+  var newPw = document.getElementById('pwNew').value;
+  var confirmPw = document.getElementById('pwConfirm').value;
+  var status = document.getElementById('pwStatus');
+  var btn = document.getElementById('pwSubmitBtn');
+
+  status.className = 'pw-modal-status'; status.textContent = '';
+
+  if (!currentPw) {
+    status.className = 'pw-modal-status error'; status.textContent = 'Please enter your current password.';
+    return;
+  }
+  if (newPw.length < 6) {
+    status.className = 'pw-modal-status error'; status.textContent = 'New password must be at least 6 characters.';
+    return;
+  }
+  if (newPw !== confirmPw) {
+    status.className = 'pw-modal-status error'; status.textContent = 'New passwords do not match.';
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Updating...';
+
+  try {
+    var res = await fetch('/api/auth/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: getCurrentUserEmail(),
+        currentPassword: currentPw,
+        newPassword: newPw
+      })
+    });
+    var result = await res.json();
+    if (!res.ok) throw new Error(result.error || 'Failed to change password');
+
+    status.className = 'pw-modal-status success';
+    status.textContent = 'Password updated successfully.';
+    btn.textContent = 'Done';
+    setTimeout(function() { closeChangePassword(); }, 1500);
+  } catch(e) {
+    status.className = 'pw-modal-status error';
+    status.textContent = e.message || 'Failed to change password.';
+    btn.disabled = false; btn.textContent = 'Update Password';
+  }
+}
+
+function signOutUser() {
+  if (!confirm('Sign out of Tour-Lytics?')) return;
+  window.location.href = '/login';
 }
 
 // Fetch centralized tour list from server
@@ -11701,6 +11926,8 @@ async function loadTeamMembers() {
     _teamMembers = await res.json();
     _teamLoaded = true;
     renderTeamPage();
+    // Refresh user menu with display name from team data
+    initUserMenu();
   } catch(e) {
     console.error('Failed to load team:', e);
     document.getElementById('teamMembersList').innerHTML = '<div class="team-empty">Failed to load team members.</div>';
