@@ -9354,7 +9354,8 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
     return '<div style="padding:var(--space-4);color:var(--color-text-muted);text-align:center">Need at least one building with an RFP to compare.</div>';
   }
 
-  // Get latest submission per building
+  // Get latest submission per building, including per-building assumptions
+  var aMap = window._rfpState.assumptionsMap || {};
   var buildingData = [];
   keys.forEach(function(bNum) {
     var subs = byBuilding[bNum];
@@ -9363,11 +9364,23 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
     var address = latest.building_address || latest.buildingAddress || (bldg ? bldg.address : 'Building #' + bNum);
     var summary = (latest.analysis && latest.analysis.summary) ? latest.analysis.summary : {};
     var terms = latest.terms || {};
-    buildingData.push({ address: address, summary: summary, terms: terms });
+    // Per-building assumptions
+    var a = aMap[address] || {};
+    var fb = parseFloat(a.opex_food_beverage) || 0;
+    var wpe = parseFloat(a.opex_workplace_experience) || 0;
+    var maint = parseFloat(a.opex_maintenance_security) || 0;
+    var customItems = a.opex_custom_items || [];
+    var customTotal = 0;
+    customItems.forEach(function(item) { customTotal += parseFloat(item.monthly) || 0; });
+    var totalInternalOpex = fb + wpe + maint + customTotal;
+    var slMonthly = summary.straightLineMonthlyRent || 0;
+    var allInMonthly = slMonthly + totalInternalOpex;
+    var allInAnnual = allInMonthly * 12;
+    buildingData.push({ address: address, summary: summary, terms: terms, internalOpex: totalInternalOpex, allInMonthly: allInMonthly, allInAnnual: allInAnnual });
   });
 
   // Metrics to compare - [label, getter, lowerIsBetter]
-  var metrics = [
+  var dealMetrics = [
     ['RSF', function(d) { return d.summary.rsf; }, false],
     ['Term (months)', function(d) { return d.summary.termMonths; }, false],
     ['Base Rent $/RSF', function(d) { return d.terms.baseRent; }, true],
@@ -9376,9 +9389,17 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
     ['SL Annual Expense', function(d) { return d.summary.straightLineAnnualExpense; }, true],
     ['Free Rent Value', function(d) { return d.summary.freeRentValue; }, false],
     ['TI Value', function(d) { return d.summary.tiValue; }, false],
-    ['Total Concessions', function(d) { return d.summary.totalConcessions; }, false],
-    ['Monthly OpEx', function(d) { return d.terms.opex; }, true]
+    ['Total Concessions', function(d) { return d.summary.totalConcessions; }, false]
   ];
+
+  var assumptionMetrics = [
+    ['Internal OpEx/mo', function(d) { return d.internalOpex; }, true],
+    ['All-In Monthly', function(d) { return d.allInMonthly; }, true],
+    ['All-In Annual', function(d) { return d.allInAnnual; }, true]
+  ];
+
+  // Check if any building has assumptions entered
+  var hasAnyAssumptions = buildingData.some(function(d) { return d.internalOpex > 0; });
 
   var html = '<div class="fin-table-wrap"><table class="fin-table rfp-comparison-table">';
   html += '<thead><tr><th class="cell-label">Metric</th>';
@@ -9387,13 +9408,9 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
   });
   html += '</tr></thead><tbody>';
 
-  metrics.forEach(function(m) {
-    var label = m[0];
-    var getter = m[1];
-    var lowerIsBetter = m[2];
-
+  function renderMetricRow(label, getter, lowerIsBetter, isAssumption) {
     var values = buildingData.map(function(d) { return getter(d); });
-    var numericValues = values.filter(function(v) { return v != null && !isNaN(v); });
+    var numericValues = values.filter(function(v) { return v != null && !isNaN(v) && v !== 0; });
 
     var bestVal = null;
     var worstVal = null;
@@ -9411,20 +9428,31 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
     html += '<tr><td class="cell-label">' + label + '</td>';
     values.forEach(function(v) {
       var cls = 'cell-currency';
-      if (v != null && !isNaN(v) && bestVal !== null) {
+      if (v != null && !isNaN(v) && v !== 0 && bestVal !== null) {
         if (v === bestVal) cls += ' cell-best';
         else if (v === worstVal) cls += ' cell-worst';
       }
       var display;
       if (label === 'RSF' || label === 'Term (months)') {
         display = rfpFmtNum(v);
+      } else if (isAssumption && (v === 0 || v == null)) {
+        display = '--';
       } else {
         display = rfpFmtCurrency(v);
       }
       html += '<td class="' + cls + '">' + display + '</td>';
     });
     html += '</tr>';
-  });
+  }
+
+  // Deal metrics
+  dealMetrics.forEach(function(m) { renderMetricRow(m[0], m[1], m[2], false); });
+
+  // Assumptions section (separator + rows)
+  if (hasAnyAssumptions) {
+    html += '<tr><td colspan="' + (buildingData.length + 1) + '" style="padding:var(--space-2) var(--space-3);font-weight:600;font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);background:var(--color-bg-alt);border-top:2px solid var(--color-border)">Your Assumptions</td></tr>';
+    assumptionMetrics.forEach(function(m) { renderMetricRow(m[0], m[1], m[2], true); });
+  }
 
   html += '</tbody></table></div>';
   return html;
