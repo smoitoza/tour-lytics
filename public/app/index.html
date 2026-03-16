@@ -9238,6 +9238,14 @@ function rfpReadAssumptionsFromForm() {
   return a;
 }
 
+// Re-render only the assumptions panel content without touching the rest of the dashboard
+function rfpRefreshAssumptionsPanel() {
+  var container = document.getElementById('fin-assumptions');
+  if (!container) return;
+  var sub = rfpGetCurrentSubmission();
+  container.innerHTML = rfpBuildAssumptionsPanel(sub);
+}
+
 // Custom assumption line items management
 function rfpAddCustomAssumption() {
   var a = rfpReadAssumptionsFromForm();
@@ -9245,9 +9253,7 @@ function rfpAddCustomAssumption() {
   a.opex_custom_items.push({ label: '', monthly: 0 });
   var addr = rfpGetCurrentBuildingAddress();
   if (addr) window._rfpState.assumptionsMap[addr] = a;
-  rfpRenderDashboard(window._rfpState.submissions);
-  // Re-select assumptions tab
-  setTimeout(function() { switchFinSheet('assumptions'); }, 50);
+  rfpRefreshAssumptionsPanel();
 }
 
 function rfpRemoveCustomAssumption(index) {
@@ -9256,8 +9262,7 @@ function rfpRemoveCustomAssumption(index) {
   a.opex_custom_items.splice(index, 1);
   var addr = rfpGetCurrentBuildingAddress();
   if (addr) window._rfpState.assumptionsMap[addr] = a;
-  rfpRenderDashboard(window._rfpState.submissions);
-  setTimeout(function() { switchFinSheet('assumptions'); }, 50);
+  rfpRefreshAssumptionsPanel();
 }
 
 function rfpSaveAssumptions() {
