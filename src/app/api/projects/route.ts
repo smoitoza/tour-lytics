@@ -35,6 +35,55 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(data || [])
 }
 
+/* DELETE /api/projects?id=<slug>&email=<admin-email> -- delete a project and related data */
+export async function DELETE(req: NextRequest) {
+  const supabase = createClient(supabaseUrl, supabaseKey)
+  const projectId = req.nextUrl.searchParams.get('id')
+  const email = req.nextUrl.searchParams.get('email')
+
+  if (!projectId) {
+    return NextResponse.json({ error: 'Project ID is required.' }, { status: 400 })
+  }
+
+  // Only the admin email can delete projects
+  if (email !== 'samoitoza@gmail.com') {
+    return NextResponse.json({ error: 'Only admins can delete projects.' }, { status: 403 })
+  }
+
+  // Prevent deleting the SF demo project
+  if (projectId === 'sf-office-search') {
+    return NextResponse.json({ error: 'Cannot delete the demo project.' }, { status: 400 })
+  }
+
+  // Delete related data from all tables that reference this project
+  const relatedTables = [
+    'project_members',
+    'tour_list',
+    'building_surveys',
+    'building_photos',
+    'rfp_submissions',
+    'building_assumptions',
+    'commute_studies',
+    'ai_usage_log',
+  ]
+
+  for (const table of relatedTables) {
+    await supabase.from(table).delete().eq('project_id', projectId)
+  }
+
+  // Delete the project itself
+  const { error } = await supabase
+    .from('projects')
+    .delete()
+    .eq('id', projectId)
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ success: true })
+}
+
 /* POST /api/projects -- create a new project (admin only) */
 export async function POST(req: NextRequest) {
   const supabase = createClient(supabaseUrl, supabaseKey)

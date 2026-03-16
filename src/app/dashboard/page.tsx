@@ -168,6 +168,10 @@ export default function DashboardPage() {
   const [creatingProject, setCreatingProject] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
 
+  /* ---- Delete project state ---- */
+  const [deleteTarget, setDeleteTarget] = useState<Project | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
   /* ---- Team management state ---- */
   const [teamMembers, setTeamMembers] = useState<Array<{
     email: string
@@ -296,6 +300,23 @@ export default function DashboardPage() {
       setCreateError('Network error. Please try again.')
       setCreatingProject(false)
     }
+  }
+
+  const handleDeleteProject = async () => {
+    if (!deleteTarget || !user?.email) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/projects?id=${encodeURIComponent(deleteTarget.id)}&email=${encodeURIComponent(user.email)}`, {
+        method: 'DELETE',
+      })
+      if (res.ok) {
+        setProjects((prev) => prev.filter((p) => p.id !== deleteTarget.id))
+        setDeleteTarget(null)
+      }
+    } catch {
+      /* silently ignore */
+    }
+    setDeleting(false)
   }
 
   const handleAddMember = async () => {
@@ -433,6 +454,9 @@ export default function DashboardPage() {
         .details-btn:hover { background: rgba(37,99,235,0.08) !important; color: #2563eb !important; border-color: rgba(37,99,235,0.2) !important; }
         .invite-btn:hover { opacity: 0.85; }
         .create-project-btn:hover { border-color: #2563eb !important; background: rgba(37,99,235,0.02) !important; }
+        .delete-project-btn { opacity: 0; transition: opacity 0.15s; }
+        .project-card-wrap:hover .delete-project-btn { opacity: 1; }
+        .delete-project-btn:hover { background: rgba(220,38,38,0.08) !important; color: #dc2626 !important; }
       `}</style>
 
       {/* -- Top bar -- */}
@@ -566,9 +590,46 @@ export default function DashboardPage() {
             </div>
             {projects.map((project) => {
               const updatedDate = project.updated_at ? new Date(project.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
+              const canDelete = isAdmin && project.id !== 'sf-office-search'
               return (
-                <Link
+                <div
                   key={project.id}
+                  className="project-card-wrap"
+                  style={{ position: 'relative', marginBottom: '0.75rem' }}
+                  onMouseEnter={() => setHoveredCard(project.id)}
+                  onMouseLeave={() => setHoveredCard(null)}
+                >
+                  {/* Delete button - admin only, not for SF demo */}
+                  {canDelete && (
+                    <button
+                      className="delete-project-btn"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteTarget(project) }}
+                      title="Delete project"
+                      style={{
+                        position: 'absolute',
+                        top: '0.75rem',
+                        right: '0.75rem',
+                        zIndex: 10,
+                        width: '2rem',
+                        height: '2rem',
+                        borderRadius: '0.5rem',
+                        border: '1px solid #e2e8f0',
+                        background: '#ffffff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        color: '#94a3b8',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                      </svg>
+                    </button>
+                  )}
+                <Link
                   href={`/project/${project.id}`}
                   className="no-underline"
                   style={{
@@ -585,10 +646,7 @@ export default function DashboardPage() {
                       ? '0 8px 32px rgba(37,99,235,0.08), 0 2px 8px rgba(0,0,0,0.04)'
                       : '0 1px 3px rgba(0,0,0,0.02)',
                     transform: hoveredCard === project.id ? 'translateY(-2px)' : 'translateY(0)',
-                    marginBottom: '0.75rem',
                   }}
-                  onMouseEnter={() => setHoveredCard(project.id)}
-                  onMouseLeave={() => setHoveredCard(null)}
                 >
                   {/* Status + arrow */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
@@ -655,6 +713,7 @@ export default function DashboardPage() {
                     )}
                   </div>
                 </Link>
+                </div>
               )
             })}
 
@@ -980,6 +1039,118 @@ export default function DashboardPage() {
                       </svg>
                       Create Project
                     </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* -- Delete Confirmation Modal -- */}
+      {deleteTarget && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15,23,42,0.5)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100,
+            padding: '1.5rem',
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget && !deleting) setDeleteTarget(null) }}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '1.25rem',
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 24px 48px rgba(0,0,0,0.16)',
+              width: '100%',
+              maxWidth: '420px',
+              overflow: 'hidden',
+              animation: 'fadeUp 0.3s ease-out',
+            }}
+          >
+            <div style={{ padding: '1.5rem' }}>
+              {/* Warning icon */}
+              <div style={{
+                width: '3rem',
+                height: '3rem',
+                borderRadius: '0.75rem',
+                background: 'rgba(220,38,38,0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '1rem',
+              }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                  <line x1="10" y1="11" x2="10" y2="17" />
+                  <line x1="14" y1="11" x2="14" y2="17" />
+                </svg>
+              </div>
+
+              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.125rem', fontWeight: 700, color: '#0f172a', margin: '0 0 0.5rem' }}>
+                Delete Project
+              </h3>
+              <p style={{ fontSize: '0.875rem', color: '#64748b', lineHeight: 1.6, margin: '0 0 0.25rem' }}>
+                Are you sure you want to delete <strong style={{ color: '#0f172a' }}>{deleteTarget.name}</strong>?
+              </p>
+              <p style={{ fontSize: '0.8125rem', color: '#94a3b8', lineHeight: 1.5, margin: '0 0 1.5rem' }}>
+                This will permanently remove the project and all its data including team members, survey results, financials, and photos. This cannot be undone.
+              </p>
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setDeleteTarget(null)}
+                  disabled={deleting}
+                  style={{
+                    padding: '0.625rem 1.25rem',
+                    fontSize: '0.8125rem',
+                    fontWeight: 500,
+                    color: '#64748b',
+                    background: 'transparent',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '0.625rem',
+                    cursor: deleting ? 'not-allowed' : 'pointer',
+                    fontFamily: 'inherit',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteProject}
+                  disabled={deleting}
+                  style={{
+                    padding: '0.625rem 1.5rem',
+                    fontSize: '0.8125rem',
+                    fontWeight: 600,
+                    color: '#ffffff',
+                    background: '#dc2626',
+                    border: 'none',
+                    borderRadius: '0.625rem',
+                    cursor: deleting ? 'not-allowed' : 'pointer',
+                    fontFamily: 'inherit',
+                    opacity: deleting ? 0.7 : 1,
+                    transition: 'all 0.15s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                  }}
+                >
+                  {deleting ? (
+                    <>
+                      <div style={{ width: '1rem', height: '1rem', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                      Deleting...
+                    </>
+                  ) : (
+                    'Delete Project'
                   )}
                 </button>
               </div>
