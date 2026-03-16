@@ -4285,29 +4285,68 @@ body {
       .rfp-terms-grid { grid-template-columns: 1fr; }
       .rfp-top-bar { flex-direction: column; align-items: stretch; }
       .rfp-top-bar-left { flex-direction: column; }
-      .rfp-summary-metrics { grid-template-columns: repeat(2, 1fr); }
+      .rfp-summary-metrics { grid-template-columns: repeat(2, 1fr); gap: var(--space-2); padding: var(--space-3); }
+      .rfp-metric-value { font-size: var(--text-base); }
       .rfp-modal-inner { padding: var(--space-4); max-width: 100%; }
       .rfp-version-bar { flex-direction: column; align-items: flex-start; }
-    }
-    @media (max-width: 500px) {
-      .rfp-summary-metrics { grid-template-columns: 1fr; }
-      .rfp-building-card-stats { flex-direction: column; gap: var(--space-2); }
-    }
+      .rfp-view-toggle { margin-bottom: var(--space-3); }
 
-    @media (max-width: 768px) {
+      /* Financials page layout */
       .financials-view { padding: var(--space-2); }
-      .fin-table { font-size: 0.72rem; }
-      .fin-table th, .fin-table td { padding: 6px 10px; }
-      .fin-sheet-tabs { gap: 0; }
+
+      /* Financial sub-tabs: scrollable, compact */
+      .fin-sheet-tabs { gap: 0; padding: var(--space-1) 0; }
       .fin-sheet-tab { padding: 6px 10px; font-size: 0.65rem; }
+
+      /* Tables: horizontally scrollable with sticky labels */
+      .fin-table-wrap { margin: 0 calc(-1 * var(--space-2)); border-radius: 0; border-left: none; border-right: none; }
+      .fin-table { font-size: 0.72rem; min-width: 500px; }
+      .fin-table th, .fin-table td { padding: 6px 10px; }
+      .fin-table .cell-label {
+        min-width: 110px;
+        max-width: 130px;
+        position: sticky;
+        left: 0;
+        background: var(--color-surface);
+        z-index: 1;
+        box-shadow: 2px 0 4px rgba(0,0,0,0.06);
+      }
+      .fin-table th:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 3;
+        background: var(--color-surface-2);
+        box-shadow: 2px 0 4px rgba(0,0,0,0.06);
+      }
+      .fin-table tr.row-bold .cell-label,
+      .fin-table tr.row-section .cell-label { background: var(--color-surface-2); }
+      .fin-table tr:hover .cell-label { background: var(--color-surface); }
+
+      /* Comparison table: same sticky treatment */
+      .rfp-comparison-table { min-width: 420px; }
+      .rfp-comparison-table .cell-best.cell-label { background: rgba(5, 150, 105, 0.06); }
+      .rfp-comparison-table .cell-worst.cell-label { background: rgba(220, 38, 38, 0.04); }
+
+      /* Top nav tabs */
       .page-tabs { padding: var(--space-1) var(--space-2); gap: var(--space-1); }
       .page-tab { padding: 6px 10px; font-size: var(--text-xs); gap: 4px; }
       .page-tab svg { width: 14px; height: 14px; }
-      .fin-table .cell-label { min-width: 140px; }
+
+      /* Building cards: ensure no overlap with Tour List button */
+      .rfp-building-card { position: relative; z-index: 0; }
     }
 
-    /* Small screens: compact tabs with labels, horizontal scroll */
     @media (max-width: 500px) {
+      .rfp-summary-metrics { grid-template-columns: repeat(2, 1fr); gap: var(--space-2); padding: var(--space-2); }
+      .rfp-metric-value { font-size: var(--text-sm); }
+      .rfp-metric-label { font-size: 0.65rem; }
+      .rfp-building-card-stats { flex-direction: column; gap: var(--space-2); }
+
+      /* Even more compact tables */
+      .fin-table { font-size: 0.68rem; }
+      .fin-table th, .fin-table td { padding: 5px 8px; }
+      .fin-table .cell-label { min-width: 100px; max-width: 120px; font-size: 0.68rem; }
+
       .page-tabs { padding: var(--space-1) var(--space-2); gap: 2px; }
       .page-tab { padding: 6px 10px; font-size: 0.7rem; gap: 4px; }
       .page-tab svg { width: 13px; height: 13px; }
