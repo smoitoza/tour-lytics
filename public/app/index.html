@@ -8460,12 +8460,32 @@ function rfpExtractTerms(text, address) {
   return fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text: text, address: address })
+    body: JSON.stringify({ documentText: text, buildingAddress: address })
   })
   .then(function(r) { return r.json(); })
   .then(function(data) {
     if (data.error) throw new Error(data.error);
-    return data.terms || data;
+    var raw = data.dealTerms || data.terms || data;
+    // Map snake_case API response to camelCase form fields
+    return {
+      rsf: raw.rsf || '',
+      leaseTerm: raw.lease_term_months || raw.leaseTerm || '',
+      commencementDate: raw.commencement_date || raw.commencementDate || '',
+      baseRent: raw.base_rent_rsf || raw.baseRent || '',
+      rentBasis: raw.rent_basis || raw.rentBasis || '',
+      annualEscalation: raw.annual_escalation_pct || raw.annualEscalation || '',
+      freeRent: raw.free_rent_months || raw.freeRent || '',
+      tiAllowancePerRSF: raw.ti_allowance_rsf || raw.tiAllowancePerRSF || '',
+      tiAllowanceTotal: raw.ti_allowance_total || raw.tiAllowanceTotal || '',
+      opex: raw.opex_monthly || raw.opex || '',
+      parkingSpots: raw.parking_spots || raw.parkingSpots || '',
+      parkingRate: raw.parking_rate_monthly || raw.parkingRate || '',
+      parkingEscalation: raw.parking_escalation_pct || raw.parkingEscalation || '',
+      securityDeposit: raw.security_deposit || raw.securityDeposit || '',
+      structure: raw.structure || '',
+      landlord: raw.landlord || '',
+      notes: raw.notes || ''
+    };
   });
 }
 
