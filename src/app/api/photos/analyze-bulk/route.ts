@@ -53,19 +53,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: 'All photos already analyzed', analyzed: 0, remaining: 0 })
     }
 
-    // Debit tokens for bulk photo analysis
+    // Debit tokens for bulk photo analysis: 8 tokens per batch of 15 photos
+    const BATCH_SIZE = 15
+    const batchCount = Math.ceil(photos.length / BATCH_SIZE)
     try {
-      const tokenResult = await debitTokens({
-        projectId: 'sf-office-search',
-        action: 'photo_bulk_analysis',
-        metadata: { photo_count: photos.length },
-        note: `Bulk photo analysis: ${photos.length} photos`,
-      })
-      if (!tokenResult.success) {
-        return NextResponse.json(
-          { error: 'Insufficient tokens for bulk photo analysis.' },
-          { status: 402 }
-        )
+      for (let i = 0; i < batchCount; i++) {
+        const tokenResult = await debitTokens({
+          projectId: 'sf-office-search',
+          action: 'photo_bulk_analysis',
+          metadata: { photo_count: photos.length, batch: i + 1, total_batches: batchCount },
+          note: `Bulk photo analysis: batch ${i + 1}/${batchCount} (${photos.length} photos total)`,
+        })
+        if (!tokenResult.success) {
+          return NextResponse.json(
+            { error: `Insufficient tokens for bulk photo analysis. Need ${batchCount * 8} tokens for ${photos.length} photos (${batchCount} batches of ${BATCH_SIZE}).` },
+            { status: 402 }
+          )
+        }
       }
     } catch (e) {
       console.warn('Token debit skipped:', (e as Error).message)
