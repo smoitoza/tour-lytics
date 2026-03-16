@@ -4342,6 +4342,20 @@ body {
       .rfp-metric-label { font-size: 0.65rem; }
       .rfp-building-card-stats { flex-direction: column; gap: var(--space-2); }
 
+      /* Deal terms: stack key/value vertically on small screens */
+      .rfp-terms-row {
+        flex-direction: column;
+        gap: 2px;
+        padding: 8px 12px;
+      }
+      .rfp-terms-val {
+        text-align: left;
+        word-break: break-word;
+        white-space: normal;
+      }
+      .rfp-terms-key { font-size: 0.7rem; }
+      .rfp-terms-grid { border-radius: var(--radius-md); }
+
       /* Even more compact tables */
       .fin-table { font-size: 0.68rem; }
       .fin-table th, .fin-table td { padding: 5px 8px; }
@@ -4350,6 +4364,9 @@ body {
       .page-tabs { padding: var(--space-1) var(--space-2); gap: 2px; }
       .page-tab { padding: 6px 10px; font-size: 0.7rem; gap: 4px; }
       .page-tab svg { width: 13px; height: 13px; }
+
+      /* Sub-tabs: ensure Assumptions is visible */
+      .fin-sheet-tab { padding: 5px 8px; font-size: 0.6rem; }
     }
 
 /* ============================================================
@@ -7117,7 +7134,13 @@ function switchPageTab(tabId) {
   
   document.querySelector(`.page-tab[data-page-tab="${tabId}"]`).classList.add('active');
   document.getElementById(`tab-${tabId}`).classList.add('active');
-  
+
+  // On mobile, hide Tour List button on non-map tabs to avoid overlap
+  var tourToggle = document.getElementById('tourToggle');
+  if (tourToggle && window.innerWidth <= 768) {
+    tourToggle.style.display = (tabId === 'map') ? 'flex' : 'none';
+  }
+
   // Invalidate map size when switching back to map
   if (tabId === 'map' && typeof map !== 'undefined') {
     setTimeout(() => map.invalidateSize(), 100);
