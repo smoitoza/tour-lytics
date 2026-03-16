@@ -84,6 +84,121 @@ async function getRFPContext(): Promise<string> {
   }
 }
 
+// Fetch team members for chatbot context
+async function getTeamContext(): Promise<string> {
+  try {
+    const { data, error } = await supabase
+      .from('project_members')
+      .select('*')
+      .eq('project_id', 'sf-office-search')
+      .order('created_at', { ascending: true })
+
+    if (error || !data || data.length === 0) {
+      return ''
+    }
+
+    let context = '\n\nTEAM MEMBERS (people involved in this office search project):\n'
+    const byPersona: Record<string, typeof data> = {}
+    data.forEach(m => {
+      const p = m.persona || 'unknown'
+      if (!byPersona[p]) byPersona[p] = []
+      byPersona[p].push(m)
+    })
+
+    const personaLabels: Record<string, string> = {
+      admin: 'Admin (project lead/decision maker)',
+      broker: 'Broker (real estate broker/advisor)',
+      cre_team: 'CRE Team (corporate real estate team)',
+      touree: 'Touree (tour participant/evaluator)',
+    }
+
+    for (const [persona, members] of Object.entries(byPersona)) {
+      context += `\n${personaLabels[persona] || persona} (${members.length}):\n`
+      members.forEach(m => {
+        const name = m.display_name || m.email
+        context += `  - ${name} (${m.email})${m.added_by ? ' - invited by ' + m.added_by : ''}\n`
+      })
+    }
+
+    context += `\nTotal team size: ${data.length} members\n`
+    return context
+  } catch (e) {
+    console.error('Failed to fetch team context:', e)
+    return ''
+  }
+}
+
+// Fetch commute study data for chatbot context
+async function getCommuteContext(): Promise<string> {
+  try {
+    const { data, error } = await supabase
+      .from('commute_studies')
+      .select('*')
+      .eq('project_id', 'sf-office-search')
+      .single()
+
+    if (error || !data) {
+      return ''
+    }
+
+    const employees = data.employees || []
+    const results = data.results || {}
+    const headers = data.headers || []
+
+    if (employees.length === 0) {
+      return ''
+    }
+
+    let context = '\n\nCOMMUTE STUDY DATA (employee commute analysis to potential office locations):\n'
+    context += `File: ${data.filename || 'Unknown'} | ${employees.length} employees analyzed\n`
+    if (data.uploaded_by) context += `Uploaded by: ${data.uploaded_by}\n`
+
+    // Summarize results per building
+    if (Object.keys(results).length > 0) {
+      context += '\nCommute Results by Building:\n'
+      for (const [buildingKey, buildingResults] of Object.entries(results)) {
+        const br = buildingResults as any
+        if (br.summary) {
+          context += `\n  ${br.buildingName || buildingKey}:\n`
+          const s = br.summary
+          if (s.avgDriveMin != null) context += `    Avg Drive: ${Math.round(s.avgDriveMin)} min (${(s.avgDriveMiles || 0).toFixed(1)} mi)\n`
+          if (s.avgTransitMin != null) context += `    Avg Transit: ${Math.round(s.avgTransitMin)} min\n`
+          if (s.under30minDrive != null) context += `    Within 30 min drive: ${s.under30minDrive} of ${employees.length} employees (${Math.round(s.under30minDrive / employees.length * 100)}%)\n`
+          if (s.under45minTransit != null) context += `    Within 45 min transit: ${s.under45minTransit} of ${employees.length} employees (${Math.round(s.under45minTransit / employees.length * 100)}%)\n`
+          if (s.under60minTransit != null) context += `    Within 60 min transit: ${s.under60minTransit} of ${employees.length} employees (${Math.round(s.under60minTransit / employees.length * 100)}%)\n`
+          if (s.medianDriveMin != null) context += `    Median Drive: ${Math.round(s.medianDriveMin)} min\n`
+          if (s.medianTransitMin != null) context += `    Median Transit: ${Math.round(s.medianTransitMin)} min\n`
+          if (s.maxDriveMin != null) context += `    Max Drive: ${Math.round(s.maxDriveMin)} min\n`
+          if (s.maxTransitMin != null) context += `    Max Transit: ${Math.round(s.maxTransitMin)} min\n`
+        }
+      }
+    }
+
+    // Include employee list summary (names/locations, not full data)
+    if (employees.length > 0 && employees.length <= 50) {
+      context += '\nEmployee Locations (for commute reference):\n'
+      employees.forEach((emp: any, i: number) => {
+        // Include available identifying info and location
+        const parts: string[] = []
+        if (emp.name) parts.push(emp.name)
+        if (emp.city) parts.push(emp.city)
+        if (emp.state) parts.push(emp.state)
+        if (emp.zip) parts.push('ZIP: ' + emp.zip)
+        if (parts.length > 0) {
+          context += `  ${i + 1}. ${parts.join(', ')}\n`
+        }
+      })
+    } else if (employees.length > 50) {
+      context += `\n${employees.length} employees in commute study (too many to list individually).\n`
+    }
+
+    return context
+  } catch (e) {
+    console.error('Failed to fetch commute context:', e)
+    return ''
+  }
+}
+
 // Fetch photo descriptions for chatbot context
 async function getPhotoContext(): Promise<string> {
   try {
@@ -434,6 +549,23 @@ When a user asks about photos, what spaces looked like, or visual aspects of bui
 - "What condition was the flooring at 301 Brannan?"
 - "Show me pictures of the kitchen"
 
+TEAM MEMBERS CAPABILITY:
+You have access to live team member data injected at the end of this prompt. You can answer questions like:
+- "Who is on the team?" or "How many people are on the project?"
+- "Who are the brokers?" or "List the tourees"
+- "What role does [name] have?"
+- "Who invited [name]?"
+Group members by their persona/role when presenting team info. Personas are: Admin (project lead), Broker (real estate advisor), CRE Team (corporate real estate), Touree (tour participant).
+
+COMMUTE STUDY CAPABILITY:
+You have access to the commute study data (employee commute analysis to different office buildings). This data comes from an uploaded Excel file with employee locations, analyzed against each shortlisted building. You can answer questions like:
+- "Which building has the best commute for our team?"
+- "What's the average drive time to 250 Brannan?"
+- "How many employees can get to 123 Townsend within 30 minutes?"
+- "Compare commute times across our shortlisted buildings"
+- "Which building is most accessible by transit?"
+When comparing buildings on commute, focus on average drive/transit time, percentage of employees within 30 min drive, and percentage within 45 min transit as the key metrics.
+
 DISPLAYING PHOTOS:
 Each photo in the TOUR PHOTOS data includes an image URL after "image:". When the user asks to see a photo or asks about a building with photos, show the photos using markdown image syntax: ![description](url)
 Show up to 3-4 relevant photos at a time. Always include a brief description with each image. For un-analyzed photos, use the area tag as the description.
@@ -500,11 +632,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch live data for RAG context
-    const [photoContext, rfpContext] = await Promise.all([
+    const [photoContext, rfpContext, teamContext, commuteContext] = await Promise.all([
       getPhotoContext(),
       getRFPContext(),
+      getTeamContext(),
+      getCommuteContext(),
     ])
-    const systemPromptWithPhotos = SYSTEM_PROMPT + rfpContext + photoContext
+    const systemPromptWithPhotos = SYSTEM_PROMPT + rfpContext + teamContext + commuteContext + photoContext
 
     // Stream response with tool use support
     const encoder = new TextEncoder()
