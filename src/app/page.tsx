@@ -841,69 +841,74 @@ export default function LandingPage() {
       {/* == THE PROBLEM == */}
       <section id="problem" style={{ padding: '6rem 0', background: '#ffffff' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
-          <div className="grid grid-cols-1 md:grid-cols-2 items-center" style={{ gap: '3rem' }}>
-            <div>
-              <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
-                The Problem
-              </span>
-              <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3.5rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '1rem' }}>
-                You can&apos;t build a tour list<br />from a 129-page PDF.
-              </h2>
-              <p className="font-medium" style={{ fontSize: 'clamp(1.125rem, 1rem + 0.75vw, 1.5rem)', color: '#475569', lineHeight: 1.4, marginBottom: '1rem' }}>
-                For San Francisco - and really any market - broker surveys arrive the same way: a static, 129-page PDF. You&apos;re stuck on page one, scrolling through the deck, trying to remember which building was where on the map. You&apos;ve done this before.
-              </p>
-              <p style={{ color: '#64748b', lineHeight: 1.7 }}>
-                We asked our brokers to do better. Three days later, what came back was a clunky Tableau dashboard we could have built ourselves. So we built something real: an app that parses the entire PDF, maps every building, and sorts what you&apos;re negotiating, touring, and passing on. Click any building name and you&apos;re looking at its page in the survey instantly.
-              </p>
-              <p style={{ color: '#64748b', lineHeight: 1.7, marginTop: '1rem' }}>
-                And then there&apos;s the financial side. Tell me the last time a broker survey came with a spreadsheet that matches what your CFO actually wants to see - cash flow, straight-line P&amp;L, GAAP format. It&apos;s not that brokers don&apos;t care. It&apos;s that the tools don&apos;t exist. Brokers send a glossy proposal with an asking rate and a nice rendering because that&apos;s what their systems produce - but your finance team is left rebuilding everything from scratch. Tour-Lytics closes that gap automatically the moment you upload a deal.
-              </p>
-              <p style={{ color: '#64748b', lineHeight: 1.7, marginTop: '1rem' }}>
-                And touring? That process is even worse. Every time you tour, you get handed a large paper folder. You take notes by hand, snap photos on your phone, then try to recall everything you saw three buildings later. It&apos;s a 40-year-old process that hasn&apos;t changed. Our Tour Book tab links directly to the locations on your map - score every space on price, parking, security, fit-out, and more. Add photos and notes from your phone while you&apos;re standing in the lobby. When you&apos;re done, you have a ranked, exportable tour report instead of a stack of scribbled-on paper.
-              </p>
+          {/* Narrative */}
+          <div style={{ maxWidth: '780px' }}>
+            <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
+              The Problem
+            </span>
+            <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3.5rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '1.5rem' }}>
+              You can&apos;t build a tour list<br />from a 129-page PDF.
+            </h2>
+            <p className="font-medium" style={{ fontSize: 'clamp(1.125rem, 1rem + 0.75vw, 1.5rem)', color: '#475569', lineHeight: 1.4, marginBottom: '1.25rem' }}>
+              For San Francisco, and really any market, broker surveys still tend to arrive the same way: a static 129-page PDF. You start on page one and scroll through the deck, trying to keep track of which building sits where on the map. If you have been through a few searches, the process probably feels familiar.
+            </p>
+            <p style={{ color: '#64748b', lineHeight: 1.7 }}>
+              We asked our brokers if there was a better way to present the information digitally. What came back a few days later was a Tableau dashboard. It was a step in the right direction, but it still felt limited. So we decided to build something purpose-built for the workflow: an app that parses the entire PDF, maps every building, and organizes what you&apos;re negotiating, touring, or passing on. Click any building name and you jump directly to its page in the survey.
+            </p>
+            <p style={{ color: '#64748b', lineHeight: 1.7, marginTop: '1rem' }}>
+              Once everything is mapped, another layer becomes possible that has historically been difficult to run: commute analysis. For years, running a true commute study meant hiring a consultant, exporting employee zip codes, and waiting days or weeks for a report. Even then, it was usually a one-time snapshot. Tour-Lytics runs that analysis in seconds. Upload employee locations and instantly see commute times to every building in the survey, at different times of day. What used to require a study can now be part of the normal decision process.
+            </p>
+            <p style={{ color: '#64748b', lineHeight: 1.7, marginTop: '1rem' }}>
+              The financial side has a similar challenge. Broker surveys typically focus on asking rates and visuals, which makes sense for marketing a building. But the format rarely matches how finance teams actually evaluate a deal. Most internal teams still end up rebuilding the numbers to see cash flow, straight-line P&amp;L, or GAAP views. Tour-Lytics bridges that gap by automatically generating those financial views the moment you upload a deal.
+            </p>
+            <p style={{ color: '#64748b', lineHeight: 1.7, marginTop: '1rem' }}>
+              Touring buildings is another place where the process has not changed much over time. You are usually handed a paper tour book, taking notes by hand while snapping photos on your phone and trying to remember details several stops later. Our Tour Book tab connects directly to the buildings on your map. While you are on site, you can score each space on price, parking, security, fit-out, and more, while adding photos and notes from your phone. When the tour is finished, you have a ranked, exportable report instead of a stack of marked-up pages.
+            </p>
+          </div>
+
+          {/* Problem / Solution Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: '1.5rem', marginTop: '3rem' }}>
+            {/* Problem Card */}
+            <div style={{ padding: '1.5rem', borderRadius: '1rem', border: '1px solid #fecaca', background: '#fef2f2' }}>
+              <div className="inline-flex items-center justify-center rounded-full font-bold" style={{ width: '28px', height: '28px', background: '#fee2e2', color: '#dc2626', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', marginBottom: '0.75rem' }}>&#x2717;</div>
+              <h4 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', color: '#991b1b', marginBottom: '0.75rem' }}>What surveys look like today</h4>
+              <ul className="flex flex-col" style={{ listStyle: 'none', padding: 0, gap: '0.5rem' }}>
+                {[
+                  'A static 129-page PDF',
+                  'No map, no sorting, no filtering',
+                  "Can't build a tour list",
+                  'Paper tour folders and handwritten notes',
+                  'Commute studies require outside consultants',
+                  'No cash flow or GAAP financials included',
+                ].map((item) => (
+                  <li key={item} className="text-sm relative" style={{ color: '#64748b', paddingLeft: '1.25rem' }}>
+                    <span className="absolute rounded-full" style={{ left: 0, top: '7px', width: '8px', height: '8px', background: '#fca5a5' }} />
+                    {item}
+                  </li>
+                ))}
+              </ul>
             </div>
-            <div className="flex flex-col" style={{ gap: '1rem' }}>
-              {/* Problem Card */}
-              <div style={{ padding: '1.5rem', borderRadius: '1rem', border: '1px solid #fecaca', background: '#fef2f2' }}>
-                <div className="inline-flex items-center justify-center rounded-full font-bold" style={{ width: '28px', height: '28px', background: '#fee2e2', color: '#dc2626', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', marginBottom: '0.75rem' }}>&#x2717;</div>
-                <h4 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', color: '#991b1b', marginBottom: '0.75rem' }}>What surveys look like today</h4>
-                <ul className="flex flex-col" style={{ listStyle: 'none', padding: 0, gap: '0.5rem' }}>
-                  {[
-                    'A static 129-page PDF',
-                    'No map, no sorting, no filtering',
-                    "Can't build a tour list",
-                    'Paper tour folders and handwritten notes',
-                    'No cash flow or GAAP financials included',
-                  ].map((item) => (
-                    <li key={item} className="text-sm relative" style={{ color: '#64748b', paddingLeft: '1.25rem' }}>
-                      <span className="absolute rounded-full" style={{ left: 0, top: '7px', width: '8px', height: '8px', background: '#fca5a5' }} />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              {/* Solution Card */}
-              <div style={{ padding: '1.5rem', borderRadius: '1rem', border: '1px solid #bbf7d0', background: '#f0fdf4' }}>
-                <div className="inline-flex items-center justify-center rounded-full font-bold" style={{ width: '28px', height: '28px', background: '#dcfce7', color: '#16a34a', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', marginBottom: '0.75rem' }}>&#x2713;</div>
-                <h4 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', color: '#166534', marginBottom: '0.75rem' }}>What Tour-Lytics gives you</h4>
-                <ul className="flex flex-col" style={{ listStyle: 'none', padding: 0, gap: '0.5rem' }}>
-                  {[
-                    'Interactive map with every building',
-                    'Click any name \u2192 jump to survey page',
-                    'Build your tour list from the map',
-                    'Tour Book with scores, photos, and notes',
-                    'Monthly cash flow & GAAP P&L',
-                    'AI assistant that answers questions about any building or deal',
-                    'Commute study for your entire team',
-                    'Upload new surveys directly to the map',
-                  ].map((item) => (
-                    <li key={item} className="text-sm relative" style={{ color: '#64748b', paddingLeft: '1.25rem' }}>
-                      <span className="absolute rounded-full" style={{ left: 0, top: '7px', width: '8px', height: '8px', background: '#86efac' }} />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            {/* Solution Card */}
+            <div style={{ padding: '1.5rem', borderRadius: '1rem', border: '1px solid #bbf7d0', background: '#f0fdf4' }}>
+              <div className="inline-flex items-center justify-center rounded-full font-bold" style={{ width: '28px', height: '28px', background: '#dcfce7', color: '#16a34a', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', marginBottom: '0.75rem' }}>&#x2713;</div>
+              <h4 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', color: '#166534', marginBottom: '0.75rem' }}>What Tour-Lytics gives you</h4>
+              <ul className="flex flex-col" style={{ listStyle: 'none', padding: 0, gap: '0.5rem' }}>
+                {[
+                  'Interactive map with every building',
+                  'Click any name \u2192 jump to survey page',
+                  'Build your tour list from the map',
+                  'Tour Book with scores, photos, and notes',
+                  'Commute analysis in seconds, not weeks',
+                  'Monthly cash flow & GAAP P&L',
+                  'AI assistant that answers questions about any building or deal',
+                  'Upload new surveys directly to the map',
+                ].map((item) => (
+                  <li key={item} className="text-sm relative" style={{ color: '#64748b', paddingLeft: '1.25rem' }}>
+                    <span className="absolute rounded-full" style={{ left: 0, top: '7px', width: '8px', height: '8px', background: '#86efac' }} />
+                    {item}
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         </div>
