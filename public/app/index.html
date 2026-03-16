@@ -3804,6 +3804,208 @@ body {
       .ai-usage-table th, .ai-usage-table td { padding: 8px 10px; }
     }
 
+    /* ===== SURVEY UPLOAD ===== */
+    .survey-upload-toggle {
+      position: fixed;
+      bottom: 24px;
+      left: 180px;
+      z-index: 990;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 18px;
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--color-text);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 999px;
+      box-shadow: var(--shadow-md);
+      cursor: pointer;
+      transition: all var(--transition);
+      white-space: nowrap;
+    }
+    .survey-upload-toggle:hover {
+      border-color: var(--color-accent-blue);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+      transform: translateY(-1px);
+    }
+    .survey-upload-toggle svg { flex-shrink: 0; color: var(--color-accent-blue); }
+
+    @media (max-width: 768px) {
+      .survey-upload-toggle {
+        left: auto;
+        right: 24px;
+        bottom: 80px;
+        padding: 8px 14px;
+        font-size: var(--text-xs);
+      }
+    }
+
+    /* Survey upload modal */
+    .survey-upload-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 2000;
+    }
+    .survey-upload-modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 2001;
+      width: 90%;
+      max-width: 520px;
+      max-height: 85vh;
+      overflow-y: auto;
+      background: var(--color-surface);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+    }
+    .survey-upload-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-4) var(--space-5);
+      border-bottom: 1px solid var(--color-border);
+    }
+    .survey-upload-modal-header h3 {
+      font-family: var(--font-display);
+      font-size: var(--text-lg);
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .survey-upload-modal-header h3 svg { color: var(--color-accent-blue); }
+    .survey-upload-modal-close {
+      background: none;
+      border: none;
+      color: var(--color-text-muted);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: var(--radius-sm);
+    }
+    .survey-upload-modal-close:hover { background: var(--color-surface-2); color: var(--color-text); }
+    .survey-upload-modal-body {
+      padding: var(--space-4) var(--space-5);
+    }
+    .survey-upload-desc {
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-2);
+      line-height: 1.5;
+    }
+    .survey-upload-cost {
+      font-size: var(--text-xs);
+      color: var(--color-accent-purple);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: var(--space-4);
+    }
+    .survey-upload-cost svg { color: var(--color-accent-purple); }
+    .survey-upload-dropzone {
+      border: 2px dashed var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-8) var(--space-4);
+      text-align: center;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .survey-upload-dropzone:hover,
+    .survey-upload-dropzone.dragover {
+      border-color: var(--color-accent-blue);
+      background: rgba(37, 99, 235, 0.04);
+    }
+    .survey-upload-dropzone p {
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+    }
+    .survey-upload-file-info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-2) var(--space-3);
+      background: var(--color-surface-2);
+      border-radius: var(--radius-sm);
+      margin-top: var(--space-3);
+      font-size: var(--text-sm);
+      font-weight: 500;
+    }
+    .survey-upload-status {
+      margin-top: var(--space-3);
+      padding: var(--space-3);
+      border-radius: var(--radius-md);
+      font-size: var(--text-sm);
+      line-height: 1.5;
+    }
+    .survey-upload-actions {
+      display: flex;
+      gap: var(--space-2);
+      margin-top: var(--space-4);
+    }
+    .survey-upload-submit {
+      flex: 1;
+      padding: 10px 20px;
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: #fff;
+      background: var(--color-accent-blue);
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .survey-upload-submit:hover:not(:disabled) { background: #1d4ed8; }
+    .survey-upload-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+    .survey-upload-cancel {
+      padding: 10px 20px;
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--color-text-muted);
+      background: none;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+    }
+    .survey-upload-cancel:hover { background: var(--color-surface-2); }
+
+    .survey-upload-results {
+      margin-top: var(--space-3);
+      padding: var(--space-3);
+      background: rgba(5, 150, 105, 0.06);
+      border: 1px solid rgba(5, 150, 105, 0.2);
+      border-radius: var(--radius-md);
+    }
+    .survey-upload-results h4 {
+      font-size: var(--text-sm);
+      font-weight: 700;
+      color: var(--color-accent-green);
+      margin-bottom: var(--space-2);
+    }
+    .survey-upload-results ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .survey-upload-results li {
+      font-size: var(--text-xs);
+      padding: 3px 0;
+      color: var(--color-text);
+      border-bottom: 1px solid var(--color-divider);
+    }
+    .survey-upload-results li:last-child { border-bottom: none; }
+    .survey-result-new { color: var(--color-accent-green); font-weight: 600; }
+    .survey-result-dup { color: var(--color-text-muted); }
+
     /* ===== TOP TAB BAR ===== */
     .page-tabs {
       display: flex;
@@ -5206,6 +5408,45 @@ body {
   Tour List
   <span class="tour-toggle-count" id="tourToggleCount" data-count="0"></span>
 </button>
+
+<!-- Upload Survey Button (admin/broker/cre_team only, map tab) -->
+<button class="survey-upload-toggle" id="surveyUploadToggle" style="display:none;" onclick="openSurveyUploadModal()">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+  Upload Survey
+</button>
+
+<!-- Survey Upload Modal -->
+<div class="survey-upload-overlay" id="surveyUploadOverlay" style="display:none;" onclick="closeSurveyUploadModal()"></div>
+<div class="survey-upload-modal" id="surveyUploadModal" style="display:none;">
+  <div class="survey-upload-modal-header">
+    <h3>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Upload New Survey
+    </h3>
+    <button class="survey-upload-modal-close" onclick="closeSurveyUploadModal()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="survey-upload-modal-body">
+    <p class="survey-upload-desc">Upload a broker survey (.pdf or .docx) to add new buildings to the map. Duplicate addresses will be skipped.</p>
+    <p class="survey-upload-cost"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Cost: 25 tokens</p>
+    <div class="survey-upload-dropzone" id="surveyDropzone">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.4;margin-bottom:8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <p>Drop your survey file here or <label for="surveyFileInput" style="color:var(--color-primary);cursor:pointer;font-weight:600;">browse</label></p>
+      <p style="font-size:var(--text-xs);color:var(--color-text-faint);margin-top:4px;">PDF or DOCX</p>
+      <input type="file" id="surveyFileInput" accept=".pdf,.docx" style="display:none;" onchange="surveyFileSelected(this)" />
+    </div>
+    <div class="survey-upload-file-info" id="surveyFileInfo" style="display:none;">
+      <span id="surveyFileName"></span>
+      <button onclick="surveyRemoveFile()" style="background:none;border:none;color:var(--color-text-muted);cursor:pointer;font-size:var(--text-xs);">&times; Remove</button>
+    </div>
+    <div class="survey-upload-status" id="surveyUploadStatus" style="display:none;"></div>
+    <div class="survey-upload-actions">
+      <button class="survey-upload-submit" id="surveySubmitBtn" onclick="surveySubmitUpload()" disabled>Parse & Add to Map</button>
+      <button class="survey-upload-cancel" onclick="closeSurveyUploadModal()">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <header class="header">
   <div class="header-inner">
@@ -7575,6 +7816,11 @@ async function fetchUserRole() {
       var aiTab = document.getElementById('tabBtnAiUsage');
       if (aiTab) aiTab.style.display = '';
     }
+    // Show Upload Survey button for admin/broker/cre_team
+    if (hasAdminAccess()) {
+      var survUpBtn = document.getElementById('surveyUploadToggle');
+      if (survUpBtn) survUpBtn.style.display = '';
+    }
     // Fetch centralized tour list from server
     await fetchCentralTourList();
   }
@@ -7596,10 +7842,14 @@ function switchPageTab(tabId) {
   document.querySelector(`.page-tab[data-page-tab="${tabId}"]`).classList.add('active');
   document.getElementById(`tab-${tabId}`).classList.add('active');
 
-  // On mobile, hide Tour List button on non-map tabs to avoid overlap
+  // On mobile, hide Tour List and Upload Survey buttons on non-map tabs to avoid overlap
   var tourToggle = document.getElementById('tourToggle');
   if (tourToggle && window.innerWidth <= 768) {
     tourToggle.style.display = (tabId === 'map') ? 'flex' : 'none';
+  }
+  var surveyToggle = document.getElementById('surveyUploadToggle');
+  if (surveyToggle && hasAdminAccess()) {
+    surveyToggle.style.display = (tabId === 'map') ? '' : 'none';
   }
 
   // Invalidate map size when switching back to map
@@ -10677,6 +10927,256 @@ switchPageTab = function(tabId) {
     loadPhotosGallery();
   }
 };
+
+// ============================================================
+// Survey Upload & Map Merge
+// ============================================================
+
+var _surveyUploadFile = null;
+
+function openSurveyUploadModal() {
+  document.getElementById('surveyUploadOverlay').style.display = 'block';
+  document.getElementById('surveyUploadModal').style.display = 'block';
+  // Reset state
+  _surveyUploadFile = null;
+  document.getElementById('surveyFileInfo').style.display = 'none';
+  document.getElementById('surveyUploadStatus').style.display = 'none';
+  document.getElementById('surveySubmitBtn').disabled = true;
+  document.getElementById('surveyDropzone').style.display = '';
+  // Setup drag-drop
+  surveyInitDropzone();
+}
+
+function closeSurveyUploadModal() {
+  document.getElementById('surveyUploadOverlay').style.display = 'none';
+  document.getElementById('surveyUploadModal').style.display = 'none';
+}
+
+function surveyInitDropzone() {
+  var dz = document.getElementById('surveyDropzone');
+  dz.ondragover = function(e) { e.preventDefault(); dz.classList.add('dragover'); };
+  dz.ondragleave = function() { dz.classList.remove('dragover'); };
+  dz.ondrop = function(e) {
+    e.preventDefault();
+    dz.classList.remove('dragover');
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      surveyHandleFile(e.dataTransfer.files[0]);
+    }
+  };
+  dz.onclick = function() { document.getElementById('surveyFileInput').click(); };
+}
+
+function surveyFileSelected(input) {
+  if (input.files && input.files[0]) {
+    surveyHandleFile(input.files[0]);
+  }
+}
+
+function surveyHandleFile(file) {
+  var ext = file.name.split('.').pop().toLowerCase();
+  if (ext !== 'pdf' && ext !== 'docx') {
+    alert('Please select a PDF or DOCX file.');
+    return;
+  }
+  _surveyUploadFile = file;
+  document.getElementById('surveyFileName').textContent = file.name + ' (' + (file.size / 1024).toFixed(0) + ' KB)';
+  document.getElementById('surveyFileInfo').style.display = 'flex';
+  document.getElementById('surveyDropzone').style.display = 'none';
+  document.getElementById('surveySubmitBtn').disabled = false;
+}
+
+function surveyRemoveFile() {
+  _surveyUploadFile = null;
+  document.getElementById('surveyFileInfo').style.display = 'none';
+  document.getElementById('surveyDropzone').style.display = '';
+  document.getElementById('surveySubmitBtn').disabled = true;
+  document.getElementById('surveyFileInput').value = '';
+}
+
+async function surveySubmitUpload() {
+  if (!_surveyUploadFile) return;
+
+  var statusEl = document.getElementById('surveyUploadStatus');
+  var submitBtn = document.getElementById('surveySubmitBtn');
+  submitBtn.disabled = true;
+  statusEl.style.display = 'block';
+  statusEl.innerHTML = '<div style="display:flex;align-items:center;gap:0.5rem;"><div style="width:1rem;height:1rem;border:2px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div> Extracting text from document...</div>';
+
+  try {
+    // Step 1: Parse the document client-side to extract text
+    var text = await rfpParseDocument(_surveyUploadFile);
+
+    if (!text || text.trim().length < 50) {
+      statusEl.innerHTML = '<div style="color:#dc2626;">Could not extract enough text from this document. Please try a different file.</div>';
+      submitBtn.disabled = false;
+      return;
+    }
+
+    statusEl.innerHTML = '<div style="display:flex;align-items:center;gap:0.5rem;"><div style="width:1rem;height:1rem;border:2px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div> AI is parsing ' + text.length.toLocaleString() + ' characters of survey data... This may take a moment.</div>';
+
+    // Step 2: Send to AI for structured extraction + geocoding
+    var res = await fetch('/api/survey-parse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: text, userEmail: getCurrentUserEmail() })
+    });
+
+    if (!res.ok) {
+      var errData = await res.json().catch(function() { return {}; });
+      if (res.status === 402) {
+        statusEl.innerHTML = '<div style="color:#dc2626;">Insufficient tokens. You need 25 tokens for a survey upload. Visit the AI Usage tab to add more.</div>';
+      } else {
+        statusEl.innerHTML = '<div style="color:#dc2626;">Error: ' + (errData.error || 'Failed to parse survey.') + '</div>';
+      }
+      submitBtn.disabled = false;
+      return;
+    }
+
+    var data = await res.json();
+
+    if (!data.buildings || data.buildings.length === 0) {
+      statusEl.innerHTML = '<div style="color:#dc2626;">No buildings could be extracted from this document. Make sure it contains a broker survey with property listings.</div>';
+      submitBtn.disabled = false;
+      return;
+    }
+
+    // Step 3: Merge with existing SURVEY_BUILDINGS and add markers
+    var mergeResult = surveyMergeBuildings(data.buildings);
+
+    // Step 4: Show results
+    var html = '<div class="survey-upload-results">';
+    html += '<h4>' + mergeResult.added + ' new building' + (mergeResult.added !== 1 ? 's' : '') + ' added, ' + mergeResult.skipped + ' duplicate' + (mergeResult.skipped !== 1 ? 's' : '') + ' skipped</h4>';
+    html += '<ul>';
+    mergeResult.details.forEach(function(d) {
+      var cls = d.status === 'added' ? 'survey-result-new' : 'survey-result-dup';
+      var label = d.status === 'added' ? '+ NEW' : 'EXISTING';
+      html += '<li class="' + cls + '">' + label + ': ' + esc(d.address) + '</li>';
+    });
+    html += '</ul></div>';
+    statusEl.innerHTML = html;
+
+    // Update legend count
+    surveyUpdateLegendCount();
+
+  } catch (err) {
+    statusEl.innerHTML = '<div style="color:#dc2626;">Error: ' + (err.message || String(err)) + '</div>';
+    submitBtn.disabled = false;
+  }
+}
+
+function surveyNormalizeAddress(addr) {
+  if (!addr) return '';
+  return addr.toLowerCase()
+    .replace(/[.,#]/g, '')
+    .replace(/\bstreet\b/g, 'st')
+    .replace(/\bavenue\b/g, 'ave')
+    .replace(/\bboulevard\b/g, 'blvd')
+    .replace(/\bdrive\b/g, 'dr')
+    .replace(/\broad\b/g, 'rd')
+    .replace(/\bsuite\b/g, 'ste')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function surveyMergeBuildings(newBuildings) {
+  // Build a set of existing addresses for dedup
+  var existingAddresses = new Set();
+  SURVEY_BUILDINGS.forEach(function(b) {
+    existingAddresses.add(surveyNormalizeAddress(b.address));
+  });
+  // Also check BUILDINGS (shortlisted deal buildings)
+  if (typeof BUILDINGS !== 'undefined') {
+    BUILDINGS.forEach(function(b) {
+      if (b.address) existingAddresses.add(surveyNormalizeAddress(b.address));
+      if (b.name) existingAddresses.add(surveyNormalizeAddress(b.name));
+    });
+  }
+
+  var nextNum = SURVEY_BUILDINGS.length + 1;
+  var added = 0;
+  var skipped = 0;
+  var details = [];
+
+  newBuildings.forEach(function(nb) {
+    var normAddr = surveyNormalizeAddress(nb.address);
+    if (!normAddr || existingAddresses.has(normAddr)) {
+      skipped++;
+      details.push({ address: nb.address || '(unknown)', status: 'duplicate' });
+      return;
+    }
+
+    // Skip if no geocode
+    if (!nb.lat || !nb.lng) {
+      skipped++;
+      details.push({ address: nb.address || '(no coordinates)', status: 'duplicate' });
+      return;
+    }
+
+    // Create survey building entry
+    var entry = {
+      num: nextNum,
+      address: nb.address,
+      neighborhood: nb.neighborhood || '',
+      owner: nb.owner || '',
+      yearBuiltClass: nb.yearBuiltClass || '',
+      buildingSF: nb.buildingSF || '',
+      stories: nb.stories || '',
+      spaceAvailable: nb.spaceAvailable || '',
+      rentalRate: nb.rentalRate || '',
+      directSublease: nb.directSublease || '',
+      lat: nb.lat,
+      lng: nb.lng
+    };
+
+    // Add to SURVEY_BUILDINGS array
+    SURVEY_BUILDINGS.push(entry);
+    existingAddresses.add(normAddr);
+
+    // Add marker to map
+    var icon = L.divIcon({
+      className: 'survey-marker-wrapper',
+      html: '<div class="survey-marker">' + nextNum + '</div>',
+      iconSize: [22, 22],
+      iconAnchor: [11, 11]
+    });
+
+    var marker = L.marker([nb.lat, nb.lng], { icon: icon }).addTo(map);
+    marker.bindPopup(buildSurveyPopup(entry), {
+      className: 'survey-popup-wrapper',
+      maxWidth: 420,
+      minWidth: 320,
+      closeButton: true,
+      autoPan: true,
+      autoPanPadding: [20, 20],
+      offset: [0, -5]
+    });
+    marker.on('mouseover', function() { this.openPopup(); });
+    surveyMarkers.push(marker);
+
+    nextNum++;
+    added++;
+    details.push({ address: nb.address, status: 'added' });
+  });
+
+  // Re-fit map bounds to include all markers
+  if (added > 0) {
+    var allM = [...markers, ...surveyMarkers];
+    if (allM.length > 0) {
+      var group = L.featureGroup(allM);
+      map.fitBounds(group.getBounds().pad(0.15));
+    }
+  }
+
+  return { added: added, skipped: skipped, details: details };
+}
+
+function surveyUpdateLegendCount() {
+  // Update the legend to reflect new survey count
+  var legendEl = document.querySelector('.legend-section-label');
+  if (legendEl && legendEl.textContent.indexOf('Surveyed') >= 0) {
+    legendEl.textContent = 'Surveyed (' + SURVEY_BUILDINGS.length + ')';
+  }
+}
 
 // ============================================================
 // AI Usage Dashboard
