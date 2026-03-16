@@ -6,7 +6,7 @@ import { debitTokens } from '@/lib/tokens'
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { text, userEmail } = body
+    const { text, userEmail, projectId } = body
 
     if (!text || text.trim().length < 50) {
       return NextResponse.json({ error: 'Survey text too short or missing.' }, { status: 400 })
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     // Debit 25 tokens for survey upload
     try {
       const tokenResult = await debitTokens({
-        projectId: 'sf-office-search',
+        projectId: projectId || 'sf-office-search',
         action: 'survey_map_upload',
         userEmail,
         metadata: { text_length: text.length },
@@ -102,11 +102,13 @@ Return ONLY the JSON array, no other text.`
     }
 
     // Geocode addresses to get lat/lng
+    // Use project market for geocoding context, fall back to general US
+    const geocodeCity = body.market || 'USA'
     const geocoded = await Promise.all(
       buildings.map(async (b: any) => {
         try {
           // Use Nominatim (free, no key needed) for geocoding
-          const addr = encodeURIComponent(`${b.address}, San Francisco, CA`)
+          const addr = encodeURIComponent(`${b.address}, ${geocodeCity}`)
           const geoRes = await fetch(
             `https://nominatim.openstreetmap.org/search?format=json&q=${addr}&limit=1`,
             { headers: { 'User-Agent': 'TourLytics/1.0' } }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { creditTokens } from '@/lib/tokens'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -130,6 +131,18 @@ export async function POST(req: NextRequest) {
         persona: 'admin',
         display_name: createdBy.split('@')[0],
       }, { onConflict: 'email,project_id' })
+
+    // Seed 100 beta tokens for the new project
+    try {
+      await creditTokens({
+        projectId: slug,
+        amount: 100,
+        userEmail: createdBy,
+        note: 'Beta seed - 100 tokens',
+      })
+    } catch (e) {
+      console.warn('Token seed skipped for project', slug, ':', (e as Error).message)
+    }
 
     return NextResponse.json(data, { status: 201 })
   } catch {
