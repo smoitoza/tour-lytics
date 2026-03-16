@@ -12,6 +12,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
+<!-- PDF generation: pdf-lib for Tour Book PDF export -->
+<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+
 <!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -5319,6 +5322,7 @@ body {
   0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.4); }
   50% { box-shadow: 0 0 0 6px rgba(220,38,38,0); }
 }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 .chat-welcome {
   text-align: center;
@@ -8896,55 +8900,224 @@ function moveCard(key, direction) {
   }, 50);
 }
 
-function exportTourBook() {
+async function exportTourBook() {
   const list = getTourList();
-  const data = getTourBookData();
-  
-  let text = 'TOUR BOOK - SF Office Search\n';
-  text += 'Generated: ' + new Date().toLocaleDateString() + '\n';
-  text += '='.repeat(50) + '\n\n';
-  
-  list.forEach((item, idx) => {
-    const key = getBuildingKey(item);
-    const entry = data[key] || { scores: {}, notes: '' };
-    const avg = getOverallScore(key);
-    
-    text += (idx + 1) + '. ' + item.name + '\n';
-    text += '   ' + (item.meta || '') + '\n';
-    text += '   Overall Score: ' + (avg > 0 ? avg.toFixed(1) + '/5.0' : 'Not scored') + '\n';
-    text += '   ' + '-'.repeat(40) + '\n';
-    
-    SCORE_CATEGORIES.forEach(cat => {
-      const score = entry.scores[cat.id] || 0;
-      text += '   ' + cat.label + ': ' + (score > 0 ? '★'.repeat(score) + '☆'.repeat(5 - score) + ' (' + score + '/5)' : 'Not rated') + '\n';
-    });
-    
-    if (entry.notes) {
-      text += '\n   Notes:\n   ' + entry.notes.replace(/\n/g, '\n   ') + '\n';
-    }
-    text += '\n';
-  });
-  
-  // Ranking
-  const ranked = list.map(item => {
-    const key = getBuildingKey(item);
-    return { name: item.name, score: getOverallScore(key) };
-  }).filter(r => r.score > 0).sort((a, b) => b.score - a.score);
-  
-  if (ranked.length > 0) {
-    text += '\nRANKING\n' + '='.repeat(50) + '\n';
-    ranked.forEach((r, i) => {
-      text += '#' + (i + 1) + ' ' + r.name + ' - ' + r.score.toFixed(1) + '/5.0\n';
-    });
+  if (!list.length) { alert('No buildings on your tour list.'); return; }
+
+  // Show loading state on button
+  var btn = document.querySelector('.tourbook-export-btn');
+  var origHTML = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite;vertical-align:middle;margin-right:6px"><circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="12"/></svg>Building PDF...';
+    btn.disabled = true;
+    btn.style.opacity = '0.7';
   }
-  
-  const blob = new Blob([text], { type: 'text/plain' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'tour-book-' + new Date().toISOString().slice(0, 10) + '.txt';
-  a.click();
-  URL.revokeObjectURL(url);
+
+  try {
+    var { PDFDocument, rgb, StandardFonts } = PDFLib;
+
+    // Fetch the source survey PDF
+    var surveyBytes = await fetch(PDF_FILE).then(function(r) { return r.arrayBuffer(); });
+    var surveyPdf = await PDFDocument.load(surveyBytes);
+    var totalSurveyPages = surveyPdf.getPageCount();
+
+    // Build sorted list of all building start pages to compute page ranges
+    var allPageStarts = Object.entries(PDF_PAGES)
+      .map(function(e) { return { num: e[0], page: e[1] }; })
+      .sort(function(a, b) { return a.page - b.page; });
+
+    function getPageRange(pdfPage) {
+      // Find this building's index in sorted list
+      var idx = allPageStarts.findIndex(function(e) { return e.page === pdfPage; });
+      var startPage = pdfPage - 1; // pdf-lib uses 0-indexed
+      var endPage;
+      if (idx >= 0 && idx < allPageStarts.length - 1) {
+        endPage = allPageStarts[idx + 1].page - 2; // up to the page before next building starts
+      } else {
+        // Last building - go to end of PDF (or start + 3 pages as safe default)
+        endPage = Math.min(startPage + 3, totalSurveyPages - 1);
+      }
+      return { start: startPage, end: endPage };
+    }
+
+    // Create new PDF
+    var newPdf = await PDFDocument.create();
+    var helvetica = await newPdf.embedFont(StandardFonts.Helvetica);
+    var helveticaBold = await newPdf.embedFont(StandardFonts.HelveticaBold);
+
+    // ---- COVER PAGE ----
+    var coverPage = newPdf.addPage([612, 792]); // Letter size
+    var schedule = getTourSchedule();
+    var today = new Date();
+    var dateStr = today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    // Dark header band
+    coverPage.drawRectangle({ x: 0, y: 592, width: 612, height: 200, color: rgb(0.059, 0.090, 0.165) });
+
+    // Logo text
+    coverPage.drawText('Tour-Lytics', {
+      x: 50, y: 740, size: 28, font: helveticaBold, color: rgb(1, 1, 1)
+    });
+
+    // Project name
+    coverPage.drawText('SF Office Search', {
+      x: 50, y: 690, size: 20, font: helvetica, color: rgb(0.58, 0.64, 0.72)
+    });
+
+    // Tour Book title
+    coverPage.drawText('Tour Book', {
+      x: 50, y: 640, size: 36, font: helveticaBold, color: rgb(1, 1, 1)
+    });
+
+    // Date
+    coverPage.drawText(dateStr, {
+      x: 50, y: 608, size: 12, font: helvetica, color: rgb(0.58, 0.64, 0.72)
+    });
+
+    // Stats line
+    var statsY = 560;
+    coverPage.drawText(list.length + ' Buildings on Tour', {
+      x: 50, y: statsY, size: 14, font: helveticaBold, color: rgb(0.059, 0.090, 0.165)
+    });
+
+    // Divider line
+    coverPage.drawRectangle({ x: 50, y: 540, width: 512, height: 1, color: rgb(0.886, 0.910, 0.937) });
+
+    // Building list with tour times
+    var yPos = 510;
+    list.forEach(function(item, idx) {
+      var key = getBuildingKey(item);
+      var sched = schedule[key] || {};
+      var timeStr = '';
+      if (sched.date || sched.time) {
+        var parts = [];
+        if (sched.date) {
+          var d = new Date(sched.date + 'T12:00:00');
+          parts.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+        }
+        if (sched.time) parts.push(sched.time);
+        timeStr = parts.join(' at ');
+      }
+
+      // Building number circle
+      coverPage.drawCircle({ x: 66, y: yPos + 4, size: 10, color: rgb(0.145, 0.388, 0.922) });
+      coverPage.drawText(String(idx + 1), {
+        x: idx + 1 >= 10 ? 61 : 63, y: yPos, size: 10, font: helveticaBold, color: rgb(1, 1, 1)
+      });
+
+      // Building name
+      coverPage.drawText(item.name, {
+        x: 86, y: yPos, size: 13, font: helveticaBold, color: rgb(0.059, 0.090, 0.165)
+      });
+
+      // Meta (RSF, price)
+      if (item.meta) {
+        coverPage.drawText(item.meta, {
+          x: 86, y: yPos - 16, size: 10, font: helvetica, color: rgb(0.396, 0.455, 0.529)
+        });
+      }
+
+      // Tour time on right side
+      if (timeStr) {
+        var timeWidth = helvetica.widthOfTextAtSize(timeStr, 10);
+        coverPage.drawText(timeStr, {
+          x: 562 - timeWidth, y: yPos, size: 10, font: helvetica, color: rgb(0.396, 0.455, 0.529)
+        });
+      }
+
+      yPos -= 42;
+    });
+
+    // Footer on cover
+    coverPage.drawRectangle({ x: 50, y: 44, width: 512, height: 1, color: rgb(0.886, 0.910, 0.937) });
+    coverPage.drawText('Generated by Tour-Lytics  |  tour-lytics.com', {
+      x: 50, y: 28, size: 9, font: helvetica, color: rgb(0.58, 0.64, 0.72)
+    });
+
+    // ---- BUILDING SURVEY PAGES ----
+    for (var i = 0; i < list.length; i++) {
+      var item = list[i];
+      var pdfPage = item.pdfPage;
+      if (!pdfPage) continue;
+
+      var range = getPageRange(pdfPage);
+
+      // Add a separator page before each building's survey pages
+      var sepPage = newPdf.addPage([612, 792]);
+      sepPage.drawRectangle({ x: 0, y: 692, width: 612, height: 100, color: rgb(0.059, 0.090, 0.165) });
+      sepPage.drawText('Building ' + (i + 1) + ' of ' + list.length, {
+        x: 50, y: 740, size: 11, font: helvetica, color: rgb(0.58, 0.64, 0.72)
+      });
+      sepPage.drawText(item.name, {
+        x: 50, y: 715, size: 24, font: helveticaBold, color: rgb(1, 1, 1)
+      });
+      if (item.meta) {
+        sepPage.drawText(item.meta, {
+          x: 50, y: 695, size: 12, font: helvetica, color: rgb(0.58, 0.64, 0.72)
+        });
+      }
+      if (item.tags && item.tags.length) {
+        sepPage.drawText(item.tags.join('  |  '), {
+          x: 50, y: 665, size: 11, font: helvetica, color: rgb(0.145, 0.388, 0.922)
+        });
+      }
+
+      // Tour schedule on separator
+      var key = getBuildingKey(item);
+      var sched = schedule[key] || {};
+      if (sched.date || sched.time) {
+        var parts = [];
+        if (sched.date) {
+          var d = new Date(sched.date + 'T12:00:00');
+          parts.push(d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }));
+        }
+        if (sched.time) parts.push(sched.time);
+        sepPage.drawText('Tour: ' + parts.join(' at '), {
+          x: 50, y: 645, size: 11, font: helvetica, color: rgb(0.396, 0.455, 0.529)
+        });
+      }
+
+      // Survey source note
+      sepPage.drawText('The following pages are extracted from the broker survey.', {
+        x: 50, y: 610, size: 10, font: helvetica, color: rgb(0.58, 0.64, 0.72)
+      });
+
+      // Footer
+      sepPage.drawRectangle({ x: 50, y: 44, width: 512, height: 1, color: rgb(0.886, 0.910, 0.937) });
+      sepPage.drawText('Generated by Tour-Lytics  |  tour-lytics.com', {
+        x: 50, y: 28, size: 9, font: helvetica, color: rgb(0.58, 0.64, 0.72)
+      });
+
+      // Copy survey pages for this building
+      var pageIndices = [];
+      for (var p = range.start; p <= range.end && p < totalSurveyPages; p++) {
+        pageIndices.push(p);
+      }
+      var copiedPages = await newPdf.copyPages(surveyPdf, pageIndices);
+      copiedPages.forEach(function(pg) { newPdf.addPage(pg); });
+    }
+
+    // Save and download
+    var pdfBytes = await newPdf.save();
+    var blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'tour-book-' + new Date().toISOString().slice(0, 10) + '.pdf';
+    a.click();
+    URL.revokeObjectURL(url);
+
+  } catch(err) {
+    console.error('Tour Book PDF export failed:', err);
+    alert('PDF export failed. Please try again.');
+  } finally {
+    // Restore button
+    if (btn) {
+      btn.innerHTML = origHTML;
+      btn.disabled = false;
+      btn.style.opacity = '1';
+    }
+  }
 }
 
 // ============================================================
