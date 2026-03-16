@@ -2426,6 +2426,8 @@ body {
     }
     .team-action-btn.resend { color: var(--color-primary); border-color: rgba(234,124,28,0.3); }
     .team-action-btn.resend:hover { background: rgba(234,124,28,0.06); }
+    .team-action-btn.reset-pw { color: #2563eb; border-color: rgba(37,99,235,0.25); }
+    .team-action-btn.reset-pw:hover { background: rgba(37,99,235,0.06); }
     .team-action-btn.remove { color: #dc2626; border-color: rgba(220,38,38,0.2); }
     .team-action-btn.remove:hover { background: rgba(220,38,38,0.06); }
 
@@ -11765,6 +11767,7 @@ function renderTeamPage() {
 
     if (canManage && !isMe) {
       html += '<div class="team-member-actions">';
+      html += '<button class="team-action-btn reset-pw" onclick="teamResetPassword(\'' + m.email.replace(/'/g, "\\'") + '\', \'' + (m.display_name || '').replace(/'/g, "\\'") + '\')">Reset Password</button>';
       html += '<button class="team-action-btn resend" onclick="teamResendInvite(\'' + m.email.replace(/'/g, "\\'") + '\', \'' + (m.display_name || '').replace(/'/g, "\\'") + '\', \'' + m.persona + '\')">Resend Invite</button>';
       html += '<button class="team-action-btn remove" onclick="teamRemoveMember(\'' + m.email.replace(/'/g, "\\'") + '\')">Remove</button>';
       html += '</div>';
@@ -11873,6 +11876,52 @@ function teamResendInvite(email, displayName, persona) {
     'See you on the tour!';
   var mailtoUrl = 'mailto:' + encodeURIComponent(email) + '?subject=' + subject + '&body=' + encodeURIComponent(body);
   window.open(mailtoUrl, '_blank');
+}
+
+async function teamResetPassword(email, displayName) {
+  if (!confirm('Reset password for ' + email + '?')) return;
+
+  // Find the button and show loading
+  var btns = document.querySelectorAll('.team-action-btn.reset-pw');
+  var btn = null;
+  btns.forEach(function(b) {
+    if (b.getAttribute('onclick') && b.getAttribute('onclick').indexOf(email) !== -1) btn = b;
+  });
+  if (btn) { btn.textContent = 'Resetting...'; btn.disabled = true; }
+
+  try {
+    var res = await fetch('/api/team/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email })
+    });
+    var result = await res.json();
+    if (!res.ok) throw new Error(result.error || 'Failed to reset password');
+
+    var tempPw = result.tempPassword;
+    var appUrl = window.location.origin + '/login';
+    var firstName = displayName ? displayName.split(' ')[0] : '';
+    var greeting = firstName ? 'Hi ' + firstName + ',' : 'Hi,';
+    var subject = encodeURIComponent('Tour-Lytics - Your password has been reset');
+    var body = greeting + '\n\n' +
+      'Your Tour-Lytics password has been reset. Here are your updated credentials:\n\n' +
+      'Login: ' + appUrl + '\n' +
+      'Email: ' + email + '\n' +
+      'Password: ' + tempPw + '\n\n' +
+      'You can change your password after signing in.\n\n' +
+      'See you on the tour!';
+    var mailtoUrl = 'mailto:' + encodeURIComponent(email) + '?subject=' + subject + '&body=' + encodeURIComponent(body);
+    window.open(mailtoUrl, '_blank');
+
+    if (btn) { btn.textContent = 'Password Reset'; btn.style.color = '#16a34a'; btn.style.borderColor = 'rgba(22,163,74,0.3)'; }
+    setTimeout(function() {
+      if (btn) { btn.textContent = 'Reset Password'; btn.disabled = false; btn.style.color = ''; btn.style.borderColor = ''; }
+    }, 3000);
+
+  } catch(e) {
+    alert('Reset failed: ' + (e.message || 'Unknown error'));
+    if (btn) { btn.textContent = 'Reset Password'; btn.disabled = false; }
+  }
 }
 
 async function teamRemoveMember(email) {
