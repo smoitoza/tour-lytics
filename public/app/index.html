@@ -9169,9 +9169,45 @@ function rfpBuildAssumptionsPanel(selected) {
   return html;
 }
 
+// Read current form values into _rfpState.assumptions before re-rendering
+function rfpReadAssumptionsFromForm() {
+  var a = window._rfpState.assumptions || {};
+  var el;
+  el = document.getElementById('assumption-fb');
+  if (el) a.opex_food_beverage = parseFloat(el.value) || 0;
+  el = document.getElementById('assumption-wpe');
+  if (el) a.opex_workplace_experience = parseFloat(el.value) || 0;
+  el = document.getElementById('assumption-maint');
+  if (el) a.opex_maintenance_security = parseFloat(el.value) || 0;
+  el = document.getElementById('assumption-headcount');
+  if (el) a.headcount = parseInt(el.value) || 0;
+  el = document.getElementById('assumption-density');
+  if (el) a.target_density_rsf = parseInt(el.value) || 0;
+  el = document.getElementById('assumption-discount');
+  if (el) a.discount_rate = parseFloat(el.value) || 6.0;
+  // Read custom items from DOM
+  var customItems = [];
+  var i = 0;
+  while (true) {
+    var labelEl = document.getElementById('assumption-custom-label-' + i);
+    var amountEl = document.getElementById('assumption-custom-amount-' + i);
+    if (!labelEl && !amountEl) break;
+    customItems.push({
+      label: labelEl ? labelEl.value.trim() : '',
+      monthly: amountEl ? parseFloat(amountEl.value) || 0 : 0
+    });
+    i++;
+  }
+  if (customItems.length > 0 || (a.opex_custom_items && a.opex_custom_items.length > 0)) {
+    a.opex_custom_items = customItems;
+  }
+  window._rfpState.assumptions = a;
+  return a;
+}
+
 // Custom assumption line items management
 function rfpAddCustomAssumption() {
-  var a = window._rfpState.assumptions || {};
+  var a = rfpReadAssumptionsFromForm();
   if (!a.opex_custom_items) a.opex_custom_items = [];
   a.opex_custom_items.push({ label: '', monthly: 0 });
   window._rfpState.assumptions = a;
@@ -9181,7 +9217,7 @@ function rfpAddCustomAssumption() {
 }
 
 function rfpRemoveCustomAssumption(index) {
-  var a = window._rfpState.assumptions || {};
+  var a = rfpReadAssumptionsFromForm();
   if (!a.opex_custom_items) return;
   a.opex_custom_items.splice(index, 1);
   window._rfpState.assumptions = a;
