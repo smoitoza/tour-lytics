@@ -8,6 +8,10 @@
 <!-- Leaflet CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
+<!-- Document parsing: mammoth.js for .docx, pdf.js for .pdf -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
 <!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -419,7 +423,7 @@ body {
   word-break: break-word;
 }
 
-/* Tooltip — wider variant for material terms */
+/* Tooltip - wider variant for material terms */
 .building-tooltip.wide {
   min-width: 380px;
   max-width: 460px;
@@ -3725,6 +3729,571 @@ body {
       font-weight: 600;
     }
 
+    /* ===== RFP / LOI ANALYSIS UI ===== */
+
+    /* Top action bar */
+    .rfp-top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+      margin-bottom: var(--space-4);
+      flex-wrap: wrap;
+    }
+    .rfp-top-bar-left {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      flex-wrap: wrap;
+    }
+    .rfp-btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: 10px 20px;
+      background: var(--color-primary);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-md);
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+      font-weight: 600;
+      cursor: pointer;
+      transition: background var(--transition);
+      white-space: nowrap;
+    }
+    .rfp-btn-primary:hover { background: var(--color-primary-hover); }
+    .rfp-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .rfp-btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: 8px 16px;
+      background: var(--color-surface);
+      color: var(--color-text);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+      white-space: nowrap;
+    }
+    .rfp-btn-secondary:hover { border-color: var(--color-primary); color: var(--color-primary); }
+    .rfp-btn-secondary.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+    .rfp-btn-danger {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: 6px 14px;
+      background: none;
+      color: #dc2626;
+      border: 1px solid #fca5a5;
+      border-radius: var(--radius-md);
+      font-family: var(--font-body);
+      font-size: var(--text-xs);
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .rfp-btn-danger:hover { background: #fef2f2; border-color: #dc2626; }
+    .rfp-btn-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      color: var(--color-text-muted);
+      transition: all var(--transition);
+    }
+    .rfp-btn-icon:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
+    /* Empty state */
+    .rfp-empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: var(--space-8) var(--space-4);
+      min-height: 400px;
+    }
+    .rfp-empty-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: rgba(244, 121, 32, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: var(--space-4);
+    }
+    .rfp-empty-icon svg { width: 36px; height: 36px; color: var(--color-primary); }
+    .rfp-empty-title {
+      font-family: var(--font-display);
+      font-size: var(--text-lg);
+      font-weight: 700;
+      color: var(--color-text);
+      margin-bottom: var(--space-2);
+    }
+    .rfp-empty-desc {
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-6);
+      max-width: 400px;
+    }
+
+    /* Modal overlay */
+    .rfp-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.5);
+      padding: var(--space-4);
+    }
+    .rfp-modal-inner {
+      background: var(--color-surface);
+      border-radius: var(--radius-xl);
+      padding: var(--space-6);
+      max-width: 560px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+    }
+    .rfp-modal-title {
+      font-family: var(--font-display);
+      font-size: var(--text-lg);
+      font-weight: 700;
+      color: var(--color-text);
+      margin-bottom: var(--space-4);
+    }
+    .rfp-modal-close {
+      position: absolute;
+      top: var(--space-4);
+      right: var(--space-4);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--color-text-muted);
+      padding: 4px;
+      border-radius: var(--radius-sm);
+      transition: color var(--transition);
+    }
+    .rfp-modal-close:hover { color: var(--color-text); }
+
+    /* Steps */
+    .rfp-step { margin-bottom: var(--space-5); }
+    .rfp-step-label {
+      display: block;
+      font-size: var(--text-xs);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-2);
+    }
+    .rfp-select, .rfp-input, .rfp-textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+      color: var(--color-text);
+      background: var(--color-surface);
+      transition: border-color var(--transition);
+    }
+    .rfp-select:focus, .rfp-input:focus, .rfp-textarea:focus {
+      outline: none;
+      border-color: var(--color-primary);
+    }
+    .rfp-textarea { resize: vertical; min-height: 100px; }
+
+    /* File drop zone */
+    .rfp-drop-zone {
+      border: 2px dashed var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-8) var(--space-4);
+      text-align: center;
+      cursor: pointer;
+      background: var(--color-surface-2);
+      transition: border-color 200ms ease, background 200ms ease;
+    }
+    .rfp-drop-zone:hover, .rfp-drop-zone.dragover {
+      border-color: var(--color-primary);
+      background: #fff7ed;
+    }
+    .rfp-drop-zone svg { width: 32px; height: 32px; color: var(--color-text-faint); margin-bottom: var(--space-2); }
+    .rfp-drop-zone p { font-size: var(--text-sm); color: var(--color-text-muted); margin-bottom: var(--space-1); }
+    .rfp-drop-zone .small { font-size: var(--text-xs); color: var(--color-text-faint); }
+    .rfp-drop-file-name {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: 8px 12px;
+      background: rgba(244, 121, 32, 0.06);
+      border-radius: var(--radius-md);
+      font-size: var(--text-sm);
+      color: var(--color-text);
+      margin-top: var(--space-3);
+    }
+    .rfp-drop-file-name button {
+      margin-left: auto;
+      background: none;
+      border: none;
+      color: var(--color-text-muted);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 0 4px;
+    }
+
+    /* Toggle group (RFP / LOI) */
+    .rfp-toggle-group {
+      display: inline-flex;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .rfp-toggle-btn {
+      padding: 8px 20px;
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      border: none;
+      background: var(--color-surface);
+      color: var(--color-text-muted);
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .rfp-toggle-btn.active {
+      background: var(--color-primary);
+      color: #fff;
+    }
+    .rfp-toggle-btn:not(.active):hover { background: var(--color-surface-2); }
+
+    /* Modal actions row */
+    .rfp-modal-actions {
+      display: flex;
+      gap: var(--space-3);
+      justify-content: flex-end;
+      margin-top: var(--space-5);
+      padding-top: var(--space-4);
+      border-top: 1px solid var(--color-divider);
+    }
+    .rfp-modal-cancel {
+      padding: 10px 20px;
+      background: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--color-text-muted);
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .rfp-modal-cancel:hover { color: var(--color-text); border-color: var(--color-text-muted); }
+
+    /* Loading / status */
+    .rfp-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-8);
+      text-align: center;
+    }
+    .rfp-spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid var(--color-border);
+      border-top-color: var(--color-primary);
+      border-radius: 50%;
+      animation: rfp-spin 0.8s linear infinite;
+      margin-bottom: var(--space-3);
+    }
+    @keyframes rfp-spin { to { transform: rotate(360deg); } }
+    .rfp-loading-text { font-size: var(--text-sm); color: var(--color-text-muted); }
+
+    /* Review form (deal terms edit) */
+    .rfp-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-3) var(--space-4);
+    }
+    .rfp-form-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+    .rfp-form-group.full-width {
+      grid-column: 1 / -1;
+    }
+    .rfp-form-label {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .rfp-form-input {
+      padding: 8px 12px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+      color: var(--color-text);
+      background: var(--color-surface);
+      transition: border-color var(--transition);
+    }
+    .rfp-form-input:focus { outline: none; border-color: var(--color-primary); }
+
+    /* Building cards grid */
+    .rfp-building-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: var(--space-4);
+      margin-bottom: var(--space-4);
+    }
+    .rfp-building-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+      cursor: pointer;
+      transition: all var(--transition);
+      position: relative;
+    }
+    .rfp-building-card:hover { border-color: var(--color-primary); box-shadow: var(--shadow-md); }
+    .rfp-building-card.active {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 2px rgba(244, 121, 32, 0.2);
+    }
+    .rfp-building-card-addr {
+      font-family: var(--font-display);
+      font-size: var(--text-base);
+      font-weight: 700;
+      color: var(--color-text);
+      margin-bottom: var(--space-1);
+    }
+    .rfp-building-card-meta {
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-3);
+    }
+    .rfp-building-card-stats {
+      display: flex;
+      gap: var(--space-4);
+    }
+    .rfp-building-card-stat {
+      display: flex;
+      flex-direction: column;
+    }
+    .rfp-building-card-stat-val {
+      font-size: var(--text-base);
+      font-weight: 700;
+      color: var(--color-text);
+      font-variant-numeric: tabular-nums;
+    }
+    .rfp-building-card-stat-label {
+      font-size: var(--text-xs);
+      color: var(--color-text-faint);
+    }
+    .rfp-building-card-badge {
+      position: absolute;
+      top: var(--space-3);
+      right: var(--space-3);
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .rfp-building-card-badge.rfp { background: rgba(244, 121, 32, 0.1); color: var(--color-primary-dark); }
+    .rfp-building-card-badge.loi { background: rgba(37, 99, 235, 0.1); color: var(--color-accent-blue); }
+
+    /* Summary metrics bar */
+    .rfp-summary-metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: var(--space-3);
+      margin-bottom: var(--space-4);
+      padding: var(--space-4);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+    }
+    .rfp-metric {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .rfp-metric-value {
+      font-size: var(--text-lg);
+      font-weight: 700;
+      color: var(--color-text);
+      font-variant-numeric: tabular-nums;
+    }
+    .rfp-metric-label {
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+    }
+
+    /* Version selector */
+    .rfp-version-bar {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-bottom: var(--space-4);
+      padding: var(--space-3) var(--space-4);
+      background: var(--color-surface-2);
+      border-radius: var(--radius-lg);
+      flex-wrap: wrap;
+    }
+    .rfp-version-bar-label {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .rfp-version-chip {
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: var(--text-xs);
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--color-border);
+      background: var(--color-surface);
+      color: var(--color-text-muted);
+      transition: all var(--transition);
+    }
+    .rfp-version-chip:hover { border-color: var(--color-primary); color: var(--color-primary); }
+    .rfp-version-chip.active {
+      background: var(--color-primary);
+      color: #fff;
+      border-color: var(--color-primary);
+    }
+
+    /* Comparison table enhancements */
+    .rfp-comparison-table { width: 100%; }
+    .rfp-comparison-table .cell-best { color: #059669; font-weight: 700; background: rgba(5, 150, 105, 0.06); }
+    .rfp-comparison-table .cell-worst { color: #dc2626; font-weight: 600; background: rgba(220, 38, 38, 0.04); }
+
+    /* Detail panel */
+    .rfp-detail-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-3);
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+    .rfp-detail-title {
+      font-family: var(--font-display);
+      font-size: var(--text-lg);
+      font-weight: 700;
+      color: var(--color-text);
+    }
+    .rfp-detail-subtitle {
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-4);
+    }
+
+    /* Deal terms display table */
+    .rfp-terms-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: var(--color-surface);
+    }
+    .rfp-terms-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--color-divider);
+      font-size: var(--text-sm);
+    }
+    .rfp-terms-row:nth-child(odd) { background: var(--color-surface); }
+    .rfp-terms-row:nth-child(even) { background: var(--color-surface-2); }
+    .rfp-terms-key {
+      font-weight: 500;
+      color: var(--color-text-muted);
+    }
+    .rfp-terms-val {
+      font-weight: 600;
+      color: var(--color-text);
+      text-align: right;
+    }
+
+    /* View toggle for dashboard vs comparison */
+    .rfp-view-toggle {
+      display: inline-flex;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .rfp-view-toggle-btn {
+      padding: 6px 14px;
+      font-family: var(--font-body);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      border: none;
+      background: var(--color-surface);
+      color: var(--color-text-muted);
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .rfp-view-toggle-btn.active {
+      background: var(--color-primary);
+      color: #fff;
+    }
+    .rfp-view-toggle-btn:not(.active):hover { background: var(--color-surface-2); }
+
+    /* Error message */
+    .rfp-error {
+      padding: var(--space-3) var(--space-4);
+      background: #fef2f2;
+      border: 1px solid #fca5a5;
+      border-radius: var(--radius-md);
+      color: #dc2626;
+      font-size: var(--text-sm);
+      margin-bottom: var(--space-4);
+    }
+
+    /* Mobile for RFP */
+    @media (max-width: 768px) {
+      .rfp-building-cards { grid-template-columns: 1fr; }
+      .rfp-form { grid-template-columns: 1fr; }
+      .rfp-terms-grid { grid-template-columns: 1fr; }
+      .rfp-top-bar { flex-direction: column; align-items: stretch; }
+      .rfp-top-bar-left { flex-direction: column; }
+      .rfp-summary-metrics { grid-template-columns: repeat(2, 1fr); }
+      .rfp-modal-inner { padding: var(--space-4); max-width: 100%; }
+      .rfp-version-bar { flex-direction: column; align-items: flex-start; }
+    }
+    @media (max-width: 500px) {
+      .rfp-summary-metrics { grid-template-columns: 1fr; }
+      .rfp-building-card-stats { flex-direction: column; gap: var(--space-2); }
+    }
+
     @media (max-width: 768px) {
       .financials-view { padding: var(--space-2); }
       .fin-table { font-size: 0.72rem; }
@@ -4284,292 +4853,11 @@ body {
 
 <div class="tab-content" id="tab-financials">
 
-<div class="financials-view">
-  <div class="fin-sheet-tabs">
-    <button class="fin-sheet-tab active" onclick="switchFinSheet('assumptions')" data-sheet="assumptions">Assumptions</button>
-<button class="fin-sheet-tab" onclick="switchFinSheet('monthly-cash-flow')" data-sheet="monthly-cash-flow">Monthly Cash Flow</button>
-<button class="fin-sheet-tab" onclick="switchFinSheet('annual-summary')" data-sheet="annual-summary">Annual Summary</button>
-<button class="fin-sheet-tab" onclick="switchFinSheet('comparison')" data-sheet="comparison">Comparison</button>
-
-  </div>
-  
-    <div class="fin-sheet-content active" id="fin-assumptions">
-      <div class="fin-sheet-title">250 Brannan Street - Sublease Financial Model (Procore Counter #3)</div>
-      <div class="fin-sheet-subtitle">Procore Technologies, Inc. | Portion of 3rd Floor (Sublease from Splunk Inc.)</div>
-      <div class="fin-table-wrap">
-        <table class="fin-table">
-          <tbody>
-            <tr class="row-empty"><td colspan="9"></td></tr>
-<tr class="row-section"><td class="cell-label" colspan="4">KEY ASSUMPTIONS</td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr><th class="cell-label">Premises (RSF)</th><th>16000</th><th></th><th class="cell-note">Partial 3rd floor, Suite 3B</th><th></th><th>OPERATIONAL EXPENSES</th><th></th><th></th><th></th></tr>
-<tr class="row-bold"><td class="cell-label">Lease Term (months)</td><td>63</td><td></td><td class="cell-note">June 2026 through Aug 2031</td><td></td><td class="cell-note">Food & Beverage (monthly)</td><td class="cell-currency">$30,000</td><td></td><td class="cell-note">Catering, kitchen, snacks</td></tr>
-<tr class="row-bold"><td class="cell-label">Commencement Date (est.)</td><td>June 1, 2026</td><td></td><td class="cell-note">May 15 delivery + 2 weeks early access</td><td></td><td class="cell-note">Workplace Experience (monthly)</td><td class="cell-currency">$10,000</td><td></td><td class="cell-note">WPE headcount/staffing</td></tr>
-<tr class="row-bold"><td class="cell-label">Expiration Date</td><td>August 31, 2031</td><td></td><td></td><td></td><td class="cell-note">General Maintenance/Security (monthly)</td><td class="cell-currency">$10,000</td><td></td><td class="cell-note">Maintenance, security, misc</td></tr>
-<tr class="row-bold"><td class="cell-label">Base Rent ($/RSF/yr)</td><td class="cell-currency">$43</td><td></td><td class="cell-note">$43.00/RSF Modified Gross, net of janitorial</td><td></td><td>Total Monthly OpEx</td><td class="cell-currency">$50,000</td><td></td><td></td></tr>
-<tr class="row-bold"><td class="cell-label">Rent Basis</td><td>Modified Gross (net of janitor)</td><td></td><td class="cell-note">Includes pro-rata utilities, OpEx, taxes</td><td></td><td>Annual OpEx</td><td class="cell-currency">$600,000</td><td></td><td></td></tr>
-<tr class="row-bold"><td class="cell-label">Annual Escalation</td><td class="cell-pct">3.0%</td><td></td><td>3% annual increases</td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr class="row-bold"><td class="cell-label">Free Rent (months)</td><td>5</td><td></td><td class="cell-note">Rent commencement Nov 1, 2026 (5 mo free)</td><td></td><td>PARKING</td><td></td><td></td><td></td></tr>
-<tr class="row-bold"><td class="cell-label">TI Allowance</td><td>None</td><td></td><td class="cell-note">Delivered as-is with existing FF&E</td><td></td><td>Parking Spots</td><td>5</td><td></td><td></td></tr>
-<tr class="row-bold"><td class="cell-label">Parking</td><td>5 spots @ $437/mo</td><td></td><td class="cell-note">3% annual escalation, starting June 2027</td><td></td><td class="cell-note">Monthly Rate (per spot)</td><td class="cell-currency">$437</td><td></td><td></td></tr>
-<tr class="row-bold"><td class="cell-label">Security Deposit</td><td>TBD</td><td></td><td class="cell-note">Subject to financial review</td><td></td><td>Annual Escalation</td><td class="cell-pct">3.0%</td><td></td><td></td></tr>
-<tr class="row-bold"><td class="cell-label">Sublandlord</td><td>Splunk Inc.</td><td></td><td>Delaware Corporation</td><td></td><td class="cell-note">Monthly Parking Cost (Yr 1)</td><td class="cell-currency">$2,185</td><td></td><td></td></tr>
-<tr class="row-bold"><td class="cell-label">Master Landlord</td><td>Brannan Propco, LLC</td><td></td><td>Consent required</td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr class="row-bold"><td class="cell-label">FF&E</td><td>$1 purchase option at term end</td><td></td><td class="cell-note">Free to use during term</td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr class="row-empty"><td colspan="9"></td></tr>
-<tr class="row-bold"><td class="cell-label" colspan="4">CALCULATED METRICS (formulas reference inputs above)</td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">Annual Base Rent (Year 1)</td><td class="cell-currency">$688,000</td><td></td><td>RSF x Rent/RSF</td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">Monthly Base Rent (Year 1)</td><td class="cell-currency">$57,333</td><td></td><td>Annual / 12</td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">Free Rent Value</td><td class="cell-currency">$286,667</td><td></td><td class="cell-note">Monthly rent x free months</td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr class="row-bold"><td class="cell-label">Total Gross Rent (63 months)</td><td></td><td></td><td class="cell-note">See Monthly Cash Flow total</td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr class="row-bold"><td class="cell-label">Effective Rent After Concessions</td><td></td><td></td><td>See Annual Summary</td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr class="row-empty"><td colspan="9"></td></tr>
-<tr class="row-section"><td class="cell-label" colspan="4">KEY DEAL TERMS</td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr class="row-bold"><td class="cell-label">Item</td><td>Terms</td><td>Notes</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">Structure</td><td>Sublease from Splunk Inc.</td><td>Master LL consent required (Brannan Propco)</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">Delivery</td><td>May 15, 2026 (estimated)</td><td>2 weeks early access, no rent</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">FF&E</td><td>Free during term</td><td>$1 Bill of Sale at expiration</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">Rent Basis</td><td>Modified Gross, net of janitor</td><td>Includes pro-rata utilities, OpEx, taxes</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">Alterations</td><td>Subject to LL + SLL approval</td><td>Restoration for Subtenant improvements</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">Assignment/Sublease</td><td>Subject to LL consent</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">Parking</td><td>5 spots @ $437/mo</td><td>3% annual escalation, starts June 2027</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">Signage</td><td>Building standard</td><td>Lobby directory + floor lobby</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">Access</td><td>24/7/365</td><td>Card readers + elevator key-card access</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">Early Access</td><td>2 weeks pre-commencement</td><td>No rent, for FF&E install</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr class="row-empty"><td colspan="9"></td></tr>
-<tr class="row-empty"><td colspan="9"></td></tr>
-<tr class="row-section"><td class="cell-label">SHEET NAVIGATION</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">Monthly Cash Flow</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">Annual Summary</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">Comparison</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr class="row-empty"><td colspan="9"></td></tr>
-<tr><td class="cell-label">Source: Splunk Counter-Proposal dated March 10, 2026 | Via JLL (Travis James & Teva Myatt)</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">Model generated: 2026-03-10</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-    
-    <div class="fin-sheet-content" id="fin-monthly-cash-flow">
-      <div class="fin-sheet-title">250 Brannan Street - Monthly Cash Flow Schedule (Procore Counter #3)</div>
-      <div class="fin-sheet-subtitle">Procore Technologies, Inc. | 16,000 RSF | 63-Month Term | $43/RSF | 5 Mo Free</div>
-      <div class="fin-table-wrap">
-        <table class="fin-table">
-          <tbody>
-            <tr class="row-empty"><td colspan="10"></td></tr>
-<tr><th class="cell-label">Month #</th><th>Period</th><th>Lease Yr</th><th>Rent $/RSF</th><th>Monthly Base Rent</th><th>Free Rent Credit</th><th>Net Cash Rent</th><th>Cumulative Cash</th><th></th><th></th></tr>
-<tr><td class="cell-label">1</td><td>Jun 2026</td><td>1</td><td class="cell-currency">$43</td><td class="cell-currency">$57,333</td><td class="cell-currency cell-neg">($57,333)</td><td class="cell-currency">$0.00</td><td class="cell-currency">$0.00</td><td></td><td></td></tr>
-<tr><td class="cell-label">2</td><td>Jul 2026</td><td>1</td><td class="cell-currency">$43</td><td class="cell-currency">$57,333</td><td class="cell-currency cell-neg">($57,333)</td><td class="cell-currency">$0.00</td><td class="cell-currency">$0.00</td><td></td><td></td></tr>
-<tr><td class="cell-label">3</td><td>Aug 2026</td><td>1</td><td class="cell-currency">$43</td><td class="cell-currency">$57,333</td><td class="cell-currency cell-neg">($57,333)</td><td class="cell-currency">$0.00</td><td class="cell-currency">$0.00</td><td></td><td></td></tr>
-<tr><td class="cell-label">4</td><td>Sep 2026</td><td>1</td><td class="cell-currency">$43</td><td class="cell-currency">$57,333</td><td class="cell-currency cell-neg">($57,333)</td><td class="cell-currency">$0.00</td><td class="cell-currency">$0.00</td><td></td><td></td></tr>
-<tr><td class="cell-label">5</td><td>Oct 2026</td><td>1</td><td class="cell-currency">$43</td><td class="cell-currency">$57,333</td><td class="cell-currency cell-neg">($57,333)</td><td class="cell-currency">$0.00</td><td class="cell-currency">$0.00</td><td></td><td></td></tr>
-<tr><td class="cell-label">6</td><td>Nov 2026</td><td>1</td><td class="cell-currency">$43</td><td class="cell-currency">$57,333</td><td class="cell-currency">$0.00</td><td class="cell-currency">$57,333</td><td class="cell-currency">$57,333</td><td></td><td></td></tr>
-<tr><td class="cell-label">7</td><td>Dec 2026</td><td>1</td><td class="cell-currency">$43</td><td class="cell-currency">$57,333</td><td class="cell-currency">$0.00</td><td class="cell-currency">$57,333</td><td class="cell-currency">$114,667</td><td></td><td></td></tr>
-<tr><td class="cell-label">8</td><td>Jan 2027</td><td>1</td><td class="cell-currency">$43</td><td class="cell-currency">$57,333</td><td class="cell-currency">$0.00</td><td class="cell-currency">$57,333</td><td class="cell-currency">$172,000</td><td></td><td></td></tr>
-<tr><td class="cell-label">9</td><td>Feb 2027</td><td>1</td><td class="cell-currency">$43</td><td class="cell-currency">$57,333</td><td class="cell-currency">$0.00</td><td class="cell-currency">$57,333</td><td class="cell-currency">$229,333</td><td></td><td></td></tr>
-<tr><td class="cell-label">10</td><td>Mar 2027</td><td>1</td><td class="cell-currency">$43</td><td class="cell-currency">$57,333</td><td class="cell-currency">$0.00</td><td class="cell-currency">$57,333</td><td class="cell-currency">$286,667</td><td></td><td></td></tr>
-<tr><td class="cell-label">11</td><td>Apr 2027</td><td>1</td><td class="cell-currency">$43</td><td class="cell-currency">$57,333</td><td class="cell-currency">$0.00</td><td class="cell-currency">$57,333</td><td class="cell-currency">$344,000</td><td></td><td></td></tr>
-<tr><td class="cell-label">12</td><td>May 2027</td><td>1</td><td class="cell-currency">$43</td><td class="cell-currency">$57,333</td><td class="cell-currency">$0.00</td><td class="cell-currency">$57,333</td><td class="cell-currency">$401,333</td><td></td><td></td></tr>
-<tr><td class="cell-label">13</td><td>Jun 2027</td><td>2</td><td class="cell-currency">$44</td><td class="cell-currency">$59,053</td><td class="cell-currency">$0.00</td><td class="cell-currency">$59,053</td><td class="cell-currency">$460,387</td><td></td><td></td></tr>
-<tr><td class="cell-label">14</td><td>Jul 2027</td><td>2</td><td class="cell-currency">$44</td><td class="cell-currency">$59,053</td><td class="cell-currency">$0.00</td><td class="cell-currency">$59,053</td><td class="cell-currency">$519,440</td><td></td><td></td></tr>
-<tr><td class="cell-label">15</td><td>Aug 2027</td><td>2</td><td class="cell-currency">$44</td><td class="cell-currency">$59,053</td><td class="cell-currency">$0.00</td><td class="cell-currency">$59,053</td><td class="cell-currency">$578,493</td><td></td><td></td></tr>
-<tr><td class="cell-label">16</td><td>Sep 2027</td><td>2</td><td class="cell-currency">$44</td><td class="cell-currency">$59,053</td><td class="cell-currency">$0.00</td><td class="cell-currency">$59,053</td><td class="cell-currency">$637,547</td><td></td><td></td></tr>
-<tr><td class="cell-label">17</td><td>Oct 2027</td><td>2</td><td class="cell-currency">$44</td><td class="cell-currency">$59,053</td><td class="cell-currency">$0.00</td><td class="cell-currency">$59,053</td><td class="cell-currency">$696,600</td><td></td><td></td></tr>
-<tr><td class="cell-label">18</td><td>Nov 2027</td><td>2</td><td class="cell-currency">$44</td><td class="cell-currency">$59,053</td><td class="cell-currency">$0.00</td><td class="cell-currency">$59,053</td><td class="cell-currency">$755,653</td><td></td><td></td></tr>
-<tr><td class="cell-label">19</td><td>Dec 2027</td><td>2</td><td class="cell-currency">$44</td><td class="cell-currency">$59,053</td><td class="cell-currency">$0.00</td><td class="cell-currency">$59,053</td><td class="cell-currency">$814,707</td><td></td><td></td></tr>
-<tr><td class="cell-label">20</td><td>Jan 2028</td><td>2</td><td class="cell-currency">$44</td><td class="cell-currency">$59,053</td><td class="cell-currency">$0.00</td><td class="cell-currency">$59,053</td><td class="cell-currency">$873,760</td><td></td><td></td></tr>
-<tr><td class="cell-label">21</td><td>Feb 2028</td><td>2</td><td class="cell-currency">$44</td><td class="cell-currency">$59,053</td><td class="cell-currency">$0.00</td><td class="cell-currency">$59,053</td><td class="cell-currency">$932,813</td><td></td><td></td></tr>
-<tr><td class="cell-label">22</td><td>Mar 2028</td><td>2</td><td class="cell-currency">$44</td><td class="cell-currency">$59,053</td><td class="cell-currency">$0.00</td><td class="cell-currency">$59,053</td><td class="cell-currency">$991,867</td><td></td><td></td></tr>
-<tr><td class="cell-label">23</td><td>Apr 2028</td><td>2</td><td class="cell-currency">$44</td><td class="cell-currency">$59,053</td><td class="cell-currency">$0.00</td><td class="cell-currency">$59,053</td><td class="cell-currency">$1,050,920</td><td></td><td></td></tr>
-<tr><td class="cell-label">24</td><td>May 2028</td><td>2</td><td class="cell-currency">$44</td><td class="cell-currency">$59,053</td><td class="cell-currency">$0.00</td><td class="cell-currency">$59,053</td><td class="cell-currency">$1,109,973</td><td></td><td></td></tr>
-<tr><td class="cell-label">25</td><td>Jun 2028</td><td>3</td><td class="cell-currency">$46</td><td class="cell-currency">$60,825</td><td class="cell-currency">$0.00</td><td class="cell-currency">$60,825</td><td class="cell-currency">$1,170,798</td><td></td><td></td></tr>
-<tr><td class="cell-label">26</td><td>Jul 2028</td><td>3</td><td class="cell-currency">$46</td><td class="cell-currency">$60,825</td><td class="cell-currency">$0.00</td><td class="cell-currency">$60,825</td><td class="cell-currency">$1,231,623</td><td></td><td></td></tr>
-<tr><td class="cell-label">27</td><td>Aug 2028</td><td>3</td><td class="cell-currency">$46</td><td class="cell-currency">$60,825</td><td class="cell-currency">$0.00</td><td class="cell-currency">$60,825</td><td class="cell-currency">$1,292,448</td><td></td><td></td></tr>
-<tr><td class="cell-label">28</td><td>Sep 2028</td><td>3</td><td class="cell-currency">$46</td><td class="cell-currency">$60,825</td><td class="cell-currency">$0.00</td><td class="cell-currency">$60,825</td><td class="cell-currency">$1,353,273</td><td></td><td></td></tr>
-<tr><td class="cell-label">29</td><td>Oct 2028</td><td>3</td><td class="cell-currency">$46</td><td class="cell-currency">$60,825</td><td class="cell-currency">$0.00</td><td class="cell-currency">$60,825</td><td class="cell-currency">$1,414,098</td><td></td><td></td></tr>
-<tr><td class="cell-label">30</td><td>Nov 2028</td><td>3</td><td class="cell-currency">$46</td><td class="cell-currency">$60,825</td><td class="cell-currency">$0.00</td><td class="cell-currency">$60,825</td><td class="cell-currency">$1,474,923</td><td></td><td></td></tr>
-<tr><td class="cell-label">31</td><td>Dec 2028</td><td>3</td><td class="cell-currency">$46</td><td class="cell-currency">$60,825</td><td class="cell-currency">$0.00</td><td class="cell-currency">$60,825</td><td class="cell-currency">$1,535,748</td><td></td><td></td></tr>
-<tr><td class="cell-label">32</td><td>Jan 2029</td><td>3</td><td class="cell-currency">$46</td><td class="cell-currency">$60,825</td><td class="cell-currency">$0.00</td><td class="cell-currency">$60,825</td><td class="cell-currency">$1,596,573</td><td></td><td></td></tr>
-<tr><td class="cell-label">33</td><td>Feb 2029</td><td>3</td><td class="cell-currency">$46</td><td class="cell-currency">$60,825</td><td class="cell-currency">$0.00</td><td class="cell-currency">$60,825</td><td class="cell-currency">$1,657,398</td><td></td><td></td></tr>
-<tr><td class="cell-label">34</td><td>Mar 2029</td><td>3</td><td class="cell-currency">$46</td><td class="cell-currency">$60,825</td><td class="cell-currency">$0.00</td><td class="cell-currency">$60,825</td><td class="cell-currency">$1,718,223</td><td></td><td></td></tr>
-<tr><td class="cell-label">35</td><td>Apr 2029</td><td>3</td><td class="cell-currency">$46</td><td class="cell-currency">$60,825</td><td class="cell-currency">$0.00</td><td class="cell-currency">$60,825</td><td class="cell-currency">$1,779,048</td><td></td><td></td></tr>
-<tr><td class="cell-label">36</td><td>May 2029</td><td>3</td><td class="cell-currency">$46</td><td class="cell-currency">$60,825</td><td class="cell-currency">$0.00</td><td class="cell-currency">$60,825</td><td class="cell-currency">$1,839,873</td><td></td><td></td></tr>
-<tr><td class="cell-label">37</td><td>Jun 2029</td><td>4</td><td class="cell-currency">$47</td><td class="cell-currency">$62,650</td><td class="cell-currency">$0.00</td><td class="cell-currency">$62,650</td><td class="cell-currency">$1,902,522</td><td></td><td></td></tr>
-<tr><td class="cell-label">38</td><td>Jul 2029</td><td>4</td><td class="cell-currency">$47</td><td class="cell-currency">$62,650</td><td class="cell-currency">$0.00</td><td class="cell-currency">$62,650</td><td class="cell-currency">$1,965,172</td><td></td><td></td></tr>
-<tr><td class="cell-label">39</td><td>Aug 2029</td><td>4</td><td class="cell-currency">$47</td><td class="cell-currency">$62,650</td><td class="cell-currency">$0.00</td><td class="cell-currency">$62,650</td><td class="cell-currency">$2,027,822</td><td></td><td></td></tr>
-<tr><td class="cell-label">40</td><td>Sep 2029</td><td>4</td><td class="cell-currency">$47</td><td class="cell-currency">$62,650</td><td class="cell-currency">$0.00</td><td class="cell-currency">$62,650</td><td class="cell-currency">$2,090,471</td><td></td><td></td></tr>
-<tr><td class="cell-label">41</td><td>Oct 2029</td><td>4</td><td class="cell-currency">$47</td><td class="cell-currency">$62,650</td><td class="cell-currency">$0.00</td><td class="cell-currency">$62,650</td><td class="cell-currency">$2,153,121</td><td></td><td></td></tr>
-<tr><td class="cell-label">42</td><td>Nov 2029</td><td>4</td><td class="cell-currency">$47</td><td class="cell-currency">$62,650</td><td class="cell-currency">$0.00</td><td class="cell-currency">$62,650</td><td class="cell-currency">$2,215,771</td><td></td><td></td></tr>
-<tr><td class="cell-label">43</td><td>Dec 2029</td><td>4</td><td class="cell-currency">$47</td><td class="cell-currency">$62,650</td><td class="cell-currency">$0.00</td><td class="cell-currency">$62,650</td><td class="cell-currency">$2,278,420</td><td></td><td></td></tr>
-<tr><td class="cell-label">44</td><td>Jan 2030</td><td>4</td><td class="cell-currency">$47</td><td class="cell-currency">$62,650</td><td class="cell-currency">$0.00</td><td class="cell-currency">$62,650</td><td class="cell-currency">$2,341,070</td><td></td><td></td></tr>
-<tr><td class="cell-label">45</td><td>Feb 2030</td><td>4</td><td class="cell-currency">$47</td><td class="cell-currency">$62,650</td><td class="cell-currency">$0.00</td><td class="cell-currency">$62,650</td><td class="cell-currency">$2,403,720</td><td></td><td></td></tr>
-<tr><td class="cell-label">46</td><td>Mar 2030</td><td>4</td><td class="cell-currency">$47</td><td class="cell-currency">$62,650</td><td class="cell-currency">$0.00</td><td class="cell-currency">$62,650</td><td class="cell-currency">$2,466,369</td><td></td><td></td></tr>
-<tr><td class="cell-label">47</td><td>Apr 2030</td><td>4</td><td class="cell-currency">$47</td><td class="cell-currency">$62,650</td><td class="cell-currency">$0.00</td><td class="cell-currency">$62,650</td><td class="cell-currency">$2,529,019</td><td></td><td></td></tr>
-<tr><td class="cell-label">48</td><td>May 2030</td><td>4</td><td class="cell-currency">$47</td><td class="cell-currency">$62,650</td><td class="cell-currency">$0.00</td><td class="cell-currency">$62,650</td><td class="cell-currency">$2,591,669</td><td></td><td></td></tr>
-<tr><td class="cell-label">49</td><td>Jun 2030</td><td>5</td><td class="cell-currency">$48</td><td class="cell-currency">$64,529</td><td class="cell-currency">$0.00</td><td class="cell-currency">$64,529</td><td class="cell-currency">$2,656,198</td><td></td><td></td></tr>
-<tr><td class="cell-label">50</td><td>Jul 2030</td><td>5</td><td class="cell-currency">$48</td><td class="cell-currency">$64,529</td><td class="cell-currency">$0.00</td><td class="cell-currency">$64,529</td><td class="cell-currency">$2,720,727</td><td></td><td></td></tr>
-<tr><td class="cell-label">51</td><td>Aug 2030</td><td>5</td><td class="cell-currency">$48</td><td class="cell-currency">$64,529</td><td class="cell-currency">$0.00</td><td class="cell-currency">$64,529</td><td class="cell-currency">$2,785,256</td><td></td><td></td></tr>
-<tr><td class="cell-label">52</td><td>Sep 2030</td><td>5</td><td class="cell-currency">$48</td><td class="cell-currency">$64,529</td><td class="cell-currency">$0.00</td><td class="cell-currency">$64,529</td><td class="cell-currency">$2,849,785</td><td></td><td></td></tr>
-<tr><td class="cell-label">53</td><td>Oct 2030</td><td>5</td><td class="cell-currency">$48</td><td class="cell-currency">$64,529</td><td class="cell-currency">$0.00</td><td class="cell-currency">$64,529</td><td class="cell-currency">$2,914,315</td><td></td><td></td></tr>
-<tr><td class="cell-label">54</td><td>Nov 2030</td><td>5</td><td class="cell-currency">$48</td><td class="cell-currency">$64,529</td><td class="cell-currency">$0.00</td><td class="cell-currency">$64,529</td><td class="cell-currency">$2,978,844</td><td></td><td></td></tr>
-<tr><td class="cell-label">55</td><td>Dec 2030</td><td>5</td><td class="cell-currency">$48</td><td class="cell-currency">$64,529</td><td class="cell-currency">$0.00</td><td class="cell-currency">$64,529</td><td class="cell-currency">$3,043,373</td><td></td><td></td></tr>
-<tr><td class="cell-label">56</td><td>Jan 2031</td><td>5</td><td class="cell-currency">$48</td><td class="cell-currency">$64,529</td><td class="cell-currency">$0.00</td><td class="cell-currency">$64,529</td><td class="cell-currency">$3,107,902</td><td></td><td></td></tr>
-<tr><td class="cell-label">57</td><td>Feb 2031</td><td>5</td><td class="cell-currency">$48</td><td class="cell-currency">$64,529</td><td class="cell-currency">$0.00</td><td class="cell-currency">$64,529</td><td class="cell-currency">$3,172,431</td><td></td><td></td></tr>
-<tr><td class="cell-label">58</td><td>Mar 2031</td><td>5</td><td class="cell-currency">$48</td><td class="cell-currency">$64,529</td><td class="cell-currency">$0.00</td><td class="cell-currency">$64,529</td><td class="cell-currency">$3,236,960</td><td></td><td></td></tr>
-<tr><td class="cell-label">59</td><td>Apr 2031</td><td>5</td><td class="cell-currency">$48</td><td class="cell-currency">$64,529</td><td class="cell-currency">$0.00</td><td class="cell-currency">$64,529</td><td class="cell-currency">$3,301,490</td><td></td><td></td></tr>
-<tr><td class="cell-label">60</td><td>May 2031</td><td>5</td><td class="cell-currency">$48</td><td class="cell-currency">$64,529</td><td class="cell-currency">$0.00</td><td class="cell-currency">$64,529</td><td class="cell-currency">$3,366,019</td><td></td><td></td></tr>
-<tr><td class="cell-label">61</td><td>Jun 2031</td><td>6</td><td class="cell-currency">$50</td><td class="cell-currency">$66,465</td><td class="cell-currency">$0.00</td><td class="cell-currency">$66,465</td><td class="cell-currency">$3,432,484</td><td></td><td></td></tr>
-<tr><td class="cell-label">62</td><td>Jul 2031</td><td>6</td><td class="cell-currency">$50</td><td class="cell-currency">$66,465</td><td class="cell-currency">$0.00</td><td class="cell-currency">$66,465</td><td class="cell-currency">$3,498,949</td><td></td><td></td></tr>
-<tr><td class="cell-label">63</td><td>Aug 2031</td><td>6</td><td class="cell-currency">$50</td><td class="cell-currency">$66,465</td><td class="cell-currency">$0.00</td><td class="cell-currency">$66,465</td><td class="cell-currency">$3,565,414</td><td></td><td></td></tr>
-<tr class="row-bold"><td class="cell-label">TOTAL</td><td></td><td></td><td></td><td class="cell-currency">$3,852,081</td><td class="cell-currency cell-neg">($286,667)</td><td class="cell-currency">$3,565,414</td><td></td><td></td><td></td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-    
-    <div class="fin-sheet-content" id="fin-annual-summary">
-      <div class="fin-sheet-title">250 Brannan Street - Annual Cash Flow & Straight-Line P&L (Procore Counter #3)</div>
-      <div class="fin-sheet-subtitle">Procore Technologies, Inc. | 16,000 RSF | 63-Month Term | $43/RSF | 5 Mo Free</div>
-      <div class="fin-table-wrap">
-        <table class="fin-table">
-          <tbody>
-            <tr class="row-empty"><td colspan="8"></td></tr>
-<tr class="row-section"><td class="cell-label" colspan="8">SECTION A: CASH FLOW BY LEASE YEAR</td></tr>
-<tr><th class="cell-label"></th><th>Lease Yr 1</th><th>Lease Yr 2</th><th>Lease Yr 3</th><th>Lease Yr 4</th><th>Lease Yr 5</th><th>Lease Yr 6</th><th>Total</th></tr>
-<tr><td class="cell-label"></td><td>Jun 26-May 27</td><td>Jun 27-May 28</td><td>Jun 28-May 29</td><td>Jun 29-May 30</td><td>Jun 30-May 31</td><td>Jun 31-Aug 31</td><td></td></tr>
-<tr><td class="cell-label">Months in Period</td><td>12</td><td>12</td><td>12</td><td>12</td><td>12</td><td>3</td><td>63</td></tr>
-<tr><td class="cell-label">Base Rent ($/RSF/yr)</td><td class="cell-currency">$43</td><td class="cell-currency">$44</td><td class="cell-currency">$46</td><td class="cell-currency">$47</td><td class="cell-currency">$48</td><td class="cell-currency">$50</td><td></td></tr>
-<tr><td class="cell-label">Gross Base Rent</td><td class="cell-currency">$688,000</td><td class="cell-currency">$708,640</td><td class="cell-currency">$729,899</td><td class="cell-currency">$751,796</td><td class="cell-currency">$774,350</td><td class="cell-currency">$199,395</td><td class="cell-currency">$3,852,081</td></tr>
-<tr><td class="cell-label">Free Rent Concession</td><td class="cell-currency cell-neg">($286,667)</td><td class="cell-currency">$0.00</td><td class="cell-currency">$0.00</td><td class="cell-currency">$0.00</td><td class="cell-currency">$0.00</td><td class="cell-currency">$0.00</td><td class="cell-currency cell-neg">($286,667)</td></tr>
-<tr class="row-bold"><td class="cell-label">Net Cash Rent Paid</td><td class="cell-currency">$401,333</td><td class="cell-currency">$708,640</td><td class="cell-currency">$729,899</td><td class="cell-currency">$751,796</td><td class="cell-currency">$774,350</td><td class="cell-currency">$199,395</td><td class="cell-currency">$3,565,414</td></tr>
-<tr class="row-bold"><td class="cell-label">Effective Rent ($/RSF/yr)</td><td class="cell-currency">$25</td><td class="cell-currency">$44</td><td class="cell-currency">$46</td><td class="cell-currency">$47</td><td class="cell-currency">$48</td><td class="cell-currency">$50</td><td class="cell-currency">$42</td></tr>
-<tr class="row-empty"><td colspan="8"></td></tr>
-<tr class="row-empty"><td colspan="8"></td></tr>
-<tr class="row-section"><td class="cell-label" colspan="8">SECTION B: STRAIGHT-LINE (GAAP) P&L EXPENSE BY LEASE YEAR</td></tr>
-<tr class="row-bold"><td class="cell-label"></td><td>Lease Yr 1</td><td>Lease Yr 2</td><td>Lease Yr 3</td><td>Lease Yr 4</td><td>Lease Yr 5</td><td>Lease Yr 6</td><td>Total</td></tr>
-<tr><td class="cell-label"></td><td>Jun 26-May 27</td><td>Jun 27-May 28</td><td>Jun 28-May 29</td><td>Jun 29-May 30</td><td>Jun 30-May 31</td><td>Jun 31-Aug 31</td><td></td></tr>
-<tr><td class="cell-label">Straight-Line Monthly Expense</td><td class="cell-currency">$56,594</td><td class="cell-currency">$56,594</td><td class="cell-currency">$56,594</td><td class="cell-currency">$56,594</td><td class="cell-currency">$56,594</td><td class="cell-currency">$56,594</td><td class="cell-currency">$56,594</td></tr>
-<tr><td class="cell-label">Months in Period</td><td>12</td><td>12</td><td>12</td><td>12</td><td>12</td><td>3</td><td>63</td></tr>
-<tr class="row-bold"><td class="cell-label">Straight-Line Annual Expense</td><td class="cell-currency">$679,126</td><td class="cell-currency">$679,126</td><td class="cell-currency">$679,126</td><td class="cell-currency">$679,126</td><td class="cell-currency">$679,126</td><td class="cell-currency">$169,782</td><td class="cell-currency">$3,565,414</td></tr>
-<tr><td class="cell-label">Cash Rent Paid</td><td class="cell-currency">$401,333</td><td class="cell-currency">$708,640</td><td class="cell-currency">$729,899</td><td class="cell-currency">$751,796</td><td class="cell-currency">$774,350</td><td class="cell-currency">$199,395</td><td class="cell-currency">$3,565,414</td></tr>
-<tr class="row-bold"><td class="cell-label">Deferred Rent (Liability)</td><td class="cell-currency">$277,793</td><td class="cell-currency cell-neg">($29,514)</td><td class="cell-currency cell-neg">($50,773)</td><td class="cell-currency cell-neg">($72,670)</td><td class="cell-currency cell-neg">($95,224)</td><td class="cell-currency cell-neg">($29,614)</td><td class="cell-currency">$0.00</td></tr>
-<tr class="row-bold"><td class="cell-label">Cumulative Deferred Rent</td><td class="cell-currency">$277,793</td><td class="cell-currency">$248,280</td><td class="cell-currency">$197,507</td><td class="cell-currency">$124,837</td><td class="cell-currency">$29,614</td><td class="cell-currency">$0.00</td><td class="cell-currency">$0.00</td></tr>
-<tr><td class="cell-label">Straight-Line Rent ($/RSF/yr)</td><td class="cell-currency">$42</td><td class="cell-currency">$42</td><td class="cell-currency">$42</td><td class="cell-currency">$42</td><td class="cell-currency">$42</td><td class="cell-currency">$42</td><td class="cell-currency">$42</td></tr>
-<tr class="row-empty"><td colspan="8"></td></tr>
-<tr class="row-empty"><td colspan="8"></td></tr>
-<tr class="row-section"><td class="cell-label" colspan="8">SECTION C: CALENDAR YEAR VIEW (Cash & Straight-Line)</td></tr>
-<tr class="row-bold"><td class="cell-label"></td><td>2026</td><td>2027</td><td>2028</td><td>2029</td><td>2030</td><td>2031</td><td>Total</td></tr>
-<tr><td class="cell-label">Months</td><td>7</td><td>12</td><td>12</td><td>12</td><td>12</td><td>8</td><td>63</td></tr>
-<tr><td class="cell-label">Gross Base Rent</td><td class="cell-currency">$401,333</td><td class="cell-currency">$700,040</td><td class="cell-currency">$721,041</td><td class="cell-currency">$742,672</td><td class="cell-currency">$764,953</td><td class="cell-currency">$522,041</td><td class="cell-currency">$3,852,081</td></tr>
-<tr><td class="cell-label">Free Rent Concession</td><td class="cell-currency cell-neg">($286,667)</td><td class="cell-currency">$0.00</td><td class="cell-currency">$0.00</td><td class="cell-currency">$0.00</td><td class="cell-currency">$0.00</td><td class="cell-currency">$0.00</td><td class="cell-currency cell-neg">($286,667)</td></tr>
-<tr class="row-bold"><td class="cell-label">Net Cash Rent</td><td class="cell-currency">$114,667</td><td class="cell-currency">$700,040</td><td class="cell-currency">$721,041</td><td class="cell-currency">$742,672</td><td class="cell-currency">$764,953</td><td class="cell-currency">$522,041</td><td class="cell-currency">$3,565,414</td></tr>
-<tr class="row-empty"><td colspan="8"></td></tr>
-<tr class="row-bold"><td class="cell-label">Straight-Line Expense</td><td class="cell-currency">$396,157</td><td class="cell-currency">$679,126</td><td class="cell-currency">$679,126</td><td class="cell-currency">$679,126</td><td class="cell-currency">$679,126</td><td class="cell-currency">$452,751</td><td class="cell-currency">$3,565,414</td></tr>
-<tr><td class="cell-label">Deferred Rent Adj.</td><td class="cell-currency">$281,490</td><td class="cell-currency cell-neg">($20,914)</td><td class="cell-currency cell-neg">($41,915)</td><td class="cell-currency cell-neg">($63,546)</td><td class="cell-currency cell-neg">($85,826)</td><td class="cell-currency cell-neg">($69,290)</td><td class="cell-currency">$0.00</td></tr>
-<tr class="row-empty"><td colspan="8"></td></tr>
-<tr class="row-empty"><td colspan="8"></td></tr>
-<tr class="row-section"><td class="cell-label" colspan="8">SECTION D: TOTAL OCCUPANCY COST - CALENDAR YEAR (Straight-Line Rent + OpEx)</td></tr>
-<tr class="row-bold"><td class="cell-label"></td><td>2026</td><td>2027</td><td>2028</td><td>2029</td><td>2030</td><td>2031</td><td>Total</td></tr>
-<tr><td class="cell-label">Months in Period</td><td>7</td><td>12</td><td>12</td><td>12</td><td>12</td><td>8</td><td>63</td></tr>
-<tr class="row-empty"><td colspan="8"></td></tr>
-<tr class="row-bold"><td class="cell-label">Straight-Line Rent Expense</td><td class="cell-currency">$396,157</td><td class="cell-currency">$679,126</td><td class="cell-currency">$679,126</td><td class="cell-currency">$679,126</td><td class="cell-currency">$679,126</td><td class="cell-currency">$452,751</td><td class="cell-currency">$3,565,414</td></tr>
-<tr><td class="cell-label">Food & Beverage</td><td class="cell-currency">$160,000</td><td class="cell-currency">$360,000</td><td class="cell-currency">$360,000</td><td class="cell-currency">$360,000</td><td class="cell-currency">$360,000</td><td class="cell-currency">$240,000</td><td class="cell-currency">$1,840,000</td></tr>
-<tr><td class="cell-label">Workplace Experience</td><td class="cell-currency">$70,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$80,000</td><td class="cell-currency">$630,000</td></tr>
-<tr><td class="cell-label">General Maintenance / Security</td><td class="cell-currency">$70,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$80,000</td><td class="cell-currency">$630,000</td></tr>
-<tr class="row-bold"><td class="cell-label">Total Operational Expenses</td><td class="cell-currency">$300,000</td><td class="cell-currency">$600,000</td><td class="cell-currency">$600,000</td><td class="cell-currency">$600,000</td><td class="cell-currency">$600,000</td><td class="cell-currency">$400,000</td><td class="cell-currency">$3,100,000</td></tr>
-<tr class="row-empty"><td colspan="8"></td></tr>
-<tr class="row-bold"><td class="cell-label">Total Occupancy Cost</td><td class="cell-currency">$696,157</td><td class="cell-currency">$1,279,126</td><td class="cell-currency">$1,279,126</td><td class="cell-currency">$1,279,126</td><td class="cell-currency">$1,279,126</td><td class="cell-currency">$852,751</td><td class="cell-currency">$6,665,414</td></tr>
-<tr class="row-empty"><td colspan="8"></td></tr>
-<tr><td class="cell-label">Per RSF Breakdown:</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">  Rent Expense ($/RSF/yr)</td><td class="cell-currency">$42</td><td class="cell-currency">$42</td><td class="cell-currency">$42</td><td class="cell-currency">$42</td><td class="cell-currency">$42</td><td class="cell-currency">$42</td><td class="cell-currency">$42</td></tr>
-<tr><td class="cell-label">  OpEx ($/RSF/yr)</td><td class="cell-currency">$32</td><td class="cell-currency">$38</td><td class="cell-currency">$38</td><td class="cell-currency">$38</td><td class="cell-currency">$38</td><td class="cell-currency">$38</td><td class="cell-currency">$37</td></tr>
-<tr class="row-bold"><td class="cell-label">  Total Occupancy ($/RSF/yr)</td><td class="cell-currency">$75</td><td class="cell-currency">$80</td><td class="cell-currency">$80</td><td class="cell-currency">$80</td><td class="cell-currency">$80</td><td class="cell-currency">$80</td><td class="cell-currency">$79</td></tr>
-<tr class="row-empty"><td colspan="8"></td></tr>
-<tr><td class="cell-label">Monthly Rent</td><td class="cell-currency">$56,594</td><td class="cell-currency">$56,594</td><td class="cell-currency">$56,594</td><td></td><td></td><td></td><td></td></tr>
-<tr class="row-empty"><td colspan="8"></td></tr>
-<tr><td class="cell-label">Monthly Procore OPEX/Internal</td><td class="cell-currency">$42,857</td><td class="cell-currency">$50,000</td><td class="cell-currency">$50,000</td><td></td><td></td><td></td><td></td></tr>
-<tr class="row-empty"><td colspan="8"></td></tr>
-<tr class="row-bold"><td class="cell-label">Total Monthly P&L</td><td class="cell-currency">$99,451</td><td class="cell-currency">$106,594</td><td class="cell-currency">$106,594</td><td></td><td></td><td></td><td></td></tr>
-<tr class="row-empty"><td colspan="8"></td></tr>
-<tr class="row-empty"><td colspan="8"></td></tr>
-<tr><td class="cell-label">1</td><td>10000</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">2</td><td>15000</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">3</td><td>20000</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">4</td><td>25000</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">5</td><td>30000</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">6</td><td>30000</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">7</td><td>30000</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label"></td><td>160000</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-    
-    <div class="fin-sheet-content" id="fin-comparison">
-      <div class="fin-sheet-title">SF Office Comparison: Brannan Counter #3 vs Splunk Counter vs Townsend</div>
-      <div class="fin-sheet-subtitle">Procore Counter ($43/RSF, 5mo free) vs Splunk Counter ($49.50, 3mo free) vs Townsend</div>
-      <div class="fin-table-wrap">
-        <table class="fin-table">
-          <tbody>
-            <tr class="row-empty"><td colspan="8"></td></tr>
-<tr class="row-section"><td class="cell-label" colspan="5">DEAL OVERVIEW</td><td></td><td></td><td></td></tr>
-<tr><th class="cell-label"></th><th>Procore Counter #3</th><th>Splunk Counter</th><th>123 Townsend</th><th>Notes</th><th></th><th></th><th></th></tr>
-<tr><td class="cell-label">Structure</td><td>Sublease (Splunk)</td><td>Sublease (Splunk)</td><td class="cell-note">Direct (Rubicon Point)</td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">Premises (RSF)</td><td>16000</td><td>16000</td><td>23031</td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">Base Rent ($/RSF/yr)</td><td class="cell-currency">$43</td><td class="cell-currency">$50</td><td class="cell-currency">$64</td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">Rent Basis</td><td>Mod. Gross</td><td>Mod. Gross</td><td>Industrial Gross</td><td class="cell-note">No OpEx/Tax pass-throughs</td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">Term (months)</td><td>63</td><td>63</td><td>65</td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">Expiration</td><td>Aug 31, 2031</td><td>Aug 31, 2031</td><td>Aug 31, 2031</td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">Free Rent</td><td>5 months</td><td>3 months</td><td>5 mo + 3.75 TI</td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">TI Allowance</td><td>None</td><td>None</td><td>$20/RSF ($460,620)</td><td class="cell-note">Townsend TI as free rent</td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">Annual Escalation</td><td>3%</td><td>3%</td><td>3%</td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">FF&E</td><td>Included ($1 buyout)</td><td>Included ($1 buyout)</td><td>Included (return)</td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">Parking</td><td>5 spots @ $437/mo</td><td>5 spots @ $437/mo</td><td>TBD</td><td>3% annual esc.</td><td></td><td></td><td></td></tr>
-<tr class="row-empty"><td colspan="8"></td></tr>
-<tr class="row-empty"><td colspan="8"></td></tr>
-<tr class="row-section"><td class="cell-label" colspan="8">ANNUAL ALL-IN OCCUPANCY COST (STRAIGHT-LINE BASIS)</td></tr>
-<tr class="row-bold"><td class="cell-label">Expense Category</td><td>2026</td><td>2027</td><td>2028</td><td>2029</td><td>2030</td><td>2031</td><td>Total</td></tr>
-<tr class="row-bold"><td class="cell-label" colspan="8">PROCORE COUNTER #3: 250 BRANNAN ($43/RSF, 5 Mo Free)</td></tr>
-<tr class="row-bold"><td class="cell-label">Rent Expense (Straight-Line)</td><td class="cell-currency">$396,157</td><td class="cell-currency">$679,126</td><td class="cell-currency">$679,126</td><td class="cell-currency">$679,126</td><td class="cell-currency">$679,126</td><td class="cell-currency">$452,751</td><td class="cell-currency">$3,565,414</td></tr>
-<tr><td class="cell-label">Food & Beverage</td><td class="cell-currency">$160,000</td><td class="cell-currency">$360,000</td><td class="cell-currency">$360,000</td><td class="cell-currency">$360,000</td><td class="cell-currency">$360,000</td><td class="cell-currency">$240,000</td><td class="cell-currency">$1,840,000</td></tr>
-<tr><td class="cell-label">Workplace Experience</td><td class="cell-currency">$70,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$80,000</td><td class="cell-currency">$630,000</td></tr>
-<tr><td class="cell-label">General Maintenance / Security</td><td class="cell-currency">$70,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$80,000</td><td class="cell-currency">$630,000</td></tr>
-<tr class="row-bold"><td class="cell-label">Total Occupancy Cost</td><td class="cell-currency">$696,157</td><td class="cell-currency">$1,279,126</td><td class="cell-currency">$1,279,126</td><td class="cell-currency">$1,279,126</td><td class="cell-currency">$1,279,126</td><td class="cell-currency">$852,751</td><td class="cell-currency">$6,665,414</td></tr>
-<tr class="row-bold"><td class="cell-label">Per RSF ($/RSF/yr)</td><td class="cell-currency">$75</td><td class="cell-currency">$80</td><td class="cell-currency">$80</td><td class="cell-currency">$80</td><td class="cell-currency">$80</td><td class="cell-currency">$80</td><td class="cell-currency">$79</td></tr>
-<tr class="row-empty"><td colspan="8"></td></tr>
-<tr class="row-bold"><td class="cell-label" colspan="8">SPLUNK COUNTER: 250 BRANNAN ($49.50/RSF, 3 Mo Free)</td></tr>
-<tr class="row-bold"><td class="cell-label">Rent Expense (Straight-Line)</td><td class="cell-currency">$470,708</td><td class="cell-currency">$806,928</td><td class="cell-currency">$806,928</td><td class="cell-currency">$806,928</td><td class="cell-currency">$806,928</td><td class="cell-currency">$537,952</td><td class="cell-currency">$4,236,372</td></tr>
-<tr><td class="cell-label">Food & Beverage</td><td class="cell-currency">$160,000</td><td class="cell-currency">$360,000</td><td class="cell-currency">$360,000</td><td class="cell-currency">$360,000</td><td class="cell-currency">$360,000</td><td class="cell-currency">$240,000</td><td class="cell-currency">$1,840,000</td></tr>
-<tr><td class="cell-label">Workplace Experience</td><td class="cell-currency">$70,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$80,000</td><td class="cell-currency">$630,000</td></tr>
-<tr><td class="cell-label">General Maintenance / Security</td><td class="cell-currency">$70,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$80,000</td><td class="cell-currency">$630,000</td></tr>
-<tr class="row-bold"><td class="cell-label">Total Occupancy Cost</td><td class="cell-currency">$770,708</td><td class="cell-currency">$1,406,928</td><td class="cell-currency">$1,406,928</td><td class="cell-currency">$1,406,928</td><td class="cell-currency">$1,406,928</td><td class="cell-currency">$937,952</td><td class="cell-currency">$7,336,372</td></tr>
-<tr class="row-bold"><td class="cell-label">Per RSF ($/RSF/yr)</td><td class="cell-currency">$83</td><td class="cell-currency">$88</td><td class="cell-currency">$88</td><td class="cell-currency">$88</td><td class="cell-currency">$88</td><td class="cell-currency">$88</td><td class="cell-currency">$87</td></tr>
-<tr class="row-empty"><td colspan="8"></td></tr>
-<tr class="row-bold"><td class="cell-label" colspan="8">123 TOWNSEND STREET (Direct Lease, $64/RSF)</td></tr>
-<tr class="row-bold"><td class="cell-label">Rent Expense (Straight-Line)</td><td class="cell-currency">$1,024,803</td><td class="cell-currency">$1,366,404</td><td class="cell-currency">$1,366,404</td><td class="cell-currency">$1,366,404</td><td class="cell-currency">$1,366,404</td><td class="cell-currency">$910,936</td><td class="cell-currency">$7,401,355</td></tr>
-<tr><td class="cell-label">Food & Beverage</td><td class="cell-currency">$160,000</td><td class="cell-currency">$360,000</td><td class="cell-currency">$360,000</td><td class="cell-currency">$360,000</td><td class="cell-currency">$360,000</td><td class="cell-currency">$240,000</td><td class="cell-currency">$1,840,000</td></tr>
-<tr><td class="cell-label">Workplace Experience</td><td class="cell-currency">$70,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$80,000</td><td class="cell-currency">$630,000</td></tr>
-<tr><td class="cell-label">General Maintenance / Security</td><td class="cell-currency">$70,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$120,000</td><td class="cell-currency">$80,000</td><td class="cell-currency">$630,000</td></tr>
-<tr class="row-bold"><td class="cell-label">Total Occupancy Cost</td><td class="cell-currency">$1,324,803</td><td class="cell-currency">$1,966,404</td><td class="cell-currency">$1,966,404</td><td class="cell-currency">$1,966,404</td><td class="cell-currency">$1,966,404</td><td class="cell-currency">$1,310,936</td><td class="cell-currency">$10,501,355</td></tr>
-<tr class="row-bold"><td class="cell-label">Per RSF ($/RSF/yr)</td><td class="cell-currency">$77</td><td class="cell-currency">$85</td><td class="cell-currency">$85</td><td class="cell-currency">$85</td><td class="cell-currency">$85</td><td class="cell-currency">$85</td><td class="cell-currency">$84</td></tr>
-<tr><td class="cell-label"></td><td>189,257.57</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr class="row-section"><td class="cell-label" colspan="8">SAVINGS: PROCORE COUNTER #3 vs TOWNSEND</td></tr>
-<tr class="row-bold"><td class="cell-label">Total Savings vs Townsend</td><td class="cell-currency cell-savings">$628,646</td><td class="cell-currency cell-savings">$687,278</td><td class="cell-currency cell-savings">$687,278</td><td class="cell-currency cell-savings">$687,278</td><td class="cell-currency cell-savings">$687,278</td><td class="cell-currency cell-savings">$458,185</td><td class="cell-currency cell-savings">$3,835,941</td></tr>
-<tr><td class="cell-label">Savings %</td><td class="cell-pct">47.5%</td><td class="cell-pct">35.0%</td><td class="cell-pct">35.0%</td><td class="cell-pct">35.0%</td><td class="cell-pct">35.0%</td><td class="cell-pct">35.0%</td><td class="cell-pct">36.5%</td></tr>
-<tr class="row-empty"><td colspan="8"></td></tr>
-<tr class="row-section"><td class="cell-label" colspan="8">SAVINGS: PROCORE COUNTER #3 vs SPLUNK COUNTER</td></tr>
-<tr class="row-bold"><td class="cell-label">Total Savings vs Splunk Counter</td><td class="cell-currency cell-savings">$74,551</td><td class="cell-currency cell-savings">$127,802</td><td class="cell-currency cell-savings">$127,802</td><td class="cell-currency cell-savings">$127,802</td><td class="cell-currency cell-savings">$127,802</td><td class="cell-currency cell-savings">$85,201</td><td class="cell-currency cell-savings">$670,958</td></tr>
-<tr><td class="cell-label">Savings %</td><td class="cell-pct">9.7%</td><td class="cell-pct">9.1%</td><td class="cell-pct">9.1%</td><td class="cell-pct">9.1%</td><td class="cell-pct">9.1%</td><td class="cell-pct">9.1%</td><td class="cell-pct">9.1%</td></tr>
-<tr class="row-empty"><td colspan="8"></td></tr>
-<tr class="row-empty"><td colspan="8"></td></tr>
-<tr><td class="cell-label">Sources: Splunk counter 3/10/26 | Savills recommendation (Denis Karas) | Townsend counter 3/5/26 | OpEx per Procore RE</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">Procore Counter: $43/RSF, 5mo free, Modified Gross. Splunk Counter: $49.50/RSF, 3mo free. Townsend: $64/RSF IG + TI as free rent.</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr><td class="cell-label">Model generated: 2026-03-10</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-    
+<div class="financials-view" id="rfp-root">
+  <!-- Dynamic content rendered by rfpInit() -->
 </div>
+
+<!-- RFP Upload Modal (injected by JS) -->
 
 </div>
 
@@ -4747,7 +5035,7 @@ var _storeApi = {
   removeItem: function(k) { try { window['local'+'Storage'].removeItem(k); } catch(e) { delete _storeMem[k]; } }
 };
 // ============================================================
-// Building Data — Material Terms
+// Building Data - Material Terms
 // ============================================================
 
 const BUILDINGS = [
@@ -4978,7 +5266,7 @@ function buildPopup(b) {
   const badgeLabel = b.statusLabel;
 
   if (!isNegotiating) {
-    // TBD buildings — compact popup
+    // TBD buildings - compact popup
     return `
       <div class="building-tooltip">
         <div class="tooltip-accent-bar" style="background:${b.color}"></div>
@@ -4995,7 +5283,7 @@ function buildPopup(b) {
           </div>
           <div class="tooltip-tbd">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            <span>Material terms pending — tour scheduled week of 3/16/26</span>
+            <span>Material terms pending - tour scheduled week of 3/16/26</span>
           </div>
           <div class="tooltip-photos-section" id="photo-section-shortlist-${b.id}"><div class="tooltip-photos-header"><span class="tooltip-photos-title">Photos</span></div><div class="tooltip-photo-grid" style="margin-top:6px"><div class="tooltip-photo-add-btn" onclick="openPhotoUpload('shortlist', ${b.id}, '${b.name}', '${b.address}')" title="Add Photo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div></div></div>
           <button class="tooltip-tour-btn" onclick="toggleTourItem('shortlist', ${b.id})" id="tour-btn-shortlist-${b.id}">
@@ -6783,6 +7071,10 @@ function switchPageTab(tabId) {
     commuteLoadSaved();
     commuteApplyRoleAccess();
   }
+  // Load RFP/LOI analysis when switching to financials tab
+  if (tabId === 'financials') {
+    rfpInit();
+  }
 }
 
 // ============================================================
@@ -7797,13 +8089,995 @@ function exportTourBook() {
   URL.revokeObjectURL(url);
 }
 
-// ===== FINANCIAL SHEET TAB SWITCHING =====
+// ============================================================
+// RFP / LOI FINANCIAL ANALYSIS ENGINE
+// ============================================================
+
+window._rfpState = { submissions: [], selectedBuilding: null, selectedSubmission: null, view: 'dashboard' };
+var _rfpModal = null;
+
+// Currency formatting
+function rfpFmtCurrency(v) {
+  if (v == null || isNaN(v)) return '--';
+  var abs = Math.abs(v);
+  var formatted = '$' + abs.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  if (v < 0) return '<span class="cell-neg">(' + formatted + ')</span>';
+  return formatted;
+}
+function rfpFmtCurrencyPlain(v) {
+  if (v == null || isNaN(v)) return '--';
+  var abs = Math.abs(v);
+  var formatted = '$' + abs.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  if (v < 0) return '(' + formatted + ')';
+  return formatted;
+}
+function rfpFmtCurrencyDecimals(v) {
+  if (v == null || isNaN(v)) return '--';
+  var abs = Math.abs(v);
+  var formatted = '$' + abs.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (v < 0) return '<span class="cell-neg">(' + formatted + ')</span>';
+  return formatted;
+}
+function rfpFmtPct(v) {
+  if (v == null || isNaN(v)) return '--';
+  return parseFloat(v).toFixed(2) + '%';
+}
+function rfpFmtNum(v) {
+  if (v == null || isNaN(v)) return '--';
+  return Number(v).toLocaleString('en-US');
+}
+
+// Fin sheet tab switching (still used for analysis sub-tabs)
 function switchFinSheet(sheetId) {
-  document.querySelectorAll('.fin-sheet-tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.fin-sheet-content').forEach(t => t.classList.remove('active'));
-  
-  document.querySelector(`.fin-sheet-tab[data-sheet="${sheetId}"]`).classList.add('active');
-  document.getElementById(`fin-${sheetId}`).classList.add('active');
+  document.querySelectorAll('.fin-sheet-tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.fin-sheet-content').forEach(function(t) { t.classList.remove('active'); });
+  var tabEl = document.querySelector('.fin-sheet-tab[data-sheet="' + sheetId + '"]');
+  var contentEl = document.getElementById('fin-' + sheetId);
+  if (tabEl) tabEl.classList.add('active');
+  if (contentEl) contentEl.classList.add('active');
+}
+
+// ===== INIT =====
+function rfpInit() {
+  rfpLoadSubmissions();
+}
+
+// ===== LOAD SUBMISSIONS =====
+function rfpLoadSubmissions() {
+  var root = document.getElementById('rfp-root');
+  if (!root) return;
+  root.innerHTML = '<div class="rfp-loading"><div class="rfp-spinner"></div><div class="rfp-loading-text">Loading proposals...</div></div>';
+
+  var email = getCurrentUserEmail();
+  var url = '/api/rfp';
+  if (email) url += '?userEmail=' + encodeURIComponent(email);
+
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) throw new Error(data.error);
+      window._rfpState.submissions = data.submissions || data || [];
+      if (window._rfpState.submissions.length === 0) {
+        rfpRenderEmpty();
+      } else {
+        rfpRenderDashboard(window._rfpState.submissions);
+      }
+    })
+    .catch(function(err) {
+      console.error('RFP load error:', err);
+      // If API not available, show empty state
+      window._rfpState.submissions = [];
+      rfpRenderEmpty();
+    });
+}
+
+// ===== EMPTY STATE =====
+function rfpRenderEmpty() {
+  var root = document.getElementById('rfp-root');
+  if (!root) return;
+  var canUpload = hasAdminAccess();
+  root.innerHTML =
+    '<div class="rfp-empty-state">' +
+      '<div class="rfp-empty-icon">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+          '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>' +
+          '<polyline points="14 2 14 8 20 8"/>' +
+          '<line x1="12" y1="18" x2="12" y2="12"/>' +
+          '<line x1="9" y1="15" x2="15" y2="15"/>' +
+        '</svg>' +
+      '</div>' +
+      '<div class="rfp-empty-title">No proposals submitted yet</div>' +
+      '<div class="rfp-empty-desc">Submit an RFP or LOI to generate financial analysis including cash flow projections, straight-line P&amp;L, and GAAP accounting.</div>' +
+      (canUpload ? '<button class="rfp-btn-primary" onclick="rfpShowUploadModal()"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Submit RFP / LOI</button>' : '') +
+    '</div>';
+}
+
+// ===== UPLOAD MODAL =====
+function rfpShowUploadModal() {
+  if (_rfpModal) { _rfpModal.remove(); _rfpModal = null; }
+
+  var buildings = (typeof SURVEY_BUILDINGS !== 'undefined') ? SURVEY_BUILDINGS : [];
+  var tourList = (typeof getTourList === 'function') ? getTourList() : [];
+  var shortlistedNums = tourList.filter(function(t) { return t.type === 'survey'; }).map(function(t) { return t.id; });
+
+  // Build building options - shortlisted first
+  var shortlisted = buildings.filter(function(b) { return shortlistedNums.indexOf(b.num) >= 0; });
+  var others = buildings.filter(function(b) { return shortlistedNums.indexOf(b.num) < 0; });
+
+  var optionsHtml = '<option value="">Select a building...</option>';
+  if (shortlisted.length > 0) {
+    optionsHtml += '<optgroup label="Shortlisted">';
+    shortlisted.forEach(function(b) {
+      optionsHtml += '<option value="' + b.num + '">' + String.fromCharCode(9733) + ' ' + b.address + '</option>';
+    });
+    optionsHtml += '</optgroup>';
+  }
+  optionsHtml += '<optgroup label="All Buildings">';
+  others.forEach(function(b) {
+    optionsHtml += '<option value="' + b.num + '">' + b.address + '</option>';
+  });
+  optionsHtml += '</optgroup>';
+
+  var modal = document.createElement('div');
+  modal.className = 'rfp-modal';
+  modal.innerHTML =
+    '<div class="rfp-modal-inner">' +
+      '<button class="rfp-modal-close" onclick="rfpCloseModal()" title="Close">' +
+        '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+      '</button>' +
+      '<div class="rfp-modal-title">Submit RFP / LOI</div>' +
+
+      '<div class="rfp-step">' +
+        '<label class="rfp-step-label">Step 1: Select Building</label>' +
+        '<select class="rfp-select" id="rfp-building-select">' + optionsHtml + '</select>' +
+      '</div>' +
+
+      '<div class="rfp-step">' +
+        '<label class="rfp-step-label">Step 2: Upload Document</label>' +
+        '<div class="rfp-drop-zone" id="rfp-drop-zone">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+            '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>' +
+            '<polyline points="17 8 12 3 7 8"/>' +
+            '<line x1="12" y1="3" x2="12" y2="15"/>' +
+          '</svg>' +
+          '<p>Click to select or drag &amp; drop a file</p>' +
+          '<p class="small">.docx or .pdf files accepted</p>' +
+        '</div>' +
+        '<input type="file" id="rfp-file-input" accept=".docx,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf" style="display:none" />' +
+        '<div id="rfp-file-name" style="display:none"></div>' +
+        '<div style="margin-top:var(--space-3)">' +
+          '<details>' +
+            '<summary style="font-size:var(--text-xs);color:var(--color-text-muted);cursor:pointer">Or paste text manually</summary>' +
+            '<textarea class="rfp-textarea" id="rfp-manual-text" placeholder="Paste deal terms text here..." style="margin-top:var(--space-2)"></textarea>' +
+          '</details>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="rfp-step">' +
+        '<label class="rfp-step-label">Step 3: Document Type</label>' +
+        '<div class="rfp-toggle-group">' +
+          '<button class="rfp-toggle-btn active" onclick="rfpSetDocType(this, \'RFP\')" data-type="RFP">RFP</button>' +
+          '<button class="rfp-toggle-btn" onclick="rfpSetDocType(this, \'LOI\')" data-type="LOI">LOI</button>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="rfp-step">' +
+        '<label class="rfp-step-label">Step 4: Source (optional)</label>' +
+        '<input class="rfp-input" id="rfp-source-input" placeholder="e.g. Counter #3 from Landlord via Broker" />' +
+      '</div>' +
+
+      '<div id="rfp-upload-status" style="display:none"></div>' +
+
+      '<div class="rfp-modal-actions">' +
+        '<button class="rfp-modal-cancel" onclick="rfpCloseModal()">Cancel</button>' +
+        '<button class="rfp-btn-primary" id="rfp-submit-btn" onclick="rfpSubmitUpload()">Extract &amp; Analyze</button>' +
+      '</div>' +
+    '</div>';
+
+  document.body.appendChild(modal);
+  _rfpModal = modal;
+  _rfpModal._selectedFile = null;
+  _rfpModal._docType = 'RFP';
+
+  // Wire up drop zone
+  var dropZone = document.getElementById('rfp-drop-zone');
+  var fileInput = document.getElementById('rfp-file-input');
+
+  dropZone.addEventListener('click', function() { fileInput.click(); });
+  dropZone.addEventListener('dragover', function(e) { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', function() { dropZone.classList.remove('dragover'); });
+  dropZone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length > 0) rfpHandleFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', function() {
+    if (fileInput.files.length > 0) rfpHandleFile(fileInput.files[0]);
+  });
+
+  // Click outside to close
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) rfpCloseModal();
+  });
+}
+
+function rfpCloseModal() {
+  if (_rfpModal) { _rfpModal.remove(); _rfpModal = null; }
+}
+
+function rfpSetDocType(btn, type) {
+  if (!_rfpModal) return;
+  _rfpModal._docType = type;
+  document.querySelectorAll('.rfp-toggle-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+function rfpHandleFile(file) {
+  if (!_rfpModal) return;
+  var ext = file.name.split('.').pop().toLowerCase();
+  if (ext !== 'docx' && ext !== 'pdf') {
+    alert('Please upload a .docx or .pdf file.');
+    return;
+  }
+  _rfpModal._selectedFile = file;
+  var nameEl = document.getElementById('rfp-file-name');
+  if (nameEl) {
+    nameEl.style.display = 'block';
+    nameEl.className = 'rfp-drop-file-name';
+    nameEl.innerHTML =
+      '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' +
+      '<span>' + file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)</span>' +
+      '<button onclick="rfpClearFile()" title="Remove">&times;</button>';
+  }
+}
+
+function rfpClearFile() {
+  if (!_rfpModal) return;
+  _rfpModal._selectedFile = null;
+  var nameEl = document.getElementById('rfp-file-name');
+  if (nameEl) { nameEl.style.display = 'none'; nameEl.innerHTML = ''; }
+  var fileInput = document.getElementById('rfp-file-input');
+  if (fileInput) fileInput.value = '';
+}
+
+// ===== FILE PARSING =====
+function rfpParseDocument(file) {
+  return new Promise(function(resolve, reject) {
+    var ext = file.name.split('.').pop().toLowerCase();
+    if (ext === 'docx') {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        if (typeof mammoth === 'undefined') { reject(new Error('mammoth.js not loaded')); return; }
+        mammoth.extractRawText({ arrayBuffer: e.target.result })
+          .then(function(result) { resolve(result.value); })
+          .catch(reject);
+      };
+      reader.onerror = function() { reject(new Error('Failed to read file')); };
+      reader.readAsArrayBuffer(file);
+    } else if (ext === 'pdf') {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        if (typeof pdfjsLib === 'undefined') { reject(new Error('pdf.js not loaded')); return; }
+        var typedArray = new Uint8Array(e.target.result);
+        pdfjsLib.getDocument(typedArray).promise.then(function(pdf) {
+          var pages = [];
+          var total = pdf.numPages;
+          function getPage(i) {
+            if (i > total) { resolve(pages.join('\n')); return; }
+            pdf.getPage(i).then(function(page) {
+              page.getTextContent().then(function(tc) {
+                pages.push(tc.items.map(function(item) { return item.str; }).join(' '));
+                getPage(i + 1);
+              });
+            });
+          }
+          getPage(1);
+        }).catch(reject);
+      };
+      reader.onerror = function() { reject(new Error('Failed to read file')); };
+      reader.readAsArrayBuffer(file);
+    } else {
+      reject(new Error('Unsupported file type: ' + ext));
+    }
+  });
+}
+
+// ===== SUBMIT UPLOAD =====
+function rfpSubmitUpload() {
+  if (!_rfpModal) return;
+  var buildingSelect = document.getElementById('rfp-building-select');
+  var buildingNum = buildingSelect ? parseInt(buildingSelect.value) : NaN;
+  if (isNaN(buildingNum)) { alert('Please select a building.'); return; }
+
+  var file = _rfpModal._selectedFile;
+  var manualText = (document.getElementById('rfp-manual-text') || {}).value || '';
+  if (!file && !manualText.trim()) { alert('Please upload a document or paste text.'); return; }
+
+  var docType = _rfpModal._docType || 'RFP';
+  var source = (document.getElementById('rfp-source-input') || {}).value || '';
+
+  var buildings = (typeof SURVEY_BUILDINGS !== 'undefined') ? SURVEY_BUILDINGS : [];
+  var building = buildings.find(function(b) { return b.num === buildingNum; });
+  var address = building ? building.address : 'Building #' + buildingNum;
+
+  // Show loading
+  var statusEl = document.getElementById('rfp-upload-status');
+  if (statusEl) {
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = '<div class="rfp-loading"><div class="rfp-spinner"></div><div class="rfp-loading-text">Parsing document...</div></div>';
+  }
+  var submitBtn = document.getElementById('rfp-submit-btn');
+  if (submitBtn) submitBtn.disabled = true;
+
+  var parsePromise;
+  if (file) {
+    parsePromise = rfpParseDocument(file);
+  } else {
+    parsePromise = Promise.resolve(manualText.trim());
+  }
+
+  parsePromise
+    .then(function(text) {
+      if (statusEl) {
+        statusEl.innerHTML = '<div class="rfp-loading"><div class="rfp-spinner"></div><div class="rfp-loading-text">Analyzing document with AI...</div></div>';
+      }
+      return rfpExtractTerms(text, address);
+    })
+    .then(function(terms) {
+      rfpCloseModal();
+      rfpShowReviewForm(terms, { buildingNum: buildingNum, address: address, docType: docType, source: source });
+    })
+    .catch(function(err) {
+      console.error('RFP upload error:', err);
+      if (statusEl) {
+        statusEl.innerHTML = '<div class="rfp-error">Error: ' + (err.message || 'Failed to process document') + '</div>';
+      }
+      if (submitBtn) submitBtn.disabled = false;
+    });
+}
+
+// ===== AI EXTRACTION =====
+function rfpExtractTerms(text, address) {
+  var email = getCurrentUserEmail();
+  var url = '/api/rfp/extract';
+  if (email) url += '?userEmail=' + encodeURIComponent(email);
+
+  return fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: text, address: address })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.error) throw new Error(data.error);
+    return data.terms || data;
+  });
+}
+
+// ===== REVIEW FORM =====
+function rfpShowReviewForm(terms, meta) {
+  if (_rfpModal) { _rfpModal.remove(); _rfpModal = null; }
+
+  var fields = [
+    { key: 'rsf', label: 'RSF (Rentable Sq Ft)', type: 'number' },
+    { key: 'leaseTerm', label: 'Lease Term (months)', type: 'number' },
+    { key: 'commencementDate', label: 'Commencement Date', type: 'date' },
+    { key: 'baseRent', label: 'Base Rent ($/RSF/yr)', type: 'number', step: '0.01' },
+    { key: 'rentBasis', label: 'Rent Basis', type: 'text', placeholder: 'e.g. FSG, NNN, Modified Gross' },
+    { key: 'annualEscalation', label: 'Annual Escalation %', type: 'number', step: '0.01' },
+    { key: 'freeRent', label: 'Free Rent (months)', type: 'number' },
+    { key: 'tiAllowancePerRSF', label: 'TI Allowance ($/RSF)', type: 'number', step: '0.01' },
+    { key: 'tiAllowanceTotal', label: 'TI Allowance (total $)', type: 'number' },
+    { key: 'opex', label: 'OpEx (monthly $)', type: 'number' },
+    { key: 'parkingSpots', label: 'Parking Spots', type: 'number' },
+    { key: 'parkingRate', label: 'Parking Rate ($/spot/mo)', type: 'number', step: '0.01' },
+    { key: 'parkingEscalation', label: 'Parking Escalation %', type: 'number', step: '0.01' },
+    { key: 'securityDeposit', label: 'Security Deposit ($)', type: 'number' },
+    { key: 'structure', label: 'Structure', type: 'text', placeholder: 'e.g. Direct, Sublease' },
+    { key: 'landlord', label: 'Landlord', type: 'text' },
+    { key: 'notes', label: 'Notes', type: 'textarea', fullWidth: true }
+  ];
+
+  var formHtml = '<div class="rfp-form">';
+  fields.forEach(function(f) {
+    var val = terms[f.key] != null ? terms[f.key] : '';
+    var cls = f.fullWidth ? 'rfp-form-group full-width' : 'rfp-form-group';
+    formHtml += '<div class="' + cls + '">';
+    formHtml += '<label class="rfp-form-label">' + f.label + '</label>';
+    if (f.type === 'textarea') {
+      formHtml += '<textarea class="rfp-form-input rfp-textarea" id="rfp-field-' + f.key + '" placeholder="' + (f.placeholder || '') + '">' + val + '</textarea>';
+    } else {
+      formHtml += '<input class="rfp-form-input" id="rfp-field-' + f.key + '" type="' + f.type + '"' +
+        (f.step ? ' step="' + f.step + '"' : '') +
+        ' value="' + val + '"' +
+        (f.placeholder ? ' placeholder="' + f.placeholder + '"' : '') + ' />';
+    }
+    formHtml += '</div>';
+  });
+  formHtml += '</div>';
+
+  var modal = document.createElement('div');
+  modal.className = 'rfp-modal';
+  modal.innerHTML =
+    '<div class="rfp-modal-inner" style="max-width:700px">' +
+      '<button class="rfp-modal-close" onclick="rfpCloseModal()" title="Close">' +
+        '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+      '</button>' +
+      '<div class="rfp-modal-title">Review Deal Terms</div>' +
+      '<div style="font-size:var(--text-sm);color:var(--color-text-muted);margin:-8px 0 16px">' +
+        meta.address + ' | ' + meta.docType + (meta.source ? ' | ' + meta.source : '') +
+      '</div>' +
+      formHtml +
+      '<div id="rfp-review-status" style="display:none"></div>' +
+      '<div class="rfp-modal-actions">' +
+        '<button class="rfp-modal-cancel" onclick="rfpCloseModal()">Cancel</button>' +
+        '<button class="rfp-btn-primary" id="rfp-confirm-btn" onclick="rfpConfirmFromForm()">Confirm &amp; Generate Analysis</button>' +
+      '</div>' +
+    '</div>';
+
+  document.body.appendChild(modal);
+  _rfpModal = modal;
+  _rfpModal._meta = meta;
+  _rfpModal._fields = fields;
+
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) rfpCloseModal();
+  });
+}
+
+// ===== CONFIRM & SAVE =====
+function rfpConfirmFromForm() {
+  if (!_rfpModal) return;
+  var meta = _rfpModal._meta;
+  var fields = _rfpModal._fields;
+  var terms = {};
+  fields.forEach(function(f) {
+    var el = document.getElementById('rfp-field-' + f.key);
+    if (!el) return;
+    var val = el.value;
+    if (f.type === 'number') {
+      val = val ? parseFloat(val) : null;
+    }
+    terms[f.key] = val;
+  });
+  rfpConfirmAndSave(meta, terms);
+}
+
+function rfpConfirmAndSave(meta, terms) {
+  var statusEl = document.getElementById('rfp-review-status');
+  var confirmBtn = document.getElementById('rfp-confirm-btn');
+  if (statusEl) {
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = '<div class="rfp-loading"><div class="rfp-spinner"></div><div class="rfp-loading-text">Generating financial analysis...</div></div>';
+  }
+  if (confirmBtn) confirmBtn.disabled = true;
+
+  var email = getCurrentUserEmail();
+  var url = '/api/rfp';
+  if (email) url += '?userEmail=' + encodeURIComponent(email);
+
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      building_num: meta.buildingNum,
+      building_address: meta.address,
+      doc_type: meta.docType,
+      source: meta.source,
+      terms: terms
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.error) throw new Error(data.error);
+    rfpCloseModal();
+    rfpLoadSubmissions();
+  })
+  .catch(function(err) {
+    console.error('RFP save error:', err);
+    if (statusEl) {
+      statusEl.innerHTML = '<div class="rfp-error">Error: ' + (err.message || 'Failed to save analysis') + '</div>';
+    }
+    if (confirmBtn) confirmBtn.disabled = false;
+  });
+}
+
+// ===== DASHBOARD VIEW =====
+function rfpRenderDashboard(submissions) {
+  var root = document.getElementById('rfp-root');
+  if (!root) return;
+
+  // Group submissions by building
+  var byBuilding = {};
+  submissions.forEach(function(s) {
+    var key = s.building_num || s.buildingNum || 'unknown';
+    if (!byBuilding[key]) byBuilding[key] = [];
+    byBuilding[key].push(s);
+  });
+
+  var isCompare = window._rfpState.view === 'comparison';
+  var canUpload = hasAdminAccess();
+
+  // Top bar
+  var html =
+    '<div class="rfp-top-bar">' +
+      '<div class="rfp-top-bar-left">' +
+        (canUpload ?
+          '<button class="rfp-btn-primary" onclick="rfpShowUploadModal()">' +
+            '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
+            'Submit RFP / LOI' +
+          '</button>' : '') +
+        '<div class="rfp-view-toggle">' +
+          '<button class="rfp-view-toggle-btn' + (!isCompare ? ' active' : '') + '" onclick="rfpSwitchView(\'dashboard\')">Buildings</button>' +
+          '<button class="rfp-view-toggle-btn' + (isCompare ? ' active' : '') + '" onclick="rfpSwitchView(\'comparison\')">Compare</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  if (isCompare) {
+    html += rfpBuildComparisonHtml(submissions, byBuilding);
+  } else {
+    html += rfpBuildDashboardHtml(submissions, byBuilding);
+  }
+
+  root.innerHTML = html;
+}
+
+function rfpSwitchView(view) {
+  window._rfpState.view = view;
+  rfpRenderDashboard(window._rfpState.submissions);
+}
+
+function rfpBuildDashboardHtml(submissions, byBuilding) {
+  var buildings = (typeof SURVEY_BUILDINGS !== 'undefined') ? SURVEY_BUILDINGS : [];
+  var html = '<div class="rfp-building-cards">';
+  var keys = Object.keys(byBuilding);
+
+  keys.forEach(function(bNum) {
+    var subs = byBuilding[bNum];
+    var latest = subs[subs.length - 1];
+    var building = buildings.find(function(b) { return b.num === parseInt(bNum); });
+    var address = latest.building_address || latest.buildingAddress || (building ? building.address : 'Building #' + bNum);
+    var summary = (latest.analysis && latest.analysis.summary) ? latest.analysis.summary : {};
+    var docType = latest.doc_type || latest.docType || 'RFP';
+    var isSelected = window._rfpState.selectedBuilding === bNum;
+
+    html +=
+      '<div class="rfp-building-card' + (isSelected ? ' active' : '') + '" onclick="rfpSelectBuilding(\'' + bNum + '\')">' +
+        '<span class="rfp-building-card-badge ' + docType.toLowerCase() + '">' + docType + '</span>' +
+        '<div class="rfp-building-card-addr">' + address + '</div>' +
+        '<div class="rfp-building-card-meta">' + subs.length + ' proposal' + (subs.length !== 1 ? 's' : '') +
+          (latest.source ? ' | ' + latest.source : '') + '</div>' +
+        '<div class="rfp-building-card-stats">' +
+          '<div class="rfp-building-card-stat">' +
+            '<div class="rfp-building-card-stat-val">' + rfpFmtCurrencyPlain(summary.effectiveRentRSF) + '</div>' +
+            '<div class="rfp-building-card-stat-label">Eff. Rent/RSF</div>' +
+          '</div>' +
+          '<div class="rfp-building-card-stat">' +
+            '<div class="rfp-building-card-stat-val">' + rfpFmtCurrencyPlain(summary.totalAllInCost) + '</div>' +
+            '<div class="rfp-building-card-stat-label">Total All-in Cost</div>' +
+          '</div>' +
+          '<div class="rfp-building-card-stat">' +
+            '<div class="rfp-building-card-stat-val">' + (summary.termMonths || '--') + ' mo</div>' +
+            '<div class="rfp-building-card-stat-label">Term</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+  });
+  html += '</div>';
+
+  // Detail view for selected building
+  if (window._rfpState.selectedBuilding && byBuilding[window._rfpState.selectedBuilding]) {
+    html += rfpBuildDetailHtml(byBuilding[window._rfpState.selectedBuilding]);
+  }
+
+  return html;
+}
+
+function rfpSelectBuilding(bNum) {
+  window._rfpState.selectedBuilding = bNum;
+  window._rfpState.selectedSubmission = null;
+  rfpRenderDashboard(window._rfpState.submissions);
+}
+
+// ===== DETAIL VIEW =====
+function rfpBuildDetailHtml(subs) {
+  // Sort by created_at descending
+  var sorted = subs.slice().sort(function(a, b) {
+    return new Date(b.created_at || b.createdAt || 0) - new Date(a.created_at || a.createdAt || 0);
+  });
+
+  var selectedId = window._rfpState.selectedSubmission;
+  var selected = null;
+  if (selectedId) {
+    selected = sorted.find(function(s) { return s.id === selectedId; });
+  }
+  if (!selected) selected = sorted[0];
+  if (!selected) return '';
+
+  var address = selected.building_address || selected.buildingAddress || '';
+  var docType = selected.doc_type || selected.docType || 'RFP';
+  var canDelete = hasAdminAccess();
+
+  var html = '<div style="margin-top:var(--space-4)">';
+
+  // Header
+  html +=
+    '<div class="rfp-detail-header">' +
+      '<div>' +
+        '<div class="rfp-detail-title">' + address + '</div>' +
+        '<div class="rfp-detail-subtitle">' + docType +
+          (selected.source ? ' | ' + selected.source : '') +
+          ' | Submitted ' + (selected.created_at || selected.createdAt ? new Date(selected.created_at || selected.createdAt).toLocaleDateString() : '') +
+        '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:var(--space-2);align-items:center">' +
+        (canDelete ? '<button class="rfp-btn-danger" onclick="rfpDeleteSubmission(\'' + selected.id + '\')">Delete</button>' : '') +
+      '</div>' +
+    '</div>';
+
+  // Version chips if multiple
+  if (sorted.length > 1) {
+    html += '<div class="rfp-version-bar"><span class="rfp-version-bar-label">Versions</span>';
+    sorted.forEach(function(s, idx) {
+      var isActive = s.id === selected.id;
+      var label = (s.doc_type || s.docType || 'RFP') + ' #' + (sorted.length - idx);
+      if (s.source) label += ' - ' + s.source;
+      html += '<button class="rfp-version-chip' + (isActive ? ' active' : '') + '" onclick="rfpSelectSubmission(\'' + s.id + '\')">' + label + '</button>';
+    });
+    html += '</div>';
+  }
+
+  // Summary metrics
+  var summary = (selected.analysis && selected.analysis.summary) ? selected.analysis.summary : {};
+  html +=
+    '<div class="rfp-summary-metrics">' +
+      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtNum(summary.rsf) + '</div><div class="rfp-metric-label">RSF</div></div>' +
+      '<div class="rfp-metric"><div class="rfp-metric-value">' + (summary.termMonths || '--') + ' mo</div><div class="rfp-metric-label">Lease Term</div></div>' +
+      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(summary.effectiveRentRSF) + '</div><div class="rfp-metric-label">Effective Rent/RSF</div></div>' +
+      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(summary.straightLineAnnualExpense) + '</div><div class="rfp-metric-label">SL Annual Expense</div></div>' +
+      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(summary.totalAllInCost) + '</div><div class="rfp-metric-label">Total All-in Cost</div></div>' +
+      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(summary.totalConcessions) + '</div><div class="rfp-metric-label">Total Concessions</div></div>' +
+    '</div>';
+
+  // Sub-tabs
+  html +=
+    '<div class="fin-sheet-tabs">' +
+      '<button class="fin-sheet-tab active" data-sheet="deal-terms" onclick="switchFinSheet(\'deal-terms\')">Deal Terms</button>' +
+      '<button class="fin-sheet-tab" data-sheet="cash-flow" onclick="switchFinSheet(\'cash-flow\')">Cash Flow</button>' +
+      '<button class="fin-sheet-tab" data-sheet="straight-line" onclick="switchFinSheet(\'straight-line\')">Straight-Line P&amp;L</button>' +
+      '<button class="fin-sheet-tab" data-sheet="gaap" onclick="switchFinSheet(\'gaap\')">GAAP Analysis</button>' +
+    '</div>';
+
+  // Deal Terms tab
+  var terms = selected.terms || {};
+  html += '<div class="fin-sheet-content active" id="fin-deal-terms">' + rfpBuildTermsTable(terms) + '</div>';
+
+  // Cash Flow tab
+  html += '<div class="fin-sheet-content" id="fin-cash-flow">' + rfpBuildCashFlowTable(selected.analysis) + '</div>';
+
+  // Straight-Line P&L tab
+  html += '<div class="fin-sheet-content" id="fin-straight-line">' + rfpBuildStraightLineTable(selected.analysis) + '</div>';
+
+  // GAAP tab
+  html += '<div class="fin-sheet-content" id="fin-gaap">' + rfpBuildGAAPTable(selected.analysis) + '</div>';
+
+  html += '</div>';
+  return html;
+}
+
+function rfpSelectSubmission(id) {
+  window._rfpState.selectedSubmission = id;
+  rfpRenderDashboard(window._rfpState.submissions);
+}
+
+// ===== DEAL TERMS TABLE =====
+function rfpBuildTermsTable(terms) {
+  if (!terms) return '<div style="padding:var(--space-4);color:var(--color-text-muted)">No terms data available.</div>';
+  var rows = [
+    ['RSF', rfpFmtNum(terms.rsf)],
+    ['Lease Term', (terms.leaseTerm || '--') + ' months'],
+    ['Commencement Date', terms.commencementDate || '--'],
+    ['Base Rent', terms.baseRent ? rfpFmtCurrencyDecimals(terms.baseRent) + '/RSF/yr' : '--'],
+    ['Rent Basis', terms.rentBasis || '--'],
+    ['Annual Escalation', terms.annualEscalation ? terms.annualEscalation + '%' : '--'],
+    ['Free Rent', terms.freeRent ? terms.freeRent + ' months' : '--'],
+    ['TI Allowance (per RSF)', rfpFmtCurrencyDecimals(terms.tiAllowancePerRSF)],
+    ['TI Allowance (total)', rfpFmtCurrencyPlain(terms.tiAllowanceTotal)],
+    ['OpEx (monthly)', rfpFmtCurrencyPlain(terms.opex)],
+    ['Parking Spots', terms.parkingSpots || '--'],
+    ['Parking Rate', terms.parkingRate ? rfpFmtCurrencyDecimals(terms.parkingRate) + '/spot/mo' : '--'],
+    ['Parking Escalation', terms.parkingEscalation ? terms.parkingEscalation + '%' : '--'],
+    ['Security Deposit', rfpFmtCurrencyPlain(terms.securityDeposit)],
+    ['Structure', terms.structure || '--'],
+    ['Landlord', terms.landlord || '--']
+  ];
+  if (terms.notes) rows.push(['Notes', terms.notes]);
+
+  var html = '<div class="rfp-terms-grid">';
+  rows.forEach(function(r) {
+    html += '<div class="rfp-terms-row"><span class="rfp-terms-key">' + r[0] + '</span><span class="rfp-terms-val">' + r[1] + '</span></div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+// ===== CASH FLOW TABLE =====
+function rfpBuildCashFlowTable(analysis) {
+  if (!analysis || !analysis.cash_flow || !analysis.cash_flow.monthly) {
+    return '<div style="padding:var(--space-4);color:var(--color-text-muted)">No cash flow data available.</div>';
+  }
+  var monthly = analysis.cash_flow.monthly;
+  var totals = analysis.cash_flow.totals || {};
+
+  var html = '<div class="fin-table-wrap"><table class="fin-table">';
+  html += '<thead><tr>' +
+    '<th class="cell-label">Month</th>' +
+    '<th>Period</th>' +
+    '<th>Lease Year</th>' +
+    '<th class="cell-currency">Rent/RSF</th>' +
+    '<th class="cell-currency">Monthly Base Rent</th>' +
+    '<th class="cell-currency">Free Rent Credit</th>' +
+    '<th class="cell-currency">Net Cash Rent</th>' +
+    '<th class="cell-currency">OpEx</th>' +
+    '<th class="cell-currency">Parking</th>' +
+    '<th class="cell-currency">Total Monthly</th>' +
+    '<th class="cell-currency">Cumulative Cash</th>' +
+  '</tr></thead><tbody>';
+
+  monthly.forEach(function(row) {
+    var isFreeRent = row.freeRentCredit && row.freeRentCredit !== 0;
+    html += '<tr' + (isFreeRent ? ' style="background:rgba(5,150,105,0.04)"' : '') + '>' +
+      '<td class="cell-label">' + (row.month || '') + '</td>' +
+      '<td>' + (row.period || '') + '</td>' +
+      '<td>' + (row.leaseYear || '') + '</td>' +
+      '<td class="cell-currency">' + rfpFmtCurrencyDecimals(row.rentRSF) + '</td>' +
+      '<td class="cell-currency">' + rfpFmtCurrency(row.monthlyBaseRent) + '</td>' +
+      '<td class="cell-currency">' + (row.freeRentCredit ? rfpFmtCurrency(row.freeRentCredit) : '') + '</td>' +
+      '<td class="cell-currency">' + rfpFmtCurrency(row.netCashRent) + '</td>' +
+      '<td class="cell-currency">' + rfpFmtCurrency(row.opex) + '</td>' +
+      '<td class="cell-currency">' + rfpFmtCurrency(row.parking) + '</td>' +
+      '<td class="cell-currency">' + rfpFmtCurrency(row.totalMonthlyCost) + '</td>' +
+      '<td class="cell-currency">' + rfpFmtCurrency(row.cumulativeCash) + '</td>' +
+    '</tr>';
+  });
+
+  // Totals row
+  html += '<tr class="row-bold">' +
+    '<td class="cell-label">TOTALS</td>' +
+    '<td colspan="3"></td>' +
+    '<td class="cell-currency">' + rfpFmtCurrency(totals.totalBaseRent) + '</td>' +
+    '<td class="cell-currency cell-savings">' + rfpFmtCurrency(totals.totalFreeRentValue) + '</td>' +
+    '<td class="cell-currency">' + rfpFmtCurrency(totals.totalNetRent) + '</td>' +
+    '<td class="cell-currency">' + rfpFmtCurrency(totals.totalOpex) + '</td>' +
+    '<td class="cell-currency">' + rfpFmtCurrency(totals.totalParking) + '</td>' +
+    '<td class="cell-currency">' + rfpFmtCurrency(totals.totalAllInCost) + '</td>' +
+    '<td></td>' +
+  '</tr>';
+
+  html += '</tbody></table></div>';
+  return html;
+}
+
+// ===== STRAIGHT-LINE P&L TABLE =====
+function rfpBuildStraightLineTable(analysis) {
+  if (!analysis || !analysis.straight_line_pl || !analysis.straight_line_pl.annual) {
+    return '<div style="padding:var(--space-4);color:var(--color-text-muted)">No straight-line P&amp;L data available.</div>';
+  }
+  var annual = analysis.straight_line_pl.annual;
+  var totals = analysis.straight_line_pl.totals || {};
+
+  var html = '<div class="fin-table-wrap"><table class="fin-table">';
+  html += '<thead><tr>' +
+    '<th class="cell-label">Year</th>' +
+    '<th>Months</th>' +
+    '<th class="cell-currency">Base Rent</th>' +
+    '<th class="cell-currency">Free Rent</th>' +
+    '<th class="cell-currency">Net Rent</th>' +
+    '<th class="cell-currency">OpEx</th>' +
+    '<th class="cell-currency">Parking</th>' +
+    '<th class="cell-currency">Total Cost</th>' +
+  '</tr></thead><tbody>';
+
+  annual.forEach(function(row) {
+    html += '<tr>' +
+      '<td class="cell-label">Year ' + (row.year || '') + '</td>' +
+      '<td>' + (row.months || '') + '</td>' +
+      '<td class="cell-currency">' + rfpFmtCurrency(row.baseRent) + '</td>' +
+      '<td class="cell-currency">' + (row.freeRent ? rfpFmtCurrency(row.freeRent) : '') + '</td>' +
+      '<td class="cell-currency">' + rfpFmtCurrency(row.netRent) + '</td>' +
+      '<td class="cell-currency">' + rfpFmtCurrency(row.opex) + '</td>' +
+      '<td class="cell-currency">' + rfpFmtCurrency(row.parking) + '</td>' +
+      '<td class="cell-currency">' + rfpFmtCurrency(row.totalCost) + '</td>' +
+    '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+
+  // Summary metrics below table
+  html +=
+    '<div class="rfp-summary-metrics" style="margin-top:var(--space-4)">' +
+      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(totals.straightLineMonthlyRent) + '</div><div class="rfp-metric-label">SL Monthly Rent</div></div>' +
+      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(totals.straightLineAnnualRent) + '</div><div class="rfp-metric-label">SL Annual Rent</div></div>' +
+      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyDecimals(totals.effectiveRentRSF) + '</div><div class="rfp-metric-label">Effective Rent/RSF</div></div>' +
+      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyDecimals(totals.totalCostPerRSFPerYear) + '</div><div class="rfp-metric-label">Total Cost/RSF/Year</div></div>' +
+    '</div>';
+
+  return html;
+}
+
+// ===== GAAP ANALYSIS TABLE =====
+function rfpBuildGAAPTable(analysis) {
+  if (!analysis || !analysis.gaap) {
+    return '<div style="padding:var(--space-4);color:var(--color-text-muted)">No GAAP analysis data available.</div>';
+  }
+  var gaap = analysis.gaap;
+  var summary = gaap.summary || {};
+  var schedule = gaap.schedule || [];
+
+  // Summary box
+  var html =
+    '<div class="rfp-summary-metrics" style="margin-bottom:var(--space-4)">' +
+      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtPct(summary.discountRate) + '</div><div class="rfp-metric-label">Discount Rate</div></div>' +
+      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(summary.leaseLiability) + '</div><div class="rfp-metric-label">Lease Liability (Day 1)</div></div>' +
+      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(summary.rouAsset) + '</div><div class="rfp-metric-label">ROU Asset (Day 1)</div></div>' +
+      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(summary.totalLeasePayments) + '</div><div class="rfp-metric-label">Total Lease Payments</div></div>' +
+      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(summary.tiAllowance) + '</div><div class="rfp-metric-label">TI Allowance</div></div>' +
+    '</div>';
+
+  if (schedule.length === 0) return html;
+
+  html += '<div class="fin-table-wrap"><table class="fin-table">';
+  html += '<thead><tr>' +
+    '<th class="cell-label">Month</th>' +
+    '<th>Period</th>' +
+    '<th class="cell-currency">Cash Payment</th>' +
+    '<th class="cell-currency">Interest Expense</th>' +
+    '<th class="cell-currency">Principal Reduction</th>' +
+    '<th class="cell-currency">Lease Liability</th>' +
+    '<th class="cell-currency">ROU Amortization</th>' +
+    '<th class="cell-currency">ROU Asset</th>' +
+    '<th class="cell-currency">SL Expense</th>' +
+    '<th class="cell-currency">Total GAAP Expense</th>' +
+  '</tr></thead><tbody>';
+
+  schedule.forEach(function(row) {
+    html += '<tr>' +
+      '<td class="cell-label">' + (row.month || '') + '</td>' +
+      '<td>' + (row.period || '') + '</td>' +
+      '<td class="cell-currency">' + rfpFmtCurrency(row.cashPayment) + '</td>' +
+      '<td class="cell-currency">' + rfpFmtCurrency(row.interestExpense) + '</td>' +
+      '<td class="cell-currency">' + rfpFmtCurrency(row.principalReduction) + '</td>' +
+      '<td class="cell-currency">' + rfpFmtCurrency(row.leaseLiability) + '</td>' +
+      '<td class="cell-currency">' + rfpFmtCurrency(row.rouAmortization) + '</td>' +
+      '<td class="cell-currency">' + rfpFmtCurrency(row.rouAsset) + '</td>' +
+      '<td class="cell-currency">' + rfpFmtCurrency(row.straightLineExpense) + '</td>' +
+      '<td class="cell-currency">' + rfpFmtCurrency(row.totalGAAPExpense) + '</td>' +
+    '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  return html;
+}
+
+// ===== COMPARISON VIEW =====
+function rfpBuildComparisonHtml(submissions, byBuilding) {
+  var buildings = (typeof SURVEY_BUILDINGS !== 'undefined') ? SURVEY_BUILDINGS : [];
+  var keys = Object.keys(byBuilding);
+  if (keys.length < 1) {
+    return '<div style="padding:var(--space-4);color:var(--color-text-muted);text-align:center">Need at least one building with an RFP to compare.</div>';
+  }
+
+  // Get latest submission per building
+  var buildingData = [];
+  keys.forEach(function(bNum) {
+    var subs = byBuilding[bNum];
+    var latest = subs[subs.length - 1];
+    var bldg = buildings.find(function(b) { return b.num === parseInt(bNum); });
+    var address = latest.building_address || latest.buildingAddress || (bldg ? bldg.address : 'Building #' + bNum);
+    var summary = (latest.analysis && latest.analysis.summary) ? latest.analysis.summary : {};
+    var terms = latest.terms || {};
+    buildingData.push({ address: address, summary: summary, terms: terms });
+  });
+
+  // Metrics to compare - [label, getter, lowerIsBetter]
+  var metrics = [
+    ['RSF', function(d) { return d.summary.rsf; }, false],
+    ['Term (months)', function(d) { return d.summary.termMonths; }, false],
+    ['Base Rent $/RSF', function(d) { return d.terms.baseRent; }, true],
+    ['Effective Rent $/RSF', function(d) { return d.summary.effectiveRentRSF; }, true],
+    ['Total All-in Cost', function(d) { return d.summary.totalAllInCost; }, true],
+    ['SL Annual Expense', function(d) { return d.summary.straightLineAnnualExpense; }, true],
+    ['Free Rent Value', function(d) { return d.summary.freeRentValue; }, false],
+    ['TI Value', function(d) { return d.summary.tiValue; }, false],
+    ['Total Concessions', function(d) { return d.summary.totalConcessions; }, false],
+    ['Monthly OpEx', function(d) { return d.terms.opex; }, true]
+  ];
+
+  var html = '<div class="fin-table-wrap"><table class="fin-table rfp-comparison-table">';
+  html += '<thead><tr><th class="cell-label">Metric</th>';
+  buildingData.forEach(function(b) {
+    html += '<th style="text-align:right;min-width:160px">' + b.address + '</th>';
+  });
+  html += '</tr></thead><tbody>';
+
+  metrics.forEach(function(m) {
+    var label = m[0];
+    var getter = m[1];
+    var lowerIsBetter = m[2];
+
+    var values = buildingData.map(function(d) { return getter(d); });
+    var numericValues = values.filter(function(v) { return v != null && !isNaN(v); });
+
+    var bestVal = null;
+    var worstVal = null;
+    if (numericValues.length > 1) {
+      if (lowerIsBetter) {
+        bestVal = Math.min.apply(null, numericValues);
+        worstVal = Math.max.apply(null, numericValues);
+      } else {
+        bestVal = Math.max.apply(null, numericValues);
+        worstVal = Math.min.apply(null, numericValues);
+      }
+      if (bestVal === worstVal) { bestVal = null; worstVal = null; }
+    }
+
+    html += '<tr><td class="cell-label">' + label + '</td>';
+    values.forEach(function(v) {
+      var cls = 'cell-currency';
+      if (v != null && !isNaN(v) && bestVal !== null) {
+        if (v === bestVal) cls += ' cell-best';
+        else if (v === worstVal) cls += ' cell-worst';
+      }
+      var display;
+      if (label === 'RSF' || label === 'Term (months)') {
+        display = rfpFmtNum(v);
+      } else {
+        display = rfpFmtCurrency(v);
+      }
+      html += '<td class="' + cls + '">' + display + '</td>';
+    });
+    html += '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  return html;
+}
+
+// ===== RENDER ANALYSIS (for one submission) =====
+function rfpRenderAnalysis(submission) {
+  window._rfpState.selectedBuilding = String(submission.building_num || submission.buildingNum || 'unknown');
+  window._rfpState.selectedSubmission = submission.id;
+  window._rfpState.view = 'dashboard';
+  rfpRenderDashboard(window._rfpState.submissions);
+}
+
+// ===== RENDER COMPARISON =====
+function rfpRenderComparison(submissions) {
+  window._rfpState.view = 'comparison';
+  rfpRenderDashboard(submissions);
+}
+
+// ===== DELETE SUBMISSION =====
+function rfpDeleteSubmission(id) {
+  if (!confirm('Delete this proposal? This cannot be undone.')) return;
+
+  var email = getCurrentUserEmail();
+  var url = '/api/rfp/' + id;
+  if (email) url += '?userEmail=' + encodeURIComponent(email);
+
+  fetch(url, { method: 'DELETE' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) throw new Error(data.error);
+      window._rfpState.selectedBuilding = null;
+      window._rfpState.selectedSubmission = null;
+      rfpLoadSubmissions();
+    })
+    .catch(function(err) {
+      console.error('RFP delete error:', err);
+      alert('Failed to delete: ' + (err.message || 'Unknown error'));
+    });
 }
 
 // ============================================================
