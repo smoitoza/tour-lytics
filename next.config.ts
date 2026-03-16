@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
         source: "/app/:path*",
         headers: [
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
         ],
       },
     ];

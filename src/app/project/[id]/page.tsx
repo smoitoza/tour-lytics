@@ -121,7 +121,7 @@ export default function ProjectPage() {
       {/* Full app iframe - pass user email for survey submission */}
       <div style={{ flex: 1, position: 'relative' }}>
         <iframe
-          src={`/app/index.html?userEmail=${encodeURIComponent(user?.email || '')}&projectId=${encodeURIComponent(projectId)}${tabParam ? '#' + tabParam : ''}`}
+          src={`/app/index.html?userEmail=${encodeURIComponent(user?.email || '')}&projectId=${encodeURIComponent(projectId)}&v=${Date.now()}${tabParam ? '#' + tabParam : ''}`}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
           title={project?.name || 'Project Application'}
         />
