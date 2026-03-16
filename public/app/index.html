@@ -5600,8 +5600,8 @@ body {
         <rect x="17" y="17" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.3"/>
       </svg>
       <div class="header-title-group">
-        <h1 class="header-title">SF Office Search</h1>
-        <span class="header-subtitle">33 Buildings Evaluated &middot; 4 Shortlisted</span>
+        <h1 class="header-title" id="projectTitle">SF Office Search</h1>
+        <span class="header-subtitle" id="projectSubtitle">33 Buildings Evaluated &middot; 4 Shortlisted</span>
       </div>
     </div>
     <div class="header-right">
@@ -7094,7 +7094,7 @@ const FLOOR_DATA = {
 };
 
 
-const SURVEY_BUILDINGS = [
+const _SF_SURVEY_BUILDINGS = [
   {
     num: 1,
     address: '300 Mission Street',
@@ -7502,6 +7502,16 @@ const SURVEY_BUILDINGS = [
     lng: -122.3931655
   }
 ];
+
+// Only load SF buildings for the SF project; other projects start empty
+const SURVEY_BUILDINGS = (function() {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var pid = params.get('projectId');
+    if (!pid || pid === 'sf-office-search') return _SF_SURVEY_BUILDINGS;
+    return [];
+  } catch(e) { return _SF_SURVEY_BUILDINGS; }
+})();
 
 function buildSurveyPopup(b) {
   // Build floor table if data exists
@@ -7967,7 +7977,7 @@ async function fetchUserRole() {
   var email = getCurrentUserEmail();
   if (!email) return null;
   try {
-    var res = await fetch('/api/team?projectId=sf-office-search');
+    var res = await fetch('/api/team?projectId=' + getProjectId());
     if (!res.ok) return null;
     var members = await res.json();
     var me = members.find(function(m) { return m.email.toLowerCase() === email.toLowerCase(); });
@@ -8304,11 +8314,39 @@ function renderTourBook() {
   var hasExistingCards = document.querySelectorAll('.tourbook-card').length > 0;
 
   if (list.length === 0) {
-    container.innerHTML = 
-      '<div class="tourbook-empty">' +
-        '<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>' +
-        '<p><strong>No buildings on your tour list</strong><br>' + (isReadOnlyTourList() ? 'The admin has not set up the tour list yet. Check back soon.' : 'Add buildings from the Map tab to start building your tour book.') + '</p>' +
-      '</div>';
+    var isNewProject = SURVEY_BUILDINGS.length === 0;
+    if (isNewProject && hasAdminAccess()) {
+      container.innerHTML = 
+        '<div class="tourbook-empty" style="text-align:center;padding:4rem 2rem;">' +
+          '<div style="width:80px;height:80px;border-radius:1rem;background:rgba(37,99,235,0.08);display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;">' +
+            '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+              '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>' +
+              '<polyline points="14 2 14 8 20 8"/>' +
+              '<line x1="12" y1="18" x2="12" y2="12"/>' +
+              '<line x1="9" y1="15" x2="15" y2="15"/>' +
+            '</svg>' +
+          '</div>' +
+          '<h3 style="font-size:1.125rem;font-weight:700;color:#0f172a;margin:0 0 0.5rem;">Upload Your Broker Survey</h3>' +
+          '<p style="font-size:0.875rem;color:#64748b;max-width:400px;margin:0 auto 1.5rem;line-height:1.6;">Get started by uploading a broker survey PDF. Tour-Lytics will extract all the building data and populate your project automatically.</p>' +
+          '<button onclick="openSurveyUploadModal()" style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.75rem 1.5rem;background:#2563eb;color:#fff;border:none;border-radius:0.75rem;font-size:0.875rem;font-weight:600;cursor:pointer;transition:opacity 0.15s;font-family:inherit;" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">' +
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' +
+            'Upload Survey PDF' +
+          '</button>' +
+          '<p style="font-size:0.75rem;color:#94a3b8;margin-top:1rem;">Supports PDF, CSV, and Excel files</p>' +
+        '</div>';
+    } else if (isNewProject) {
+      container.innerHTML = 
+        '<div class="tourbook-empty">' +
+          '<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>' +
+          '<p><strong>No buildings yet</strong><br>The project admin is setting things up. Check back soon.</p>' +
+        '</div>';
+    } else {
+      container.innerHTML = 
+        '<div class="tourbook-empty">' +
+          '<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>' +
+          '<p><strong>No buildings on your tour list</strong><br>' + (isReadOnlyTourList() ? 'The admin has not set up the tour list yet. Check back soon.' : 'Add buildings from the Map tab to start building your tour book.') + '</p>' +
+        '</div>';
+    }
     return;
   }
   
@@ -8503,6 +8541,45 @@ function getCurrentUserEmail() {
   } catch(e) { return ''; }
 }
 
+// --- Get current project ID from URL params ---
+function getProjectId() {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    return params.get('projectId') || 'sf-office-search';
+  } catch(e) { return 'sf-office-search'; }
+}
+
+// --- Set project header dynamically ---
+(function initProjectHeader() {
+  var pid = getProjectId();
+  if (pid && pid !== 'sf-office-search') {
+    // Convert slug to title: 'new-york-office' -> 'New York Office'
+    var fallbackTitle = pid.replace(/-/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+    var titleEl = document.getElementById('projectTitle');
+    var subtitleEl = document.getElementById('projectSubtitle');
+    if (titleEl) titleEl.textContent = fallbackTitle;
+    if (subtitleEl) subtitleEl.textContent = '0 Buildings Evaluated';
+    document.title = fallbackTitle;
+    // Try to fetch real project name from API
+    fetch('/api/projects?email=')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (Array.isArray(data)) {
+          var proj = data.find(function(p) { return p.id === pid; });
+          if (proj) {
+            if (titleEl) titleEl.textContent = proj.name;
+            document.title = proj.name;
+            var parts = [];
+            if (proj.buildings_count) parts.push(proj.buildings_count + ' Buildings Evaluated');
+            if (proj.shortlisted_count) parts.push(proj.shortlisted_count + ' Shortlisted');
+            if (subtitleEl && parts.length) subtitleEl.innerHTML = parts.join(' &middot; ');
+          }
+        }
+      })
+      .catch(function() {});
+  }
+})();
+
 // (ADMIN_EMAIL, _userRole, _centralTourList, _centralTourListLoaded moved above initTourList)
 
 function isAdmin() {
@@ -8630,7 +8707,7 @@ function signOutUser() {
 // Fetch centralized tour list from server
 async function fetchCentralTourList() {
   try {
-    var res = await fetch('/api/tour-list?projectId=sf-office-search');
+    var res = await fetch('/api/tour-list?projectId=' + getProjectId());
     if (!res.ok) return [];
     var data = await res.json();
     _centralTourList = Array.isArray(data) ? data : [];
@@ -8665,7 +8742,7 @@ async function addToCentralTourList(info) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        projectId: 'sf-office-search',
+        projectId: getProjectId(),
         buildingType: info.type,
         buildingId: info.id,
         buildingName: info.name,
@@ -8685,7 +8762,7 @@ async function addToCentralTourList(info) {
 // Remove a building from the centralized tour list (admin only)
 async function removeFromCentralTourList(type, id) {
   try {
-    await fetch('/api/tour-list?projectId=sf-office-search&buildingType=' + encodeURIComponent(type) + '&buildingId=' + id, {
+    await fetch('/api/tour-list?projectId=' + getProjectId() + '&buildingType=' + encodeURIComponent(type) + '&buildingId=' + id, {
       method: 'DELETE'
     });
   } catch(e) { console.error('Failed to remove from central tour list:', e); }
@@ -8695,7 +8772,7 @@ async function removeFromCentralTourList(type, id) {
 async function saveCentralTourSchedule(buildingType, buildingId, field, value) {
   try {
     var body = {
-      projectId: 'sf-office-search',
+      projectId: getProjectId(),
       buildingType: buildingType,
       buildingId: buildingId
     };
@@ -8744,7 +8821,7 @@ async function submitSurvey() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userEmail: userEmail,
-          projectId: 'sf-office-search',
+          projectId: getProjectId(),
           buildingKey: key,
           buildingName: item.name,
           scores: entry.scores,
@@ -9416,7 +9493,7 @@ function rfpInit() {
 // ===== LOAD ASSUMPTIONS (all buildings) =====
 function rfpLoadAssumptions() {
   var email = getCurrentUserEmail();
-  var url = '/api/assumptions?projectId=sf-office-search';
+  var url = '/api/assumptions?projectId=' + getProjectId();
   if (email) url += '&userEmail=' + encodeURIComponent(email);
   fetch(url)
     .then(function(r) { return r.json(); })
@@ -10578,7 +10655,7 @@ function rfpSaveAssumptions() {
   }
 
   var payload = {
-    projectId: 'sf-office-search',
+    projectId: getProjectId(),
     building_address: buildingAddr,
     opex_food_beverage: parseFloat((document.getElementById('assumption-fb') || {}).value) || 0,
     opex_workplace_experience: parseFloat((document.getElementById('assumption-wpe') || {}).value) || 0,
@@ -10787,7 +10864,7 @@ var AREA_LABELS = {
 async function fetchBuildingPhotos(buildingType, buildingId) {
   var cacheKey = buildingType + '-' + buildingId;
   try {
-    var res = await fetch('/api/photos?projectId=sf-office-search&buildingType=' + encodeURIComponent(buildingType) + '&buildingId=' + buildingId);
+    var res = await fetch('/api/photos?projectId=' + getProjectId() + '&buildingType=' + encodeURIComponent(buildingType) + '&buildingId=' + buildingId);
     if (!res.ok) return [];
     var data = await res.json();
     _photoCache[cacheKey] = Array.isArray(data) ? data : [];
@@ -11062,7 +11139,7 @@ async function submitPhotoUpload() {
 
       var formData = new FormData();
       formData.append('file', fileToUpload);
-      formData.append('projectId', 'sf-office-search');
+      formData.append('projectId', getProjectId());
       formData.append('buildingType', modal._buildingType);
       formData.append('buildingId', String(modal._buildingId));
       formData.append('buildingName', modal._buildingName);
@@ -11224,7 +11301,7 @@ async function loadPhotosGallery() {
   if (_galleryLoaded) return;
   _galleryLoaded = true;
   try {
-    var res = await fetch('/api/photos?projectId=sf-office-search');
+    var res = await fetch('/api/photos?projectId=' + getProjectId());
     if (!res.ok) throw new Error('Failed to load photos');
     _allGalleryPhotos = await res.json();
     populatePhotoFilters();
@@ -11697,10 +11774,10 @@ async function aiUsageLoad() {
   try {
     // Fetch all data in parallel
     var [balanceRes, summaryRes, txRes, pricingRes] = await Promise.all([
-      fetch('/api/tokens?view=balance&projectId=sf-office-search'),
-      fetch('/api/tokens?view=summary&projectId=sf-office-search'),
-      fetch('/api/tokens?view=transactions&projectId=sf-office-search&limit=50'),
-      fetch('/api/tokens?view=pricing&projectId=sf-office-search')
+      fetch('/api/tokens?view=balance&projectId=' + getProjectId()),
+      fetch('/api/tokens?view=summary&projectId=' + getProjectId()),
+      fetch('/api/tokens?view=transactions&projectId=' + getProjectId() + '&limit=50'),
+      fetch('/api/tokens?view=pricing&projectId=' + getProjectId())
     ]);
 
     var balance = balanceRes.ok ? await balanceRes.json() : { balance: 0, total_purchased: 0, total_consumed: 0 };
@@ -11848,7 +11925,7 @@ async function aiUsageSubmitReseed() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        projectId: 'sf-office-search',
+        projectId: getProjectId(),
         amount: amount,
         userEmail: getCurrentUserEmail(),
         note: note
@@ -11995,7 +12072,7 @@ function openComposeEmail(to, subject, body) {
 async function loadTeamMembers() {
   if (_teamLoaded) { renderTeamPage(); return; }
   try {
-    var res = await fetch('/api/team?projectId=sf-office-search');
+    var res = await fetch('/api/team?projectId=' + getProjectId());
     if (!res.ok) throw new Error('Failed to load team');
     _teamMembers = await res.json();
     _teamLoaded = true;
@@ -12110,7 +12187,7 @@ async function teamAddMember() {
         email: email,
         displayName: displayName,
         persona: persona,
-        projectId: 'sf-office-search',
+        projectId: getProjectId(),
         addedBy: getCurrentUserEmail()
       })
     });
@@ -12228,7 +12305,7 @@ async function teamRemoveMember(email) {
     var res = await fetch('/api/team', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email, projectId: 'sf-office-search' })
+      body: JSON.stringify({ email: email, projectId: getProjectId() })
     });
     if (!res.ok) {
       var errData = await res.json();
@@ -12247,7 +12324,7 @@ async function teamChangeRole(email, newPersona) {
     var res = await fetch('/api/team', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email, persona: newPersona, projectId: 'sf-office-search' })
+      body: JSON.stringify({ email: email, persona: newPersona, projectId: getProjectId() })
     });
     if (!res.ok) {
       var errData = await res.json();
@@ -12291,7 +12368,7 @@ async function loadCombinedScores() {
   if (!container) return;
   container.innerHTML = '<div class="scores-loading"><div style="display:flex;align-items:center;justify-content:center;gap:0.75rem"><div style="width:1rem;height:1rem;border:2px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div><span>Loading survey scores...</span></div></div>';
   try {
-    var res = await fetch('/api/surveys/combined?projectId=sf-office-search&includeDetails=true');
+    var res = await fetch('/api/surveys/combined?projectId=' + getProjectId() + '&includeDetails=true');
     var data = await res.json();
     _scoresData = Array.isArray(data) ? data : (data.buildings || []);
     // Pre-populate details data from the includeDetails response
@@ -12453,7 +12530,7 @@ async function commuteLoadSaved() {
   if (_commuteSavedLoaded) return;
   _commuteSavedLoaded = true;
   try {
-    var res = await fetch('/api/commute-study?projectId=sf-office-search');
+    var res = await fetch('/api/commute-study?projectId=' + getProjectId());
     var data = await res.json();
     if (!data || !data.employees || !data.employees.length) return;
 
@@ -12504,7 +12581,7 @@ async function commuteSaveToServer(filename) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        projectId: 'sf-office-search',
+        projectId: getProjectId(),
         filename: filename || '',
         headers: _commuteHeaders,
         latCol: _commuteLatCol,
@@ -12522,7 +12599,7 @@ async function commuteSaveToServer(filename) {
 // Delete saved commute study from server
 async function commuteDeleteFromServer() {
   try {
-    await fetch('/api/commute-study?projectId=sf-office-search', { method: 'DELETE' });
+    await fetch('/api/commute-study?projectId=' + getProjectId(), { method: 'DELETE' });
   } catch(e) {
     console.warn('Failed to delete commute study:', e);
   }
