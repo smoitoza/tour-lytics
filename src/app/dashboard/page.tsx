@@ -599,36 +599,6 @@ export default function DashboardPage() {
                   onMouseEnter={() => setHoveredCard(project.id)}
                   onMouseLeave={() => setHoveredCard(null)}
                 >
-                  {/* Delete button - admin only, not for SF demo */}
-                  {canDelete && (
-                    <button
-                      className="delete-project-btn"
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteTarget(project) }}
-                      title="Delete project"
-                      style={{
-                        position: 'absolute',
-                        top: '0.75rem',
-                        right: '0.75rem',
-                        zIndex: 10,
-                        width: '2rem',
-                        height: '2rem',
-                        borderRadius: '0.5rem',
-                        border: '1px solid #e2e8f0',
-                        background: '#ffffff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        color: '#94a3b8',
-                        transition: 'all 0.15s',
-                      }}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="3 6 5 6 21 6" />
-                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                      </svg>
-                    </button>
-                  )}
                 <Link
                   href={`/project/${project.id}`}
                   className="no-underline"
@@ -713,6 +683,38 @@ export default function DashboardPage() {
                     )}
                   </div>
                 </Link>
+                {/* Delete link - below the card, far from the open arrow */}
+                {canDelete && (
+                  <div className="delete-project-btn" style={{
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    padding: '0.375rem 0.5rem 0',
+                  }}>
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteTarget(project) }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '0.6875rem',
+                        color: '#94a3b8',
+                        fontFamily: 'inherit',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        padding: '0.25rem 0.375rem',
+                        borderRadius: '0.375rem',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                      </svg>
+                      Delete
+                    </button>
+                  </div>
+                )}
                 </div>
               )
             })}
