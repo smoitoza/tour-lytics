@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
   let query = supabase
     .from('projects')
     .select('*')
+    .neq('status', 'deleted')
     .order('created_at', { ascending: false })
 
   // If email is provided, show projects the user created or is a member of
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(data || [])
 }
 
-/* DELETE /api/projects?id=<slug>&email=<admin-email> -- delete a project and related data */
+/* DELETE /api/projects?id=<slug>&email=<admin-email> -- soft-delete a project */
 export async function DELETE(req: NextRequest) {
   const supabase = createClient(supabaseUrl, supabaseKey)
   const projectId = req.nextUrl.searchParams.get('id')
@@ -55,26 +56,10 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: 'Cannot delete the demo project.' }, { status: 400 })
   }
 
-  // Delete related data from all tables that reference this project
-  const relatedTables = [
-    'project_members',
-    'tour_list',
-    'building_surveys',
-    'building_photos',
-    'rfp_submissions',
-    'building_assumptions',
-    'commute_studies',
-    'ai_usage_log',
-  ]
-
-  for (const table of relatedTables) {
-    await supabase.from(table).delete().eq('project_id', projectId)
-  }
-
-  // Delete the project itself
+  // Soft-delete: mark status as 'deleted' (RLS update policy exists)
   const { error } = await supabase
     .from('projects')
-    .delete()
+    .update({ status: 'deleted' })
     .eq('id', projectId)
 
   if (error) {
