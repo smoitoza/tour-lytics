@@ -8196,25 +8196,26 @@ function rfpRenderEmpty() {
 function rfpShowUploadModal() {
   if (_rfpModal) { _rfpModal.remove(); _rfpModal = null; }
 
-  var buildings = (typeof SURVEY_BUILDINGS !== 'undefined') ? SURVEY_BUILDINGS : [];
-  var tourList = (typeof getTourList === 'function') ? getTourList() : [];
-  var shortlistedNums = tourList.filter(function(t) { return t.type === 'survey'; }).map(function(t) { return t.id; });
+  var surveyBuildings = (typeof SURVEY_BUILDINGS !== 'undefined') ? SURVEY_BUILDINGS : [];
+  var dealBuildings = (typeof BUILDINGS !== 'undefined') ? BUILDINGS : [];
 
-  // Build building options - shortlisted first
-  var shortlisted = buildings.filter(function(b) { return shortlistedNums.indexOf(b.num) >= 0; });
-  var others = buildings.filter(function(b) { return shortlistedNums.indexOf(b.num) < 0; });
-
+  // Build building options - shortlisted/deal buildings first, then survey buildings
   var optionsHtml = '<option value="">Select a building...</option>';
-  if (shortlisted.length > 0) {
+
+  // Shortlisted buildings (from BUILDINGS array - active deals)
+  if (dealBuildings.length > 0) {
     optionsHtml += '<optgroup label="Shortlisted">';
-    shortlisted.forEach(function(b) {
-      optionsHtml += '<option value="' + b.num + '">' + String.fromCharCode(9733) + ' ' + b.address + '</option>';
+    dealBuildings.forEach(function(b) {
+      // Use 'deal-' prefix + id to distinguish from survey buildings
+      optionsHtml += '<option value="deal-' + b.id + '" data-address="' + (b.address || b.name) + '">' + String.fromCharCode(9733) + ' ' + b.name + '</option>';
     });
     optionsHtml += '</optgroup>';
   }
+
+  // All survey buildings
   optionsHtml += '<optgroup label="All Buildings">';
-  others.forEach(function(b) {
-    optionsHtml += '<option value="' + b.num + '">' + b.address + '</option>';
+  surveyBuildings.forEach(function(b) {
+    optionsHtml += '<option value="survey-' + b.num + '" data-address="' + b.address + '">' + b.address + '</option>';
   });
   optionsHtml += '</optgroup>';
 
@@ -8386,8 +8387,26 @@ function rfpParseDocument(file) {
 function rfpSubmitUpload() {
   if (!_rfpModal) return;
   var buildingSelect = document.getElementById('rfp-building-select');
-  var buildingNum = buildingSelect ? parseInt(buildingSelect.value) : NaN;
-  if (isNaN(buildingNum)) { alert('Please select a building.'); return; }
+  var rawVal = buildingSelect ? buildingSelect.value : '';
+  if (!rawVal) { alert('Please select a building.'); return; }
+
+  // Parse building value: "deal-1" or "survey-5"
+  var parts = rawVal.split('-');
+  var buildingType = parts[0]; // 'deal' or 'survey'
+  var buildingId = parseInt(parts.slice(1).join('-'));
+  var buildingNum, address;
+
+  if (buildingType === 'deal') {
+    var dealBuildings = (typeof BUILDINGS !== 'undefined') ? BUILDINGS : [];
+    var dealB = dealBuildings.find(function(b) { return b.id === buildingId; });
+    buildingNum = dealB ? (1000 + dealB.id) : buildingId; // Use 1000+ range for deal buildings
+    address = dealB ? dealB.name : 'Building #' + buildingId;
+  } else {
+    var surveyBuildings = (typeof SURVEY_BUILDINGS !== 'undefined') ? SURVEY_BUILDINGS : [];
+    var surveyB = surveyBuildings.find(function(b) { return b.num === buildingId; });
+    buildingNum = buildingId;
+    address = surveyB ? surveyB.address : 'Building #' + buildingId;
+  }
 
   var file = _rfpModal._selectedFile;
   var manualText = (document.getElementById('rfp-manual-text') || {}).value || '';
@@ -8395,10 +8414,6 @@ function rfpSubmitUpload() {
 
   var docType = _rfpModal._docType || 'RFP';
   var source = (document.getElementById('rfp-source-input') || {}).value || '';
-
-  var buildings = (typeof SURVEY_BUILDINGS !== 'undefined') ? SURVEY_BUILDINGS : [];
-  var building = buildings.find(function(b) { return b.num === buildingNum; });
-  var address = building ? building.address : 'Building #' + buildingNum;
 
   // Show loading
   var statusEl = document.getElementById('rfp-upload-status');
