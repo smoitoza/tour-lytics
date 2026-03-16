@@ -8903,7 +8903,7 @@ function sortTourListByDate() {
 }
 
 // --- Tour Attendees ---
-var TOUR_OWNER_EMAIL = 'samoitoza@gmail.com';
+var TOUR_OWNER_EMAIL = getCurrentUserEmail() || 'samoitoza@gmail.com';
 
 function getTourAttendees() {
   try {
