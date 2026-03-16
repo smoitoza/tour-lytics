@@ -8183,7 +8183,16 @@ function rfpGetCurrentAssumptions() {
 }
 
 // Get the building address for the currently selected submission
+// Primary: read from the data attribute embedded in the assumptions panel DOM
+// Fallback: look up from state
 function rfpGetCurrentBuildingAddress() {
+  // Try reading directly from the assumptions panel DOM
+  var panel = document.querySelector('[data-assumption-building]');
+  if (panel) {
+    var addr = panel.getAttribute('data-assumption-building');
+    if (addr) return addr;
+  }
+  // Fallback to state lookup
   var sub = rfpGetCurrentSubmission();
   return sub ? (sub.building_address || sub.buildingAddress || '') : '';
 }
@@ -9074,7 +9083,7 @@ function rfpBuildGAAPTable(analysis) {
 
 // ===== ASSUMPTIONS PANEL =====
 function rfpBuildAssumptionsPanel(selected) {
-  var buildingAddr = selected ? (selected.building_address || '') : '';
+  var buildingAddr = selected ? (selected.building_address || selected.buildingAddress || '') : '';
   var a = buildingAddr ? (window._rfpState.assumptionsMap[buildingAddr] || {}) : {};
   var canEdit = hasAdminAccess();
   var analysis = selected ? selected.analysis : null;
@@ -9101,7 +9110,7 @@ function rfpBuildAssumptionsPanel(selected) {
   var allInPerRSF = rsf > 0 ? Math.round(allInAnnual / rsf * 100) / 100 : 0;
   var densityFit = (headcount > 0 && rsf > 0) ? Math.round(rsf / headcount) : 0;
 
-  var html = '<div style="padding:var(--space-4)">';
+  var html = '<div style="padding:var(--space-4)" data-assumption-building="' + buildingAddr.replace(/"/g, '&quot;') + '">';
 
   // All-In summary (only show if assumptions have been saved with non-zero OpEx)
   if (totalMonthlyOpex > 0 && slMonthly > 0) {
@@ -9245,6 +9254,11 @@ function rfpRefreshAssumptionsPanel() {
   var container = document.getElementById('fin-assumptions');
   if (!container) return;
   var sub = rfpGetCurrentSubmission();
+  // If state lookup fails, build a minimal object from the DOM data attribute
+  if (!sub) {
+    var addr = rfpGetCurrentBuildingAddress();
+    if (addr) sub = { building_address: addr, analysis: null };
+  }
   container.innerHTML = rfpBuildAssumptionsPanel(sub);
 }
 
