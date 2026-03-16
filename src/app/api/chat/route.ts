@@ -199,64 +199,68 @@ async function getCommuteContext(): Promise<string> {
   }
 }
 
-// Fetch project assumptions for chatbot context
+// Fetch project assumptions for chatbot context (per-building)
 async function getAssumptionsContext(): Promise<string> {
   try {
     const { data, error } = await supabase
       .from('project_assumptions')
       .select('*')
       .eq('project_id', 'sf-office-search')
-      .single()
+      .order('building_address', { ascending: true })
 
-    if (error || !data) {
+    if (error || !data || data.length === 0) {
       return ''
     }
 
-    const fb = parseFloat(data.opex_food_beverage) || 0
-    const wpe = parseFloat(data.opex_workplace_experience) || 0
-    const maint = parseFloat(data.opex_maintenance_security) || 0
-    const customItems = data.opex_custom_items || []
-    let customTotal = 0
-    customItems.forEach((item: { label?: string; monthly?: number }) => {
-      customTotal += parseFloat(String(item.monthly)) || 0
-    })
-    const totalMonthlyOpex = fb + wpe + maint + customTotal
-    const headcount = parseInt(data.headcount) || 0
-    const densityRSF = parseInt(data.target_density_rsf) || 0
-    const discountRate = parseFloat(data.discount_rate) || 6.0
+    let context = '\n\nPROJECT ASSUMPTIONS (per-building internal cost modeling from the Assumptions tab):\n'
+    context += 'Each building can have its own internal operating expense assumptions. These are SEPARATE from the RFP deal terms.\n'
 
-    if (totalMonthlyOpex === 0 && headcount === 0 && discountRate === 6.0) {
-      return '' // No meaningful assumptions configured yet
-    }
-
-    let context = '\n\nPROJECT ASSUMPTIONS (internal cost modeling inputs from the Assumptions tab):\n'
-    context += 'These are the team\'s internal operating expense assumptions and workforce planning numbers. They are SEPARATE from the RFP deal terms.\n'
-
-    if (totalMonthlyOpex > 0) {
-      context += '\nInternal OpEx (Monthly):\n'
-      if (fb > 0) context += `  Food & Beverage: $${fb.toLocaleString()}/mo\n`
-      if (wpe > 0) context += `  Workplace Experience: $${wpe.toLocaleString()}/mo\n`
-      if (maint > 0) context += `  Maintenance & Security: $${maint.toLocaleString()}/mo\n`
+    for (const row of data) {
+      const fb = parseFloat(row.opex_food_beverage) || 0
+      const wpe = parseFloat(row.opex_workplace_experience) || 0
+      const maint = parseFloat(row.opex_maintenance_security) || 0
+      const customItems = row.opex_custom_items || []
+      let customTotal = 0
       customItems.forEach((item: { label?: string; monthly?: number }) => {
-        const amt = parseFloat(String(item.monthly)) || 0
-        if (amt > 0 && item.label) {
-          context += `  ${item.label}: $${amt.toLocaleString()}/mo\n`
-        }
+        customTotal += parseFloat(String(item.monthly)) || 0
       })
-      context += `  Total Internal OpEx: $${totalMonthlyOpex.toLocaleString()}/mo ($${(totalMonthlyOpex * 12).toLocaleString()}/yr)\n`
-    }
+      const totalMonthlyOpex = fb + wpe + maint + customTotal
+      const headcount = parseInt(row.headcount) || 0
+      const densityRSF = parseInt(row.target_density_rsf) || 0
+      const discountRate = parseFloat(row.discount_rate) || 6.0
 
-    if (headcount > 0) {
-      context += `\nHeadcount: ${headcount} employees\n`
-      if (densityRSF > 0) context += `Target Density: ${densityRSF} RSF/person\n`
-    }
+      if (totalMonthlyOpex === 0 && headcount === 0 && discountRate === 6.0) {
+        continue // Skip buildings with no meaningful assumptions
+      }
 
-    if (discountRate !== 6.0) {
-      context += `\nGAAP Discount Rate / IBR: ${discountRate}%\n`
-    }
+      context += `\n--- ${row.building_address || 'Unknown Building'} Assumptions ---\n`
 
-    if (data.updated_by) {
-      context += `\nLast updated by: ${data.updated_by}\n`
+      if (totalMonthlyOpex > 0) {
+        context += '  Internal OpEx (Monthly):\n'
+        if (fb > 0) context += `    Food & Beverage: $${fb.toLocaleString()}/mo\n`
+        if (wpe > 0) context += `    Workplace Experience: $${wpe.toLocaleString()}/mo\n`
+        if (maint > 0) context += `    Maintenance & Security: $${maint.toLocaleString()}/mo\n`
+        customItems.forEach((item: { label?: string; monthly?: number }) => {
+          const amt = parseFloat(String(item.monthly)) || 0
+          if (amt > 0 && item.label) {
+            context += `    ${item.label}: $${amt.toLocaleString()}/mo\n`
+          }
+        })
+        context += `    Total Internal OpEx: $${totalMonthlyOpex.toLocaleString()}/mo ($${(totalMonthlyOpex * 12).toLocaleString()}/yr)\n`
+      }
+
+      if (headcount > 0) {
+        context += `  Headcount: ${headcount} employees\n`
+        if (densityRSF > 0) context += `  Target Density: ${densityRSF} RSF/person\n`
+      }
+
+      if (discountRate !== 6.0) {
+        context += `  GAAP Discount Rate / IBR: ${discountRate}%\n`
+      }
+
+      if (row.updated_by) {
+        context += `  Last updated by: ${row.updated_by}\n`
+      }
     }
 
     return context

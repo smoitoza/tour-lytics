@@ -8093,7 +8093,7 @@ function exportTourBook() {
 // RFP / LOI FINANCIAL ANALYSIS ENGINE
 // ============================================================
 
-window._rfpState = { submissions: [], selectedBuilding: null, selectedSubmission: null, view: 'dashboard', assumptions: null };
+window._rfpState = { submissions: [], selectedBuilding: null, selectedSubmission: null, view: 'dashboard', assumptionsMap: {} };
 var _rfpModal = null;
 
 // Currency formatting
@@ -8143,7 +8143,7 @@ function rfpInit() {
   rfpLoadSubmissions();
 }
 
-// ===== LOAD ASSUMPTIONS =====
+// ===== LOAD ASSUMPTIONS (all buildings) =====
 function rfpLoadAssumptions() {
   var email = getCurrentUserEmail();
   var url = '/api/assumptions?projectId=sf-office-search';
@@ -8151,11 +8151,34 @@ function rfpLoadAssumptions() {
   fetch(url)
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      if (data && !data.error) {
-        window._rfpState.assumptions = data;
+      if (Array.isArray(data)) {
+        var map = {};
+        data.forEach(function(row) {
+          if (row.building_address) map[row.building_address] = row;
+        });
+        window._rfpState.assumptionsMap = map;
       }
     })
     .catch(function() { /* silent fail - assumptions are optional */ });
+}
+
+// Get assumptions for the currently selected building
+function rfpGetCurrentAssumptions() {
+  var sub = null;
+  if (window._rfpState.selectedSubmission != null) {
+    sub = window._rfpState.submissions[window._rfpState.selectedSubmission];
+  }
+  var addr = sub ? (sub.building_address || '') : '';
+  return addr ? (window._rfpState.assumptionsMap[addr] || {}) : {};
+}
+
+// Get the building address for the currently selected submission
+function rfpGetCurrentBuildingAddress() {
+  var sub = null;
+  if (window._rfpState.selectedSubmission != null) {
+    sub = window._rfpState.submissions[window._rfpState.selectedSubmission];
+  }
+  return sub ? (sub.building_address || '') : '';
 }
 
 // ===== LOAD SUBMISSIONS =====
@@ -9042,7 +9065,8 @@ function rfpBuildGAAPTable(analysis) {
 
 // ===== ASSUMPTIONS PANEL =====
 function rfpBuildAssumptionsPanel(selected) {
-  var a = window._rfpState.assumptions || {};
+  var buildingAddr = selected ? (selected.building_address || '') : '';
+  var a = buildingAddr ? (window._rfpState.assumptionsMap[buildingAddr] || {}) : {};
   var canEdit = hasAdminAccess();
   var analysis = selected ? selected.analysis : null;
   var summary = (analysis && analysis.summary) ? analysis.summary : {};
@@ -9169,9 +9193,11 @@ function rfpBuildAssumptionsPanel(selected) {
   return html;
 }
 
-// Read current form values into _rfpState.assumptions before re-rendering
+// Read current form values into assumptionsMap for the current building before re-rendering
 function rfpReadAssumptionsFromForm() {
-  var a = window._rfpState.assumptions || {};
+  var addr = rfpGetCurrentBuildingAddress();
+  if (!addr) return {};
+  var a = window._rfpState.assumptionsMap[addr] || {};
   var el;
   el = document.getElementById('assumption-fb');
   if (el) a.opex_food_beverage = parseFloat(el.value) || 0;
@@ -9201,7 +9227,7 @@ function rfpReadAssumptionsFromForm() {
   if (customItems.length > 0 || (a.opex_custom_items && a.opex_custom_items.length > 0)) {
     a.opex_custom_items = customItems;
   }
-  window._rfpState.assumptions = a;
+  window._rfpState.assumptionsMap[addr] = a;
   return a;
 }
 
@@ -9210,7 +9236,8 @@ function rfpAddCustomAssumption() {
   var a = rfpReadAssumptionsFromForm();
   if (!a.opex_custom_items) a.opex_custom_items = [];
   a.opex_custom_items.push({ label: '', monthly: 0 });
-  window._rfpState.assumptions = a;
+  var addr = rfpGetCurrentBuildingAddress();
+  if (addr) window._rfpState.assumptionsMap[addr] = a;
   rfpRenderDashboard(window._rfpState.submissions);
   // Re-select assumptions tab
   setTimeout(function() { switchFinSheet('assumptions'); }, 50);
@@ -9220,7 +9247,8 @@ function rfpRemoveCustomAssumption(index) {
   var a = rfpReadAssumptionsFromForm();
   if (!a.opex_custom_items) return;
   a.opex_custom_items.splice(index, 1);
-  window._rfpState.assumptions = a;
+  var addr = rfpGetCurrentBuildingAddress();
+  if (addr) window._rfpState.assumptionsMap[addr] = a;
   rfpRenderDashboard(window._rfpState.submissions);
   setTimeout(function() { switchFinSheet('assumptions'); }, 50);
 }
@@ -9228,6 +9256,11 @@ function rfpRemoveCustomAssumption(index) {
 function rfpSaveAssumptions() {
   var btn = document.getElementById('assumption-save-btn');
   var status = document.getElementById('assumption-save-status');
+  var buildingAddr = rfpGetCurrentBuildingAddress();
+  if (!buildingAddr) {
+    if (status) { status.textContent = 'Error: no building selected'; status.style.color = '#dc2626'; }
+    return;
+  }
   if (btn) btn.disabled = true;
   if (status) status.textContent = 'Saving...';
 
@@ -9248,6 +9281,7 @@ function rfpSaveAssumptions() {
 
   var payload = {
     projectId: 'sf-office-search',
+    building_address: buildingAddr,
     opex_food_beverage: parseFloat((document.getElementById('assumption-fb') || {}).value) || 0,
     opex_workplace_experience: parseFloat((document.getElementById('assumption-wpe') || {}).value) || 0,
     opex_maintenance_security: parseFloat((document.getElementById('assumption-maint') || {}).value) || 0,
@@ -9270,8 +9304,8 @@ function rfpSaveAssumptions() {
   .then(function(r) { return r.json(); })
   .then(function(data) {
     if (data.error) throw new Error(data.error);
-    window._rfpState.assumptions = data;
-    if (status) { status.textContent = 'Saved'; status.style.color = '#16a34a'; }
+    window._rfpState.assumptionsMap[buildingAddr] = data;
+    if (status) { status.textContent = 'Saved for ' + buildingAddr; status.style.color = '#16a34a'; }
     if (btn) btn.disabled = false;
     // Re-render to update All-In metrics
     rfpRenderDashboard(window._rfpState.submissions);
