@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenAI } from '@google/genai'
 import { NextResponse } from 'next/server'
+import { debitTokens } from '@/lib/tokens'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -50,6 +51,24 @@ export async function POST(req: Request) {
 
     if (!photos || photos.length === 0) {
       return NextResponse.json({ message: 'All photos already analyzed', analyzed: 0, remaining: 0 })
+    }
+
+    // Debit tokens for bulk photo analysis
+    try {
+      const tokenResult = await debitTokens({
+        projectId: 'sf-office-search',
+        action: 'photo_bulk_analysis',
+        metadata: { photo_count: photos.length },
+        note: `Bulk photo analysis: ${photos.length} photos`,
+      })
+      if (!tokenResult.success) {
+        return NextResponse.json(
+          { error: 'Insufficient tokens for bulk photo analysis.' },
+          { status: 402 }
+        )
+      }
+    } catch (e) {
+      console.warn('Token debit skipped:', (e as Error).message)
     }
 
     const ai = new GoogleGenAI({ apiKey })

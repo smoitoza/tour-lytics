@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { debitTokens } from '@/lib/tokens'
 import buildingContext from '@/data/building_context.json'
 // Static financial_context.json removed - financials now come from live RFP submissions in Supabase
 
@@ -816,6 +817,25 @@ export async function POST(request: NextRequest) {
     // Trim history
     if (history.length > MAX_HISTORY) {
       history = history.slice(-MAX_HISTORY)
+    }
+
+    // Debit token for chat message
+    try {
+      const tokenResult = await debitTokens({
+        projectId: 'sf-office-search',
+        action: 'chat_message',
+        userEmail: visitorId,
+        note: `Chat: ${message.substring(0, 80)}`,
+      })
+      if (!tokenResult.success) {
+        return new Response(
+          JSON.stringify({ error: 'Insufficient tokens. Please purchase more tokens to continue chatting.' }),
+          { status: 402, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+    } catch (e) {
+      // Token system not yet set up - continue without billing
+      console.warn('Token debit skipped:', (e as Error).message)
     }
 
     // Fetch live data for RAG context

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { debitTokens } from '@/lib/tokens'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -38,6 +39,25 @@ export async function POST(req: Request) {
     results = {},
     uploadedBy = '',
   } = body
+
+  // Debit tokens for commute study upload
+  try {
+    const tokenResult = await debitTokens({
+      projectId,
+      action: 'commute_study',
+      userEmail: uploadedBy,
+      metadata: { filename, employee_count: employees.length },
+      note: `Commute study: ${filename} (${employees.length} employees)`,
+    })
+    if (!tokenResult.success) {
+      return NextResponse.json(
+        { error: 'Insufficient tokens for commute study upload.' },
+        { status: 402 }
+      )
+    }
+  } catch (e) {
+    console.warn('Token debit skipped:', (e as Error).message)
+  }
 
   const { data, error } = await supabase
     .from('commute_studies')

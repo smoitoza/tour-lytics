@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenAI } from '@google/genai'
 import { NextResponse } from 'next/server'
+import { debitTokens } from '@/lib/tokens'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -38,6 +39,26 @@ export async function POST(req: Request) {
 
     if (fetchErr || !photo) {
       return NextResponse.json({ error: 'Photo not found' }, { status: 404 })
+    }
+
+    // Debit token for photo analysis
+    try {
+      const tokenResult = await debitTokens({
+        projectId: photo.project_id || 'sf-office-search',
+        action: 'photo_analysis',
+        userEmail: photo.uploaded_by,
+        referenceId: photoId,
+        metadata: { building_num: photo.building_num },
+        note: `Photo analysis: Building ${photo.building_num}`,
+      })
+      if (!tokenResult.success) {
+        return NextResponse.json(
+          { error: 'Insufficient tokens for photo analysis.' },
+          { status: 402 }
+        )
+      }
+    } catch (e) {
+      console.warn('Token debit skipped:', (e as Error).message)
     }
 
     // Download the image

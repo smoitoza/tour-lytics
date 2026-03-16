@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { debitTokens } from '@/lib/tokens'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -79,6 +80,28 @@ export async function POST(req: Request) {
 
   // Generate financial analysis from deal terms
   const analysis = generateFinancialAnalysis(finalDealTerms)
+
+  // Debit tokens for new RFP analysis (updates are free)
+  if (!id) {
+    try {
+      const tokenResult = await debitTokens({
+        projectId,
+        action: 'rfp_analysis',
+        userEmail: finalSubmittedBy,
+        metadata: { building: finalBuildingAddress, docType: finalDocType },
+        note: `RFP analysis: ${finalBuildingAddress}`,
+      })
+      if (!tokenResult.success) {
+        return NextResponse.json(
+          { error: 'Insufficient tokens for RFP analysis. Please purchase more tokens.' },
+          { status: 402 }
+        )
+      }
+    } catch (e) {
+      // Token system not yet set up - continue without billing
+      console.warn('Token debit skipped (system not initialized):', (e as Error).message)
+    }
+  }
 
   if (id) {
     // Update existing

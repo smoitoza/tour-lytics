@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { debitTokens } from '@/lib/tokens'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -58,6 +59,19 @@ export async function POST(req: Request) {
 
   if (!building_address) {
     return NextResponse.json({ error: 'building_address is required' }, { status: 400 })
+  }
+
+  // Log assumptions update (free action, 0 tokens, but tracked for analytics)
+  try {
+    await debitTokens({
+      projectId,
+      action: 'assumptions_update',
+      userEmail: updated_by,
+      metadata: { building_address },
+      note: `Assumptions: ${building_address}`,
+    })
+  } catch (e) {
+    console.warn('Token log skipped:', (e as Error).message)
   }
 
   const { data, error } = await supabase
