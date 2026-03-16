@@ -8950,10 +8950,15 @@ function rfpBuildStraightLineTable(analysis) {
   html += '</tbody></table></div>';
 
   // Summary metrics below table
+  var tiNote = (totals.tiAllowanceTotal && totals.tiAllowanceTotal > 0)
+    ? '<div class="rfp-metric"><div class="rfp-metric-value" style="color:#16a34a">' + rfpFmtCurrencyPlain(totals.tiAllowanceTotal) + '</div><div class="rfp-metric-label">TI Allowance</div></div>' +
+      '<div class="rfp-metric"><div class="rfp-metric-value" style="color:#16a34a">(' + rfpFmtCurrencyPlain(totals.monthlyTIAmortization) + '/mo)</div><div class="rfp-metric-label">TI Amortization</div></div>'
+    : '';
   html +=
     '<div class="rfp-summary-metrics" style="margin-top:var(--space-4)">' +
-      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(totals.straightLineMonthlyRent) + '</div><div class="rfp-metric-label">SL Monthly Rent</div></div>' +
-      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(totals.straightLineAnnualRent) + '</div><div class="rfp-metric-label">SL Annual Rent</div></div>' +
+      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(totals.straightLineMonthlyRent) + '</div><div class="rfp-metric-label">SL Monthly Rent (net of TI)</div></div>' +
+      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(totals.straightLineAnnualRent) + '</div><div class="rfp-metric-label">SL Annual Rent (net of TI)</div></div>' +
+      tiNote +
       '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyDecimals(totals.effectiveRentRSF) + '</div><div class="rfp-metric-label">Effective Rent/RSF</div></div>' +
       '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyDecimals(totals.totalCostPerRSFPerYear) + '</div><div class="rfp-metric-label">Total Cost/RSF/Year</div></div>' +
     '</div>';

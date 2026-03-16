@@ -264,9 +264,11 @@ function generateFinancialAnalysis(terms: DealTerms) {
     totalCost: Math.round(yr.totalCost),
   }))
 
-  // Straight-line rent = total net rent / total months
+  // Straight-line rent = (total net rent - TI allowance) / total months
+  // TI is a lease incentive that reduces the straight-line rent expense over the term
   const totalNetRent = monthly.reduce((s, m) => s + m.netCashRent, 0)
-  const straightLineMonthlyRent = totalNetRent / termMonths
+  const monthlyTIAmortization = tiTotal / termMonths
+  const straightLineMonthlyRent = (totalNetRent - tiTotal) / termMonths
   const straightLineAnnualRent = straightLineMonthlyRent * 12
 
   // ===== 3. GAAP / ASC 842 =====
@@ -301,7 +303,7 @@ function generateFinancialAnalysis(terms: DealTerms) {
     remainingLiability = Math.max(0, remainingLiability - principalReduction)
     remainingROU = Math.max(0, remainingROU - monthlyROUAmort)
 
-    // Straight-line lease expense for GAAP P&L
+    // Straight-line lease expense for GAAP P&L (already includes TI amortization)
     const straightLineExpense = Math.round(straightLineMonthlyRent)
     // GAAP total expense including OpEx
     const totalGAAPExpense = straightLineExpense + opexMonthly
@@ -316,14 +318,17 @@ function generateFinancialAnalysis(terms: DealTerms) {
       rouAmortization: Math.round(monthlyROUAmort),
       rouAsset: Math.round(remainingROU),
       straightLineExpense,
+      tiAmortization: Math.round(monthlyTIAmortization),
       totalGAAPExpense,
     })
   }
 
   // Summary metrics
   const totalAllIn = Math.round(cumulativeCash)
-  const effectiveRentRSF = rsf > 0 ? Math.round((totalNetRent / (termMonths / 12)) / rsf * 100) / 100 : 0
-  const totalCostPerRSFPerYear = rsf > 0 ? Math.round((totalAllIn / (termMonths / 12)) / rsf * 100) / 100 : 0
+  // Effective rent accounts for TI as a concession
+  const netRentAfterTI = totalNetRent - tiTotal
+  const effectiveRentRSF = rsf > 0 ? Math.round((netRentAfterTI / (termMonths / 12)) / rsf * 100) / 100 : 0
+  const totalCostPerRSFPerYear = rsf > 0 ? Math.round(((totalAllIn - tiTotal) / (termMonths / 12)) / rsf * 100) / 100 : 0
 
   return {
     cash_flow: {
@@ -345,6 +350,9 @@ function generateFinancialAnalysis(terms: DealTerms) {
         straightLineAnnualRent: Math.round(straightLineAnnualRent),
         effectiveRentRSF,
         totalCostPerRSFPerYear,
+        tiAllowanceTotal: tiTotal,
+        monthlyTIAmortization: Math.round(monthlyTIAmortization),
+        annualTIAmortization: Math.round(monthlyTIAmortization * 12),
       }
     },
     gaap: {
