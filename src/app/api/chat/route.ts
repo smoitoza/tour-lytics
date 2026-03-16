@@ -199,6 +199,73 @@ async function getCommuteContext(): Promise<string> {
   }
 }
 
+// Fetch project assumptions for chatbot context
+async function getAssumptionsContext(): Promise<string> {
+  try {
+    const { data, error } = await supabase
+      .from('project_assumptions')
+      .select('*')
+      .eq('project_id', 'sf-office-search')
+      .single()
+
+    if (error || !data) {
+      return ''
+    }
+
+    const fb = parseFloat(data.opex_food_beverage) || 0
+    const wpe = parseFloat(data.opex_workplace_experience) || 0
+    const maint = parseFloat(data.opex_maintenance_security) || 0
+    const customItems = data.opex_custom_items || []
+    let customTotal = 0
+    customItems.forEach((item: { label?: string; monthly?: number }) => {
+      customTotal += parseFloat(String(item.monthly)) || 0
+    })
+    const totalMonthlyOpex = fb + wpe + maint + customTotal
+    const headcount = parseInt(data.headcount) || 0
+    const densityRSF = parseInt(data.target_density_rsf) || 0
+    const discountRate = parseFloat(data.discount_rate) || 6.0
+
+    if (totalMonthlyOpex === 0 && headcount === 0 && discountRate === 6.0) {
+      return '' // No meaningful assumptions configured yet
+    }
+
+    let context = '\n\nPROJECT ASSUMPTIONS (internal cost modeling inputs from the Assumptions tab):\n'
+    context += 'These are the team\'s internal operating expense assumptions and workforce planning numbers. They are SEPARATE from the RFP deal terms.\n'
+
+    if (totalMonthlyOpex > 0) {
+      context += '\nInternal OpEx (Monthly):\n'
+      if (fb > 0) context += `  Food & Beverage: $${fb.toLocaleString()}/mo\n`
+      if (wpe > 0) context += `  Workplace Experience: $${wpe.toLocaleString()}/mo\n`
+      if (maint > 0) context += `  Maintenance & Security: $${maint.toLocaleString()}/mo\n`
+      customItems.forEach((item: { label?: string; monthly?: number }) => {
+        const amt = parseFloat(String(item.monthly)) || 0
+        if (amt > 0 && item.label) {
+          context += `  ${item.label}: $${amt.toLocaleString()}/mo\n`
+        }
+      })
+      context += `  Total Internal OpEx: $${totalMonthlyOpex.toLocaleString()}/mo ($${(totalMonthlyOpex * 12).toLocaleString()}/yr)\n`
+    }
+
+    if (headcount > 0) {
+      context += `\nHeadcount: ${headcount} employees\n`
+      if (densityRSF > 0) context += `Target Density: ${densityRSF} RSF/person\n`
+    }
+
+    if (discountRate !== 6.0) {
+      context += `\nGAAP Discount Rate / IBR: ${discountRate}%\n`
+    }
+
+    if (data.updated_by) {
+      context += `\nLast updated by: ${data.updated_by}\n`
+    }
+
+    return context
+  } catch (e) {
+    console.error('Failed to fetch assumptions context:', e)
+    return ''
+  }
+}
+
 // Fetch photo descriptions for chatbot context
 async function getPhotoContext(): Promise<string> {
   try {
@@ -479,8 +546,10 @@ If a building has no RFP submission, tell the user no financial data has been su
 
 FINANCIAL SCOPE:
 - The Financials tab is strictly focused on deal terms from submitted RFPs and LOIs. It shows lease economics only: rent, escalations, free rent, TI allowance, parking, and any OpEx explicitly stated in the deal document.
-- Do NOT add internal operational assumptions (F&B, workplace experience, maintenance, etc.) on top of the RFP figures unless the user specifically asks about total occupancy cost with internal OpEx.
-- If a user asks about "all-in cost" or "total occupancy cost", clarify whether they mean lease cost from the RFP or lease + internal operational expenses, and note that internal OpEx is not part of the RFP analysis.
+- Internal operating expense assumptions (F&B, workplace experience, maintenance, etc.) live in the separate Assumptions tab and are NOT included in the RFP analysis automatically.
+- If PROJECT ASSUMPTIONS data is injected below, you can use it to compute all-in occupancy cost when the user asks.
+- If a user asks about "all-in cost" or "total occupancy cost", combine the straight-line lease expense from the RFP with the internal OpEx from the Assumptions tab. Show the breakdown clearly: lease cost + internal OpEx = all-in cost.
+- If assumptions have not been configured yet, tell the user they can set them up in the Assumptions tab under Financials.
 
 TI ALLOWANCE IN STRAIGHT-LINE:
 - When a deal includes a TI (Tenant Improvement) allowance, it is amortized over the lease term and REDUCES the straight-line rent expense.
@@ -543,6 +612,19 @@ When a user asks about photos, what spaces looked like, or visual aspects of bui
 - "Compare the kitchens across our tour list"
 - "What condition was the flooring at 301 Brannan?"
 - "Show me pictures of the kitchen"
+
+ASSUMPTIONS / ALL-IN COST CAPABILITY:
+You may have PROJECT ASSUMPTIONS data injected below (from the Assumptions tab). This includes:
+- Internal OpEx categories (F&B, Workplace Experience, Maintenance, custom line items) with monthly amounts
+- Headcount and target density (RSF per person)
+- GAAP discount rate (IBR) for ASC 842 calculations
+
+When a user asks about assumptions, all-in cost, total occupancy cost, or cost per employee:
+1. If assumptions are configured, combine them with the RFP straight-line data to show a full picture
+2. Show the breakdown: Lease SL Monthly + Internal OpEx = All-In Monthly
+3. If they ask about cost per employee, use: All-In Annual / Headcount
+4. If they ask about density, compare actual RSF / headcount vs target density
+5. If no assumptions are saved yet, let them know they can configure it in the Assumptions tab under Financials
 
 TEAM MEMBERS CAPABILITY:
 You have access to live team member data injected at the end of this prompt. You can answer questions like:
@@ -627,13 +709,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch live data for RAG context
-    const [photoContext, rfpContext, teamContext, commuteContext] = await Promise.all([
+    const [photoContext, rfpContext, teamContext, commuteContext, assumptionsContext] = await Promise.all([
       getPhotoContext(),
       getRFPContext(),
       getTeamContext(),
       getCommuteContext(),
+      getAssumptionsContext(),
     ])
-    const systemPromptWithPhotos = SYSTEM_PROMPT + rfpContext + teamContext + commuteContext + photoContext
+    const systemPromptWithPhotos = SYSTEM_PROMPT + rfpContext + assumptionsContext + teamContext + commuteContext + photoContext
 
     // Stream response with tool use support
     const encoder = new TextEncoder()

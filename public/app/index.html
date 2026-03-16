@@ -8093,7 +8093,7 @@ function exportTourBook() {
 // RFP / LOI FINANCIAL ANALYSIS ENGINE
 // ============================================================
 
-window._rfpState = { submissions: [], selectedBuilding: null, selectedSubmission: null, view: 'dashboard' };
+window._rfpState = { submissions: [], selectedBuilding: null, selectedSubmission: null, view: 'dashboard', assumptions: null };
 var _rfpModal = null;
 
 // Currency formatting
@@ -8139,7 +8139,23 @@ function switchFinSheet(sheetId) {
 
 // ===== INIT =====
 function rfpInit() {
+  rfpLoadAssumptions();
   rfpLoadSubmissions();
+}
+
+// ===== LOAD ASSUMPTIONS =====
+function rfpLoadAssumptions() {
+  var email = getCurrentUserEmail();
+  var url = '/api/assumptions?projectId=sf-office-search';
+  if (email) url += '&userEmail=' + encodeURIComponent(email);
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data && !data.error) {
+        window._rfpState.assumptions = data;
+      }
+    })
+    .catch(function() { /* silent fail - assumptions are optional */ });
 }
 
 // ===== LOAD SUBMISSIONS =====
@@ -8782,6 +8798,7 @@ function rfpBuildDetailHtml(subs) {
       '<button class="fin-sheet-tab" data-sheet="cash-flow" onclick="switchFinSheet(\'cash-flow\')">Cash Flow</button>' +
       '<button class="fin-sheet-tab" data-sheet="straight-line" onclick="switchFinSheet(\'straight-line\')">Straight-Line P&amp;L</button>' +
       '<button class="fin-sheet-tab" data-sheet="gaap" onclick="switchFinSheet(\'gaap\')">GAAP Analysis</button>' +
+      '<button class="fin-sheet-tab" data-sheet="assumptions" onclick="switchFinSheet(\'assumptions\')">Assumptions</button>' +
     '</div>';
 
   // Deal Terms tab
@@ -8796,6 +8813,9 @@ function rfpBuildDetailHtml(subs) {
 
   // GAAP tab
   html += '<div class="fin-sheet-content" id="fin-gaap">' + rfpBuildGAAPTable(selected.analysis) + '</div>';
+
+  // Assumptions tab
+  html += '<div class="fin-sheet-content" id="fin-assumptions">' + rfpBuildAssumptionsPanel(selected) + '</div>';
 
   html += '</div>';
   return html;
@@ -9018,6 +9038,214 @@ function rfpBuildGAAPTable(analysis) {
 
   html += '</tbody></table></div>';
   return html;
+}
+
+// ===== ASSUMPTIONS PANEL =====
+function rfpBuildAssumptionsPanel(selected) {
+  var a = window._rfpState.assumptions || {};
+  var canEdit = hasAdminAccess();
+  var analysis = selected ? selected.analysis : null;
+  var summary = (analysis && analysis.summary) ? analysis.summary : {};
+
+  // Compute totals from assumptions
+  var fb = parseFloat(a.opex_food_beverage) || 0;
+  var wpe = parseFloat(a.opex_workplace_experience) || 0;
+  var maint = parseFloat(a.opex_maintenance_security) || 0;
+  var customItems = a.opex_custom_items || [];
+  var customTotal = 0;
+  customItems.forEach(function(item) { customTotal += parseFloat(item.monthly) || 0; });
+  var totalMonthlyOpex = fb + wpe + maint + customTotal;
+  var headcount = parseInt(a.headcount) || 0;
+  var densityRSF = parseInt(a.target_density_rsf) || 0;
+  var discountRate = parseFloat(a.discount_rate) || 6.0;
+
+  // All-In calculations if we have RFP data
+  var slMonthly = summary.straightLineMonthlyRent || 0;
+  var slAnnual = slMonthly * 12;
+  var allInMonthly = slMonthly + totalMonthlyOpex;
+  var allInAnnual = allInMonthly * 12;
+  var rsf = summary.rsf || 0;
+  var allInPerRSF = rsf > 0 ? Math.round(allInAnnual / rsf * 100) / 100 : 0;
+  var densityFit = (headcount > 0 && rsf > 0) ? Math.round(rsf / headcount) : 0;
+
+  var html = '<div style="padding:var(--space-4)">';
+
+  // All-In summary (only show if assumptions have been saved with non-zero OpEx)
+  if (totalMonthlyOpex > 0 && slMonthly > 0) {
+    html += '<div style="margin-bottom:var(--space-5)">' +
+      '<div style="font-weight:600;font-size:var(--text-sm);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);margin-bottom:var(--space-3)">All-In Occupancy Cost</div>' +
+      '<div class="rfp-summary-metrics">' +
+        '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(allInMonthly) + '</div><div class="rfp-metric-label">All-In Monthly</div></div>' +
+        '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(allInAnnual) + '</div><div class="rfp-metric-label">All-In Annual</div></div>' +
+        '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyDecimals(allInPerRSF) + '</div><div class="rfp-metric-label">All-In $/RSF/yr</div></div>' +
+        '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(slMonthly) + '</div><div class="rfp-metric-label">Lease (SL Monthly)</div></div>' +
+        '<div class="rfp-metric"><div class="rfp-metric-value" style="color:#d97706">+' + rfpFmtCurrencyPlain(totalMonthlyOpex) + '</div><div class="rfp-metric-label">Internal OpEx/mo</div></div>' +
+      '</div>';
+    if (headcount > 0 && densityFit > 0) {
+      html += '<div class="rfp-summary-metrics" style="margin-top:var(--space-3)">' +
+        '<div class="rfp-metric"><div class="rfp-metric-value">' + headcount + '</div><div class="rfp-metric-label">Headcount</div></div>' +
+        '<div class="rfp-metric"><div class="rfp-metric-value">' + densityFit + ' RSF</div><div class="rfp-metric-label">Actual Density/Person</div></div>' +
+        (densityRSF > 0 ? '<div class="rfp-metric"><div class="rfp-metric-value">' + densityRSF + ' RSF</div><div class="rfp-metric-label">Target Density/Person</div></div>' : '') +
+        '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(Math.round(allInAnnual / (headcount || 1))) + '</div><div class="rfp-metric-label">Cost/Employee/yr</div></div>' +
+      '</div>';
+    }
+    html += '</div><hr style="border:none;border-top:1px solid var(--color-border);margin:var(--space-4) 0">';
+  }
+
+  if (!canEdit) {
+    // Read-only view
+    html += '<div style="color:var(--color-text-muted);font-size:var(--text-sm);padding:var(--space-3)">Only admins, brokers, and CRE team members can edit assumptions.</div>';
+    if (totalMonthlyOpex === 0 && headcount === 0) {
+      html += '<div style="color:var(--color-text-muted);font-size:var(--text-sm);padding:var(--space-3)">No assumptions configured yet.</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  // Editable form
+  html += '<div style="font-weight:600;font-size:var(--text-sm);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);margin-bottom:var(--space-3)">Internal OpEx (Monthly)</div>';
+  html += '<div class="rfp-form">' +
+    '<div class="rfp-form-group">' +
+      '<label class="rfp-form-label">Food & Beverage ($/mo)</label>' +
+      '<input class="rfp-form-input" id="assumption-fb" type="number" step="1" value="' + fb + '" placeholder="e.g. 30000" />' +
+    '</div>' +
+    '<div class="rfp-form-group">' +
+      '<label class="rfp-form-label">Workplace Experience ($/mo)</label>' +
+      '<input class="rfp-form-input" id="assumption-wpe" type="number" step="1" value="' + wpe + '" placeholder="e.g. 10000" />' +
+    '</div>' +
+    '<div class="rfp-form-group">' +
+      '<label class="rfp-form-label">Maintenance & Security ($/mo)</label>' +
+      '<input class="rfp-form-input" id="assumption-maint" type="number" step="1" value="' + maint + '" placeholder="e.g. 10000" />' +
+    '</div>' +
+  '</div>';
+
+  // Custom line items
+  html += '<div id="assumption-custom-items" style="margin-top:var(--space-3)">';
+  customItems.forEach(function(item, i) {
+    html += '<div class="rfp-form" style="margin-bottom:4px">' +
+      '<div class="rfp-form-group">' +
+        '<input class="rfp-form-input" id="assumption-custom-label-' + i + '" type="text" value="' + (item.label || '') + '" placeholder="Label (e.g. IT Infrastructure)" />' +
+      '</div>' +
+      '<div class="rfp-form-group">' +
+        '<input class="rfp-form-input" id="assumption-custom-amount-' + i + '" type="number" step="1" value="' + (item.monthly || 0) + '" placeholder="$/mo" />' +
+      '</div>' +
+      '<div class="rfp-form-group" style="flex:0 0 auto;align-self:flex-end">' +
+        '<button class="rfp-btn-danger" style="padding:6px 10px;font-size:0.75rem" onclick="rfpRemoveCustomAssumption(' + i + ')">Remove</button>' +
+      '</div>' +
+    '</div>';
+  });
+  html += '</div>';
+  html += '<button style="margin-top:var(--space-2);padding:6px 14px;border:1px dashed var(--color-border);border-radius:6px;background:transparent;color:var(--color-text-muted);cursor:pointer;font-size:var(--text-sm)" onclick="rfpAddCustomAssumption()">+ Add Line Item</button>';
+
+  // Headcount & Density
+  html += '<div style="font-weight:600;font-size:var(--text-sm);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);margin:var(--space-5) 0 var(--space-3)">Headcount & Density</div>';
+  html += '<div class="rfp-form">' +
+    '<div class="rfp-form-group">' +
+      '<label class="rfp-form-label">Headcount</label>' +
+      '<input class="rfp-form-input" id="assumption-headcount" type="number" value="' + headcount + '" placeholder="e.g. 120" />' +
+    '</div>' +
+    '<div class="rfp-form-group">' +
+      '<label class="rfp-form-label">Target Density (RSF/person)</label>' +
+      '<input class="rfp-form-input" id="assumption-density" type="number" value="' + densityRSF + '" placeholder="e.g. 150" />' +
+    '</div>' +
+  '</div>';
+
+  // Discount Rate
+  html += '<div style="font-weight:600;font-size:var(--text-sm);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);margin:var(--space-5) 0 var(--space-3)">GAAP Assumptions</div>';
+  html += '<div class="rfp-form">' +
+    '<div class="rfp-form-group">' +
+      '<label class="rfp-form-label">Discount Rate / IBR (%)</label>' +
+      '<input class="rfp-form-input" id="assumption-discount" type="number" step="0.1" value="' + discountRate + '" placeholder="6.0" />' +
+    '</div>' +
+  '</div>';
+
+  // Save button
+  html += '<div style="margin-top:var(--space-5);display:flex;gap:var(--space-3);align-items:center">' +
+    '<button class="rfp-btn-primary" onclick="rfpSaveAssumptions()" id="assumption-save-btn">Save Assumptions</button>' +
+    '<div id="assumption-save-status" style="font-size:var(--text-sm);color:var(--color-text-muted)"></div>' +
+  '</div>';
+
+  html += '</div>';
+  return html;
+}
+
+// Custom assumption line items management
+function rfpAddCustomAssumption() {
+  var a = window._rfpState.assumptions || {};
+  if (!a.opex_custom_items) a.opex_custom_items = [];
+  a.opex_custom_items.push({ label: '', monthly: 0 });
+  window._rfpState.assumptions = a;
+  rfpRenderDashboard(window._rfpState.submissions);
+  // Re-select assumptions tab
+  setTimeout(function() { switchFinSheet('assumptions'); }, 50);
+}
+
+function rfpRemoveCustomAssumption(index) {
+  var a = window._rfpState.assumptions || {};
+  if (!a.opex_custom_items) return;
+  a.opex_custom_items.splice(index, 1);
+  window._rfpState.assumptions = a;
+  rfpRenderDashboard(window._rfpState.submissions);
+  setTimeout(function() { switchFinSheet('assumptions'); }, 50);
+}
+
+function rfpSaveAssumptions() {
+  var btn = document.getElementById('assumption-save-btn');
+  var status = document.getElementById('assumption-save-status');
+  if (btn) btn.disabled = true;
+  if (status) status.textContent = 'Saving...';
+
+  // Gather custom items from DOM
+  var customItems = [];
+  var i = 0;
+  while (true) {
+    var labelEl = document.getElementById('assumption-custom-label-' + i);
+    var amountEl = document.getElementById('assumption-custom-amount-' + i);
+    if (!labelEl && !amountEl) break;
+    var label = labelEl ? labelEl.value.trim() : '';
+    var amount = amountEl ? parseFloat(amountEl.value) || 0 : 0;
+    if (label || amount) {
+      customItems.push({ label: label, monthly: amount });
+    }
+    i++;
+  }
+
+  var payload = {
+    projectId: 'sf-office-search',
+    opex_food_beverage: parseFloat((document.getElementById('assumption-fb') || {}).value) || 0,
+    opex_workplace_experience: parseFloat((document.getElementById('assumption-wpe') || {}).value) || 0,
+    opex_maintenance_security: parseFloat((document.getElementById('assumption-maint') || {}).value) || 0,
+    opex_custom_items: customItems,
+    headcount: parseInt((document.getElementById('assumption-headcount') || {}).value) || 0,
+    target_density_rsf: parseInt((document.getElementById('assumption-density') || {}).value) || 0,
+    discount_rate: parseFloat((document.getElementById('assumption-discount') || {}).value) || 6.0,
+    updated_by: getCurrentUserEmail() || '',
+  };
+
+  var email = getCurrentUserEmail();
+  var url = '/api/assumptions';
+  if (email) url += '?userEmail=' + encodeURIComponent(email);
+
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.error) throw new Error(data.error);
+    window._rfpState.assumptions = data;
+    if (status) { status.textContent = 'Saved'; status.style.color = '#16a34a'; }
+    if (btn) btn.disabled = false;
+    // Re-render to update All-In metrics
+    rfpRenderDashboard(window._rfpState.submissions);
+    setTimeout(function() { switchFinSheet('assumptions'); }, 50);
+  })
+  .catch(function(err) {
+    console.error('Assumptions save error:', err);
+    if (status) { status.textContent = 'Error: ' + (err.message || 'Failed to save'); status.style.color = '#dc2626'; }
+    if (btn) btn.disabled = false;
+  });
 }
 
 // ===== COMPARISON VIEW =====
