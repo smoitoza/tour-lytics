@@ -3515,6 +3515,295 @@ body {
       }
     }
 
+    /* ===== AI USAGE DASHBOARD ===== */
+    .ai-usage-page {
+      padding: var(--space-4) var(--space-6);
+      max-width: 1200px;
+      margin: 0 auto;
+      overflow-y: auto;
+    }
+    .ai-usage-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--space-4);
+      margin-bottom: var(--space-6);
+    }
+    .ai-usage-title {
+      font-family: var(--font-display);
+      font-size: var(--text-xl);
+      font-weight: 700;
+      color: var(--color-text);
+    }
+    .ai-usage-subtitle {
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+      margin-top: var(--space-1);
+    }
+    .ai-usage-reseed-btn {
+      padding: 8px 20px;
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: #fff;
+      background: var(--color-accent-purple);
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all var(--transition);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .ai-usage-reseed-btn:hover { background: #6d28d9; }
+
+    /* Balance cards */
+    .ai-usage-cards {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-4);
+      margin-bottom: var(--space-6);
+    }
+    .ai-usage-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-5) var(--space-4);
+      box-shadow: var(--shadow-sm);
+    }
+    .ai-usage-card-balance {
+      background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+      border-color: transparent;
+      color: #fff;
+    }
+    .ai-usage-card-balance .ai-usage-card-label { color: rgba(255,255,255,0.75); }
+    .ai-usage-card-balance .ai-usage-card-value { color: #fff; }
+    .ai-usage-card-balance .ai-usage-card-sub { color: rgba(255,255,255,0.6); }
+    .ai-usage-card-label {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-2);
+    }
+    .ai-usage-card-value {
+      font-family: var(--font-display);
+      font-size: clamp(1.5rem, 1.2rem + 1.5vw, 2.25rem);
+      font-weight: 700;
+      color: var(--color-text);
+      line-height: 1.1;
+      font-variant-numeric: tabular-nums;
+    }
+    .ai-usage-card-sub {
+      font-size: var(--text-xs);
+      color: var(--color-text-faint);
+      margin-top: var(--space-1);
+    }
+    .ai-usage-card-low {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+      border-color: transparent;
+      color: #fff;
+    }
+    .ai-usage-card-low .ai-usage-card-label { color: rgba(255,255,255,0.75); }
+    .ai-usage-card-low .ai-usage-card-value { color: #fff; }
+    .ai-usage-card-low .ai-usage-card-sub { color: rgba(255,255,255,0.6); }
+
+    /* Reseed form */
+    .ai-usage-reseed-form {
+      background: var(--color-surface);
+      border: 1px solid var(--color-accent-purple);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+      margin-bottom: var(--space-6);
+    }
+    .ai-usage-reseed-title {
+      font-family: var(--font-display);
+      font-size: var(--text-base);
+      font-weight: 700;
+      margin-bottom: var(--space-3);
+    }
+    .ai-usage-reseed-fields {
+      display: flex;
+      align-items: flex-end;
+      gap: var(--space-3);
+      flex-wrap: wrap;
+    }
+    .ai-usage-reseed-field {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+    .ai-usage-reseed-field label {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      color: var(--color-text-muted);
+    }
+    .ai-usage-reseed-field input {
+      padding: 8px 12px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+      color: var(--color-text);
+      background: var(--color-surface-2);
+      width: 140px;
+    }
+    .ai-usage-reseed-field input[type="text"] { width: 220px; }
+    .ai-usage-reseed-field input:focus {
+      outline: none;
+      border-color: var(--color-accent-purple);
+      box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+    }
+    .ai-usage-reseed-submit {
+      padding: 8px 20px;
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: #fff;
+      background: var(--color-accent-purple);
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+    }
+    .ai-usage-reseed-submit:hover { background: #6d28d9; }
+    .ai-usage-reseed-cancel {
+      padding: 8px 16px;
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      color: var(--color-text-muted);
+      background: none;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+    }
+    .ai-usage-reseed-cancel:hover { background: var(--color-surface-2); }
+
+    /* Sections */
+    .ai-usage-section {
+      margin-bottom: var(--space-6);
+    }
+    .ai-usage-section-title {
+      font-family: var(--font-display);
+      font-size: var(--text-base);
+      font-weight: 700;
+      color: var(--color-text);
+      margin-bottom: var(--space-3);
+    }
+
+    /* Tables */
+    .ai-usage-table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      background: var(--color-surface);
+      box-shadow: var(--shadow-sm);
+    }
+    .ai-usage-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+    }
+    .ai-usage-table th {
+      padding: 10px 14px;
+      text-align: left;
+      font-size: var(--text-xs);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--color-text-muted);
+      background: var(--color-surface-2);
+      border-bottom: 1px solid var(--color-border);
+      white-space: nowrap;
+    }
+    .ai-usage-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--color-divider);
+      color: var(--color-text);
+      font-variant-numeric: tabular-nums;
+    }
+    .ai-usage-table tr:last-child td { border-bottom: none; }
+    .ai-usage-table tr:hover td { background: var(--color-surface-2); }
+
+    /* Token amount pills */
+    .ai-token-debit {
+      display: inline-block;
+      padding: 2px 8px;
+      background: rgba(239, 68, 68, 0.1);
+      color: #dc2626;
+      border-radius: 999px;
+      font-size: var(--text-xs);
+      font-weight: 600;
+    }
+    .ai-token-credit {
+      display: inline-block;
+      padding: 2px 8px;
+      background: rgba(5, 150, 105, 0.1);
+      color: #059669;
+      border-radius: 999px;
+      font-size: var(--text-xs);
+      font-weight: 600;
+    }
+    .ai-token-zero {
+      display: inline-block;
+      padding: 2px 8px;
+      background: rgba(107, 114, 128, 0.1);
+      color: var(--color-text-muted);
+      border-radius: 999px;
+      font-size: var(--text-xs);
+      font-weight: 600;
+    }
+    .ai-category-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: var(--text-xs);
+      font-weight: 600;
+    }
+    .ai-category-ai {
+      background: rgba(37, 99, 235, 0.1);
+      color: #2563eb;
+    }
+    .ai-category-financial {
+      background: rgba(5, 150, 105, 0.1);
+      color: #059669;
+    }
+    .ai-category-data {
+      background: rgba(244, 121, 32, 0.1);
+      color: #f47920;
+    }
+
+    /* Empty state */
+    .ai-usage-empty {
+      text-align: center;
+      padding: 2.5rem 1rem;
+      color: var(--color-text-muted);
+      font-size: var(--text-sm);
+    }
+    .ai-usage-empty svg {
+      margin-bottom: var(--space-2);
+      opacity: 0.35;
+    }
+
+    /* Mobile responsive */
+    @media (max-width: 900px) {
+      .ai-usage-cards { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 600px) {
+      .ai-usage-page { padding: var(--space-3); }
+      .ai-usage-header { flex-direction: column; gap: var(--space-2); }
+      .ai-usage-cards { grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+      .ai-usage-card { padding: var(--space-3); }
+      .ai-usage-card-value { font-size: 1.25rem; }
+      .ai-usage-reseed-fields { flex-direction: column; align-items: stretch; }
+      .ai-usage-reseed-field input,
+      .ai-usage-reseed-field input[type="text"] { width: 100%; }
+      .ai-usage-table { font-size: var(--text-xs); }
+      .ai-usage-table th, .ai-usage-table td { padding: 8px 10px; }
+    }
+
     /* ===== TOP TAB BAR ===== */
     .page-tabs {
       display: flex;
@@ -3566,6 +3855,7 @@ body {
     .tab-content.active { display: flex; }
     #tab-financials { overflow-y: auto; }
     #tab-commute { overflow-y: auto; }
+    #tab-ai-usage { overflow-y: auto; }
 
     /* ===== FINANCIALS VIEW ===== */
     .financials-view {
@@ -4967,6 +5257,10 @@ body {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     Team
   </button>
+  <button class="page-tab admin-only" onclick="switchPageTab('ai-usage')" data-page-tab="ai-usage" id="tabBtnAiUsage" style="display:none;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4z"/><circle cx="9" cy="15" r="1"/><circle cx="15" cy="15" r="1"/><path d="M9 18h6"/></svg>
+    AI Usage
+  </button>
 </nav>
 
 <div class="tab-content active" id="tab-map">
@@ -5147,6 +5441,124 @@ body {
 
     <!-- Results -->
     <div id="commuteResults" style="display:none;"></div>
+  </div>
+</div>
+
+<div class="tab-content" id="tab-ai-usage">
+  <div class="ai-usage-page">
+    <div class="ai-usage-header">
+      <div>
+        <h2 class="ai-usage-title">AI Usage Dashboard</h2>
+        <p class="ai-usage-subtitle">Track token consumption across all AI-powered features for this project.</p>
+      </div>
+      <button class="ai-usage-reseed-btn" id="aiUsageReseedBtn" onclick="aiUsageReseed()">+ Add Tokens</button>
+    </div>
+
+    <!-- Balance cards -->
+    <div class="ai-usage-cards" id="aiUsageCards">
+      <div class="ai-usage-card ai-usage-card-balance">
+        <div class="ai-usage-card-label">Current Balance</div>
+        <div class="ai-usage-card-value" id="aiCardBalance">--</div>
+        <div class="ai-usage-card-sub" id="aiCardBalanceSub">tokens remaining</div>
+      </div>
+      <div class="ai-usage-card">
+        <div class="ai-usage-card-label">Total Purchased</div>
+        <div class="ai-usage-card-value" id="aiCardPurchased">--</div>
+        <div class="ai-usage-card-sub">lifetime tokens added</div>
+      </div>
+      <div class="ai-usage-card">
+        <div class="ai-usage-card-label">Total Consumed</div>
+        <div class="ai-usage-card-value" id="aiCardConsumed">--</div>
+        <div class="ai-usage-card-sub">tokens used to date</div>
+      </div>
+      <div class="ai-usage-card">
+        <div class="ai-usage-card-label">Utilization</div>
+        <div class="ai-usage-card-value" id="aiCardUtil">--%</div>
+        <div class="ai-usage-card-sub">of purchased tokens</div>
+      </div>
+    </div>
+
+    <!-- Reseed form (hidden by default) -->
+    <div class="ai-usage-reseed-form" id="aiUsageReseedForm" style="display:none;">
+      <h3 class="ai-usage-reseed-title">Add Tokens</h3>
+      <div class="ai-usage-reseed-fields">
+        <div class="ai-usage-reseed-field">
+          <label>Amount</label>
+          <input type="number" id="aiReseedAmount" value="100" min="1" max="10000" />
+        </div>
+        <div class="ai-usage-reseed-field">
+          <label>Note</label>
+          <input type="text" id="aiReseedNote" value="Beta re-seed" placeholder="Reason for adding tokens" />
+        </div>
+        <button class="ai-usage-reseed-submit" onclick="aiUsageSubmitReseed()">Confirm</button>
+        <button class="ai-usage-reseed-cancel" onclick="document.getElementById('aiUsageReseedForm').style.display='none'">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Usage by action -->
+    <div class="ai-usage-section">
+      <h3 class="ai-usage-section-title">Usage by Feature</h3>
+      <div class="ai-usage-table-wrap" id="aiUsageSummaryWrap">
+        <table class="ai-usage-table" id="aiUsageSummaryTable">
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>Category</th>
+              <th>Actions</th>
+              <th>Tokens Used</th>
+              <th>Last 7d</th>
+              <th>Last 30d</th>
+              <th>Last Used</th>
+            </tr>
+          </thead>
+          <tbody id="aiUsageSummaryBody">
+            <tr><td colspan="7" style="text-align:center;color:var(--color-text-muted);padding:2rem;">Loading usage data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Pricing reference -->
+    <div class="ai-usage-section">
+      <h3 class="ai-usage-section-title">Token Pricing</h3>
+      <div class="ai-usage-table-wrap" id="aiUsagePricingWrap">
+        <table class="ai-usage-table ai-usage-pricing" id="aiUsagePricingTable">
+          <thead>
+            <tr>
+              <th>Action</th>
+              <th>Category</th>
+              <th>Cost</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody id="aiUsagePricingBody">
+            <tr><td colspan="4" style="text-align:center;color:var(--color-text-muted);padding:2rem;">Loading pricing...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Recent transactions -->
+    <div class="ai-usage-section">
+      <h3 class="ai-usage-section-title">Recent Transactions</h3>
+      <div class="ai-usage-table-wrap" id="aiUsageTxWrap">
+        <table class="ai-usage-table" id="aiUsageTxTable">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Action</th>
+              <th>User</th>
+              <th>Tokens</th>
+              <th>Balance After</th>
+              <th>Note</th>
+            </tr>
+          </thead>
+          <tbody id="aiUsageTxBody">
+            <tr><td colspan="6" style="text-align:center;color:var(--color-text-muted);padding:2rem;">Loading transactions...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -7158,6 +7570,11 @@ async function fetchUserRole() {
     if (!hasAdminAccess()) {
       document.body.classList.add('touree-mode');
     }
+    // Show AI Usage tab for admins only
+    if (isAdmin()) {
+      var aiTab = document.getElementById('tabBtnAiUsage');
+      if (aiTab) aiTab.style.display = '';
+    }
     // Fetch centralized tour list from server
     await fetchCentralTourList();
   }
@@ -7165,7 +7582,7 @@ async function fetchUserRole() {
 
   // Handle hash-based tab routing (e.g., /app/?...#team)
   var hashTab = window.location.hash.replace('#', '');
-  if (hashTab && ['map','financials','tourbook','photos','team','scores','commute'].indexOf(hashTab) >= 0) {
+  if (hashTab && ['map','financials','tourbook','photos','team','scores','commute','ai-usage'].indexOf(hashTab) >= 0) {
     switchPageTab(hashTab);
   }
 })();
@@ -7214,6 +7631,10 @@ function switchPageTab(tabId) {
   // Load RFP/LOI analysis when switching to financials tab
   if (tabId === 'financials') {
     rfpInit();
+  }
+  // Load AI usage dashboard when switching to it
+  if (tabId === 'ai-usage') {
+    aiUsageLoad();
   }
 }
 
@@ -10256,6 +10677,201 @@ switchPageTab = function(tabId) {
     loadPhotosGallery();
   }
 };
+
+// ============================================================
+// AI Usage Dashboard
+// ============================================================
+
+var _aiUsageLoaded = false;
+
+async function aiUsageLoad() {
+  // Only admins should see this
+  if (!isAdmin()) return;
+
+  try {
+    // Fetch all data in parallel
+    var [balanceRes, summaryRes, txRes, pricingRes] = await Promise.all([
+      fetch('/api/tokens?view=balance&projectId=sf-office-search'),
+      fetch('/api/tokens?view=summary&projectId=sf-office-search'),
+      fetch('/api/tokens?view=transactions&projectId=sf-office-search&limit=50'),
+      fetch('/api/tokens?view=pricing&projectId=sf-office-search')
+    ]);
+
+    var balance = balanceRes.ok ? await balanceRes.json() : { balance: 0, total_purchased: 0, total_consumed: 0 };
+    var summary = summaryRes.ok ? await summaryRes.json() : [];
+    var transactions = txRes.ok ? await txRes.json() : [];
+    var pricing = pricingRes.ok ? await pricingRes.json() : [];
+
+    aiUsageRenderCards(balance);
+    aiUsageRenderSummary(summary);
+    aiUsageRenderTransactions(transactions);
+    aiUsageRenderPricing(pricing);
+    _aiUsageLoaded = true;
+  } catch (err) {
+    console.error('Failed to load AI usage data:', err);
+  }
+}
+
+function aiUsageRenderCards(b) {
+  var balEl = document.getElementById('aiCardBalance');
+  var purEl = document.getElementById('aiCardPurchased');
+  var conEl = document.getElementById('aiCardConsumed');
+  var utlEl = document.getElementById('aiCardUtil');
+  var subEl = document.getElementById('aiCardBalanceSub');
+  var cardEl = document.querySelector('.ai-usage-card-balance');
+
+  balEl.textContent = (b.balance || 0).toLocaleString();
+  purEl.textContent = (b.total_purchased || 0).toLocaleString();
+  conEl.textContent = (b.total_consumed || 0).toLocaleString();
+
+  var util = b.total_purchased > 0 ? Math.round((b.total_consumed / b.total_purchased) * 100) : 0;
+  utlEl.textContent = util + '%';
+
+  // Low balance warning (under threshold or under 20)
+  var threshold = b.low_balance_threshold || 50;
+  if (b.balance <= threshold && b.balance > 0) {
+    subEl.textContent = 'Low balance - consider adding tokens';
+    if (cardEl) {
+      cardEl.classList.remove('ai-usage-card-balance');
+      cardEl.classList.add('ai-usage-card-low');
+    }
+  } else if (b.balance <= 0) {
+    subEl.textContent = 'No tokens remaining';
+    if (cardEl) {
+      cardEl.classList.remove('ai-usage-card-balance');
+      cardEl.classList.add('ai-usage-card-low');
+    }
+  } else {
+    subEl.textContent = 'tokens remaining';
+    if (cardEl) {
+      cardEl.classList.remove('ai-usage-card-low');
+      cardEl.classList.add('ai-usage-card-balance');
+    }
+  }
+}
+
+function aiUsageRenderSummary(rows) {
+  var body = document.getElementById('aiUsageSummaryBody');
+  if (!rows || rows.length === 0) {
+    body.innerHTML = '<tr><td colspan="7" class="ai-usage-empty">No usage data yet. AI actions will appear here once tokens are consumed.</td></tr>';
+    return;
+  }
+  var html = '';
+  rows.forEach(function(r) {
+    var catClass = 'ai-category-' + (r.category || 'ai');
+    var lastUsed = r.last_used ? new Date(r.last_used).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '-';
+    html += '<tr>';
+    html += '<td style="font-weight:600;">' + esc(r.display_name || r.action_type) + '</td>';
+    html += '<td><span class="ai-category-badge ' + catClass + '">' + esc(r.category || 'ai') + '</span></td>';
+    html += '<td>' + (r.total_actions || 0) + '</td>';
+    html += '<td>' + (r.total_tokens || 0) + '</td>';
+    html += '<td>' + (r.actions_7d || 0) + '</td>';
+    html += '<td>' + (r.tokens_30d || 0) + '</td>';
+    html += '<td style="font-size:var(--text-xs);color:var(--color-text-muted);">' + lastUsed + '</td>';
+    html += '</tr>';
+  });
+  body.innerHTML = html;
+}
+
+function aiUsageRenderTransactions(rows) {
+  var body = document.getElementById('aiUsageTxBody');
+  if (!rows || rows.length === 0) {
+    body.innerHTML = '<tr><td colspan="6" class="ai-usage-empty">No transactions yet.</td></tr>';
+    return;
+  }
+  var html = '';
+  rows.forEach(function(r) {
+    var ts = r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '-';
+    var amt = r.amount || 0;
+    var pill;
+    if (amt > 0) {
+      pill = '<span class="ai-token-credit">+' + amt + '</span>';
+    } else if (amt < 0) {
+      pill = '<span class="ai-token-debit">' + amt + '</span>';
+    } else {
+      pill = '<span class="ai-token-zero">0</span>';
+    }
+    html += '<tr>';
+    html += '<td style="font-size:var(--text-xs);color:var(--color-text-muted);white-space:nowrap;">' + ts + '</td>';
+    html += '<td style="font-weight:500;">' + esc(r.action_type || '-') + '</td>';
+    html += '<td style="font-size:var(--text-xs);">' + esc(r.user_email || '-') + '</td>';
+    html += '<td>' + pill + '</td>';
+    html += '<td style="font-variant-numeric:tabular-nums;">' + (r.balance_after != null ? r.balance_after : '-') + '</td>';
+    html += '<td style="font-size:var(--text-xs);color:var(--color-text-muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(r.note || '-') + '</td>';
+    html += '</tr>';
+  });
+  body.innerHTML = html;
+}
+
+function aiUsageRenderPricing(rows) {
+  var body = document.getElementById('aiUsagePricingBody');
+  if (!rows || rows.length === 0) {
+    body.innerHTML = '<tr><td colspan="4" class="ai-usage-empty">No pricing data available.</td></tr>';
+    return;
+  }
+  var html = '';
+  rows.forEach(function(r) {
+    var catClass = 'ai-category-' + (r.category || 'ai');
+    var costDisplay = r.token_cost === 0 ? '<span class="ai-token-zero">Free</span>' : '<span style="font-weight:600;">' + r.token_cost + ' token' + (r.token_cost !== 1 ? 's' : '') + '</span>';
+    html += '<tr>';
+    html += '<td style="font-weight:600;">' + esc(r.display_name || r.action_type) + '</td>';
+    html += '<td><span class="ai-category-badge ' + catClass + '">' + esc(r.category || 'ai') + '</span></td>';
+    html += '<td>' + costDisplay + '</td>';
+    html += '<td style="font-size:var(--text-xs);color:var(--color-text-muted);max-width:300px;">' + esc(r.description || '-') + '</td>';
+    html += '</tr>';
+  });
+  body.innerHTML = html;
+}
+
+function aiUsageReseed() {
+  var form = document.getElementById('aiUsageReseedForm');
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+async function aiUsageSubmitReseed() {
+  var amount = parseInt(document.getElementById('aiReseedAmount').value);
+  var note = document.getElementById('aiReseedNote').value.trim() || 'Beta re-seed';
+
+  if (!amount || amount <= 0) {
+    alert('Please enter a positive token amount.');
+    return;
+  }
+
+  try {
+    var res = await fetch('/api/tokens', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        projectId: 'sf-office-search',
+        amount: amount,
+        userEmail: getCurrentUserEmail(),
+        note: note
+      })
+    });
+
+    if (!res.ok) {
+      var err = await res.json();
+      alert('Failed to add tokens: ' + (err.error || 'Unknown error'));
+      return;
+    }
+
+    var result = await res.json();
+    document.getElementById('aiUsageReseedForm').style.display = 'none';
+
+    // Refresh dashboard
+    aiUsageLoad();
+  } catch (err) {
+    alert('Failed to add tokens: ' + err.message);
+  }
+}
+
+// Helper: escape HTML (reuse if not already defined)
+function esc(s) {
+  if (!s) return '';
+  var d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
 
 </script>
 
