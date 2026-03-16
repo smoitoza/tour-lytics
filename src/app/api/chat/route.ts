@@ -9,6 +9,81 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
+// Fetch live RFP/financial submissions for chatbot context
+async function getRFPContext(): Promise<string> {
+  try {
+    const { data, error } = await supabase
+      .from('rfp_submissions')
+      .select('*')
+      .eq('project_id', 'sf-office-search')
+      .neq('status', 'archived')
+      .order('submitted_at', { ascending: false })
+
+    if (error || !data || data.length === 0) {
+      return ''
+    }
+
+    let context = '\n\nLIVE RFP/LOI FINANCIAL SUBMISSIONS (from the Financials tab - these are REAL uploaded proposals with AI-generated analysis):\n'
+    context += 'IMPORTANT: When a user asks about financial terms, straight-line rent, cash flow, GAAP, or P&L for any building that has an RFP submission below, ALWAYS use the data from these live submissions. These supersede any static financial models in the FINANCIAL MODELS section above.\n\n'
+
+    data.forEach(sub => {
+      const terms = sub.deal_terms || {}
+      const analysis = sub.analysis || {}
+      const summary = analysis.summary || {}
+      const slTotals = analysis.straight_line_pl?.totals || {}
+      const gaapSummary = analysis.gaap?.summary || {}
+
+      context += `--- ${sub.building_address || 'Unknown'} (${(sub.doc_type || '').toUpperCase()}) ---\n`
+      context += `  Submitted: ${sub.submitted_at ? new Date(sub.submitted_at).toLocaleDateString() : 'Unknown'}\n`
+      if (sub.doc_source) context += `  Source: ${sub.doc_source}\n`
+
+      context += '  Deal Terms:\n'
+      if (terms.rsf) context += `    RSF: ${terms.rsf.toLocaleString()}\n`
+      if (terms.lease_term_months) context += `    Lease Term: ${terms.lease_term_months} months\n`
+      if (terms.commencement_date) context += `    Commencement: ${terms.commencement_date}\n`
+      if (terms.base_rent_rsf) context += `    Base Rent: $${terms.base_rent_rsf}/RSF/yr\n`
+      if (terms.rent_basis) context += `    Rent Basis: ${terms.rent_basis}\n`
+      if (terms.annual_escalation_pct) context += `    Annual Escalation: ${terms.annual_escalation_pct}%\n`
+      if (terms.free_rent_months) context += `    Free Rent: ${terms.free_rent_months} months\n`
+      if (terms.ti_allowance_rsf) context += `    TI Allowance: $${terms.ti_allowance_rsf}/RSF\n`
+      if (terms.ti_allowance_total) context += `    TI Allowance Total: $${terms.ti_allowance_total.toLocaleString()}\n`
+      if (terms.opex_monthly) context += `    OpEx (monthly): $${terms.opex_monthly.toLocaleString()}\n`
+      if (terms.parking_spots) context += `    Parking: ${terms.parking_spots} spots at $${terms.parking_rate_monthly || 0}/spot/mo\n`
+      if (terms.structure) context += `    Structure: ${terms.structure}\n`
+      if (terms.landlord) context += `    Landlord: ${terms.landlord}\n`
+      if (terms.notes) context += `    Notes: ${terms.notes}\n`
+
+      if (summary.rsf) {
+        context += '  Analysis Summary:\n'
+        context += `    Effective Rent/RSF: $${summary.effectiveRentRSF}/yr\n`
+        context += `    Total All-In Cost: $${summary.totalAllInCost?.toLocaleString()}\n`
+        context += `    SL Monthly Rent (net of TI): $${slTotals.straightLineMonthlyRent?.toLocaleString()}\n`
+        context += `    SL Annual Rent (net of TI): $${slTotals.straightLineAnnualRent?.toLocaleString()}\n`
+        context += `    SL Annual Expense (incl OpEx): $${summary.straightLineAnnualExpense?.toLocaleString()}\n`
+        context += `    Free Rent Value: $${summary.freeRentValue?.toLocaleString()}\n`
+        if (summary.tiValue) context += `    TI Allowance Value: $${summary.tiValue.toLocaleString()}\n`
+        context += `    Total Concessions: $${summary.totalConcessions?.toLocaleString()}\n`
+        if (slTotals.tiAllowanceTotal) context += `    Monthly TI Amortization: $${slTotals.monthlyTIAmortization?.toLocaleString()}/mo (reduces SL expense)\n`
+      }
+
+      if (gaapSummary.leaseLiability) {
+        context += '  GAAP / ASC 842:\n'
+        context += `    Lease Liability (Day 1): $${gaapSummary.leaseLiability?.toLocaleString()}\n`
+        context += `    ROU Asset (Day 1): $${gaapSummary.rouAsset?.toLocaleString()}\n`
+        context += `    Discount Rate: ${(gaapSummary.discountRate * 100)}%\n`
+        if (gaapSummary.tiAllowance) context += `    TI Offset on ROU: $${gaapSummary.tiAllowance.toLocaleString()}\n`
+      }
+
+      context += '\n'
+    })
+
+    return context
+  } catch (e) {
+    console.error('Failed to fetch RFP context:', e)
+    return ''
+  }
+}
+
 // Fetch photo descriptions for chatbot context
 async function getPhotoContext(): Promise<string> {
   try {
@@ -286,14 +361,21 @@ SCORING CATEGORIES (1-10 scale, used by the client to rate buildings during tour
 - Overall Feel: General impression of the building
 - The Davis Effect: Named after Steve Davis who has a very high bar for office quality
 
-FINANCIAL MODELS CRITICAL FACTS:
-- The Monthly P&L of $106,594 for 250 Brannan IS the ALL-IN number. It ALREADY INCLUDES OpEx. Breakdown: $56,594 rent + $50,000 Procore internal OpEx = $106,594 total.
-- The $50,000/mo OpEx breaks down as: $30,000 F&B + $10,000 Workplace Experience + $10,000 Maintenance/Security.
-- In 2026 (partial year, 7 months), OpEx is prorated to $42,857/mo, so total monthly P&L is $99,451. In full years (2027+), it's $106,594.
-- For 123 Townsend, monthly rent is $168,147 and with the same $50,000/mo OpEx the all-in monthly P&L would be ~$218,147.
-- The annual summary shows: Straight-Line Rent + F&B + Workplace Experience + Maintenance/Security = Total Occupancy Cost.
-- Per RSF breakdown for 250 Brannan: Rent $42/RSF/yr + OpEx $38/RSF/yr = Total $80/RSF/yr (full years).
-- NEVER say the Monthly P&L figures are "lease-only" or "rent-only" for 250 Brannan. They include OpEx.
+FINANCIAL DATA PRIORITY:
+1. FIRST check the LIVE RFP/LOI FINANCIAL SUBMISSIONS section (injected at the end of this prompt). These are real proposals uploaded to the Financials tab with AI-generated analysis including Cash Flow, Straight-Line P&L (with TI amortization), and GAAP/ASC 842 schedules. ALWAYS use these when answering financial questions about buildings that have submissions.
+2. ONLY fall back to the static FINANCIAL MODELS section above if a building has NO live RFP submission.
+3. The static financial models above may be outdated. Live RFP data is always more current and accurate.
+
+OPERATIONAL EXPENSES CONTEXT (applies on top of lease costs for internal budgeting):
+- The company's internal OpEx is $50,000/mo: $30,000 F&B + $10,000 Workplace Experience + $10,000 Maintenance/Security.
+- In 2026 (partial year), OpEx is prorated to $42,857/mo.
+- When discussing "all-in" or "total occupancy cost", add OpEx on top of the straight-line lease expense from the RFP data.
+- NEVER say financial figures are "lease-only" or "rent-only" without clarifying whether OpEx is included.
+
+TI ALLOWANCE IN STRAIGHT-LINE:
+- When a deal includes a TI (Tenant Improvement) allowance, it is amortized over the lease term and REDUCES the straight-line rent expense.
+- The SL Monthly Rent and SL Annual Rent in the live RFP data already reflect this TI amortization.
+- For example, if a deal has $460,620 TI over 65 months, that is a $7,087/mo credit reducing the straight-line expense.
 
 LIVE TOUR CONTEXT:
 Each message may include [LIVE TOUR LIST], [LIVE SCORES], and [LIVE TOUR SCHEDULE] data. This reflects what the user currently has on their Tour Book tab in real time.
@@ -417,9 +499,12 @@ export async function POST(request: NextRequest) {
       history = history.slice(-MAX_HISTORY)
     }
 
-    // Fetch photo context for RAG
-    const photoContext = await getPhotoContext()
-    const systemPromptWithPhotos = SYSTEM_PROMPT + photoContext
+    // Fetch live data for RAG context
+    const [photoContext, rfpContext] = await Promise.all([
+      getPhotoContext(),
+      getRFPContext(),
+    ])
+    const systemPromptWithPhotos = SYSTEM_PROMPT + rfpContext + photoContext
 
     // Stream response with tool use support
     const encoder = new TextEncoder()
