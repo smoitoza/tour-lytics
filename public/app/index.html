@@ -3792,16 +3792,63 @@ body {
       .ai-usage-cards { grid-template-columns: repeat(2, 1fr); }
     }
     @media (max-width: 600px) {
-      .ai-usage-page { padding: var(--space-3); }
-      .ai-usage-header { flex-direction: column; gap: var(--space-2); }
-      .ai-usage-cards { grid-template-columns: 1fr 1fr; gap: var(--space-2); }
-      .ai-usage-card { padding: var(--space-3); }
-      .ai-usage-card-value { font-size: 1.25rem; }
+      .ai-usage-page {
+        padding: var(--space-3);
+        padding-bottom: var(--space-8);
+      }
+      .ai-usage-header {
+        flex-direction: column;
+        gap: var(--space-2);
+      }
+      .ai-usage-title { font-size: var(--text-lg); }
+      .ai-usage-subtitle { font-size: var(--text-xs); }
+      .ai-usage-reseed-btn {
+        align-self: flex-start;
+        padding: 6px 14px;
+        font-size: var(--text-xs);
+      }
+
+      /* Stack balance card full-width, then 2-col for the rest */
+      .ai-usage-cards {
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-2);
+      }
+      .ai-usage-card-balance,
+      .ai-usage-card-low {
+        grid-column: 1 / -1;
+      }
+      .ai-usage-card {
+        padding: var(--space-3);
+      }
+      .ai-usage-card-value { font-size: 1.5rem; }
+      .ai-usage-card-label { font-size: 0.6rem; }
+      .ai-usage-card-sub { font-size: 0.6rem; }
+
+      /* Sections */
+      .ai-usage-section { margin-bottom: var(--space-4); }
+      .ai-usage-section-title { font-size: var(--text-sm); }
+
+      /* Tables: tighter on mobile */
+      .ai-usage-table { font-size: 0.72rem; }
+      .ai-usage-table th {
+        padding: 6px 8px;
+        font-size: 0.6rem;
+      }
+      .ai-usage-table td {
+        padding: 8px;
+      }
+      .ai-usage-table-wrap {
+        border-radius: var(--radius-md);
+      }
+
+      /* Hide less important columns on mobile */
+      .ai-usage-table .hide-mobile { display: none; }
+
+      /* Reseed form */
+      .ai-usage-reseed-form { padding: var(--space-3); }
       .ai-usage-reseed-fields { flex-direction: column; align-items: stretch; }
       .ai-usage-reseed-field input,
       .ai-usage-reseed-field input[type="text"] { width: 100%; }
-      .ai-usage-table { font-size: var(--text-xs); }
-      .ai-usage-table th, .ai-usage-table td { padding: 8px 10px; }
     }
 
     /* ===== SURVEY UPLOAD ===== */
@@ -5746,10 +5793,10 @@ body {
               <th>Feature</th>
               <th>Category</th>
               <th>Actions</th>
-              <th>Tokens Used</th>
-              <th>Last 7d</th>
-              <th>Last 30d</th>
-              <th>Last Used</th>
+              <th>Tokens</th>
+              <th class="hide-mobile">7d</th>
+              <th class="hide-mobile">30d</th>
+              <th class="hide-mobile">Last Used</th>
             </tr>
           </thead>
           <tbody id="aiUsageSummaryBody">
@@ -5769,7 +5816,7 @@ body {
               <th>Action</th>
               <th>Category</th>
               <th>Cost</th>
-              <th>Description</th>
+              <th class="hide-mobile">Description</th>
             </tr>
           </thead>
           <tbody id="aiUsagePricingBody">
@@ -5788,10 +5835,10 @@ body {
             <tr>
               <th>Time</th>
               <th>Action</th>
-              <th>User</th>
+              <th class="hide-mobile">User</th>
               <th>Tokens</th>
-              <th>Balance After</th>
-              <th>Note</th>
+              <th class="hide-mobile">Balance</th>
+              <th class="hide-mobile">Note</th>
             </tr>
           </thead>
           <tbody id="aiUsageTxBody">
@@ -11265,9 +11312,9 @@ function aiUsageRenderSummary(rows) {
     html += '<td><span class="ai-category-badge ' + catClass + '">' + esc(r.category || 'ai') + '</span></td>';
     html += '<td>' + (r.total_actions || 0) + '</td>';
     html += '<td>' + (r.total_tokens || 0) + '</td>';
-    html += '<td>' + (r.actions_7d || 0) + '</td>';
-    html += '<td>' + (r.tokens_30d || 0) + '</td>';
-    html += '<td style="font-size:var(--text-xs);color:var(--color-text-muted);">' + lastUsed + '</td>';
+    html += '<td class="hide-mobile">' + (r.actions_7d || 0) + '</td>';
+    html += '<td class="hide-mobile">' + (r.tokens_30d || 0) + '</td>';
+    html += '<td class="hide-mobile" style="font-size:var(--text-xs);color:var(--color-text-muted);">' + lastUsed + '</td>';
     html += '</tr>';
   });
   body.innerHTML = html;
@@ -11294,10 +11341,10 @@ function aiUsageRenderTransactions(rows) {
     html += '<tr>';
     html += '<td style="font-size:var(--text-xs);color:var(--color-text-muted);white-space:nowrap;">' + ts + '</td>';
     html += '<td style="font-weight:500;">' + esc(r.action_type || '-') + '</td>';
-    html += '<td style="font-size:var(--text-xs);">' + esc(r.user_email || '-') + '</td>';
+    html += '<td class="hide-mobile" style="font-size:var(--text-xs);">' + esc(r.user_email || '-') + '</td>';
     html += '<td>' + pill + '</td>';
-    html += '<td style="font-variant-numeric:tabular-nums;">' + (r.balance_after != null ? r.balance_after : '-') + '</td>';
-    html += '<td style="font-size:var(--text-xs);color:var(--color-text-muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(r.note || '-') + '</td>';
+    html += '<td class="hide-mobile" style="font-variant-numeric:tabular-nums;">' + (r.balance_after != null ? r.balance_after : '-') + '</td>';
+    html += '<td class="hide-mobile" style="font-size:var(--text-xs);color:var(--color-text-muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(r.note || '-') + '</td>';
     html += '</tr>';
   });
   body.innerHTML = html;
@@ -11317,7 +11364,7 @@ function aiUsageRenderPricing(rows) {
     html += '<td style="font-weight:600;">' + esc(r.display_name || r.action_type) + '</td>';
     html += '<td><span class="ai-category-badge ' + catClass + '">' + esc(r.category || 'ai') + '</span></td>';
     html += '<td>' + costDisplay + '</td>';
-    html += '<td style="font-size:var(--text-xs);color:var(--color-text-muted);max-width:300px;">' + esc(r.description || '-') + '</td>';
+    html += '<td class="hide-mobile" style="font-size:var(--text-xs);color:var(--color-text-muted);max-width:300px;">' + esc(r.description || '-') + '</td>';
     html += '</tr>';
   });
   body.innerHTML = html;
