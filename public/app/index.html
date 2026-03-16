@@ -8162,23 +8162,30 @@ function rfpLoadAssumptions() {
     .catch(function() { /* silent fail - assumptions are optional */ });
 }
 
+// Find the currently selected submission object
+function rfpGetCurrentSubmission() {
+  var id = window._rfpState.selectedSubmission;
+  if (!id) return null;
+  var subs = window._rfpState.submissions || [];
+  for (var i = 0; i < subs.length; i++) {
+    if (subs[i].id === id) return subs[i];
+  }
+  // Fallback: if selectedSubmission is an index (shouldn't happen but be safe)
+  if (subs[id]) return subs[id];
+  return null;
+}
+
 // Get assumptions for the currently selected building
 function rfpGetCurrentAssumptions() {
-  var sub = null;
-  if (window._rfpState.selectedSubmission != null) {
-    sub = window._rfpState.submissions[window._rfpState.selectedSubmission];
-  }
-  var addr = sub ? (sub.building_address || '') : '';
+  var sub = rfpGetCurrentSubmission();
+  var addr = sub ? (sub.building_address || sub.buildingAddress || '') : '';
   return addr ? (window._rfpState.assumptionsMap[addr] || {}) : {};
 }
 
 // Get the building address for the currently selected submission
 function rfpGetCurrentBuildingAddress() {
-  var sub = null;
-  if (window._rfpState.selectedSubmission != null) {
-    sub = window._rfpState.submissions[window._rfpState.selectedSubmission];
-  }
-  return sub ? (sub.building_address || '') : '';
+  var sub = rfpGetCurrentSubmission();
+  return sub ? (sub.building_address || sub.buildingAddress || '') : '';
 }
 
 // ===== LOAD SUBMISSIONS =====
