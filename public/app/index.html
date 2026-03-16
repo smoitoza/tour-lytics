@@ -9123,8 +9123,8 @@ function rfpDeleteSubmission(id) {
   if (!confirm('Delete this proposal? This cannot be undone.')) return;
 
   var email = getCurrentUserEmail();
-  var url = '/api/rfp/' + id;
-  if (email) url += '?userEmail=' + encodeURIComponent(email);
+  var url = '/api/rfp?id=' + encodeURIComponent(id);
+  if (email) url += '&userEmail=' + encodeURIComponent(email);
 
   fetch(url, { method: 'DELETE' })
     .then(function(r) { return r.json(); })
