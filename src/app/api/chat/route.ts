@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import buildingContext from '@/data/building_context.json'
-import financialContext from '@/data/financial_context.json'
+// Static financial_context.json removed - financials now come from live RFP submissions in Supabase
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -24,7 +24,7 @@ async function getRFPContext(): Promise<string> {
     }
 
     let context = '\n\nLIVE RFP/LOI FINANCIAL SUBMISSIONS (from the Financials tab - these are REAL uploaded proposals with AI-generated analysis):\n'
-    context += 'IMPORTANT: When a user asks about financial terms, straight-line rent, cash flow, GAAP, or P&L for any building that has an RFP submission below, ALWAYS use the data from these live submissions. These supersede any static financial models in the FINANCIAL MODELS section above.\n\n'
+    context += 'These are the current financial submissions. Use this data when answering any questions about deal terms, rent, straight-line expense, cash flow, GAAP, or P&L.\n\n'
 
     data.forEach(sub => {
       const terms = sub.deal_terms || {}
@@ -461,9 +461,6 @@ You have detailed knowledge of 33 survey buildings plus 4 buildings in active de
 BUILDING DATA:
 ${JSON.stringify(buildingContext, null, 2)}
 
-FINANCIAL MODELS:
-${JSON.stringify(financialContext, null, 2)}
-
 SCORING CATEGORIES (1-10 scale, used by the client to rate buildings during tours):
 - Location: Proximity to transit, restaurants, walkability
 - Price: Rental rate competitiveness
@@ -476,16 +473,14 @@ SCORING CATEGORIES (1-10 scale, used by the client to rate buildings during tour
 - Overall Feel: General impression of the building
 - The Davis Effect: Named after Steve Davis who has a very high bar for office quality
 
-FINANCIAL DATA PRIORITY:
-1. FIRST check the LIVE RFP/LOI FINANCIAL SUBMISSIONS section (injected at the end of this prompt). These are real proposals uploaded to the Financials tab with AI-generated analysis including Cash Flow, Straight-Line P&L (with TI amortization), and GAAP/ASC 842 schedules. ALWAYS use these when answering financial questions about buildings that have submissions.
-2. ONLY fall back to the static FINANCIAL MODELS section above if a building has NO live RFP submission.
-3. The static financial models above may be outdated. Live RFP data is always more current and accurate.
+FINANCIAL DATA:
+Financial data comes from LIVE RFP/LOI submissions in the Financials tab (injected at the end of this prompt). These are real proposals uploaded by the team with AI-generated analysis including Cash Flow, Straight-Line P&L (with TI amortization), and GAAP/ASC 842 schedules. ALWAYS use these when answering financial questions.
+If a building has no RFP submission, tell the user no financial data has been submitted yet for that building.
 
-OPERATIONAL EXPENSES CONTEXT (applies on top of lease costs for internal budgeting):
-- The company's internal OpEx is $50,000/mo: $30,000 F&B + $10,000 Workplace Experience + $10,000 Maintenance/Security.
-- In 2026 (partial year), OpEx is prorated to $42,857/mo.
-- When discussing "all-in" or "total occupancy cost", add OpEx on top of the straight-line lease expense from the RFP data.
-- NEVER say financial figures are "lease-only" or "rent-only" without clarifying whether OpEx is included.
+FINANCIAL SCOPE:
+- The Financials tab is strictly focused on deal terms from submitted RFPs and LOIs. It shows lease economics only: rent, escalations, free rent, TI allowance, parking, and any OpEx explicitly stated in the deal document.
+- Do NOT add internal operational assumptions (F&B, workplace experience, maintenance, etc.) on top of the RFP figures unless the user specifically asks about total occupancy cost with internal OpEx.
+- If a user asks about "all-in cost" or "total occupancy cost", clarify whether they mean lease cost from the RFP or lease + internal operational expenses, and note that internal OpEx is not part of the RFP analysis.
 
 TI ALLOWANCE IN STRAIGHT-LINE:
 - When a deal includes a TI (Tenant Improvement) allowance, it is amortized over the lease term and REDUCES the straight-line rent expense.
