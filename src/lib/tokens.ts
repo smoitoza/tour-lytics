@@ -28,7 +28,7 @@ function getAnonClient() {
 export type TokenAction =
   | 'chat_message'
   | 'rfp_analysis'
-  | 'survey_upload'
+  | 'survey_map_upload'
   | 'photo_analysis'
   | 'photo_bulk_analysis'
   | 'commute_study'

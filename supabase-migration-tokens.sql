@@ -28,13 +28,13 @@ CREATE TABLE IF NOT EXISTS token_pricing (
 
 -- Seed default pricing for all current AI actions
 INSERT INTO token_pricing (action_type, display_name, token_cost, category, description) VALUES
-  ('chat_message',       'AI Chat Message',         1,  'ai',        'Single message to the Tour Book AI chatbot'),
-  ('rfp_analysis',       'RFP/LOI Analysis',        10, 'financial', 'Upload and analyze an RFP or LOI document with full financial modeling'),
-  ('survey_upload',      'Broker Survey Upload',     5,  'data',      'Parse and process a broker survey document'),
-  ('photo_analysis',     'Photo AI Analysis',        2,  'ai',        'AI-powered analysis and tagging of a tour photo'),
-  ('photo_bulk_analysis','Bulk Photo Analysis',      5,  'ai',        'Batch AI analysis of multiple tour photos'),
-  ('commute_study',      'Commute Study',            8,  'data',      'Process and analyze employee commute data'),
-  ('assumptions_update', 'Assumptions Update',       0,  'financial', 'Update financial assumptions for a building (free action)')
+  ('chat_message',        'AI Chat Message',         1,  'ai',        'Single message to the Tour Book AI chatbot'),
+  ('rfp_analysis',        'RFP/LOI Analysis',        15, 'financial', 'Upload and analyze an RFP or LOI document with full financial modeling'),
+  ('survey_map_upload',   'Broker Survey Upload',    25, 'data',      'Parse a broker survey document and generate the project map'),
+  ('photo_analysis',      'Photo AI Analysis',       3,  'ai',        'AI-powered analysis and tagging of a tour photo'),
+  ('photo_bulk_analysis', 'Bulk Photo Analysis',     8,  'ai',        'Batch AI analysis of multiple tour photos'),
+  ('commute_study',       'Commute Study',           10, 'data',      'Process and analyze employee commute data'),
+  ('assumptions_update',  'Assumptions Update',      0,  'financial', 'Update financial assumptions for a building (free action)')
 ON CONFLICT (action_type) DO NOTHING;
 
 -- ============================================================
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS token_balances (
 
 -- Seed the current project with a generous starting balance (free tier / beta)
 INSERT INTO token_balances (project_id, balance, total_purchased)
-VALUES ('sf-office-search', 1000, 1000)
+VALUES ('sf-office-search', 100, 100)
 ON CONFLICT (project_id) DO NOTHING;
 
 -- ============================================================
