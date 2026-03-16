@@ -692,8 +692,123 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* == THE SOLUTION == */}
+      <section style={{ padding: '6rem 0', background: '#ffffff' }}>
+        <div style={{ maxWidth: '1000px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
+          <div className="text-center" style={{ marginBottom: '3.5rem' }}>
+            <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
+              The Solution
+            </span>
+            <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.75rem' }}>
+              One platform that speaks both broker and CFO
+            </h2>
+            <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', maxWidth: '640px', margin: '0 auto', lineHeight: 1.6 }}>
+              Tour-Lytics transforms raw market data into the financial intelligence corporate real estate teams actually need.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3" style={{ gap: '1.5rem' }}>
+            {[
+              {
+                icon: (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                    <circle cx="12" cy="10" r="3" />
+                  </svg>
+                ),
+                title: 'Market Intelligence',
+                desc: 'Interactive maps with every building, availability, and broker survey data linked in one view.',
+                accent: '#dbeafe',
+              },
+              {
+                icon: (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="3" width="20" height="18" rx="2" />
+                    <path d="M2 9h20M10 3v18" />
+                  </svg>
+                ),
+                title: 'GAAP Financial Models',
+                desc: 'Cash flow, straight-line P&L, and all-in occupancy cost models generated instantly from any broker proposal.',
+                accent: '#dcfce7',
+              },
+              {
+                icon: (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2" />
+                    <rect x="8" y="2" width="8" height="4" rx="1" />
+                    <path d="M9 14l2 2 4-4" />
+                  </svg>
+                ),
+                title: 'Tour Management',
+                desc: 'Score, rank, and coordinate building tours with your entire team. Upload photos from your phone and let AI tag and organize them automatically.',
+                accent: '#fef3c7',
+              },
+              {
+                icon: (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2a4 4 0 014 4c0 1.95-2 4-4 6-2-2-4-4.05-4-6a4 4 0 014-4z" />
+                    <path d="M8.5 14.5A9 9 0 003 21h18a9 9 0 00-5.5-6.5" />
+                  </svg>
+                ),
+                title: 'AI-Powered Analysis',
+                desc: 'An AI assistant built into every project. Ask it to compare buildings on cost, find coffee shops near your next tour, calculate walking times between buildings, or break down your lease terms. Connected to Google Maps and Google Places for real-time local intelligence.',
+                accent: '#ede9fe',
+              },
+              {
+                icon: (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="10" r="3" />
+                    <path d="M12 2a8 8 0 00-8 8c0 5.4 8 12 8 12s8-6.6 8-12a8 8 0 00-8-8z" />
+                    <path d="M3 21h18" />
+                  </svg>
+                ),
+                title: 'Commute Intelligence',
+                desc: 'Upload employee addresses, map commute times to every shortlisted building, and see transit, driving, and biking breakdowns. Know where your team should actually work.',
+                accent: '#fce7f3',
+              },
+              {
+                icon: (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                ),
+                title: 'Survey Upload & Merge',
+                desc: 'Upload new broker surveys directly into the platform. AI extracts every building and merges it with your existing map automatically.',
+                accent: '#f0fdf4',
+              },
+            ].map((card) => (
+              <div
+                key={card.title}
+                style={{
+                  padding: '2rem',
+                  borderRadius: '1rem',
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  transition: 'box-shadow 0.2s, border-color 0.2s',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#cbd5e1'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#e2e8f0'; (e.currentTarget as HTMLElement).style.boxShadow = 'none' }}
+              >
+                <div
+                  className="flex items-center justify-center"
+                  style={{ width: '48px', height: '48px', borderRadius: '0.75rem', background: card.accent, marginBottom: '1.25rem' }}
+                >
+                  {card.icon}
+                </div>
+                <h3 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#0f172a', marginBottom: '0.5rem' }}>
+                  {card.title}
+                </h3>
+                <p className="text-sm" style={{ color: '#64748b', lineHeight: 1.6 }}>{card.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* == HOW IT WORKS == */}
-      <section id="how" style={{ padding: '6rem 0', background: '#ffffff' }}>
+      <section id="how" style={{ padding: '6rem 0', background: '#f8fafc' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
           <div className="text-center" style={{ marginBottom: '3rem' }}>
             <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
@@ -741,7 +856,7 @@ export default function LandingPage() {
                 We asked our brokers to do better. Three days later, what came back was a clunky Tableau dashboard we could have built ourselves. So we built something real: an app that parses the entire PDF, maps every building, and sorts what you&apos;re negotiating, touring, and passing on. Click any building name and you&apos;re looking at its page in the survey instantly.
               </p>
               <p style={{ color: '#64748b', lineHeight: 1.7, marginTop: '1rem' }}>
-                And then there&apos;s the financial side. Tell me the last time a broker sent you a spreadsheet that matches what your CFO actually wants to see - cash flow, straight-line P&amp;L, GAAP format. It doesn&apos;t happen. Brokers care about the payday. They&apos;ll send a glossy proposal with an asking rate and a nice rendering - but your finance team is left rebuilding everything from scratch. Tour-Lytics generates it all automatically the moment you upload a deal.
+                And then there&apos;s the financial side. Tell me the last time a broker survey came with a spreadsheet that matches what your CFO actually wants to see - cash flow, straight-line P&amp;L, GAAP format. It&apos;s not that brokers don&apos;t care. It&apos;s that the tools don&apos;t exist. Brokers send a glossy proposal with an asking rate and a nice rendering because that&apos;s what their systems produce - but your finance team is left rebuilding everything from scratch. Tour-Lytics closes that gap automatically the moment you upload a deal.
               </p>
               <p style={{ color: '#64748b', lineHeight: 1.7, marginTop: '1rem' }}>
                 And touring? That process is even worse. Every time you tour, you get handed a large paper folder. You take notes by hand, snap photos on your phone, then try to recall everything you saw three buildings later. It&apos;s a 40-year-old process that hasn&apos;t changed. Our Tour Book tab links directly to the locations on your map - score every space on price, parking, security, fit-out, and more. Add photos and notes from your phone while you&apos;re standing in the lobby. When you&apos;re done, you have a ranked, exportable tour report instead of a stack of scribbled-on paper.
@@ -751,14 +866,14 @@ export default function LandingPage() {
               {/* Problem Card */}
               <div style={{ padding: '1.5rem', borderRadius: '1rem', border: '1px solid #fecaca', background: '#fef2f2' }}>
                 <div className="inline-flex items-center justify-center rounded-full font-bold" style={{ width: '28px', height: '28px', background: '#fee2e2', color: '#dc2626', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', marginBottom: '0.75rem' }}>&#x2717;</div>
-                <h4 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', color: '#991b1b', marginBottom: '0.75rem' }}>What brokers send you</h4>
+                <h4 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', color: '#991b1b', marginBottom: '0.75rem' }}>What surveys look like today</h4>
                 <ul className="flex flex-col" style={{ listStyle: 'none', padding: 0, gap: '0.5rem' }}>
                   {[
                     'A static 129-page PDF',
                     'No map, no sorting, no filtering',
                     "Can't build a tour list",
                     'Paper tour folders and handwritten notes',
-                    'No cash flow or GAAP financials',
+                    'No cash flow or GAAP financials included',
                   ].map((item) => (
                     <li key={item} className="text-sm relative" style={{ color: '#64748b', paddingLeft: '1.25rem' }}>
                       <span className="absolute rounded-full" style={{ left: 0, top: '7px', width: '8px', height: '8px', background: '#fca5a5' }} />
@@ -800,30 +915,30 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 items-center" style={{ gap: '3rem' }}>
             <div>
               <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#b45309', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
-                But here&apos;s the thing
+                Built for the whole team
               </span>
               <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '1rem' }}>
-                Brokers need this too.
+                Brokers are in the driver&apos;s seat.
               </h2>
               <p className="font-medium" style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#475569', lineHeight: 1.5, marginBottom: '1rem' }}>
-                The same brokers producing those static PDFs? They hate making them. Every survey is assembled from scratch: gathering listings, formatting pages, printing decks, emailing them out, and hoping someone reads past page three.
+                Every great deal starts with a great broker. But the tools they work with haven&apos;t kept up. Every survey is still assembled from scratch: gathering listings, formatting pages, printing decks, emailing them out, and hoping someone reads past page three.
               </p>
               <p style={{ color: '#64748b', lineHeight: 1.7 }}>
-                Tour-Lytics is not just a tool for the people receiving surveys. It is a competitive weapon for the brokers creating them. Publish an interactive survey instead of a PDF. Know which buildings your clients actually looked at. Move faster than the broker down the street who is still printing decks. The tool makes everyone better at what they do.
+                Tour-Lytics gives brokers a better way to deliver. Publish an interactive survey instead of a static PDF. See which buildings your clients actually explored. Upload new surveys and proposals directly into the platform. Move faster, present better, and give your clients the kind of experience that wins the next engagement.
               </p>
             </div>
             <div className="flex flex-col" style={{ gap: '1rem' }}>
               {/* Amber Card */}
               <div style={{ padding: '1.5rem', borderRadius: '1rem', border: '1px solid #fde68a', background: '#fffbeb' }}>
                 <div className="inline-flex items-center justify-center rounded-full font-bold" style={{ width: '28px', height: '28px', background: '#fef3c7', color: '#b45309', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', marginBottom: '0.75rem' }}>!</div>
-                <h4 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', color: '#92400e', marginBottom: '0.75rem' }}>What brokers deal with today</h4>
+                <h4 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', color: '#92400e', marginBottom: '0.75rem' }}>The broker experience today</h4>
                 <ul className="flex flex-col" style={{ listStyle: 'none', padding: 0, gap: '0.5rem' }}>
                   {[
                     'Build surveys from scratch every time',
                     'Print, bind, ship, and email PDFs',
                     'No idea what clients looked at',
-                    'Compete on speed with no tools',
-                    'Clients ask for better - nothing changes',
+                    'Competing on speed without the right tools',
+                    'Clients expect more - hard to deliver with PDFs',
                   ].map((item) => (
                     <li key={item} className="text-sm relative" style={{ color: '#64748b', paddingLeft: '1.25rem' }}>
                       <span className="absolute rounded-full" style={{ left: 0, top: '7px', width: '8px', height: '8px', background: '#fcd34d' }} />
