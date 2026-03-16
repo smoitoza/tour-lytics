@@ -8785,7 +8785,7 @@ function rfpBuildDetailHtml(subs) {
     '</div>';
 
   // Deal Terms tab
-  var terms = selected.terms || {};
+  var terms = selected.deal_terms || selected.terms || {};
   html += '<div class="fin-sheet-content active" id="fin-deal-terms">' + rfpBuildTermsTable(terms) + '</div>';
 
   // Cash Flow tab
@@ -8809,25 +8809,45 @@ function rfpSelectSubmission(id) {
 // ===== DEAL TERMS TABLE =====
 function rfpBuildTermsTable(terms) {
   if (!terms) return '<div style="padding:var(--space-4);color:var(--color-text-muted)">No terms data available.</div>';
+  // Support both snake_case (from DB) and camelCase field names
+  var t = {
+    rsf: terms.rsf || 0,
+    leaseTerm: terms.lease_term_months || terms.leaseTerm || 0,
+    commencementDate: terms.commencement_date || terms.commencementDate || '',
+    baseRent: terms.base_rent_rsf || terms.baseRent || 0,
+    rentBasis: terms.rent_basis || terms.rentBasis || '',
+    annualEscalation: terms.annual_escalation_pct || terms.annualEscalation || 0,
+    freeRent: terms.free_rent_months || terms.freeRent || 0,
+    tiAllowancePerRSF: terms.ti_allowance_rsf || terms.tiAllowancePerRSF || 0,
+    tiAllowanceTotal: terms.ti_allowance_total || terms.tiAllowanceTotal || 0,
+    opex: terms.opex_monthly || terms.opex || 0,
+    parkingSpots: terms.parking_spots || terms.parkingSpots || 0,
+    parkingRate: terms.parking_rate_monthly || terms.parkingRate || 0,
+    parkingEscalation: terms.parking_escalation_pct || terms.parkingEscalation || 0,
+    securityDeposit: terms.security_deposit || terms.securityDeposit || 0,
+    structure: terms.structure || '',
+    landlord: terms.landlord || '',
+    notes: terms.notes || ''
+  };
   var rows = [
-    ['RSF', rfpFmtNum(terms.rsf)],
-    ['Lease Term', (terms.leaseTerm || '--') + ' months'],
-    ['Commencement Date', terms.commencementDate || '--'],
-    ['Base Rent', terms.baseRent ? rfpFmtCurrencyDecimals(terms.baseRent) + '/RSF/yr' : '--'],
-    ['Rent Basis', terms.rentBasis || '--'],
-    ['Annual Escalation', terms.annualEscalation ? terms.annualEscalation + '%' : '--'],
-    ['Free Rent', terms.freeRent ? terms.freeRent + ' months' : '--'],
-    ['TI Allowance (per RSF)', rfpFmtCurrencyDecimals(terms.tiAllowancePerRSF)],
-    ['TI Allowance (total)', rfpFmtCurrencyPlain(terms.tiAllowanceTotal)],
-    ['OpEx (monthly)', rfpFmtCurrencyPlain(terms.opex)],
-    ['Parking Spots', terms.parkingSpots || '--'],
-    ['Parking Rate', terms.parkingRate ? rfpFmtCurrencyDecimals(terms.parkingRate) + '/spot/mo' : '--'],
-    ['Parking Escalation', terms.parkingEscalation ? terms.parkingEscalation + '%' : '--'],
-    ['Security Deposit', rfpFmtCurrencyPlain(terms.securityDeposit)],
-    ['Structure', terms.structure || '--'],
-    ['Landlord', terms.landlord || '--']
+    ['RSF', rfpFmtNum(t.rsf)],
+    ['Lease Term', t.leaseTerm ? t.leaseTerm + ' months' : '--'],
+    ['Commencement Date', t.commencementDate || '--'],
+    ['Base Rent', t.baseRent ? rfpFmtCurrencyDecimals(t.baseRent) + '/RSF/yr' : '--'],
+    ['Rent Basis', t.rentBasis || '--'],
+    ['Annual Escalation', t.annualEscalation ? t.annualEscalation + '%' : '--'],
+    ['Free Rent', t.freeRent ? t.freeRent + ' months' : '--'],
+    ['TI Allowance (per RSF)', rfpFmtCurrencyDecimals(t.tiAllowancePerRSF)],
+    ['TI Allowance (total)', rfpFmtCurrencyPlain(t.tiAllowanceTotal)],
+    ['OpEx (monthly)', rfpFmtCurrencyPlain(t.opex)],
+    ['Parking Spots', t.parkingSpots || '--'],
+    ['Parking Rate', t.parkingRate ? rfpFmtCurrencyDecimals(t.parkingRate) + '/spot/mo' : '--'],
+    ['Parking Escalation', t.parkingEscalation ? t.parkingEscalation + '%' : '--'],
+    ['Security Deposit', rfpFmtCurrencyPlain(t.securityDeposit)],
+    ['Structure', t.structure || '--'],
+    ['Landlord', t.landlord || '--']
   ];
-  if (terms.notes) rows.push(['Notes', terms.notes]);
+  if (t.notes) rows.push(['Notes', t.notes]);
 
   var html = '<div class="rfp-terms-grid">';
   rows.forEach(function(r) {
