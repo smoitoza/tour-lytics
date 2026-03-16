@@ -6001,7 +6001,7 @@ var _storeApi = {
 // Building Data - Material Terms
 // ============================================================
 
-const BUILDINGS = [
+const _SF_BUILDINGS = [
   {
     id: 1,
     name: "250 Brannan",
@@ -6185,6 +6185,16 @@ const BUILDINGS = [
     pdfPage: 103
   }
 ];
+
+// Only load shortlisted buildings for the SF project; other projects start empty
+const BUILDINGS = (function() {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var pid = params.get('projectId');
+    if (!pid || pid === 'sf-office-search') return _SF_BUILDINGS;
+    return [];
+  } catch(e) { return _SF_BUILDINGS; }
+})();
 
 // ============================================================
 // Date Display
@@ -9587,8 +9597,8 @@ function rfpLoadSubmissions() {
   root.innerHTML = '<div class="rfp-loading"><div class="rfp-spinner"></div><div class="rfp-loading-text">Loading proposals...</div></div>';
 
   var email = getCurrentUserEmail();
-  var url = '/api/rfp';
-  if (email) url += '?userEmail=' + encodeURIComponent(email);
+  var url = '/api/rfp?projectId=' + getProjectId();
+  if (email) url += '&userEmail=' + encodeURIComponent(email);
 
   fetch(url)
     .then(function(r) { return r.json(); })
@@ -9892,8 +9902,8 @@ function rfpSubmitUpload() {
 // ===== AI EXTRACTION =====
 function rfpExtractTerms(text, address) {
   var email = getCurrentUserEmail();
-  var url = '/api/rfp/extract';
-  if (email) url += '?userEmail=' + encodeURIComponent(email);
+  var url = '/api/rfp/extract?projectId=' + getProjectId();
+  if (email) url += '&userEmail=' + encodeURIComponent(email);
 
   return fetch(url, {
     method: 'POST',
@@ -10026,13 +10036,14 @@ function rfpConfirmAndSave(meta, terms) {
   if (confirmBtn) confirmBtn.disabled = true;
 
   var email = getCurrentUserEmail();
-  var url = '/api/rfp';
-  if (email) url += '?userEmail=' + encodeURIComponent(email);
+  var url = '/api/rfp?projectId=' + getProjectId();
+  if (email) url += '&userEmail=' + encodeURIComponent(email);
 
   fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
+      projectId: getProjectId(),
       building_num: meta.buildingNum,
       building_address: meta.address,
       doc_type: meta.docType,
@@ -10860,7 +10871,7 @@ function rfpDeleteSubmission(id) {
   if (!confirm('Delete this proposal? This cannot be undone.')) return;
 
   var email = getCurrentUserEmail();
-  var url = '/api/rfp?id=' + encodeURIComponent(id);
+  var url = '/api/rfp?id=' + encodeURIComponent(id) + '&projectId=' + getProjectId();
   if (email) url += '&userEmail=' + encodeURIComponent(email);
 
   fetch(url, { method: 'DELETE' })
