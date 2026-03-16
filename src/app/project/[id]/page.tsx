@@ -6,9 +6,24 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import type { User } from '@supabase/supabase-js'
 
+interface Project {
+  id: string
+  name: string
+  market: string
+  description: string
+  status: string
+  buildings_count: number
+  sqft: string
+  shortlisted_count: number
+  created_by: string
+  created_at: string
+  updated_at: string
+}
+
 export default function ProjectPage() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [project, setProject] = useState<Project | null>(null)
   const router = useRouter()
   const params = useParams()
   const searchParams = useSearchParams()
@@ -26,6 +41,20 @@ export default function ProjectPage() {
       setLoading(false)
     })
   }, [router])
+
+  /* Fetch project details */
+  useEffect(() => {
+    if (!projectId) return
+    fetch(`/api/projects?email=`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          const found = data.find((p: Project) => p.id === projectId)
+          if (found) setProject(found)
+        }
+      })
+      .catch(() => { /* use defaults */ })
+  }, [projectId])
 
   const handleSignOut = async () => {
     const supabase = createClient()
@@ -62,9 +91,9 @@ export default function ProjectPage() {
             <div style={{ height: '1.25rem', width: '1px', background: '#e2e8f0' }} />
             <div>
               <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '0.875rem', fontWeight: 600, color: '#0f172a', margin: 0 }}>
-                SF Office Search
+                {project?.name || projectId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
               </h1>
-              <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: 0 }}>San Francisco, CA</p>
+              <p style={{ fontSize: '0.7rem', color: '#94a3b8', margin: 0 }}>{project?.market || ''}</p>
             </div>
           </div>
 
@@ -94,7 +123,7 @@ export default function ProjectPage() {
         <iframe
           src={`/app/index.html?userEmail=${encodeURIComponent(user?.email || '')}${tabParam ? '#' + tabParam : ''}`}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
-          title="SF Office Search Application"
+          title={project?.name || 'Project Application'}
         />
       </div>
     </div>

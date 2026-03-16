@@ -57,20 +57,20 @@ function getGreeting(): string {
   return 'Good evening'
 }
 
-/* Projects data */
-const projects = [
-  {
-    id: 'sf-office-search',
-    name: 'San Francisco Office Search',
-    market: 'San Francisco, CA',
-    buildings: 33,
-    sqft: '2.8M',
-    shortlisted: 4,
-    status: 'Active' as const,
-    lastUpdated: 'Mar 13, 2026',
-    description: '33 buildings surveyed across SoMa, FiDi, and South Beach neighborhoods',
-  },
-]
+/* Project type */
+interface Project {
+  id: string
+  name: string
+  market: string
+  description: string
+  status: string
+  buildings_count: number
+  sqft: string
+  shortlisted_count: number
+  created_by: string
+  created_at: string
+  updated_at: string
+}
 
 /* Quick action items */
 const quickActions = [
@@ -157,6 +157,17 @@ export default function DashboardPage() {
   const [hoveredAction, setHoveredAction] = useState<number | null>(null)
   const router = useRouter()
 
+  /* ---- Projects state ---- */
+  const [projects, setProjects] = useState<Project[]>([])
+  const [projectsLoading, setProjectsLoading] = useState(true)
+
+  /* ---- Create project modal state ---- */
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [newProjectName, setNewProjectName] = useState('')
+  const [newProjectMarket, setNewProjectMarket] = useState('')
+  const [creatingProject, setCreatingProject] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
+
   /* ---- Team management state ---- */
   const [teamMembers, setTeamMembers] = useState<Array<{
     email: string
@@ -186,6 +197,52 @@ export default function DashboardPage() {
     })
   }, [router])
 
+  /* Fetch projects once user is known */
+  useEffect(() => {
+    if (!user) return
+    setProjectsLoading(true)
+    fetch(`/api/projects?email=${encodeURIComponent(user.email || '')}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setProjects(data)
+        } else {
+          // Fallback to hardcoded SF project if table doesn't exist yet
+          setProjects([{
+            id: 'sf-office-search',
+            name: 'San Francisco Office Search',
+            market: 'San Francisco, CA',
+            description: '33 buildings surveyed across SoMa, FiDi, and South Beach neighborhoods',
+            status: 'active',
+            buildings_count: 33,
+            sqft: '2.8M',
+            shortlisted_count: 4,
+            created_by: 'samoitoza@gmail.com',
+            created_at: '2026-03-11T00:00:00Z',
+            updated_at: '2026-03-13T00:00:00Z',
+          }])
+        }
+        setProjectsLoading(false)
+      })
+      .catch(() => {
+        // Fallback
+        setProjects([{
+          id: 'sf-office-search',
+          name: 'San Francisco Office Search',
+          market: 'San Francisco, CA',
+          description: '33 buildings surveyed across SoMa, FiDi, and South Beach neighborhoods',
+          status: 'active',
+          buildings_count: 33,
+          sqft: '2.8M',
+          shortlisted_count: 4,
+          created_by: 'samoitoza@gmail.com',
+          created_at: '2026-03-11T00:00:00Z',
+          updated_at: '2026-03-13T00:00:00Z',
+        }])
+        setProjectsLoading(false)
+      })
+  }, [user])
+
   /* Fetch team members once user is known */
   useEffect(() => {
     if (!user || user.email !== 'samoitoza@gmail.com') return
@@ -207,6 +264,38 @@ export default function DashboardPage() {
     await supabase.auth.signOut()
     router.push('/')
     router.refresh()
+  }
+
+  const handleCreateProject = async () => {
+    if (!newProjectName.trim()) {
+      setCreateError('Project name is required.')
+      return
+    }
+    setCreatingProject(true)
+    setCreateError(null)
+    try {
+      const res = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newProjectName.trim(),
+          market: newProjectMarket.trim(),
+          createdBy: user?.email,
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        setCreateError(err.error || 'Failed to create project.')
+        setCreatingProject(false)
+        return
+      }
+      const project = await res.json()
+      // Navigate to the new project's tour book
+      router.push(`/project/${project.id}?tab=tourbook`)
+    } catch {
+      setCreateError('Network error. Please try again.')
+      setCreatingProject(false)
+    }
   }
 
   const handleAddMember = async () => {
@@ -343,6 +432,7 @@ export default function DashboardPage() {
         .remove-btn:hover { background: rgba(220,38,38,0.08) !important; color: #dc2626 !important; border-color: rgba(220,38,38,0.2) !important; }
         .details-btn:hover { background: rgba(37,99,235,0.08) !important; color: #2563eb !important; border-color: rgba(37,99,235,0.2) !important; }
         .invite-btn:hover { opacity: 0.85; }
+        .create-project-btn:hover { border-color: #2563eb !important; background: rgba(37,99,235,0.02) !important; }
       `}</style>
 
       {/* -- Top bar -- */}
@@ -426,10 +516,10 @@ export default function DashboardPage() {
           marginBottom: '2rem',
         }}>
           {[
-            { value: 33, suffix: '', label: 'Buildings Surveyed', color: '#0f172a' },
-            { value: 2.8, suffix: 'M+', label: 'Total Sq Ft', color: '#0f172a', isDecimal: true },
-            { value: 4, suffix: '', label: 'Shortlisted', color: '#2563eb' },
-            { value: 7, suffix: '', label: 'Neighborhoods', color: '#0f172a' },
+            { value: projects.reduce((sum, p) => sum + (p.buildings_count || 0), 0), suffix: '', label: 'Buildings Surveyed', color: '#0f172a' },
+            { value: 0, suffix: '', label: 'Total Sq Ft', color: '#0f172a', display: projects.map(p => p.sqft).filter(Boolean).join(', ') || '0' },
+            { value: projects.reduce((sum, p) => sum + (p.shortlisted_count || 0), 0), suffix: '', label: 'Shortlisted', color: '#2563eb' },
+            { value: projects.filter(p => p.status === 'active').length, suffix: '', label: 'Active Projects', color: '#0f172a' },
           ].map((stat, i) => (
             <div key={i} style={{
               background: '#ffffff',
@@ -446,8 +536,8 @@ export default function DashboardPage() {
                 letterSpacing: '-0.02em',
                 lineHeight: 1.2,
               }}>
-                {stat.isDecimal ? (
-                  <>{stat.value}{stat.suffix}</>
+                {'display' in stat && stat.display ? (
+                  <>{stat.display}</>
                 ) : (
                   <Counter end={stat.value} suffix={stat.suffix} />
                 )}
@@ -474,124 +564,141 @@ export default function DashboardPage() {
             <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
               Active Projects
             </div>
-            {projects.map((project) => (
-              <Link
-                key={project.id}
-                href={`/project/${project.id}`}
-                className="no-underline"
+            {projects.map((project) => {
+              const updatedDate = project.updated_at ? new Date(project.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
+              return (
+                <Link
+                  key={project.id}
+                  href={`/project/${project.id}`}
+                  className="no-underline"
+                  style={{
+                    display: 'block',
+                    background: hoveredCard === project.id
+                      ? 'linear-gradient(135deg, #ffffff 0%, #f8faff 100%)'
+                      : '#ffffff',
+                    borderRadius: '1rem',
+                    border: hoveredCard === project.id ? '1px solid rgba(37,99,235,0.25)' : '1px solid #e2e8f0',
+                    padding: '1.5rem',
+                    textDecoration: 'none',
+                    transition: 'all 0.25s cubic-bezier(0.4,0,0.2,1)',
+                    boxShadow: hoveredCard === project.id
+                      ? '0 8px 32px rgba(37,99,235,0.08), 0 2px 8px rgba(0,0,0,0.04)'
+                      : '0 1px 3px rgba(0,0,0,0.02)',
+                    transform: hoveredCard === project.id ? 'translateY(-2px)' : 'translateY(0)',
+                    marginBottom: '0.75rem',
+                  }}
+                  onMouseEnter={() => setHoveredCard(project.id)}
+                  onMouseLeave={() => setHoveredCard(null)}
+                >
+                  {/* Status + arrow */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.375rem',
+                      padding: '0.25rem 0.75rem',
+                      borderRadius: '9999px',
+                      fontSize: '0.6875rem',
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      background: project.status === 'active' ? 'rgba(34,197,94,0.08)' : 'rgba(100,116,139,0.08)',
+                      color: project.status === 'active' ? '#16a34a' : '#64748b',
+                    }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: project.status === 'active' ? '#22c55e' : '#94a3b8', animation: project.status === 'active' ? 'pulse 2s infinite' : 'none' }} />
+                      {project.status === 'active' ? 'Active' : project.status}
+                    </span>
+                    <div style={{
+                      width: '2rem',
+                      height: '2rem',
+                      borderRadius: '50%',
+                      background: hoveredCard === project.id ? 'rgba(37,99,235,0.08)' : '#f8fafc',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s',
+                    }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={hoveredCard === project.id ? '#2563eb' : '#94a3b8'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'all 0.2s', transform: hoveredCard === project.id ? 'translateX(2px)' : 'translateX(0)' }}>
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* Project info */}
+                  <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.125rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.25rem', letterSpacing: '-0.01em' }}>
+                    {project.name}
+                  </h2>
+                  <p style={{ fontSize: '0.8125rem', color: '#64748b', marginBottom: '0.25rem' }}>{project.market}</p>
+                  <p style={{ fontSize: '0.8125rem', color: '#94a3b8', marginBottom: '1.25rem', lineHeight: 1.5 }}>{project.description}</p>
+
+                  {/* Stats row */}
+                  <div style={{ display: 'flex', gap: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #f1f5f9', alignItems: 'flex-end' }}>
+                    <div>
+                      <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700, color: '#0f172a' }}>{project.buildings_count}</div>
+                      <div style={{ fontSize: '0.625rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>Buildings</div>
+                    </div>
+                    {project.sqft && (
+                      <div>
+                        <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700, color: '#0f172a' }}>{project.sqft}+</div>
+                        <div style={{ fontSize: '0.625rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>Sq Ft</div>
+                      </div>
+                    )}
+                    <div>
+                      <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700, color: '#2563eb' }}>{project.shortlisted_count}</div>
+                      <div style={{ fontSize: '0.625rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>Shortlisted</div>
+                    </div>
+                    {updatedDate && (
+                      <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+                        <div style={{ fontSize: '0.6875rem', color: '#94a3b8' }}>Updated</div>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 500, color: '#475569' }}>{updatedDate}</div>
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              )
+            })}
+
+            {/* Add new project button - admin only */}
+            {isAdmin && (
+              <button
+                onClick={() => { setShowCreateModal(true); setCreateError(null); setNewProjectName(''); setNewProjectMarket('') }}
+                className="create-project-btn"
                 style={{
-                  display: 'block',
-                  background: hoveredCard === project.id
-                    ? 'linear-gradient(135deg, #ffffff 0%, #f8faff 100%)'
-                    : '#ffffff',
                   borderRadius: '1rem',
-                  border: hoveredCard === project.id ? '1px solid rgba(37,99,235,0.25)' : '1px solid #e2e8f0',
-                  padding: '1.5rem',
-                  textDecoration: 'none',
-                  transition: 'all 0.25s cubic-bezier(0.4,0,0.2,1)',
-                  boxShadow: hoveredCard === project.id
-                    ? '0 8px 32px rgba(37,99,235,0.08), 0 2px 8px rgba(0,0,0,0.04)'
-                    : '0 1px 3px rgba(0,0,0,0.02)',
-                  transform: hoveredCard === project.id ? 'translateY(-2px)' : 'translateY(0)',
+                  border: '2px dashed #cbd5e1',
+                  padding: '1.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  background: 'transparent',
+                  width: '100%',
+                  textAlign: 'left',
+                  fontFamily: 'inherit',
                 }}
-                onMouseEnter={() => setHoveredCard(project.id)}
-                onMouseLeave={() => setHoveredCard(null)}
               >
-                {/* Status + arrow */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                  <span style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.375rem',
-                    padding: '0.25rem 0.75rem',
-                    borderRadius: '9999px',
-                    fontSize: '0.6875rem',
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    background: 'rgba(34,197,94,0.08)',
-                    color: '#16a34a',
-                  }}>
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', animation: 'pulse 2s infinite' }} />
-                    {project.status}
-                  </span>
-                  <div style={{
-                    width: '2rem',
-                    height: '2rem',
-                    borderRadius: '50%',
-                    background: hoveredCard === project.id ? 'rgba(37,99,235,0.08)' : '#f8fafc',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.2s',
-                  }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={hoveredCard === project.id ? '#2563eb' : '#94a3b8'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'all 0.2s', transform: hoveredCard === project.id ? 'translateX(2px)' : 'translateX(0)' }}>
-                      <polyline points="9 18 15 12 9 6" />
-                    </svg>
-                  </div>
+                <div style={{
+                  width: '2.5rem',
+                  height: '2.5rem',
+                  borderRadius: '0.75rem',
+                  background: '#dbeafe',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
                 </div>
-
-                {/* Project info */}
-                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.125rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.25rem', letterSpacing: '-0.01em' }}>
-                  {project.name}
-                </h2>
-                <p style={{ fontSize: '0.8125rem', color: '#64748b', marginBottom: '0.25rem' }}>{project.market}</p>
-                <p style={{ fontSize: '0.8125rem', color: '#94a3b8', marginBottom: '1.25rem', lineHeight: 1.5 }}>{project.description}</p>
-
-                {/* Stats row */}
-                <div style={{ display: 'flex', gap: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #f1f5f9', alignItems: 'flex-end' }}>
-                  <div>
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700, color: '#0f172a' }}>{project.buildings}</div>
-                    <div style={{ fontSize: '0.625rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>Buildings</div>
-                  </div>
-                  <div>
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700, color: '#0f172a' }}>{project.sqft}+</div>
-                    <div style={{ fontSize: '0.625rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>Sq Ft</div>
-                  </div>
-                  <div>
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700, color: '#2563eb' }}>{project.shortlisted}</div>
-                    <div style={{ fontSize: '0.625rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>Shortlisted</div>
-                  </div>
-                  <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-                    <div style={{ fontSize: '0.6875rem', color: '#94a3b8' }}>Updated</div>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 500, color: '#475569' }}>{project.lastUpdated}</div>
-                  </div>
+                <div>
+                  <p style={{ fontSize: '0.875rem', fontWeight: 600, color: '#2563eb', margin: 0 }}>Create New Project</p>
+                  <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.125rem' }}>Start a new site selection</p>
                 </div>
-              </Link>
-            ))}
-
-            {/* Add new project card */}
-            <div style={{
-              borderRadius: '1rem',
-              border: '2px dashed #e2e8f0',
-              padding: '1.25rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '1rem',
-              marginTop: '0.75rem',
-              cursor: 'default',
-              transition: 'border-color 0.2s',
-            }}>
-              <div style={{
-                width: '2.5rem',
-                height: '2.5rem',
-                borderRadius: '0.75rem',
-                background: '#f1f5f9',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round">
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-              </div>
-              <div>
-                <p style={{ fontSize: '0.875rem', fontWeight: 600, color: '#475569' }}>New Project</p>
-                <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.125rem' }}>Additional markets coming soon</p>
-              </div>
-            </div>
+              </button>
+            )}
           </div>
 
           {/* -- Activity feed -- */}
@@ -652,15 +759,16 @@ export default function DashboardPage() {
 
 
         {/* -- Quick actions -- */}
+        {projects.length > 0 && (
         <div className="dash-fade dash-fade-5">
           <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
-            Quick Access
+            Quick Access{projects.length > 0 ? ` - ${projects[0].name}` : ''}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.75rem' }}>
             {quickActions.map((action, i) => (
               <Link
                 key={i}
-                href={`/project/sf-office-search${action.tab ? `?tab=${action.tab}` : ''}`}
+                href={`/project/${projects[0].id}${action.tab ? `?tab=${action.tab}` : ''}`}
                 className="no-underline"
                 style={{
                   display: 'flex',
@@ -701,7 +809,184 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
+        )}
       </main>
+
+      {/* -- Create Project Modal -- */}
+      {showCreateModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15,23,42,0.5)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100,
+            padding: '1.5rem',
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowCreateModal(false) }}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '1.25rem',
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 24px 48px rgba(0,0,0,0.16)',
+              width: '100%',
+              maxWidth: '480px',
+              overflow: 'hidden',
+              animation: 'fadeUp 0.3s ease-out',
+            }}
+          >
+            {/* Modal header */}
+            <div style={{ padding: '1.5rem 1.5rem 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.125rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>Create New Project</h3>
+                <p style={{ fontSize: '0.8125rem', color: '#64748b', marginTop: '0.25rem' }}>Set up a new site selection project</p>
+              </div>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem', color: '#94a3b8', borderRadius: '0.5rem' }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal body */}
+            <div style={{ padding: '1.5rem' }}>
+              {/* Project Name */}
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#334155', marginBottom: '0.375rem' }}>Project Name</label>
+                <input
+                  type="text"
+                  className="team-input"
+                  placeholder="e.g. Austin Office Search"
+                  value={newProjectName}
+                  onChange={(e) => setNewProjectName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleCreateProject() }}
+                  autoFocus
+                  style={{
+                    width: '100%',
+                    padding: '0.625rem 0.875rem',
+                    fontSize: '0.875rem',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '0.625rem',
+                    background: '#f8fafc',
+                    color: '#0f172a',
+                    fontFamily: 'inherit',
+                    boxSizing: 'border-box',
+                    transition: 'border-color 0.15s, box-shadow 0.15s',
+                  }}
+                />
+              </div>
+
+              {/* Market */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#334155', marginBottom: '0.375rem' }}>Market / Location</label>
+                <input
+                  type="text"
+                  className="team-input"
+                  placeholder="e.g. Austin, TX"
+                  value={newProjectMarket}
+                  onChange={(e) => setNewProjectMarket(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleCreateProject() }}
+                  style={{
+                    width: '100%',
+                    padding: '0.625rem 0.875rem',
+                    fontSize: '0.875rem',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '0.625rem',
+                    background: '#f8fafc',
+                    color: '#0f172a',
+                    fontFamily: 'inherit',
+                    boxSizing: 'border-box',
+                    transition: 'border-color 0.15s, box-shadow 0.15s',
+                  }}
+                />
+              </div>
+
+              {/* Info note */}
+              <div style={{ padding: '0.875rem 1rem', borderRadius: '0.75rem', background: '#f0f9ff', border: '1px solid #bae6fd', marginBottom: '1.5rem', display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: '1px' }}>
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 16v-4M12 8h.01" />
+                </svg>
+                <p style={{ fontSize: '0.8125rem', color: '#0369a1', lineHeight: 1.5, margin: 0 }}>
+                  After creating the project, you will land on the Tour Book where you can upload your first broker survey to get started.
+                </p>
+              </div>
+
+              {/* Error */}
+              {createError && (
+                <div style={{ padding: '0.625rem 0.875rem', borderRadius: '0.5rem', background: '#fef2f2', border: '1px solid #fecaca', fontSize: '0.8125rem', color: '#dc2626', marginBottom: '1rem' }}>
+                  {createError}
+                </div>
+              )}
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  style={{
+                    padding: '0.625rem 1.25rem',
+                    fontSize: '0.8125rem',
+                    fontWeight: 500,
+                    color: '#64748b',
+                    background: 'transparent',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '0.625rem',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateProject}
+                  disabled={creatingProject || !newProjectName.trim()}
+                  style={{
+                    padding: '0.625rem 1.5rem',
+                    fontSize: '0.8125rem',
+                    fontWeight: 600,
+                    color: '#ffffff',
+                    background: '#2563eb',
+                    border: 'none',
+                    borderRadius: '0.625rem',
+                    cursor: creatingProject || !newProjectName.trim() ? 'not-allowed' : 'pointer',
+                    fontFamily: 'inherit',
+                    opacity: creatingProject || !newProjectName.trim() ? 0.6 : 1,
+                    transition: 'all 0.15s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                  }}
+                >
+                  {creatingProject ? (
+                    <>
+                      <div style={{ width: '1rem', height: '1rem', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                      </svg>
+                      Create Project
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* -- Footer -- */}
       <footer style={{ padding: '1.5rem', textAlign: 'center', fontSize: '0.75rem', color: '#94a3b8' }}>
