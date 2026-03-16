@@ -1,4 +1,4 @@
-/* Investors page - rebuilt 2026-03-13 */
+/* Investors page - rebuilt 2026-03-16 with investor feedback */
 'use client'
 
 import Link from 'next/link'
@@ -24,7 +24,7 @@ function Logo({ className = '', size = 32 }: { className?: string; size?: number
 }
 
 /* -- Animated counter -- */
-function Counter({ end, suffix = '', label }: { end: number; suffix?: string; label: string }) {
+function Counter({ end, suffix = '', label, prefix = '' }: { end: number; suffix?: string; label: string; prefix?: string }) {
   const [count, setCount] = useState(0)
   const ref = useRef<HTMLDivElement>(null)
   const started = useRef(false)
@@ -52,46 +52,26 @@ function Counter({ end, suffix = '', label }: { end: number; suffix?: string; la
   }, [end])
 
   return (
-    <div ref={ref} style={{ textAlign: 'center' }}>
-      <div className="font-extrabold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2.5rem, 1.5rem + 3vw, 4rem)', color: '#2563eb', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-        {count.toLocaleString()}{suffix}
+    <div ref={ref} className="text-center">
+      <div className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.5rem + 1.5vw, 3rem)', color: '#0f172a', letterSpacing: '-0.02em' }}>
+        {prefix}{count}{suffix}
       </div>
-      <div className="font-medium" style={{ color: '#64748b', fontSize: 'clamp(0.8125rem, 0.75rem + 0.25vw, 0.9375rem)', marginTop: '0.5rem', letterSpacing: '0.04em', textTransform: 'uppercase' as const }}>
-        {label}
-      </div>
+      <div className="text-sm" style={{ color: '#64748b', marginTop: '0.25rem' }}>{label}</div>
     </div>
   )
 }
 
 export default function InvestorsPage() {
-  const [scrolled, setScrolled] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20)
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
-
   return (
-    <div style={{ minHeight: '100vh', width: '100%', overflowX: 'hidden', background: '#ffffff' }}>
-
+    <div className="bg-white" style={{ fontFamily: 'var(--font-body)', minHeight: '100vh' }}>
       {/* ===================== NAV ===================== */}
-      <nav
-        className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
-        style={{
-          background: scrolled ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.92)',
-          backdropFilter: 'blur(12px)',
-          borderBottom: '1px solid #e2e8f0',
-          boxShadow: scrolled ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-        }}
-      >
-        <div className="flex items-center justify-between" style={{ maxWidth: '1200px', margin: '0 auto', padding: '1rem 1.5rem' }}>
-          <Link href="/" className="flex items-center no-underline" style={{ gap: '0.75rem', color: '#0f172a' }}>
-            <Logo size={32} className="text-[#0f172a]" />
-            <span className="font-bold tracking-tight" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.125rem,1rem+0.75vw,1.5rem)' }}>
-              Tour<span style={{ color: '#2563eb' }}>-Lytics</span>
-            </span>
+      <nav className="fixed top-0 inset-x-0 z-50" style={{ background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(16px)', borderBottom: '1px solid #e2e8f0' }}>
+        <div className="flex items-center justify-between" style={{ maxWidth: '1200px', margin: '0 auto', padding: '1rem 1.5rem', height: '64px' }}>
+          <Link href="/" className="flex items-center no-underline" style={{ gap: '0.625rem' }}>
+            <Logo size={28} />
+            <span className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: '1.125rem', color: '#0f172a', letterSpacing: '-0.01em' }}>Tour-Lytics</span>
           </Link>
           <div className="hidden md:flex items-center" style={{ gap: '2rem' }}>
             <Link href="/" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }}>Home</Link>
@@ -171,13 +151,18 @@ export default function InvestorsPage() {
             Investor Overview
           </div>
 
-          <h1 className="font-extrabold text-white" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2.5rem, 1rem + 4vw, 5rem)', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '1.5rem', maxWidth: '900px', marginLeft: 'auto', marginRight: 'auto' }}>
-            The CRE Intelligence{' '}
-            <span style={{ color: '#2563eb' }}>Platform</span>
+          <h1 className="font-extrabold text-white" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2.5rem, 1rem + 4vw, 4.5rem)', letterSpacing: '-0.03em', lineHeight: 1.08, marginBottom: '1.5rem', maxWidth: '900px', marginLeft: 'auto', marginRight: 'auto' }}>
+            The operating system for{' '}
+            <span style={{ color: '#2563eb' }}>commercial real estate site selection</span>
           </h1>
 
-          <p style={{ fontSize: 'clamp(1.125rem, 1rem + 0.75vw, 1.5rem)', color: '#94a3b8', maxWidth: '640px', margin: '0 auto 2.5rem auto', lineHeight: 1.5 }}>
-            AI-powered intelligence that transforms how corporate real estate teams analyze markets, compare buildings, and make lease decisions.
+          <p style={{ fontSize: 'clamp(1.125rem, 1rem + 0.75vw, 1.375rem)', color: '#94a3b8', maxWidth: '700px', margin: '0 auto 1.5rem auto', lineHeight: 1.55 }}>
+            AI-powered deal intelligence for every commercial real estate tour. From broker survey to signed lease, Tour-Lytics replaces the spreadsheets, PDFs, and email chains that still run a $20T+ market.
+          </p>
+
+          {/* TAM punch line */}
+          <p style={{ fontSize: 'clamp(0.875rem, 0.8rem + 0.3vw, 1rem)', color: '#64748b', maxWidth: '600px', margin: '0 auto 2.5rem auto', lineHeight: 1.5 }}>
+            20,000+ tenant-rep brokers in the U.S. alone. $15M+ addressable SaaS opportunity. Zero purpose-built tools.
           </p>
 
           {/* CTAs */}
@@ -227,88 +212,16 @@ export default function InvestorsPage() {
 
       {/* ===================== THE PROBLEM ===================== */}
       <section style={{ padding: '6rem 0', background: '#ffffff' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
-          <div className="grid grid-cols-1 md:grid-cols-2 items-center" style={{ gap: '3rem' }}>
-            <div>
-              <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
-                The Problem
-              </span>
-              <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3.5rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '1rem' }}>
-                You can&apos;t build a tour list<br />from a 129-page PDF.
-              </h2>
-              <p className="font-medium" style={{ fontSize: 'clamp(1.125rem, 1rem + 0.75vw, 1.5rem)', color: '#475569', lineHeight: 1.4, marginBottom: '1rem' }}>
-                For San Francisco - and really any market - broker surveys arrive the same way: a static, 129-page PDF. You&apos;re stuck on page one, scrolling through the deck, trying to remember which building was where on the map. You&apos;ve done this before.
-              </p>
-              <p style={{ color: '#64748b', lineHeight: 1.7 }}>
-                We asked our brokers to do better. Three days later, what came back was a clunky Tableau dashboard we could have built ourselves. So we built something real: an app that parses the entire PDF, maps every building, and sorts what you&apos;re negotiating, touring, and passing on. Click any building name and you&apos;re looking at its page in the survey instantly.
-              </p>
-              <p style={{ color: '#64748b', lineHeight: 1.7, marginTop: '1rem' }}>
-                And then there&apos;s the financial side. Tell me the last time a broker sent you a spreadsheet that matches what your CFO actually wants to see - cash flow, straight-line P&amp;L, GAAP format. It doesn&apos;t happen. Brokers care about the payday. They&apos;ll send a glossy proposal with an asking rate and a nice rendering - but your finance team is left rebuilding everything from scratch. Tour-Lytics generates it all automatically the moment you upload a deal.
-              </p>
-              <p style={{ color: '#64748b', lineHeight: 1.7, marginTop: '1rem' }}>
-                And touring? That process is even worse. Every time you tour, you get handed a large paper folder. You take notes by hand, snap photos on your phone, then try to recall everything you saw three buildings later. It&apos;s a 40-year-old process that hasn&apos;t changed. Our Tour Book tab links directly to the locations on your map - score every space on price, parking, security, fit-out, and more. Add photos and notes from your phone while you&apos;re standing in the lobby. When you&apos;re done, you have a ranked, exportable tour report instead of a stack of scribbled-on paper.
-              </p>
-            </div>
-            <div className="flex flex-col" style={{ gap: '1rem' }}>
-              {/* Problem Card */}
-              <div style={{ padding: '1.5rem', borderRadius: '1rem', border: '1px solid #fecaca', background: '#fef2f2' }}>
-                <div className="inline-flex items-center justify-center rounded-full font-bold" style={{ width: '28px', height: '28px', background: '#fee2e2', color: '#dc2626', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', marginBottom: '0.75rem' }}>&#x2717;</div>
-                <h4 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', color: '#991b1b', marginBottom: '0.75rem' }}>What brokers send you</h4>
-                <ul className="flex flex-col" style={{ listStyle: 'none', padding: 0, gap: '0.5rem' }}>
-                  {[
-                    'A static 129-page PDF',
-                    'No map, no sorting, no filtering',
-                    "Can't build a tour list",
-                    'Paper tour folders and handwritten notes',
-                    'No cash flow or GAAP financials',
-                  ].map((item) => (
-                    <li key={item} className="text-sm relative" style={{ color: '#64748b', paddingLeft: '1.25rem' }}>
-                      <span className="absolute rounded-full" style={{ left: 0, top: '7px', width: '8px', height: '8px', background: '#fca5a5' }} />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              {/* Solution Card */}
-              <div style={{ padding: '1.5rem', borderRadius: '1rem', border: '1px solid #bbf7d0', background: '#f0fdf4' }}>
-                <div className="inline-flex items-center justify-center rounded-full font-bold" style={{ width: '28px', height: '28px', background: '#dcfce7', color: '#16a34a', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', marginBottom: '0.75rem' }}>&#x2713;</div>
-                <h4 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', color: '#166534', marginBottom: '0.75rem' }}>What Tour-Lytics gives you</h4>
-                <ul className="flex flex-col" style={{ listStyle: 'none', padding: 0, gap: '0.5rem' }}>
-                  {[
-                    'Interactive map with every building',
-                    'Click any name \u2192 jump to survey page',
-                    'Build your tour list from the map',
-                    'Tour Book with scores, photos, and notes',
-                    'Monthly cash flow & GAAP P&L',
-                    'AI assistant that answers questions about any building or deal',
-                    'Commute study for your entire team',
-                    'Upload new surveys directly to the map',
-                    'AI photo analysis and tagging',
-                  ].map((item) => (
-                    <li key={item} className="text-sm relative" style={{ color: '#64748b', paddingLeft: '1.25rem' }}>
-                      <span className="absolute rounded-full" style={{ left: 0, top: '7px', width: '8px', height: '8px', background: '#86efac' }} />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ===================== THE SOLUTION ===================== */}
-      <section style={{ padding: '6rem 0', background: '#ffffff' }}>
         <div style={{ maxWidth: '1000px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
           <div className="text-center" style={{ marginBottom: '3.5rem' }}>
             <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
-              The Solution
+              The Problem
             </span>
             <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.75rem' }}>
-              One platform that speaks both broker and CFO
+              Commercial real estate decisions still run on PDFs
             </h2>
             <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', maxWidth: '640px', margin: '0 auto', lineHeight: 1.6 }}>
-              Tour-Lytics transforms raw market data into the financial intelligence corporate real estate teams actually need.
+              Every corporate lease transaction follows the same broken workflow: broker sends a PDF survey, tenant manually re-keys data into spreadsheets, then makes million-dollar decisions off disjointed files and email threads.
             </p>
           </div>
 
@@ -316,72 +229,27 @@ export default function InvestorsPage() {
             {[
               {
                 icon: (
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
-                    <circle cx="12" cy="10" r="3" />
-                  </svg>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="9" y1="15" x2="15" y2="15" /></svg>
                 ),
-                title: 'Market Intelligence',
-                desc: 'Interactive maps with every building, availability, and broker survey data linked in one view.',
-                accent: '#dbeafe',
+                accent: '#fef2f2',
+                title: 'Trapped in static PDFs',
+                desc: 'Broker surveys arrive as 40-page PDFs with inconsistent formatting. Every building is locked inside a document no tool can read or compare.',
               },
               {
                 icon: (
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="3" width="20" height="18" rx="2" />
-                    <path d="M2 9h20M10 3v18" />
-                  </svg>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18M9 21V9" /></svg>
                 ),
-                title: 'GAAP Financial Models',
-                desc: 'Cash flow, straight-line P&L, and all-in occupancy cost models generated instantly from any broker proposal.',
-                accent: '#dcfce7',
+                accent: '#fef2f2',
+                title: 'Rebuilt in spreadsheets',
+                desc: 'CRE teams manually re-type rent, square footage, and deal terms into Excel. Every project starts from zero. One typo cascades through the entire financial model.',
               },
               {
                 icon: (
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2" />
-                    <rect x="8" y="2" width="8" height="4" rx="1" />
-                    <path d="M9 14l2 2 4-4" />
-                  </svg>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
                 ),
-                title: 'Tour Management',
-                desc: 'Score, rank, and coordinate building tours with your entire team. Upload photos from your phone and let AI tag and organize them automatically.',
-                accent: '#fef3c7',
-              },
-              {
-                icon: (
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 2a4 4 0 014 4c0 1.95-2 4-4 6-2-2-4-4.05-4-6a4 4 0 014-4z" />
-                    <path d="M8.5 14.5A9 9 0 003 21h18a9 9 0 00-5.5-6.5" />
-                  </svg>
-                ),
-                title: 'AI-Powered Analysis',
-                desc: 'An AI assistant built into every project. Ask it to compare buildings on cost, find coffee shops near your next tour, calculate walking times between buildings, or break down your lease terms. Connected to Google Maps and Google Places for real-time local intelligence.',
-                accent: '#ede9fe',
-              },
-              {
-                icon: (
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="10" r="3" />
-                    <path d="M12 2a8 8 0 00-8 8c0 5.4 8 12 8 12s8-6.6 8-12a8 8 0 00-8-8z" />
-                    <path d="M3 21h18" />
-                  </svg>
-                ),
-                title: 'Commute Intelligence',
-                desc: 'Upload employee addresses, map commute times to every shortlisted building, and see transit, driving, and biking breakdowns. Know where your team should actually work.',
-                accent: '#fce7f3',
-              },
-              {
-                icon: (
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                    <polyline points="17 8 12 3 7 8" />
-                    <line x1="12" y1="3" x2="12" y2="15" />
-                  </svg>
-                ),
-                title: 'Survey Upload & Merge',
-                desc: 'Upload new broker surveys directly into the platform. AI extracts every building and merges it with your existing map automatically.',
-                accent: '#f0fdf4',
+                accent: '#fef2f2',
+                title: 'Weeks of wasted time',
+                desc: 'What should take hours takes weeks. Site visits lack context, comparisons happen over email, and final decisions are based on gut feel instead of structured intelligence.',
               },
             ].map((card) => (
               <div
@@ -392,10 +260,11 @@ export default function InvestorsPage() {
                   background: '#ffffff',
                   border: '1px solid #e2e8f0',
                   transition: 'box-shadow 0.2s, border-color 0.2s',
+                  cursor: 'default',
                 }}
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(0,0,0,0.06)'
-                  ;(e.currentTarget as HTMLElement).style.borderColor = '#bfdbfe'
+                  ;(e.currentTarget as HTMLElement).style.borderColor = '#cbd5e1'
                 }}
                 onMouseLeave={(e) => {
                   (e.currentTarget as HTMLElement).style.boxShadow = 'none'
@@ -413,23 +282,63 @@ export default function InvestorsPage() {
         </div>
       </section>
 
-      {/* ===================== AI INTELLIGENCE LAYER ===================== */}
+      {/* ===================== THE WORKFLOW ===================== */}
       <section style={{ padding: '6rem 0', background: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+        <div style={{ maxWidth: '1000px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
+          <div className="text-center" style={{ marginBottom: '3.5rem' }}>
+            <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
+              The Workflow
+            </span>
+            <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.75rem' }}>
+              Embedded in every step of the deal
+            </h2>
+            <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', maxWidth: '640px', margin: '0 auto', lineHeight: 1.6 }}>
+              Tour-Lytics is not a standalone analytics tool. It lives inside the entire site selection workflow, from the first broker survey to the final lease decision.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-5" style={{ gap: '0' }}>
+            {[
+              { step: '01', title: 'Survey Upload', desc: 'Broker sends a PDF survey. AI parses it into structured data with buildings on a map.', icon: '📄' },
+              { step: '02', title: 'Shortlist', desc: 'Compare buildings side by side. AI scores and ranks them by your criteria.', icon: '📋' },
+              { step: '03', title: 'Tour Day', desc: 'Interactive tour book with schedules, photos, notes, and real-time scoring.', icon: '🏢' },
+              { step: '04', title: 'Analysis', desc: 'Full financial models, commute studies, and AI-driven comparisons on every building.', icon: '📊' },
+              { step: '05', title: 'Decision', desc: 'Side-by-side RFP analysis with GAAP-compliant P&L to support the lease decision.', icon: '✅' },
+            ].map((item, i) => (
+              <div key={item.step} className="relative" style={{ padding: '2rem 1.5rem', textAlign: 'center' }}>
+                {/* Connector line */}
+                {i < 4 && (
+                  <div className="hidden md:block absolute" style={{ top: '2.75rem', right: '-0.5rem', width: '1rem', height: '2px', background: '#cbd5e1', zIndex: 1 }} />
+                )}
+                <div style={{ fontSize: '1.75rem', marginBottom: '0.75rem' }}>{item.icon}</div>
+                <div className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: '0.6875rem', color: '#2563eb', letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: '0.5rem' }}>
+                  Step {item.step}
+                </div>
+                <h3 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: '#0f172a', marginBottom: '0.375rem' }}>{item.title}</h3>
+                <p style={{ fontSize: '0.8125rem', color: '#64748b', lineHeight: 1.55, margin: 0 }}>{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===================== AI KNOWLEDGE LAYER ===================== */}
+      <section style={{ padding: '6rem 0', background: '#ffffff', borderTop: '1px solid #e2e8f0' }}>
         <div style={{ maxWidth: '1000px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
           <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: '4rem', alignItems: 'start' }}>
             {/* Left: Narrative */}
             <div>
               <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
-                AI Intelligence Layer
+                AI Knowledge Layer
               </span>
               <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.75rem, 1.2rem + 2vw, 2.75rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '1.25rem', lineHeight: 1.15 }}>
-                Every project gets a personal AI analyst
+                The knowledge graph of commercial real estate searches
               </h2>
               <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', lineHeight: 1.7, marginBottom: '1.5rem' }}>
-                Tour-Lytics embeds an AI assistant directly into every project workspace. It has deep knowledge of all 33 buildings, every deal term, all financial models, and the user&apos;s live tour schedule. This is not a generic chatbot. It is a CRE analyst that knows your specific data.
+                Every project builds a structured intelligence layer. Tour-Lytics ingests broker surveys, financial terms, tour schedules, photos, and employee commute data into a single knowledge graph. The AI does not just answer questions. It understands the relationships between buildings, deal terms, team preferences, and location data.
               </p>
               <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', lineHeight: 1.7, marginBottom: '1.5rem' }}>
-                Connected to Google Maps and Google Places APIs, the assistant can find nearby restaurants, calculate walking and driving times between buildings, and pull real-time local data. Users ask questions in plain English and get answers grounded in their actual project data.
+                Connected to Google Maps and Google Places APIs, the assistant can find nearby restaurants, calculate commute times, and pull real-time local data. Users ask questions in plain English and get answers grounded in their actual project data.
               </p>
 
               {/* Capability list */}
@@ -497,32 +406,126 @@ export default function InvestorsPage() {
         </div>
       </section>
 
-      {/* ===================== WHY NOW ===================== */}
+      {/* ===================== TWO MARKETS ===================== */}
       <section style={{ padding: '6rem 0', background: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+        <div style={{ maxWidth: '1000px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
+          <div className="text-center" style={{ marginBottom: '3.5rem' }}>
+            <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
+              Two Markets, One Platform
+            </span>
+            <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.75rem' }}>
+              Built for both sides of the deal
+            </h2>
+            <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', maxWidth: '640px', margin: '0 auto', lineHeight: 1.6 }}>
+              Tour-Lytics serves the two key personas in every commercial real estate site selection: the broker driving the process and the tenant making the decision.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: '2rem' }}>
+            {/* Brokers */}
+            <div style={{ padding: '2.5rem', borderRadius: '1rem', background: '#ffffff', border: '2px solid #2563eb', position: 'relative' }}>
+              <div style={{ position: 'absolute', top: '-1px', left: '1.5rem', background: '#2563eb', color: '#fff', fontSize: '0.6875rem', fontWeight: 700, padding: '0.25rem 0.875rem', borderRadius: '0 0 0.5rem 0.5rem', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>
+                Primary Market
+              </div>
+              <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '0.75rem', background: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" /></svg>
+                </div>
+                <h3 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.25rem, 1.1rem + 0.5vw, 1.5rem)', color: '#0f172a', margin: 0 }}>Tenant-Rep Brokers</h3>
+              </div>
+              <p style={{ fontSize: '0.9375rem', color: '#64748b', lineHeight: 1.65, marginBottom: '1.5rem' }}>
+                Brokers are the entry point. They run the tour, distribute the surveys, and manage the process. Tour-Lytics gives them a modern platform to deliver a better client experience.
+              </p>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {[
+                  'Upload broker surveys and create interactive maps instantly',
+                  'Manage tour schedules, attendees, and invitations',
+                  'Deliver polished tour books instead of PDF packets',
+                  'Control the process with admin-level permissions',
+                ].map((item) => (
+                  <li key={item} className="flex items-start text-sm" style={{ gap: '0.5rem', color: '#475569' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0, marginTop: '2px' }}><polyline points="20 6 9 17 4 12" /></svg>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Tenants / Occupiers */}
+            <div style={{ padding: '2.5rem', borderRadius: '1rem', background: '#ffffff', border: '1px solid #e2e8f0' }}>
+              <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '0.75rem', background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
+                </div>
+                <h3 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.25rem, 1.1rem + 0.5vw, 1.5rem)', color: '#0f172a', margin: 0 }}>Tenants and Occupiers</h3>
+              </div>
+              <p style={{ fontSize: '0.9375rem', color: '#64748b', lineHeight: 1.65, marginBottom: '1.5rem' }}>
+                Corporate real estate teams and decision-makers are the end users. They get structured data, financial intelligence, and AI analysis instead of a stack of PDFs to read on their own.
+              </p>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {[
+                  'Explore buildings on an interactive map with full detail',
+                  'Run AI-powered financial comparisons and commute studies',
+                  'Score and rank buildings during live tour days',
+                  'Access the AI assistant for any project question',
+                ].map((item) => (
+                  <li key={item} className="flex items-start text-sm" style={{ gap: '0.5rem', color: '#475569' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0, marginTop: '2px' }}><polyline points="20 6 9 17 4 12" /></svg>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ===================== MARKET OPPORTUNITY ===================== */}
+      <section style={{ padding: '6rem 0', background: '#ffffff', borderTop: '1px solid #e2e8f0' }}>
         <div style={{ maxWidth: '1000px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
           <div className="text-center" style={{ marginBottom: '3.5rem' }}>
             <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
               Market Opportunity
             </span>
             <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.75rem' }}>
-              A $20T+ market running on spreadsheets
+              A $20T+ market with no purpose-built intelligence tool
             </h2>
-            <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', maxWidth: '640px', margin: '0 auto', lineHeight: 1.6 }}>
-              U.S. commercial real estate represents over $20 trillion in assets. Every corporate lease transaction involves the same broken workflow.
+            <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', maxWidth: '680px', margin: '0 auto', lineHeight: 1.6 }}>
+              U.S. commercial real estate represents over $20 trillion in assets. Every corporate lease transaction involves the same broken workflow. Yet no software exists to serve the tenant side of the deal.
             </p>
           </div>
 
+          {/* TAM stats row */}
+          <div className="grid grid-cols-1 md:grid-cols-3" style={{ gap: '1.5rem', marginBottom: '3rem' }}>
+            <div style={{ padding: '2rem', borderRadius: '1rem', background: '#f8fafc', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+              <div className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.5rem + 1.5vw, 2.75rem)', color: '#2563eb', marginBottom: '0.25rem' }}>20K+</div>
+              <div style={{ fontSize: '0.875rem', color: '#475569', fontWeight: 600, marginBottom: '0.25rem' }}>Tenant-rep brokers in the U.S.</div>
+              <div style={{ fontSize: '0.8125rem', color: '#94a3b8' }}>Each managing multiple active searches</div>
+            </div>
+            <div style={{ padding: '2rem', borderRadius: '1rem', background: '#f8fafc', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+              <div className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.5rem + 1.5vw, 2.75rem)', color: '#2563eb', marginBottom: '0.25rem' }}>$15M+</div>
+              <div style={{ fontSize: '0.875rem', color: '#475569', fontWeight: 600, marginBottom: '0.25rem' }}>Addressable SaaS opportunity</div>
+              <div style={{ fontSize: '0.8125rem', color: '#94a3b8' }}>Usage-based model tied to AI features</div>
+            </div>
+            <div style={{ padding: '2rem', borderRadius: '1rem', background: '#f8fafc', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+              <div className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.5rem + 1.5vw, 2.75rem)', color: '#2563eb', marginBottom: '0.25rem' }}>0</div>
+              <div style={{ fontSize: '0.875rem', color: '#475569', fontWeight: 600, marginBottom: '0.25rem' }}>Purpose-built competitors</div>
+              <div style={{ fontSize: '0.8125rem', color: '#94a3b8' }}>No tool serves the tenant/occupier intelligence gap</div>
+            </div>
+          </div>
+
+          {/* Growth path */}
           <div className="grid grid-cols-1 md:grid-cols-3" style={{ gap: '1.5rem' }}>
             {[
               {
                 step: '01',
                 title: 'The Wedge',
-                desc: 'Mid-market and enterprise tenant representation. Every company with more than one office has this problem.',
+                desc: 'Tenant-rep brokers running site selections. Every company with more than one office has this problem. Brokers are the distribution channel.',
               },
               {
                 step: '02',
                 title: 'The Expansion',
-                desc: 'Portfolio analytics, renewal management, multi-market intelligence. Deeper into the tenant lifecycle.',
+                desc: 'Portfolio analytics, renewal management, multi-market intelligence. Deeper into the tenant lifecycle with recurring usage.',
               },
               {
                 step: '03',
@@ -543,17 +546,17 @@ export default function InvestorsPage() {
       </section>
 
       {/* ===================== BUSINESS MODEL ===================== */}
-      <section style={{ padding: '6rem 0', background: '#ffffff', borderTop: '1px solid #e2e8f0' }}>
+      <section style={{ padding: '6rem 0', background: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
           <div className="text-center" style={{ marginBottom: '3.5rem' }}>
             <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
               Business Model
             </span>
             <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.75rem' }}>
-              AI token model, inspired by Perplexity and Claude
+              Usage-based AI token model
             </h2>
             <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', maxWidth: '680px', margin: '0 auto', lineHeight: 1.6 }}>
-              Every user starts free. AI-powered features consume tokens. The heaviest workflows - survey parsing, RFP analysis, commute studies, and photo AI - are the highest-value and highest-cost actions on the platform.
+              Every user starts free. AI-powered features consume tokens. The heaviest workflows are the highest-value and highest-cost actions on the platform. Revenue scales directly with the features people value most.
             </p>
           </div>
 
@@ -674,7 +677,7 @@ export default function InvestorsPage() {
           </div>
 
           {/* Revenue model note */}
-          <div style={{ marginTop: '2rem', padding: '1.5rem 2rem', borderRadius: '1rem', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+          <div style={{ marginTop: '2rem', padding: '1.5rem 2rem', borderRadius: '1rem', background: '#ffffff', border: '1px solid #e2e8f0' }}>
             <div className="flex items-start" style={{ gap: '1rem' }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '0.75rem', background: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></svg>
@@ -682,7 +685,7 @@ export default function InvestorsPage() {
               <div>
                 <h4 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: '#0f172a', marginBottom: '0.375rem' }}>Why this model works</h4>
                 <p style={{ fontSize: '0.9375rem', color: '#64748b', lineHeight: 1.65, margin: 0 }}>
-                  Survey parsing (25 tokens), RFP analysis (15 tokens), and commute studies (10 tokens) are the highest-value actions on the platform and the heaviest AI lift. Revenue scales directly with the features people value most. The free tier (100 tokens) gets teams in the door. Token packs convert them when they see the AI in action. Per-project budgets and admin controls let enterprise teams manage spend. This is the same playbook Perplexity, Claude, and ChatGPT use: generous free access, then monetize power usage.
+                  Survey parsing, RFP analysis, and commute studies are the highest-value actions on the platform and the heaviest AI lift. Revenue scales directly with the features people value most. The free tier (100 tokens) gets teams in the door. Token packs convert them when they see the AI in action. Per-project budgets and admin controls let enterprise teams manage spend. This is the same playbook Perplexity, Claude, and ChatGPT use: generous free access, then monetize power usage.
                 </p>
               </div>
             </div>
@@ -695,13 +698,13 @@ export default function InvestorsPage() {
         <div style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
           <div className="text-center" style={{ marginBottom: '3.5rem' }}>
             <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
-              Competitive Analysis
+              Competitive Landscape
             </span>
             <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.75rem' }}>
               Nobody else does what we do
             </h2>
             <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', maxWidth: '680px', margin: '0 auto', lineHeight: 1.6 }}>
-              Existing CRE tools serve landlords, investors, or lease administrators. No tool converts broker deliverables into actionable intelligence for corporate occupiers. Tour-Lytics fills that gap.
+              Existing CRE tools serve landlords, investors, or lease administrators. No tool converts broker deliverables into actionable intelligence for corporate occupiers.
             </p>
           </div>
 
@@ -751,7 +754,7 @@ export default function InvestorsPage() {
                     category: 'AI Assistant',
                     players: 'None',
                     what: 'No CRE tool offers an AI analyst embedded in the workflow',
-                    diff: 'Our AI knows every building, every deal term, and every financial model. It runs commute analysis, tags tour photos, finds coffee shops, calculates drive times, and answers questions in plain English.',
+                    diff: 'Our AI knows every building, every deal term, and every financial model. It is the knowledge graph for commercial real estate searches.',
                   },
                 ].map((row, i) => (
                   <div
@@ -781,14 +784,12 @@ export default function InvestorsPage() {
                     No tool converts broker deliverables into actionable intelligence for occupiers
                   </div>
                   <div style={{ fontSize: '0.875rem', color: '#1e40af', lineHeight: 1.6, fontWeight: 600 }}>
-                    Tour-Lytics fills this gap: the tenant/occupier intelligence layer with AI built in
+                    Tour-Lytics fills this gap: deal intelligence for commercial real estate searches
                   </div>
                 </div>
               </div>
             </div>
           </div>
-
-
         </div>
       </section>
 
