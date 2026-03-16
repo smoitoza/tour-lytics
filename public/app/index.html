@@ -8775,6 +8775,8 @@ function rfpBuildDetailHtml(subs) {
   }
   if (!selected) selected = sorted[0];
   if (!selected) return '';
+  // Persist the resolved selection so assumptions/save can find it
+  window._rfpState.selectedSubmission = selected.id;
 
   var address = selected.building_address || selected.buildingAddress || '';
   var docType = selected.doc_type || selected.docType || 'RFP';
