@@ -219,7 +219,7 @@ export default function InvestorsPage() {
           <div className="grid grid-cols-2 md:grid-cols-4" style={{ gap: '2rem' }}>
             <Counter end={33} label="Buildings analyzed" />
             <Counter end={2} suffix=".8M+" label="Sq ft mapped" />
-            <Counter end={5} suffix=" min" label="To full financials" />
+            <Counter end={7} label="AI-powered features" />
             <Counter end={100} suffix="%" label="GAAP compliant" />
           </div>
         </div>
@@ -281,6 +281,9 @@ export default function InvestorsPage() {
                     'Tour Book with scores, photos, and notes',
                     'Monthly cash flow & GAAP P&L',
                     'AI assistant that answers questions about any building or deal',
+                    'Commute study for your entire team',
+                    'Upload new surveys directly to the map',
+                    'AI photo analysis and tagging',
                   ].map((item) => (
                     <li key={item} className="text-sm relative" style={{ color: '#64748b', paddingLeft: '1.25rem' }}>
                       <span className="absolute rounded-full" style={{ left: 0, top: '7px', width: '8px', height: '8px', background: '#86efac' }} />
@@ -309,7 +312,7 @@ export default function InvestorsPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: '1.5rem' }}>
+          <div className="grid grid-cols-1 md:grid-cols-3" style={{ gap: '1.5rem' }}>
             {[
               {
                 icon: (
@@ -342,7 +345,7 @@ export default function InvestorsPage() {
                   </svg>
                 ),
                 title: 'Tour Management',
-                desc: 'Score, rank, schedule, and coordinate building tours with your entire team in one place.',
+                desc: 'Score, rank, and coordinate building tours with your entire team. Upload photos from your phone and let AI tag and organize them automatically.',
                 accent: '#fef3c7',
               },
               {
@@ -355,6 +358,30 @@ export default function InvestorsPage() {
                 title: 'AI-Powered Analysis',
                 desc: 'An AI assistant built into every project. Ask it to compare buildings on cost, find coffee shops near your next tour, calculate walking times between buildings, or break down your lease terms. Connected to Google Maps and Google Places for real-time local intelligence.',
                 accent: '#ede9fe',
+              },
+              {
+                icon: (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="10" r="3" />
+                    <path d="M12 2a8 8 0 00-8 8c0 5.4 8 12 8 12s8-6.6 8-12a8 8 0 00-8-8z" />
+                    <path d="M3 21h18" />
+                  </svg>
+                ),
+                title: 'Commute Intelligence',
+                desc: 'Upload employee addresses, map commute times to every shortlisted building, and see transit, driving, and biking breakdowns. Know where your team should actually work.',
+                accent: '#fce7f3',
+              },
+              {
+                icon: (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                ),
+                title: 'Survey Upload & Merge',
+                desc: 'Upload new broker surveys directly into the platform. AI extracts every building and merges it with your existing map automatically.',
+                accent: '#f0fdf4',
               },
             ].map((card) => (
               <div
@@ -414,6 +441,8 @@ export default function InvestorsPage() {
                   { icon: '🚶', text: 'Calculate walking, driving, or transit times between tour stops' },
                   { icon: '📅', text: 'Aware of the live tour schedule, scores, and shortlist in real time' },
                   { icon: '🔗', text: 'Powered by Claude AI with Google Maps and Places integration' },
+                  { icon: '🚗', text: 'Run commute studies across your entire team to find the optimal office location' },
+                  { icon: '📸', text: 'AI photo analysis tags and organizes tour photos automatically' },
                 ].map((item) => (
                   <div key={item.text} className="flex items-start" style={{ gap: '0.75rem' }}>
                     <span style={{ fontSize: '1rem', flexShrink: 0, marginTop: '2px' }}>{item.icon}</span>
@@ -521,10 +550,10 @@ export default function InvestorsPage() {
               Business Model
             </span>
             <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.75rem' }}>
-              AI credit model, inspired by Perplexity and Claude
+              AI token model, inspired by Perplexity and Claude
             </h2>
             <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', maxWidth: '680px', margin: '0 auto', lineHeight: 1.6 }}>
-              Every user starts free. AI-powered features consume credits. The heaviest workflows - survey parsing, financial modeling, tour books, and mapping - are the highest-value and highest-cost actions on the platform.
+              Every user starts free. AI-powered features consume tokens. The heaviest workflows - survey parsing, RFP analysis, commute studies, and photo AI - are the highest-value and highest-cost actions on the platform.
             </p>
           </div>
 
@@ -538,8 +567,8 @@ export default function InvestorsPage() {
               <div style={{ marginBottom: '1.5rem' }}>
                 <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#64748b', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>Free</span>
                 <div className="flex items-baseline" style={{ gap: '0.25rem' }}>
-                  <span className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.5rem + 1.5vw, 2.75rem)', color: '#0f172a' }}>25</span>
-                  <span style={{ fontSize: '1rem', color: '#64748b' }}>credits</span>
+                  <span className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.5rem + 1.5vw, 2.75rem)', color: '#0f172a' }}>100</span>
+                  <span style={{ fontSize: '1rem', color: '#64748b' }}>tokens</span>
                 </div>
                 <div style={{ fontSize: '0.8125rem', color: '#94a3b8', marginTop: '0.25rem' }}>No credit card required</div>
               </div>
@@ -566,10 +595,9 @@ export default function InvestorsPage() {
               <div style={{ marginBottom: '1.5rem' }}>
                 <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>Pro</span>
                 <div className="flex items-baseline" style={{ gap: '0.25rem' }}>
-                  <span className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.5rem + 1.5vw, 2.75rem)', color: '#0f172a' }}>$25</span>
-                  <span style={{ fontSize: '1rem', color: '#64748b' }}>/ credit pack</span>
+                  <span className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.5rem + 1.5vw, 2.75rem)', color: '#0f172a' }}>Pay-as-you-go</span>
                 </div>
-                <div style={{ fontSize: '0.8125rem', color: '#94a3b8', marginTop: '0.25rem' }}>Buy as needed, credits never expire</div>
+                <div style={{ fontSize: '0.8125rem', color: '#94a3b8', marginTop: '0.25rem' }}>Token packs available, tokens never expire</div>
               </div>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {[
@@ -618,17 +646,19 @@ export default function InvestorsPage() {
             </div>
           </div>
 
-          {/* Credit consumption table */}
+          {/* Token consumption table */}
           <div style={{ borderRadius: '1rem', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
             <div style={{ background: '#0f172a', padding: '1rem 1.5rem' }}>
-              <span className="font-semibold" style={{ fontFamily: 'var(--font-display)', color: '#e2e8f0', fontSize: '0.9375rem' }}>How credits are consumed</span>
+              <span className="font-semibold" style={{ fontFamily: 'var(--font-display)', color: '#e2e8f0', fontSize: '0.9375rem' }}>How tokens are consumed</span>
             </div>
             {[
-              { action: 'AI chat query', cost: '1 credit', note: 'Building comparisons, deal questions, directions', icon: '💬' },
-              { action: 'Nearby search (Google Places)', cost: '2 credits', note: 'Coffee shops, restaurants, parking near a building', icon: '📍' },
-              { action: 'Financial model generation', cost: '5 credits', note: 'Full cash flow, straight-line P&L, GAAP output per building', icon: '📊' },
-              { action: 'Survey parsing', cost: '10 credits', note: 'Parse an entire broker survey PDF into structured data + map', icon: '📄' },
-              { action: 'Tour book creation', cost: '5 credits', note: 'Create a scored, exportable tour report with photos and notes', icon: '📋' },
+              { action: 'AI chat query', cost: '1 token', note: 'Building comparisons, deal questions, directions', icon: '💬' },
+              { action: 'Photo AI analysis', cost: '3 tokens', note: 'AI tagging, categorization, and quality scoring per photo', icon: '📸' },
+              { action: 'Bulk photo analysis', cost: '8 tokens', note: 'Process up to 15 tour photos in a single batch', icon: '🖼️' },
+              { action: 'Commute study', cost: '10 tokens', note: 'Map employee commute times to every shortlisted building', icon: '🚗' },
+              { action: 'RFP/LOI analysis', cost: '15 tokens', note: 'Full cash flow, straight-line P&L, GAAP output per building', icon: '📊' },
+              { action: 'Survey map upload', cost: '25 tokens', note: 'Parse an entire broker survey PDF into structured data + map', icon: '📄' },
+              { action: 'Assumptions update', cost: 'Free', note: 'Update per-building financial assumptions at any time', icon: '⚙️' },
             ].map((item, i) => (
               <div key={item.action} className="flex items-center" style={{ padding: '1rem 1.5rem', borderTop: '1px solid #e2e8f0', background: i % 2 === 0 ? '#ffffff' : '#f8fafc', gap: '1rem', flexWrap: 'wrap' as const }}>
                 <span style={{ fontSize: '1.125rem', flexShrink: 0 }}>{item.icon}</span>
@@ -636,7 +666,7 @@ export default function InvestorsPage() {
                   <span className="font-semibold" style={{ fontSize: '0.9375rem', color: '#0f172a' }}>{item.action}</span>
                   <span className="hidden md:inline" style={{ fontSize: '0.8125rem', color: '#94a3b8', marginLeft: '0.75rem' }}>{item.note}</span>
                 </div>
-                <span className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: '0.875rem', color: '#2563eb', background: '#dbeafe', padding: '0.25rem 0.75rem', borderRadius: '1.25rem', whiteSpace: 'nowrap' as const }}>
+                <span className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: '0.875rem', color: item.cost === 'Free' ? '#16a34a' : '#2563eb', background: item.cost === 'Free' ? '#dcfce7' : '#dbeafe', padding: '0.25rem 0.75rem', borderRadius: '1.25rem', whiteSpace: 'nowrap' as const }}>
                   {item.cost}
                 </span>
               </div>
@@ -652,7 +682,7 @@ export default function InvestorsPage() {
               <div>
                 <h4 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', color: '#0f172a', marginBottom: '0.375rem' }}>Why this model works</h4>
                 <p style={{ fontSize: '0.9375rem', color: '#64748b', lineHeight: 1.65, margin: 0 }}>
-                  Survey parsing, financial modeling, and tour books are the heaviest AI lift on the platform and the highest-value actions for users. They consume the most credits, which means revenue scales directly with the features people value most. The free tier gets teams in the door. The $25 credit packs convert them when they see the AI in action. This is the same playbook Perplexity, Claude, and ChatGPT use: generous free access, then monetize power usage.
+                  Survey parsing (25 tokens), RFP analysis (15 tokens), and commute studies (10 tokens) are the highest-value actions on the platform and the heaviest AI lift. Revenue scales directly with the features people value most. The free tier (100 tokens) gets teams in the door. Token packs convert them when they see the AI in action. Per-project budgets and admin controls let enterprise teams manage spend. This is the same playbook Perplexity, Claude, and ChatGPT use: generous free access, then monetize power usage.
                 </p>
               </div>
             </div>
@@ -712,10 +742,16 @@ export default function InvestorsPage() {
                     diff: 'We sit on the tenant side - the one receiving broker surveys, not sending them',
                   },
                   {
+                    category: 'Commute Analytics',
+                    players: 'None',
+                    what: 'No CRE tool offers employee commute optimization for office selection',
+                    diff: 'Upload employee addresses, see transit/drive/bike breakdowns per building, and find the optimal location for your team.',
+                  },
+                  {
                     category: 'AI Assistant',
                     players: 'None',
                     what: 'No CRE tool offers an AI analyst embedded in the workflow',
-                    diff: 'Our AI knows every building, every deal term, and every financial model in the project. It finds coffee shops between tours, calculates drive times, and answers questions in plain English.',
+                    diff: 'Our AI knows every building, every deal term, and every financial model. It runs commute analysis, tags tour photos, finds coffee shops, calculates drive times, and answers questions in plain English.',
                   },
                 ].map((row, i) => (
                   <div

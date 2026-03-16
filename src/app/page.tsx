@@ -151,6 +151,7 @@ export default function LandingPage() {
             <a href="#demo" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Map Demo</a>
             <a href="#tourbook-demo" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Tour Book</a>
             <a href="#ai-chat" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>AI Chat</a>
+            <a href="#commute-demo" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Commute</a>
             <a href="#problem" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>The Problem</a>
             <a href="#analysis" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Analysis</a>
             <a href="#features" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Features</a>
@@ -193,6 +194,7 @@ export default function LandingPage() {
               <a href="#demo" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Map Demo</a>
               <a href="#tourbook-demo" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Tour Book</a>
               <a href="#ai-chat" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>AI Chat</a>
+              <a href="#commute-demo" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Commute</a>
               <a href="#problem" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>The Problem</a>
               <a href="#analysis" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Analysis</a>
               <a href="#features" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Features</a>
@@ -266,7 +268,7 @@ export default function LandingPage() {
               { end: 33, label: 'Buildings Mapped' },
               { end: 4, label: 'Shortlisted' },
               { display: '$3.8M', label: 'Total Lease Value Analyzed' },
-              { end: 129, label: 'PDF Pages Parsed' },
+              { end: 7, label: 'AI-Powered Features' },
             ].map((s) => (
               <div key={s.label} className="text-center">
                 {'end' in s && s.end !== undefined ? (
@@ -592,7 +594,7 @@ export default function LandingPage() {
 
           {/* Capability chips */}
           <div className="flex flex-wrap" style={{ gap: '0.5rem', marginTop: '1.5rem' }}>
-            {['Financial comparisons', 'Nearby places (Google Places)', 'Walking & driving times', 'Tour schedule awareness', 'Lease term breakdowns', 'Building specifications'].map((cap) => (
+            {['Financial comparisons', 'Nearby places (Google Places)', 'Walking & driving times', 'Tour schedule awareness', 'Lease term breakdowns', 'Building specifications', 'Commute analysis', 'Photo AI tagging'].map((cap) => (
               <span key={cap} className="text-xs font-medium" style={{ padding: '0.375rem 0.75rem', background: '#f1f5f9', color: '#475569', borderRadius: '1.25rem', border: '1px solid #e2e8f0' }}>
                 {cap}
               </span>
@@ -602,6 +604,90 @@ export default function LandingPage() {
           <div className="flex items-center" style={{ gap: '0.5rem', marginTop: '1rem', fontSize: 'clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem)', color: '#94a3b8' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
             Powered by Claude AI with real-time Google Maps and Places integration. Every answer is grounded in your actual project data.
+          </div>
+        </div>
+      </section>
+
+      {/* == COMMUTE STUDY DEMO == */}
+      <section id="commute-demo" style={{ padding: '5rem 0', background: '#f8fafc' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
+          <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
+            Commute Intelligence
+          </span>
+          <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3.5rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.75rem' }}>
+            Where should your team actually work?
+          </h2>
+          <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', marginBottom: '2.5rem', maxWidth: '640px', lineHeight: 1.6 }}>
+            Upload your employee home addresses. Tour-Lytics maps commute times to every shortlisted building - transit, driving, and biking. Know which office minimizes your team&apos;s commute before you sign.
+          </p>
+
+          {/* Commute Study Mockup */}
+          <div className="bg-white overflow-hidden" style={{ borderRadius: '1.25rem', boxShadow: '0 24px 48px rgba(0,0,0,0.16)', border: '1px solid #e2e8f0', maxWidth: '720px' }}>
+            {/* Chrome bar */}
+            <div className="flex items-center" style={{ gap: '0.5rem', padding: '0.75rem 1rem', background: '#f1f5f9', borderBottom: '1px solid #e2e8f0' }}>
+              <span className="rounded-full" style={{ width: '10px', height: '10px', background: '#ef4444' }} />
+              <span className="rounded-full" style={{ width: '10px', height: '10px', background: '#f59e0b' }} />
+              <span className="rounded-full" style={{ width: '10px', height: '10px', background: '#22c55e' }} />
+              <span className="flex-1 text-xs" style={{ marginLeft: '1rem', background: '#fff', borderRadius: '0.5rem', padding: '0.25rem 0.75rem', color: '#94a3b8', border: '1px solid #e2e8f0' }}>
+                tour-lytics.com/app - Commute Study
+              </span>
+            </div>
+            {/* Dark header */}
+            <div style={{ background: '#0f172a', padding: '1.25rem 1.5rem' }}>
+              <div className="flex items-center" style={{ gap: '0.5rem', marginBottom: '0.25rem' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /><path d="M2 12h20" /></svg>
+                <span className="font-bold text-white" style={{ fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)' }}>Commute Study - SF Office Search</span>
+              </div>
+              <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>24 employees analyzed across 3 buildings</span>
+            </div>
+            {/* Building commute results */}
+            <div style={{ padding: '1.25rem 1.5rem' }}>
+              {[
+                { name: '250 Brannan', avg: 28, best: true },
+                { name: '475 Brannan', avg: 31, best: false },
+                { name: '301 Brannan', avg: 34, best: false },
+              ].map((b) => (
+                <div key={b.name} style={{ padding: '0.875rem 1rem', marginBottom: '0.625rem', borderRadius: '0.75rem', border: b.best ? '1.5px solid #22c55e' : '1px solid #e2e8f0', background: b.best ? '#f0fdf4' : '#ffffff' }}>
+                  <div className="flex items-center justify-between" style={{ marginBottom: '0.5rem' }}>
+                    <div className="flex items-center" style={{ gap: '0.5rem' }}>
+                      <span className="font-semibold text-sm" style={{ color: '#0f172a' }}>{b.name}</span>
+                      {b.best && <span className="text-xs font-semibold" style={{ color: '#16a34a', background: '#dcfce7', padding: '0.125rem 0.5rem', borderRadius: '1rem' }}>Best Commute</span>}
+                    </div>
+                    <span className="font-bold" style={{ color: b.best ? '#16a34a' : '#0f172a', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)' }}>Avg {b.avg} min</span>
+                  </div>
+                  {/* Progress bar */}
+                  <div style={{ width: '100%', height: '6px', background: '#f1f5f9', borderRadius: '3px', overflow: 'hidden' }}>
+                    <div style={{ width: `${Math.round((b.avg / 45) * 100)}%`, height: '100%', background: b.best ? '#22c55e' : '#2563eb', borderRadius: '3px', transition: 'width 0.5s ease' }} />
+                  </div>
+                </div>
+              ))}
+
+              {/* Transit mode breakdown */}
+              <div style={{ marginTop: '1.25rem', padding: '1rem', background: '#f8fafc', borderRadius: '0.75rem', border: '1px solid #e2e8f0' }}>
+                <div className="font-semibold text-xs" style={{ color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
+                  Transit Mode Breakdown
+                </div>
+                {[
+                  { mode: 'Transit', pct: 45, color: '#2563eb' },
+                  { mode: 'Driving', pct: 30, color: '#f59e0b' },
+                  { mode: 'Biking', pct: 15, color: '#22c55e' },
+                  { mode: 'Walking', pct: 10, color: '#8b5cf6' },
+                ].map((m) => (
+                  <div key={m.mode} className="flex items-center" style={{ gap: '0.75rem', marginBottom: '0.5rem' }}>
+                    <span className="text-xs" style={{ width: '50px', color: '#64748b', flexShrink: 0 }}>{m.mode}</span>
+                    <div style={{ flex: 1, height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div style={{ width: `${m.pct}%`, height: '100%', background: m.color, borderRadius: '4px' }} />
+                    </div>
+                    <span className="font-semibold text-xs" style={{ color: '#0f172a', width: '32px', textAlign: 'right' }}>{m.pct}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center" style={{ gap: '0.5rem', marginTop: '1.5rem', fontSize: 'clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem)', color: '#94a3b8' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
+            Upload a CSV of employee addresses. Results show average commute by transit, driving, and biking for each shortlisted building.
           </div>
         </div>
       </section>
@@ -693,6 +779,8 @@ export default function LandingPage() {
                     'Tour Book with scores, photos, and notes',
                     'Monthly cash flow & GAAP P&L',
                     'AI assistant that answers questions about any building or deal',
+                    'Commute study for your entire team',
+                    'Upload new surveys directly to the map',
                   ].map((item) => (
                     <li key={item} className="text-sm relative" style={{ color: '#64748b', paddingLeft: '1.25rem' }}>
                       <span className="absolute rounded-full" style={{ left: 0, top: '7px', width: '8px', height: '8px', background: '#86efac' }} />
@@ -755,6 +843,7 @@ export default function LandingPage() {
                     'Branded, professional deliverables',
                     'Stand out in competitive pitches',
                     'Better alignment to client needs',
+                    'Upload surveys directly into the platform',
                   ].map((item) => (
                     <li key={item} className="text-sm relative" style={{ color: '#64748b', paddingLeft: '1.25rem' }}>
                       <span className="absolute rounded-full" style={{ left: 0, top: '7px', width: '8px', height: '8px', background: '#86efac' }} />
@@ -778,7 +867,7 @@ export default function LandingPage() {
             Upload an RFP. Get CFO-ready financials.
           </h2>
           <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', marginBottom: '2.5rem', maxWidth: '640px', lineHeight: 1.6 }}>
-            Drop in any broker proposal, RFP, or LOI. Tour-Lytics builds the full financial model automatically - cash flow, straight-line P&amp;L, GAAP format, deal comparisons. The spreadsheet your finance team has been building by hand.
+            Drop in any broker proposal, RFP, or LOI. Tour-Lytics builds the full financial model automatically - cash flow, straight-line P&amp;L, GAAP format, deal comparisons. Set independent assumptions per building, factor in TI allowances, and model different OpEx scenarios. The spreadsheet your finance team has been building by hand.
           </p>
 
           {/* Financial Demo Card */}
@@ -1040,19 +1129,17 @@ export default function LandingPage() {
                 icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>,
                 title: 'Tour List + Tour Book',
                 desc: "Add buildings to your tour list from the map, then open the Tour Book to score each space on price, parking, interior fit-out, and more. Add photos and notes from your phone during the walk-through. Export a ranked tour report when you're done.",
-                tag: 'New',
               },
               {
                 icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>,
                 title: 'Financial Analysis',
-                desc: 'Upload an RFP or LOI. Get straight-line rent, occupancy costs, NPV analysis, and side-by-side deal comparisons.',
+                desc: 'Upload an RFP or LOI. Get straight-line rent, occupancy costs, NPV analysis, and side-by-side deal comparisons. Set independent assumptions per building with TI allowance offsets.',
                 tag: 'Core Feature',
               },
               {
                 icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" /></svg>,
                 title: 'AI Chat Assistant',
                 desc: 'Ask your project anything. Compare buildings, break down lease costs, find nearby restaurants, calculate walking times between tours. Connected to Google Maps and Places for real-time local data.',
-                tag: 'New',
               },
               {
                 icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
@@ -1068,6 +1155,24 @@ export default function LandingPage() {
                 icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>,
                 title: 'Mobile Ready',
                 desc: 'Fully responsive maps and analysis. Pull it up on your phone during a building tour or in a client meeting.',
+              },
+              {
+                icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z" /><circle cx="12" cy="10" r="3" /><path d="M7 20h10" /></svg>,
+                title: 'Commute Study',
+                desc: 'Upload employee home addresses and map commute times to every shortlisted building. Transit, driving, and biking breakdowns help your team pick the office that works for everyone.',
+                tag: 'New',
+              },
+              {
+                icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>,
+                title: 'AI Photo Analysis',
+                desc: 'Upload tour photos and get AI-powered tagging and organization. Photos are linked to buildings and rooms, searchable by the entire team.',
+                tag: 'New',
+              },
+              {
+                icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>,
+                title: 'Survey Upload',
+                desc: 'Upload a new broker survey PDF directly into the platform. AI extracts every building, geocodes addresses, and merges them with your existing map.',
+                tag: 'New',
               },
             ].map((f) => (
               <div
