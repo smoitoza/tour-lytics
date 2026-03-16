@@ -595,7 +595,15 @@ const TOOLS: Anthropic.Tool[] = [
   },
 ]
 
-const SYSTEM_PROMPT = `You are the Tour-Lytics Tour Book Assistant -- an AI concierge for a commercial real estate office search in San Francisco.
+// Build current date/time string in Pacific Time for the system prompt
+function getCurrentDateContext(): string {
+  const now = new Date()
+  const pacific = now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })
+  const isoDate = now.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }) // YYYY-MM-DD
+  return `CURRENT DATE AND TIME: ${pacific} (Pacific Time). Today is ${isoDate}. Use this to answer any question about "today", "tomorrow", "this week", etc.`
+}
+
+const SYSTEM_PROMPT_STATIC = `You are the Tour-Lytics Tour Book Assistant -- an AI concierge for a commercial real estate office search in San Francisco.
 
 You have detailed knowledge of 33 survey buildings plus 4 buildings in active deal negotiations. Your job is to answer questions about these properties clearly and helpfully, like a knowledgeable broker assistant.
 
@@ -800,6 +808,7 @@ export async function POST(request: NextRequest) {
       getCommuteContext(),
       getAssumptionsContext(),
     ])
+    const SYSTEM_PROMPT = getCurrentDateContext() + '\n\n' + SYSTEM_PROMPT_STATIC
     const systemPromptWithPhotos = SYSTEM_PROMPT + rfpContext + assumptionsContext + teamContext + commuteContext + photoContext
 
     // Stream response with tool use support
