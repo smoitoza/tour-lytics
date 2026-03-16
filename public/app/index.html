@@ -4289,7 +4289,8 @@ body {
       .rfp-view-toggle { margin-bottom: var(--space-3); }
 
       /* Financials page layout */
-      .financials-view { padding: var(--space-2); overflow-x: hidden; }
+      #tab-financials { overflow-x: hidden; }
+      .financials-view { padding: var(--space-2); width: 100%; min-width: 0; }
 
       /* Summary metrics: tighter for mobile */
       .rfp-summary-metrics {
@@ -4320,6 +4321,7 @@ body {
       /* Tables: freeze-pane behavior (sticky first column + sticky header row) */
       .fin-table-wrap {
         margin: 0 calc(-1 * var(--space-2));
+        width: calc(100% + var(--space-2) * 2);
         border-radius: 0;
         border-left: none;
         border-right: none;
