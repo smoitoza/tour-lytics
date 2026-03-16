@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SF Office Search</title>
+<title>Tour-Lytics</title>
 
 <!-- Leaflet CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -5600,8 +5600,8 @@ body {
         <rect x="17" y="17" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.3"/>
       </svg>
       <div class="header-title-group">
-        <h1 class="header-title" id="projectTitle">SF Office Search</h1>
-        <span class="header-subtitle" id="projectSubtitle">33 Buildings Evaluated &middot; 4 Shortlisted</span>
+        <h1 class="header-title" id="projectTitle"></h1>
+        <span class="header-subtitle" id="projectSubtitle"></span>
       </div>
     </div>
     <div class="header-right">
@@ -6215,9 +6215,17 @@ if (dateEl) {
 // Map Init
 // ============================================================
 
+// Dynamic map center: SF for sf-office-search, zoomed-out US view for new projects
+var _mapCenter = (function() {
+  var pid = getProjectId();
+  if (!pid || pid === 'sf-office-search') return { center: [37.7810, -122.3930], zoom: 16 };
+  // New projects: start with a wide US view until buildings are uploaded
+  return { center: [39.8283, -98.5795], zoom: 4 };
+})();
+
 const map = L.map("map", {
-  center: [37.7810, -122.3930],
-  zoom: 16,
+  center: _mapCenter.center,
+  zoom: _mapCenter.zoom,
   zoomControl: true,
   scrollWheelZoom: true
 });
@@ -8585,27 +8593,29 @@ function getProjectId() {
   } catch(e) { return 'sf-office-search'; }
 }
 
-// --- Set project header dynamically ---
+// --- Set project header dynamically for ALL projects ---
 (function initProjectHeader() {
   var pid = getProjectId();
-  var footerEl = document.getElementById('footerInfo');
-
-  if (pid === 'sf-office-search' || !pid) {
-    // SF project keeps original footer
-    if (footerEl) footerEl.innerHTML = 'Broker Survey &middot; Feb 19, 2026';
-    return;
-  }
-
-  // Non-SF project: dynamic header
-  var fallbackTitle = pid.replace(/-/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
   var titleEl = document.getElementById('projectTitle');
   var subtitleEl = document.getElementById('projectSubtitle');
-  if (titleEl) titleEl.textContent = fallbackTitle;
-  if (subtitleEl) subtitleEl.textContent = '0 Buildings Evaluated';
-  document.title = fallbackTitle;
-  if (footerEl) footerEl.textContent = '';
+  var footerEl = document.getElementById('footerInfo');
 
-  // Try to fetch real project name from API
+  // Immediate fallback from slug (shows right away, no flash of empty)
+  var fallbackTitle = pid.replace(/-/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+  if (titleEl) titleEl.textContent = fallbackTitle;
+  document.title = fallbackTitle;
+
+  if (pid === 'sf-office-search' || !pid) {
+    // SF defaults while API loads
+    if (subtitleEl) subtitleEl.innerHTML = '33 Buildings Evaluated &middot; 4 Shortlisted';
+    if (footerEl) footerEl.innerHTML = 'Broker Survey &middot; Feb 19, 2026';
+  } else {
+    // New project defaults
+    if (subtitleEl) subtitleEl.textContent = '0 Buildings Evaluated';
+    if (footerEl) footerEl.textContent = '';
+  }
+
+  // Fetch real project name from API for ALL projects
   fetch('/api/projects?email=')
     .then(function(r) { return r.json(); })
     .then(function(data) {
@@ -8630,6 +8640,16 @@ function getProjectId() {
 function isAdmin() {
   return getCurrentUserEmail().toLowerCase() === ADMIN_EMAIL;
 }
+
+// Immediate admin UI setup (runs before async initTourList completes)
+(function immediateAdminCheck() {
+  if (isAdmin()) {
+    var survUpBtn = document.getElementById('surveyUploadToggle');
+    if (survUpBtn) survUpBtn.style.display = '';
+    var aiTab = document.getElementById('tabBtnAiUsage');
+    if (aiTab) aiTab.style.display = '';
+  }
+})();
 
 // Admin, Broker, and CRE Team all get full access (edit tour list, manage buildings, etc.)
 function hasAdminAccess() {
@@ -9221,7 +9241,8 @@ function generateCalendarLinks(invites, btn, statusEl) {
     var endFmt = inv.date.replace(/-/g, '') + 'T' + endTime.replace(':', '') + '00';
     
     var title = encodeURIComponent('Office Tour: ' + inv.building);
-    var details = encodeURIComponent('Office tour of ' + inv.building + '\n' + inv.address + '\n\nSF Office Search Tour Book');
+    var _calProjectName = document.getElementById('projectTitle') ? document.getElementById('projectTitle').textContent : 'Tour-Lytics';
+    var details = encodeURIComponent('Office tour of ' + inv.building + '\n' + inv.address + '\n\n' + _calProjectName + ' Tour Book');
     var location = encodeURIComponent(inv.address);
     var attendeeStr = inv.attendees.map(function(e) { return encodeURIComponent(e); }).join(',');
     
@@ -9321,8 +9342,9 @@ async function exportTourBook() {
       x: 50, y: 740, size: 28, font: helveticaBold, color: rgb(1, 1, 1)
     });
 
-    // Project name
-    coverPage.drawText('SF Office Search', {
+    // Project name (dynamic)
+    var _pdfProjectName = document.getElementById('projectTitle') ? document.getElementById('projectTitle').textContent : 'Tour-Lytics Project';
+    coverPage.drawText(_pdfProjectName, {
       x: 50, y: 690, size: 20, font: helvetica, color: rgb(0.58, 0.64, 0.72)
     });
 
@@ -12242,13 +12264,14 @@ async function teamAddMember() {
     // Build mailto invite
     var tempPw = result.tempPassword || '';
     var appUrl = window.location.origin + '/login';
-    var subject = encodeURIComponent('You\'re invited to Tour-Lytics - SF Office Search');
+    var _invProjectName = document.getElementById('projectTitle') ? document.getElementById('projectTitle').textContent : 'Tour-Lytics';
+    var subject = encodeURIComponent('You\'re invited to Tour-Lytics - ' + _invProjectName);
     var roleNames = { admin: 'admin', broker: 'broker', cre_team: 'CRE team member', touree: 'tour reviewer' };
     var roleName = roleNames[persona] || 'team member';
     var firstName = displayName ? displayName.split(' ')[0] : '';
     var greeting = firstName ? 'Hi ' + firstName + ',' : 'Hi,';
     var body = greeting + '\n\n' +
-      'You\'ve been added as a ' + roleName + ' on our San Francisco Office Search project in Tour-Lytics.\n\n';
+      'You\'ve been added as a ' + roleName + ' on our ' + _invProjectName + ' project in Tour-Lytics.\n\n';
     if (tempPw) {
       body += 'Your account is ready. Here are your login credentials:\n\n' +
         'Login: ' + appUrl + '\n' +
@@ -12287,11 +12310,12 @@ function teamResendInvite(email, displayName, persona) {
   var roleNames = { admin: 'admin', broker: 'broker', cre_team: 'CRE team member', touree: 'tour reviewer' };
   var roleName = roleNames[persona] || 'team member';
   var appUrl = window.location.origin + '/login';
-  var subject = encodeURIComponent('Tour-Lytics - Reminder: You\'re on the SF Office Search team');
+  var _resendProjectName = document.getElementById('projectTitle') ? document.getElementById('projectTitle').textContent : 'Tour-Lytics';
+  var subject = encodeURIComponent('Tour-Lytics - Reminder: You\'re on the ' + _resendProjectName + ' team');
   var firstName = displayName ? displayName.split(' ')[0] : '';
   var greeting = firstName ? 'Hi ' + firstName + ',' : 'Hi,';
   var body = greeting + '\n\n' +
-    'Just a reminder - you\'ve been added as a ' + roleName + ' on our San Francisco Office Search project in Tour-Lytics.\n\n' +
+    'Just a reminder - you\'ve been added as a ' + roleName + ' on our ' + _resendProjectName + ' project in Tour-Lytics.\n\n' +
     'Login here: ' + appUrl + '\n\n' +
     'If you need a password reset, let me know.\n\n' +
     'See you on the tour!';
