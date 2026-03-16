@@ -597,10 +597,27 @@ const TOOLS: Anthropic.Tool[] = [
 
 // Build current date/time string in Pacific Time for the system prompt
 function getCurrentDateContext(): string {
+  // Compute Pacific Time offset manually to avoid any runtime locale issues
   const now = new Date()
-  const pacific = now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })
-  const isoDate = now.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }) // YYYY-MM-DD
-  return `CURRENT DATE AND TIME: ${pacific} (Pacific Time). Today is ${isoDate}. Use this to answer any question about "today", "tomorrow", "this week", etc.`
+  // Get Pacific Time components using Intl (reliable on Node/V8)
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Los_Angeles',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+    weekday: 'long'
+  })
+  const parts = Object.fromEntries(fmt.formatToParts(now).map(p => [p.type, p.value]))
+  const pacificDate = `${parts.year}-${parts.month}-${parts.day}`
+  const pacificDay = parts.weekday
+  const pacificTime = `${parts.hour}:${parts.minute}`
+
+  // Compute tomorrow in Pacific
+  const todayMs = new Date(`${pacificDate}T12:00:00`).getTime()
+  const tomorrowDate = new Date(todayMs + 86400000).toISOString().slice(0, 10)
+
+  return `CURRENT DATE AND TIME (Pacific Time): ${pacificDay}, ${pacificDate} at ${pacificTime}.
+Today's date is ${pacificDate} (${pacificDay}). Tomorrow's date is ${tomorrowDate}.
+IMPORTANT: When the user says "tomorrow", they mean ${tomorrowDate}. When they say "today", they mean ${pacificDate}. Always use these exact dates when resolving relative date references like "today", "tomorrow", "this week", etc.`
 }
 
 const SYSTEM_PROMPT_STATIC = `You are the Tour-Lytics Tour Book Assistant -- an AI concierge for a commercial real estate office search in San Francisco.
@@ -644,6 +661,7 @@ Each message may include [LIVE TOUR LIST], [LIVE SCORES], and [LIVE TOUR SCHEDUL
 - The Tour Book is the user's shortlist of buildings they are actively evaluating or touring. It is NOT the full 33-building survey.
 - If scores are provided, reference them when relevant.
 - If schedule data is provided, reference tour dates and times when relevant.
+- CRITICAL: When matching schedule dates to words like "today" or "tomorrow", use the CURRENT DATE AND TIME provided at the top of this prompt. Compare the schedule date strings (YYYY-MM-DD) against those exact dates. Do NOT guess or infer the current date from any other source.
 
 NEARBY PLACES CAPABILITY:
 You have access to a tool called search_nearby_places that uses Google Places to find coffee shops, restaurants, bars, parking, gyms, and any other type of place near the tour buildings. When a user asks about places near a building:
