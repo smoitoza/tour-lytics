@@ -38,28 +38,57 @@ export async function POST(req: Request) {
   const {
     id, // if provided, update existing
     projectId = 'sf-office-search',
-    buildingNum,
-    buildingAddress,
-    docType = 'rfp',
-    docName,
-    docSource = '',
-    submittedBy = '',
-    dealTerms = {},
+    // Accept both camelCase and snake_case from frontend
+    buildingNum, building_num,
+    buildingAddress, building_address,
+    docType, doc_type,
+    docName, doc_name,
+    docSource, doc_source,
+    submittedBy, submitted_by,
+    dealTerms, terms,
     status = 'confirmed',
   } = body
 
+  const finalBuildingNum = buildingNum ?? building_num
+  const finalBuildingAddress = buildingAddress ?? building_address ?? ''
+  const finalDocType = docType ?? doc_type ?? 'rfp'
+  const finalDocName = docName ?? doc_name ?? ''
+  const finalDocSource = docSource ?? doc_source ?? ''
+  const finalSubmittedBy = submittedBy ?? submitted_by ?? ''
+  // Frontend review form sends camelCase terms; map to snake_case for analysis engine
+  const rawTerms = dealTerms ?? terms ?? {}
+  const finalDealTerms: DealTerms = {
+    rsf: rawTerms.rsf ?? rawTerms.RSF ?? 0,
+    lease_term_months: rawTerms.lease_term_months ?? rawTerms.leaseTerm ?? 0,
+    commencement_date: rawTerms.commencement_date ?? rawTerms.commencementDate ?? '',
+    base_rent_rsf: rawTerms.base_rent_rsf ?? rawTerms.baseRent ?? 0,
+    annual_escalation_pct: rawTerms.annual_escalation_pct ?? rawTerms.annualEscalation ?? 0,
+    free_rent_months: rawTerms.free_rent_months ?? rawTerms.freeRent ?? 0,
+    ti_allowance_rsf: rawTerms.ti_allowance_rsf ?? rawTerms.tiAllowancePerRSF ?? 0,
+    ti_allowance_total: rawTerms.ti_allowance_total ?? rawTerms.tiAllowanceTotal ?? 0,
+    opex_monthly: rawTerms.opex_monthly ?? rawTerms.opex ?? 0,
+    parking_spots: rawTerms.parking_spots ?? rawTerms.parkingSpots ?? 0,
+    parking_rate_monthly: rawTerms.parking_rate_monthly ?? rawTerms.parkingRate ?? 0,
+    parking_escalation_pct: rawTerms.parking_escalation_pct ?? rawTerms.parkingEscalation ?? 0,
+    security_deposit: rawTerms.security_deposit ?? rawTerms.securityDeposit ?? 0,
+    rent_basis: rawTerms.rent_basis ?? rawTerms.rentBasis ?? '',
+    structure: rawTerms.structure ?? '',
+    landlord: rawTerms.landlord ?? '',
+    notes: rawTerms.notes ?? '',
+  }
+
   // Generate financial analysis from deal terms
-  const analysis = generateFinancialAnalysis(dealTerms)
+  const analysis = generateFinancialAnalysis(finalDealTerms)
 
   if (id) {
     // Update existing
     const { data, error } = await supabase
       .from('rfp_submissions')
       .update({
-        deal_terms: dealTerms,
+        deal_terms: finalDealTerms,
         analysis,
         status,
-        doc_source: docSource,
+        doc_source: finalDocSource,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
@@ -75,13 +104,13 @@ export async function POST(req: Request) {
     .from('rfp_submissions')
     .insert({
       project_id: projectId,
-      building_num: buildingNum,
-      building_address: buildingAddress,
-      doc_type: docType,
-      doc_name: docName,
-      doc_source: docSource,
-      submitted_by: submittedBy,
-      deal_terms: dealTerms,
+      building_num: finalBuildingNum,
+      building_address: finalBuildingAddress,
+      doc_type: finalDocType,
+      doc_name: finalDocName,
+      doc_source: finalDocSource,
+      submitted_by: finalSubmittedBy,
+      deal_terms: finalDealTerms,
       analysis,
       status,
     })

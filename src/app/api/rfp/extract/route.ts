@@ -7,7 +7,9 @@ const anthropic = new Anthropic()
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { documentText, buildingAddress } = body
+    // Accept both naming conventions from frontend
+    const documentText = body.documentText || body.text || ''
+    const buildingAddress = body.buildingAddress || body.address || ''
 
     if (!documentText || documentText.trim().length < 50) {
       return NextResponse.json(
