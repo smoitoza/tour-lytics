@@ -4282,26 +4282,63 @@ body {
     @media (max-width: 768px) {
       .rfp-building-cards { grid-template-columns: 1fr; }
       .rfp-form { grid-template-columns: 1fr; }
-      .rfp-terms-grid { grid-template-columns: 1fr; }
       .rfp-top-bar { flex-direction: column; align-items: stretch; }
       .rfp-top-bar-left { flex-direction: column; }
-      .rfp-summary-metrics { grid-template-columns: repeat(2, 1fr); gap: var(--space-2); padding: var(--space-3); }
-      .rfp-metric-value { font-size: var(--text-base); }
       .rfp-modal-inner { padding: var(--space-4); max-width: 100%; }
       .rfp-version-bar { flex-direction: column; align-items: flex-start; }
       .rfp-view-toggle { margin-bottom: var(--space-3); }
 
       /* Financials page layout */
-      .financials-view { padding: var(--space-2); }
+      .financials-view { padding: var(--space-2); overflow-x: hidden; }
+
+      /* Summary metrics: tighter for mobile */
+      .rfp-summary-metrics {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-2);
+        padding: var(--space-3);
+        margin-left: 0;
+        margin-right: 0;
+        border-radius: var(--radius-md);
+      }
+      .rfp-metric-value { font-size: var(--text-base); }
+
+      /* Deal terms: edge-to-edge */
+      .rfp-terms-grid {
+        grid-template-columns: 1fr;
+        margin: 0 calc(-1 * var(--space-2));
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+      }
+      .rfp-terms-row { padding: 8px 12px; font-size: var(--text-xs); }
+      .rfp-terms-val { word-break: break-word; overflow-wrap: break-word; }
 
       /* Financial sub-tabs: scrollable, compact */
       .fin-sheet-tabs { gap: 0; padding: var(--space-1) 0; }
       .fin-sheet-tab { padding: 6px 10px; font-size: 0.65rem; }
 
-      /* Tables: horizontally scrollable with sticky labels */
-      .fin-table-wrap { margin: 0 calc(-1 * var(--space-2)); border-radius: 0; border-left: none; border-right: none; }
+      /* Tables: freeze-pane behavior (sticky first column + sticky header row) */
+      .fin-table-wrap {
+        margin: 0 calc(-1 * var(--space-2));
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+        max-height: 60vh;
+      }
       .fin-table { font-size: 0.72rem; min-width: 500px; }
       .fin-table th, .fin-table td { padding: 6px 10px; }
+
+      /* Sticky header row (freeze top row on vertical scroll) */
+      .fin-table th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: var(--color-surface-2);
+      }
+
+      /* Sticky first column (freeze labels on horizontal scroll) */
       .fin-table .cell-label {
         min-width: 110px;
         max-width: 130px;
@@ -4311,18 +4348,22 @@ body {
         z-index: 1;
         box-shadow: 2px 0 4px rgba(0,0,0,0.06);
       }
+
+      /* Top-left corner cell: sticky in both directions */
       .fin-table th:first-child {
         position: sticky;
         left: 0;
-        z-index: 3;
+        top: 0;
+        z-index: 4;
         background: var(--color-surface-2);
         box-shadow: 2px 0 4px rgba(0,0,0,0.06);
       }
+
       .fin-table tr.row-bold .cell-label,
       .fin-table tr.row-section .cell-label { background: var(--color-surface-2); }
       .fin-table tr:hover .cell-label { background: var(--color-surface); }
 
-      /* Comparison table: same sticky treatment */
+      /* Comparison table: same freeze-pane treatment */
       .rfp-comparison-table { min-width: 420px; }
       .rfp-comparison-table .cell-best.cell-label { background: rgba(5, 150, 105, 0.06); }
       .rfp-comparison-table .cell-worst.cell-label { background: rgba(220, 38, 38, 0.04); }
@@ -4355,7 +4396,7 @@ body {
         overflow-wrap: break-word;
       }
       .rfp-terms-key { font-size: 0.7rem; }
-      .rfp-terms-grid { border-radius: var(--radius-md); margin: 0 calc(-1 * var(--space-1)); }
+      .rfp-terms-grid { border-radius: 0; margin: 0 calc(-1 * var(--space-2)); border-left: none; border-right: none; }
 
       /* Even more compact tables */
       .fin-table { font-size: 0.68rem; }
