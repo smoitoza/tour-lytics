@@ -11820,6 +11820,24 @@ async function surveySubmitUpload() {
     // Step 3: Merge with existing SURVEY_BUILDINGS and add markers
     var mergeResult = surveyMergeBuildings(data.buildings);
 
+    // If all buildings were skipped as duplicates but DB is empty, this is a stale in-memory state.
+    // Auto-replace: clear memory and re-merge so the upload actually goes through.
+    if (mergeResult.added === 0 && mergeResult.skipped > 0) {
+      try {
+        var dbCheck = await fetch('/api/survey-buildings?projectId=' + encodeURIComponent(currentProjectId));
+        var dbBuildings = await dbCheck.json();
+        if (!dbBuildings || dbBuildings.length === 0) {
+          // DB is empty but memory has stale data - clear and re-merge
+          SURVEY_BUILDINGS.length = 0;
+          surveyMarkers.forEach(function(m) { map.removeLayer(m); });
+          surveyMarkers.length = 0;
+          mergeResult = surveyMergeBuildings(data.buildings);
+        }
+      } catch (checkErr) {
+        console.warn('DB check failed, proceeding with merge result:', checkErr);
+      }
+    }
+
     // Step 4: Show results
     var html = '<div class="survey-upload-results">';
     html += '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">';
@@ -11839,14 +11857,25 @@ async function surveySubmitUpload() {
     surveyUpdateLegendCount();
 
     // Step 5: Persist buildings to database so they survive page refresh
+    var saveSuccess = false;
     try {
-      await fetch('/api/survey-buildings', {
+      var saveRes = await fetch('/api/survey-buildings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectId: currentProjectId, buildings: SURVEY_BUILDINGS })
       });
+      if (saveRes.ok) {
+        var saveData = await saveRes.json();
+        saveSuccess = saveData.saved > 0;
+      } else {
+        console.error('Save failed:', saveRes.status, await saveRes.text());
+      }
     } catch (saveErr) {
-      console.warn('Building persistence skipped:', saveErr);
+      console.error('Building save error:', saveErr);
+    }
+
+    if (!saveSuccess && SURVEY_BUILDINGS.length > 0) {
+      statusEl.innerHTML += '<div style="color:#f59e0b;margin-top:0.5rem;font-size:0.85rem;">Warning: Buildings are shown on the map but may not persist after refresh. Try uploading again if they disappear.</div>';
     }
 
     // Replace action buttons with "Done" button so user can close the modal
