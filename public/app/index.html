@@ -7680,10 +7680,57 @@ SURVEY_BUILDINGS.forEach((b) => {
 
 // Re-fit bounds to include all markers
 const allMarkers = [...markers, ...surveyMarkers];
-const allGroup = L.featureGroup(allMarkers);
-map.fitBounds(allGroup.getBounds().pad(0.15));
+if (allMarkers.length > 0) {
+  const allGroup = L.featureGroup(allMarkers);
+  map.fitBounds(allGroup.getBounds().pad(0.15));
+}
 
+// Load persisted survey buildings from database for non-SF projects
+(async function loadSavedSurveyBuildings() {
+  var pid = getProjectId();
+  if (pid === 'sf-office-search') return; // SF uses hardcoded data
+  if (SURVEY_BUILDINGS.length > 0) return; // Already have data in memory
+  try {
+    var res = await fetch('/api/survey-buildings?projectId=' + encodeURIComponent(pid));
+    if (!res.ok) return;
+    var saved = await res.json();
+    if (!saved || !Array.isArray(saved) || saved.length === 0) return;
 
+    saved.forEach(function(b) {
+      if (!b.lat || !b.lng) return;
+      SURVEY_BUILDINGS.push(b);
+
+      var icon = L.divIcon({
+        className: 'survey-marker-wrapper',
+        html: '<div class="survey-marker">' + b.num + '</div>',
+        iconSize: [22, 22],
+        iconAnchor: [11, 11]
+      });
+      var marker = L.marker([b.lat, b.lng], { icon: icon }).addTo(map);
+      marker.bindPopup(buildSurveyPopup(b), {
+        className: 'survey-popup-wrapper',
+        maxWidth: 420, minWidth: 320,
+        closeButton: true, autoPan: true,
+        autoPanPadding: [20, 20], offset: [0, -5]
+      });
+      marker.on('mouseover', function() { this.openPopup(); });
+      surveyMarkers.push(marker);
+    });
+
+    // Fit map to show all loaded buildings
+    var allM = [].concat(markers, surveyMarkers);
+    if (allM.length > 0) {
+      var group = L.featureGroup(allM);
+      map.fitBounds(group.getBounds().pad(0.15));
+    }
+
+    // Update legend
+    if (typeof refreshLegend === 'function') refreshLegend();
+    console.log('Loaded', saved.length, 'saved survey buildings for project', pid);
+  } catch (err) {
+    console.warn('Could not load saved survey buildings:', err);
+  }
+})();
 
 // ============================================================
 // Map Legend (as Leaflet control)
@@ -11790,6 +11837,17 @@ async function surveySubmitUpload() {
 
     // Update legend count
     surveyUpdateLegendCount();
+
+    // Step 5: Persist buildings to database so they survive page refresh
+    try {
+      await fetch('/api/survey-buildings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: currentProjectId, buildings: SURVEY_BUILDINGS })
+      });
+    } catch (saveErr) {
+      console.warn('Building persistence skipped:', saveErr);
+    }
 
     // Replace action buttons with "Done" button so user can close the modal
     var actionsEl = document.querySelector('.survey-upload-actions');
