@@ -2255,6 +2255,10 @@ body {
       transition: background 0.15s;
     }
     .photos-building-picker-cancel:hover { background: var(--color-bg-muted); }
+    .picker-group-label {
+      font-size: var(--text-xs); font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.05em; color: var(--color-text-muted); padding: 8px 4px 4px;
+    }
 
     .photos-building-group {
       margin-bottom: var(--space-6);
@@ -11889,11 +11893,14 @@ function closePhotoUpload() {
 }
 
 // --- Photos Page Upload: building picker then photo upload ---
+// Mirrors the RFP dropdown pattern: shortlisted buildings starred at top, all survey buildings below
 function openPhotosPageUpload() {
   if (!hasAdminAccess()) { alert('Only admins, brokers, and CRE team members can upload photos.'); return; }
 
-  var buildings = (typeof SURVEY_BUILDINGS !== 'undefined') ? SURVEY_BUILDINGS : [];
-  if (buildings.length === 0) {
+  var surveyBuildings = (typeof SURVEY_BUILDINGS !== 'undefined') ? SURVEY_BUILDINGS : [];
+  var dealBuildings = (typeof BUILDINGS !== 'undefined') ? BUILDINGS : [];
+
+  if (surveyBuildings.length === 0 && dealBuildings.length === 0) {
     alert('No buildings in this project yet. Upload a survey first to add buildings.');
     return;
   }
@@ -11901,16 +11908,36 @@ function openPhotosPageUpload() {
   var modal = document.createElement('div');
   modal.className = 'photos-building-picker';
   var listHtml = '';
-  buildings.forEach(function(b) {
-    var name = b.address || b.name || ('Building ' + b.num);
-    var addr = b.neighborhood || '';
-    listHtml += '<div class="photos-building-picker-item" data-num="' + b.num + '" data-name="' + name.replace(/"/g, '&quot;') + '" data-address="' + (b.address || '').replace(/"/g, '&quot;') + '">' +
-      '<div style="flex:1"><div class="picker-bname">' + name + '</div>' +
-      (addr ? '<div class="picker-baddr">' + addr + '</div>' : '') +
-      '</div>' +
-      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--color-text-faint);flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>' +
-    '</div>';
-  });
+
+  // Shortlisted / Tour Book buildings first (with star)
+  if (dealBuildings.length > 0) {
+    listHtml += '<div class="picker-group-label">Shortlisted</div>';
+    dealBuildings.forEach(function(b) {
+      var name = b.name || b.address || ('Building ' + b.id);
+      var addr = b.address || '';
+      listHtml += '<div class="photos-building-picker-item" data-type="deal" data-num="' + b.id + '" data-name="' + name.replace(/"/g, '&quot;') + '" data-address="' + addr.replace(/"/g, '&quot;') + '">' +
+        '<div style="flex:1"><div class="picker-bname">' + String.fromCharCode(9733) + ' ' + name + '</div>' +
+        (addr && addr !== name ? '<div class="picker-baddr">' + addr + '</div>' : '') +
+        '</div>' +
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--color-text-faint);flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>' +
+      '</div>';
+    });
+  }
+
+  // All survey buildings
+  if (surveyBuildings.length > 0) {
+    listHtml += '<div class="picker-group-label">All Buildings</div>';
+    surveyBuildings.forEach(function(b) {
+      var name = b.address || b.name || ('Building ' + b.num);
+      var addr = b.neighborhood || '';
+      listHtml += '<div class="photos-building-picker-item" data-type="survey" data-num="' + b.num + '" data-name="' + name.replace(/"/g, '&quot;') + '" data-address="' + (b.address || '').replace(/"/g, '&quot;') + '">' +
+        '<div style="flex:1"><div class="picker-bname">' + name + '</div>' +
+        (addr ? '<div class="picker-baddr">' + addr + '</div>' : '') +
+        '</div>' +
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--color-text-faint);flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>' +
+      '</div>';
+    });
+  }
 
   modal.innerHTML = '<div class="photos-building-picker-inner">' +
     '<h3>Upload Photos</h3>' +
@@ -11924,12 +11951,13 @@ function openPhotosPageUpload() {
   // Click building to open upload modal
   modal.querySelectorAll('.photos-building-picker-item').forEach(function(item) {
     item.addEventListener('click', function() {
+      var buildingType = item.getAttribute('data-type');
       var num = parseInt(item.getAttribute('data-num'));
       var name = item.getAttribute('data-name');
       var address = item.getAttribute('data-address');
       modal.remove();
       // Open existing photo upload modal with building info
-      openPhotoUpload('survey', num, name, address);
+      openPhotoUpload(buildingType, num, name, address);
       // When upload finishes, refresh the gallery
       var origClose = closePhotoUpload;
       closePhotoUpload = function() {
