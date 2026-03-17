@@ -132,9 +132,10 @@ Return ONLY the JSON array, no other text.`
         for (const pt of pageTexts) {
           const pageText = pt.text.toLowerCase().replace(/[.,]/g, '')
           // Look for the full address on this page
+          // Do NOT break - keep scanning so we land on the LAST (detail) page,
+          // not the first (TOC/map page that lists all addresses)
           if (pageText.includes(addrClean)) {
             bestPage = pt.page
-            break
           }
         }
         
@@ -145,7 +146,6 @@ Return ONLY the JSON array, no other text.`
             const pageText = pt.text.toLowerCase().replace(/[.,]/g, '')
             if (pageText.includes(partial)) {
               bestPage = pt.page
-              break
             }
           }
         }
