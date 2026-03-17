@@ -13867,6 +13867,7 @@ function commuteSetGroupMode(mode) {
         body: JSON.stringify({
           message: text,
           visitor_id: visitorId,
+          projectId: getProjectId(),
           tour_list: getTourList(),
           scores: getTourBookData(),
           schedule: getTourSchedule()

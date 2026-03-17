@@ -2,24 +2,84 @@ import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { debitTokens } from '@/lib/tokens'
-import buildingContext from '@/data/building_context.json'
 
 // Allow up to 60s for AI chat responses (default 10s can timeout on complex queries)
 export const maxDuration = 60
-// Static financial_context.json removed - financials now come from live RFP submissions in Supabase
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-// Fetch live RFP/financial submissions for chatbot context
-async function getRFPContext(): Promise<string> {
+// ============================================================
+// Project-scoped data fetchers
+// Every function takes projectId so each chatbot is fully isolated
+// ============================================================
+
+// Fetch project metadata (name, market) for system prompt context
+async function getProjectMeta(projectId: string): Promise<{ name: string; market: string }> {
+  try {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('name, market')
+      .eq('id', projectId)
+      .single()
+
+    if (error || !data) {
+      return { name: projectId, market: '' }
+    }
+    return { name: data.name || projectId, market: data.market || '' }
+  } catch (e) {
+    return { name: projectId, market: '' }
+  }
+}
+
+// Fetch survey buildings for this project (replaces static building_context.json)
+async function getBuildingContext(projectId: string): Promise<string> {
+  try {
+    const { data, error } = await supabase
+      .from('survey_buildings')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('num', { ascending: true })
+
+    if (error || !data || data.length === 0) {
+      return ''
+    }
+
+    let context = '\nSURVEY BUILDINGS (properties in this project):\n'
+    data.forEach((b: any) => {
+      context += `\n#${b.num} - ${b.address}:\n`
+      if (b.neighborhood) context += `  Neighborhood: ${b.neighborhood}\n`
+      if (b.owner) context += `  Owner: ${b.owner}\n`
+      if (b.year_built_class) context += `  Year Built / Class: ${b.year_built_class}\n`
+      if (b.building_sf) context += `  Building SF: ${b.building_sf}\n`
+      if (b.stories) context += `  Stories: ${b.stories}\n`
+      if (b.space_available) context += `  Space Available: ${b.space_available}\n`
+      if (b.rental_rate) context += `  Rental Rate: ${b.rental_rate}\n`
+      if (b.direct_sublease) context += `  Direct/Sublease: ${b.direct_sublease}\n`
+      if (b.floors && b.floors.length > 0) {
+        context += '  Available Floors:\n'
+        b.floors.forEach((f: any) => {
+          const parts = [f.floor, f.suite, f.rsf, f.available, f.rentalRate].filter(Boolean)
+          context += `    - ${parts.join(' | ')}\n`
+        })
+      }
+    })
+    return context
+  } catch (e) {
+    console.error('Failed to fetch building context:', e)
+    return ''
+  }
+}
+
+// Fetch live RFP/financial submissions for this project
+async function getRFPContext(projectId: string): Promise<string> {
   try {
     const { data, error } = await supabase
       .from('rfp_submissions')
       .select('*')
-      .eq('project_id', 'sf-office-search')
+      .eq('project_id', projectId)
       .neq('status', 'archived')
       .order('submitted_at', { ascending: false })
 
@@ -88,13 +148,13 @@ async function getRFPContext(): Promise<string> {
   }
 }
 
-// Fetch team members for chatbot context
-async function getTeamContext(): Promise<string> {
+// Fetch team members for this project
+async function getTeamContext(projectId: string): Promise<string> {
   try {
     const { data, error } = await supabase
       .from('project_members')
       .select('*')
-      .eq('project_id', 'sf-office-search')
+      .eq('project_id', projectId)
       .order('created_at', { ascending: true })
 
     if (error || !data || data.length === 0) {
@@ -132,13 +192,13 @@ async function getTeamContext(): Promise<string> {
   }
 }
 
-// Fetch commute study data for chatbot context
-async function getCommuteContext(): Promise<string> {
+// Fetch commute study data for this project
+async function getCommuteContext(projectId: string): Promise<string> {
   try {
     const { data, error } = await supabase
       .from('commute_studies')
       .select('*')
-      .eq('project_id', 'sf-office-search')
+      .eq('project_id', projectId)
       .single()
 
     if (error || !data) {
@@ -157,12 +217,9 @@ async function getCommuteContext(): Promise<string> {
     context += `File: ${data.filename || 'Unknown'} | ${employees.length} employees analyzed\n`
     if (data.uploaded_by) context += `Uploaded by: ${data.uploaded_by}\n`
 
-    // Data format: results.summaries[] has {building, driving_avg_seconds, transit_avg_seconds, driving_avg_text, transit_avg_text, ...}
-    // results.details[] has {employee, commutes: [{building, driving: {duration_seconds, ...}, transit: {duration_seconds, ...}}, ...]}
     const summaries = results.summaries || []
     const details = results.details || []
 
-    // Build employee name -> detail lookup for per-building stats
     const detailMap: Record<string, any> = {}
     details.forEach((d: any) => { if (d.employee) detailMap[d.employee] = d })
     const buildingOrder = summaries.map((s: any) => s.building)
@@ -177,7 +234,6 @@ async function getCommuteContext(): Promise<string> {
         if (avgDriveMin != null) context += `    Avg Drive: ${avgDriveMin} min (${s.driving_avg_distance_text || ''})\n`
         if (avgTransitMin != null) context += `    Avg Transit: ${avgTransitMin} min\n`
 
-        // Compute under-30-min drive and under-45-min transit from details
         let under30drive = 0, under45transit = 0, under60transit = 0
         details.forEach((d: any) => {
           const c = d.commutes?.find((x: any) => x.building === s.building)
@@ -191,13 +247,10 @@ async function getCommuteContext(): Promise<string> {
       }
     }
 
-    // Detect groupable columns from employee meta (business unit, department, etc.)
     const latCol = data.lat_col ?? 0
     const lngCol = data.lng_col ?? 1
-    // headers that are not lat/lng
     const metaCols = headers.filter((_: string, i: number) => i !== latCol && i !== lngCol)
 
-    // Find group-by columns with 2-30 unique values
     const groupableCols: { col: string; values: string[] }[] = []
     for (const col of metaCols) {
       const vals: Record<string, boolean> = {}
@@ -211,12 +264,10 @@ async function getCommuteContext(): Promise<string> {
       }
     }
 
-    // Build per-group commute breakdown (e.g. by Business Unit)
     if (groupableCols.length > 0 && details.length > 0) {
       for (const gc of groupableCols) {
         context += `\nCommute Breakdown by ${gc.col}:\n`
 
-        // Group employees by this column
         const groups: Record<string, string[]> = {}
         employees.forEach((emp: any) => {
           const key = (emp.meta?.[gc.col] || 'Unknown').trim()
@@ -258,7 +309,6 @@ async function getCommuteContext(): Promise<string> {
       }
     }
 
-    // For large datasets, list unique group values and skip individual employee list
     if (employees.length > 50) {
       context += `\n${employees.length} employees in commute study.\n`
       for (const gc of groupableCols) {
@@ -273,13 +323,13 @@ async function getCommuteContext(): Promise<string> {
   }
 }
 
-// Fetch project assumptions for chatbot context (per-building)
-async function getAssumptionsContext(): Promise<string> {
+// Fetch project assumptions for this project (per-building)
+async function getAssumptionsContext(projectId: string): Promise<string> {
   try {
     const { data, error } = await supabase
       .from('project_assumptions')
       .select('*')
-      .eq('project_id', 'sf-office-search')
+      .eq('project_id', projectId)
       .order('building_address', { ascending: true })
 
     if (error || !data || data.length === 0) {
@@ -304,7 +354,7 @@ async function getAssumptionsContext(): Promise<string> {
       const discountRate = parseFloat(row.discount_rate) || 6.0
 
       if (totalMonthlyOpex === 0 && headcount === 0 && discountRate === 6.0) {
-        continue // Skip buildings with no meaningful assumptions
+        continue
       }
 
       context += `\n--- ${row.building_address || 'Unknown Building'} Assumptions ---\n`
@@ -344,14 +394,13 @@ async function getAssumptionsContext(): Promise<string> {
   }
 }
 
-// Fetch photo descriptions for chatbot context
-async function getPhotoContext(): Promise<string> {
+// Fetch photo descriptions for this project
+async function getPhotoContext(projectId: string): Promise<string> {
   try {
-    // Fetch ALL photos (both analyzed and un-analyzed) so the chatbot can show images
     const { data, error } = await supabase
       .from('building_photos')
       .select('building_name, building_address, area_tag, ai_description, ai_tags, ai_area_suggestion, uploaded_by, created_at, file_url, ai_analyzed_at')
-      .eq('project_id', 'sf-office-search')
+      .eq('project_id', projectId)
       .order('created_at', { ascending: false })
       .limit(100)
 
@@ -359,7 +408,6 @@ async function getPhotoContext(): Promise<string> {
       return ''
     }
 
-    // Group by building
     const byBuilding: Record<string, typeof data> = {}
     data.forEach(p => {
       const key = p.building_name
@@ -378,7 +426,6 @@ async function getPhotoContext(): Promise<string> {
           const tags = p.ai_tags?.join(', ') || ''
           context += `  - [${area}] ${p.ai_description}${tags ? ' (tags: ' + tags + ')' : ''} | image: ${p.file_url}\n`
         } else {
-          // Photo uploaded but not yet AI-analyzed; still include it with area tag so chatbot can show it
           context += `  - [${area}] (photo not yet analyzed) | image: ${p.file_url}\n`
         }
       })
@@ -390,7 +437,10 @@ async function getPhotoContext(): Promise<string> {
   }
 }
 
-// Initialize client inside handler to pick up env vars after redeploy
+// ============================================================
+// AI client + helpers
+// ============================================================
+
 function getClient() {
   return new Anthropic({
     apiKey: process.env.ANTHROPIC_API_KEY,
@@ -548,62 +598,63 @@ async function searchNearbyPlaces(query: string, maxResults = 5): Promise<string
   }
 }
 
-// ---- Claude tool definitions ----
-const TOOLS: Anthropic.Tool[] = [
-  {
-    name: 'search_nearby_places',
-    description:
-      'Search for nearby places (restaurants, coffee shops, parking, bars, gyms, etc.) near a specific address or building location. Use this whenever a user asks about places to eat, drink, park, or visit near any of the tour buildings. Always include "San Francisco" in the query for accurate results.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        query: {
-          type: 'string',
-          description:
-            'A natural language search query including the place type and location, e.g. "coffee shops near 250 Brannan Street, San Francisco" or "parking garages near 300 Mission Street, San Francisco"',
+// ---- Claude tool definitions (dynamic per market) ----
+function getTools(market: string): Anthropic.Tool[] {
+  const locationHint = market || 'the project market area'
+  return [
+    {
+      name: 'search_nearby_places',
+      description:
+        `Search for nearby places (restaurants, coffee shops, parking, bars, gyms, etc.) near a specific address or building location. Use this whenever a user asks about places to eat, drink, park, or visit near any of the tour buildings. Always include "${locationHint}" in the query for accurate results.`,
+      input_schema: {
+        type: 'object' as const,
+        properties: {
+          query: {
+            type: 'string',
+            description:
+              `A natural language search query including the place type and location, e.g. "coffee shops near 250 Main Street, ${locationHint}"`,
+          },
+          max_results: {
+            type: 'number',
+            description: 'Maximum number of results to return (1-10, default 5)',
+          },
         },
-        max_results: {
-          type: 'number',
-          description: 'Maximum number of results to return (1-10, default 5)',
-        },
+        required: ['query'],
       },
-      required: ['query'],
     },
-  },
-  {
-    name: 'get_directions',
-    description:
-      'Get walking, driving, transit, or bicycling directions between two locations. Returns travel time, distance, and step-by-step directions. Use this when a user asks how far apart two buildings are, how long it takes to walk/drive between locations, or asks for directions between any two addresses or buildings. Always use full street addresses with "San Francisco, CA" for best results.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        origin: {
-          type: 'string',
-          description:
-            'Starting address, e.g. "250 Brannan Street, San Francisco, CA"',
+    {
+      name: 'get_directions',
+      description:
+        `Get walking, driving, transit, or bicycling directions between two locations. Returns travel time, distance, and step-by-step directions. Use this when a user asks how far apart two buildings are, how long it takes to walk/drive between locations, or asks for directions. Always use full street addresses with the city/state for best results.`,
+      input_schema: {
+        type: 'object' as const,
+        properties: {
+          origin: {
+            type: 'string',
+            description:
+              `Starting address, e.g. "250 Main Street, ${locationHint}"`,
+          },
+          destination: {
+            type: 'string',
+            description:
+              `Destination address, e.g. "505 Howard Street, ${locationHint}"`,
+          },
+          mode: {
+            type: 'string',
+            enum: ['walking', 'driving', 'transit', 'bicycling'],
+            description:
+              'Travel mode. Default is walking. Use "transit" for public transportation.',
+          },
         },
-        destination: {
-          type: 'string',
-          description:
-            'Destination address, e.g. "505 Howard Street, San Francisco, CA"',
-        },
-        mode: {
-          type: 'string',
-          enum: ['walking', 'driving', 'transit', 'bicycling'],
-          description:
-            'Travel mode. Default is walking. Use "transit" for public transportation (Muni, BART, bus).',
-        },
+        required: ['origin', 'destination'],
       },
-      required: ['origin', 'destination'],
     },
-  },
-]
+  ]
+}
 
 // Build current date/time string in Pacific Time for the system prompt
 function getCurrentDateContext(): string {
-  // Compute Pacific Time offset manually to avoid any runtime locale issues
   const now = new Date()
-  // Get Pacific Time components using Intl (reliable on Node/V8)
   const fmt = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/Los_Angeles',
     year: 'numeric', month: '2-digit', day: '2-digit',
@@ -615,7 +666,6 @@ function getCurrentDateContext(): string {
   const pacificDay = parts.weekday
   const pacificTime = `${parts.hour}:${parts.minute}`
 
-  // Compute tomorrow in Pacific
   const todayMs = new Date(`${pacificDate}T12:00:00`).getTime()
   const tomorrowDate = new Date(todayMs + 86400000).toISOString().slice(0, 10)
 
@@ -624,12 +674,15 @@ Today's date is ${pacificDate} (${pacificDay}). Tomorrow's date is ${tomorrowDat
 IMPORTANT: When the user says "tomorrow", they mean ${tomorrowDate}. When they say "today", they mean ${pacificDate}. Always use these exact dates when resolving relative date references like "today", "tomorrow", "this week", etc.`
 }
 
-const SYSTEM_PROMPT_STATIC = `You are the Tour-Lytics Tour Book Assistant -- an AI concierge for a commercial real estate office search in San Francisco.
+// ---- Dynamic system prompt (adapts to project) ----
+function buildSystemPrompt(projectName: string, market: string, buildingCount: number): string {
+  const marketLabel = market || 'the target market'
+  return `You are the Tour-Lytics Tour Book Assistant -- an AI concierge for a commercial real estate office search project.
 
-You have detailed knowledge of 33 survey buildings plus 4 buildings in active deal negotiations. Your job is to answer questions about these properties clearly and helpfully, like a knowledgeable broker assistant.
+PROJECT: ${projectName}
+MARKET: ${marketLabel}
 
-BUILDING DATA:
-${JSON.stringify(buildingContext, null, 2)}
+You have detailed knowledge of the survey buildings in this project. Your job is to answer questions about these properties clearly and helpfully, like a knowledgeable broker assistant.
 
 SCORING CATEGORIES (1-10 scale, used by the client to rate buildings during tours):
 - Location: Proximity to transit, restaurants, walkability
@@ -648,8 +701,8 @@ Financial data comes from LIVE RFP/LOI submissions in the Financials tab (inject
 If a building has no RFP submission, tell the user no financial data has been submitted yet for that building.
 
 FINANCIAL SCOPE:
-- The Financials tab is strictly focused on deal terms from submitted RFPs and LOIs. It shows lease economics only: rent, escalations, free rent, TI allowance, parking, and any OpEx explicitly stated in the deal document.
-- Internal operating expense assumptions (F&B, workplace experience, maintenance, etc.) live in the separate Assumptions tab and are NOT included in the RFP analysis automatically.
+- The Financials tab is strictly focused on deal terms from submitted RFPs and LOIs.
+- Internal operating expense assumptions live in the separate Assumptions tab.
 - If PROJECT ASSUMPTIONS data is injected below, you can use it to compute all-in occupancy cost when the user asks.
 - If a user asks about "all-in cost" or "total occupancy cost", combine the straight-line lease expense from the RFP with the internal OpEx from the Assumptions tab. Show the breakdown clearly: lease cost + internal OpEx = all-in cost.
 - If assumptions have not been configured yet, tell the user they can set them up in the Assumptions tab under Financials.
@@ -657,114 +710,50 @@ FINANCIAL SCOPE:
 TI ALLOWANCE IN STRAIGHT-LINE:
 - When a deal includes a TI (Tenant Improvement) allowance, it is amortized over the lease term and REDUCES the straight-line rent expense.
 - The SL Monthly Rent and SL Annual Rent in the live RFP data already reflect this TI amortization.
-- For example, if a deal has $460,620 TI over 65 months, that is a $7,087/mo credit reducing the straight-line expense.
 
 LIVE TOUR CONTEXT:
-Each message may include [LIVE TOUR LIST], [LIVE SCORES], and [LIVE TOUR SCHEDULE] data. This reflects what the user currently has on their Tour Book tab in real time.
-- When the user asks about "my tour book", "my tour list", "buildings on my tour", or similar, ONLY reference the buildings in the LIVE TOUR LIST, not all 33 survey buildings.
-- The Tour Book is the user's shortlist of buildings they are actively evaluating or touring. It is NOT the full 33-building survey.
-- If scores are provided, reference them when relevant.
-- If schedule data is provided, reference tour dates and times when relevant.
-- CRITICAL: When matching schedule dates to words like "today" or "tomorrow", use the CURRENT DATE AND TIME provided at the top of this prompt. Compare the schedule date strings (YYYY-MM-DD) against those exact dates. Do NOT guess or infer the current date from any other source.
+Each message may include [LIVE TOUR LIST], [LIVE SCORES], and [LIVE TOUR SCHEDULE] data.
+- When the user asks about "my tour book", "my tour list", "buildings on my tour", ONLY reference the buildings in the LIVE TOUR LIST.
+- The Tour Book is the user's shortlist. It is NOT the full survey.
+- CRITICAL: When matching schedule dates to words like "today" or "tomorrow", use the CURRENT DATE AND TIME provided at the top of this prompt.
 
 NEARBY PLACES CAPABILITY:
-You have access to a tool called search_nearby_places that uses Google Places to find coffee shops, restaurants, bars, parking, gyms, and any other type of place near the tour buildings. When a user asks about places near a building:
+You have access to search_nearby_places (Google Places). When a user asks about places near a building:
 1. Identify the building address from your data
-2. Call search_nearby_places with a query like "coffee shops near [address], San Francisco"
-3. Present the results in a clean, helpful format with name, rating, distance context, and Google Maps link if available
-4. If the user asks about their "first tour" or "next tour", check the LIVE TOUR SCHEDULE data to identify which building, then search near that address
+2. Call search_nearby_places with the query including "${marketLabel}"
+3. Present results with name, rating, distance context, and Google Maps link
 
 DIRECTIONS & TRAVEL TIME CAPABILITY:
-You have access to a tool called get_directions that uses Google Maps to calculate travel time and step-by-step directions between any two locations. Use this when a user asks:
-- How far apart two buildings are (walking, driving, transit, or biking)
-- How long it takes to get between tours or buildings
-- Directions from one building to another, or from a building to a nearby place
-- Whether they can walk between tours, or if they should drive/take transit
-- How to get to a building from a landmark, hotel, or other location
+You have access to get_directions (Google Maps). Use for travel time, directions, and route comparisons between buildings or locations. Always include the city/state in addresses.
 
-When using get_directions:
-1. Look up the full street addresses of both locations from your building data
-2. Always include "San Francisco, CA" in the addresses
-3. Default to walking mode unless the user specifies driving, transit, or biking
-4. Present the results conversationally: lead with the travel time and distance, then offer key directions if helpful
-5. If the user asks about travel between consecutive tours on their schedule, check the LIVE TOUR SCHEDULE to identify the buildings and times, then calculate the route
-6. For transit directions, mention specific bus/train lines and stops from the step data
+TOUR PHOTOS CAPABILITY:
+Photos uploaded during tours may have AI analysis (Gemini Vision) with descriptions, area tags, feature tags, and direct image URLs. Show photos using markdown: ![description](url). Show up to 3-4 photos at a time.
+
+ASSUMPTIONS / ALL-IN COST CAPABILITY:
+PROJECT ASSUMPTIONS data includes per-building internal OpEx, headcount, target density, and GAAP discount rate. Combine with RFP data for all-in cost calculations.
+
+TEAM MEMBERS CAPABILITY:
+Live team data is injected below. Group by persona: Admin, Broker, CRE Team, Touree.
+
+COMMUTE STUDY CAPABILITY:
+Full commute study data (employee commute analysis) is available with per-building averages and per-department breakdowns.
+
+DISPLAYING PHOTOS:
+Show photos using markdown image syntax: ![description](url). Show up to 3-4 at a time.
 
 GUIDELINES:
-- Be concise but thorough. Use specific numbers (rates, SF, etc.) when available.
+- Be concise but thorough. Use specific numbers when available.
 - If comparing buildings, use a structured format.
 - When a building detail is "TBD" or "Negotiable", say so honestly.
-- Reference building numbers (#1-33) and addresses together for clarity.
+- Reference building numbers and addresses together for clarity.
 - If asked about something not in the data, say you don't have that information.
 - Do not use em dashes in your responses. Use commas, periods, or semicolons instead.
 - Be conversational and professional, like a sharp real estate analyst.
 - Keep responses focused. Don't dump all data unless asked for a full comparison.
-- When asked about costs, always distinguish between lease-only P&L and all-in occupancy cost (which includes OpEx).
+- When asked about costs, always distinguish between lease-only P&L and all-in occupancy cost.`
+}
 
-TOUR PHOTOS CAPABILITY:
-Team members can upload photos during building tours. Photos may be AI-analyzed (Gemini Vision) which provides:
-- A description of what's in the photo (finishes, natural light, condition, etc.)
-- Area tags (lobby, kitchen, open floor, etc.)
-- Feature tags (natural_light, modern_finishes, high_ceilings, etc.)
-- A direct image URL you can display
-
-Some photos may say "(photo not yet analyzed)" which means AI hasn't processed them yet, but they still have an area tag and image URL. You can still show these photos to the user.
-
-When a user asks about photos, what spaces looked like, or visual aspects of buildings, reference the TOUR PHOTOS data. You can answer questions like:
-- "What did the lobby look like at 250 Brannan?"
-- "Which buildings had the best natural light?"
-- "Compare the kitchens across our tour list"
-- "What condition was the flooring at 301 Brannan?"
-- "Show me pictures of the kitchen"
-
-ASSUMPTIONS / ALL-IN COST CAPABILITY:
-You may have PROJECT ASSUMPTIONS data injected below (from the Assumptions tab). This includes:
-- Internal OpEx categories (F&B, Workplace Experience, Maintenance, custom line items) with monthly amounts
-- Headcount and target density (RSF per person)
-- GAAP discount rate (IBR) for ASC 842 calculations
-
-When a user asks about assumptions, all-in cost, total occupancy cost, or cost per employee:
-1. If assumptions are configured, combine them with the RFP straight-line data to show a full picture
-2. Show the breakdown: Lease SL Monthly + Internal OpEx = All-In Monthly
-3. If they ask about cost per employee, use: All-In Annual / Headcount
-4. If they ask about density, compare actual RSF / headcount vs target density
-5. If no assumptions are saved yet, let them know they can configure it in the Assumptions tab under Financials
-
-TEAM MEMBERS CAPABILITY:
-You have access to live team member data injected at the end of this prompt. You can answer questions like:
-- "Who is on the team?" or "How many people are on the project?"
-- "Who are the brokers?" or "List the tourees"
-- "What role does [name] have?"
-- "Who invited [name]?"
-Group members by their persona/role when presenting team info. Personas are: Admin (project lead), Broker (real estate advisor), CRE Team (corporate real estate), Touree (tour participant).
-
-COMMUTE STUDY CAPABILITY:
-You have access to the full commute study data (employee commute analysis to different office buildings). This data comes from an uploaded Excel file with employee locations, analyzed against each shortlisted building. The data includes:
-- Overall averages per building (drive and transit)
-- Percentage of employees within 30-min drive, 45-min transit, 60-min transit
-- Per-business-unit / per-department breakdowns with average commute times to each building
-- Individual employee commute details when available
-
-You can answer questions like:
-- "Which building has the best commute for our team?"
-- "What's the average drive time to 250 Brannan?"
-- "How many employees can get to 123 Townsend within 30 minutes?"
-- "Compare commute times across our shortlisted buildings"
-- "Which building is most accessible by transit?"
-- "What about by business unit?" or "Break down commutes by department"
-- "Which building works best for the AI Company team?"
-- "Compare commute times for Corp Dev vs Customer Success"
-When comparing buildings on commute, focus on average drive/transit time, percentage of employees within 30 min drive, and percentage within 45 min transit as the key metrics.
-When asked about breakdowns by business unit/department, use the per-group commute data in the COMMUTE STUDY DATA section. Each group shows average drive and transit times to each building.
-
-DISPLAYING PHOTOS:
-Each photo in the TOUR PHOTOS data includes an image URL after "image:". When the user asks to see a photo or asks about a building with photos, show the photos using markdown image syntax: ![description](url)
-Show up to 3-4 relevant photos at a time. Always include a brief description with each image. For un-analyzed photos, use the area tag as the description.
-Example: Here is the kitchen at 250 Brannan:\n![Kitchen at 250 Brannan](https://...url...)
-
-If no photos have been uploaded for a building, let the user know photos haven't been added yet.`
-
-// In-memory conversation store
+// In-memory conversation store (keyed by projectId + visitorId for isolation)
 const conversations = new Map<string, Array<{ role: string; content: string | Anthropic.ContentBlockParam[] }>>()
 const MAX_HISTORY = 20
 
@@ -784,12 +773,16 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { message, visitor_id, tour_list, scores, schedule } = body
+    const { message, visitor_id, tour_list, scores, schedule, projectId: rawProjectId } = body
+    const projectId = rawProjectId || 'sf-office-search'
     const visitorId =
       visitor_id || request.headers.get('x-visitor-id') || 'default'
 
+    // Conversation key includes projectId for full isolation
+    const convoKey = `${projectId}::${visitorId}`
+
     // Get or create conversation history
-    let history = conversations.get(visitorId) || []
+    let history = conversations.get(convoKey) || []
 
     // Build context-enriched message
     let userContent = message
@@ -822,10 +815,10 @@ export async function POST(request: NextRequest) {
       history = history.slice(-MAX_HISTORY)
     }
 
-    // Debit token for chat message
+    // Debit token for chat message (project-scoped)
     try {
       const tokenResult = await debitTokens({
-        projectId: 'sf-office-search',
+        projectId,
         action: 'chat_message',
         userEmail: visitorId,
         note: `Chat: ${message.substring(0, 80)}`,
@@ -841,23 +834,27 @@ export async function POST(request: NextRequest) {
       console.warn('Token debit skipped:', (e as Error).message)
     }
 
-    // Fetch live data for RAG context
-    const [photoContext, rfpContext, teamContext, commuteContext, assumptionsContext] = await Promise.all([
-      getPhotoContext(),
-      getRFPContext(),
-      getTeamContext(),
-      getCommuteContext(),
-      getAssumptionsContext(),
+    // Fetch all project-scoped data in parallel
+    const [projectMeta, buildingCtx, photoContext, rfpContext, teamContext, commuteContext, assumptionsContext] = await Promise.all([
+      getProjectMeta(projectId),
+      getBuildingContext(projectId),
+      getPhotoContext(projectId),
+      getRFPContext(projectId),
+      getTeamContext(projectId),
+      getCommuteContext(projectId),
+      getAssumptionsContext(projectId),
     ])
-    const SYSTEM_PROMPT = getCurrentDateContext() + '\n\n' + SYSTEM_PROMPT_STATIC
-    const systemPromptWithPhotos = SYSTEM_PROMPT + rfpContext + assumptionsContext + teamContext + commuteContext + photoContext
+
+    const dynamicSystemPrompt = buildSystemPrompt(projectMeta.name, projectMeta.market, 0)
+    const SYSTEM_PROMPT = getCurrentDateContext() + '\n\n' + dynamicSystemPrompt + '\n' + buildingCtx + rfpContext + assumptionsContext + teamContext + commuteContext + photoContext
+
+    const tools = getTools(projectMeta.market)
 
     // Stream response with tool use support
     const encoder = new TextEncoder()
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          // First call - may return tool_use
           let apiMessages = history.map((m) => ({
             role: m.role as 'user' | 'assistant',
             content: m.content as string | Anthropic.ContentBlockParam[],
@@ -872,12 +869,11 @@ export async function POST(request: NextRequest) {
             const response = await getClient().messages.create({
               model: 'claude-sonnet-4-20250514',
               max_tokens: 1024,
-              system: systemPromptWithPhotos,
-              tools: TOOLS,
+              system: SYSTEM_PROMPT,
+              tools,
               messages: apiMessages,
             })
 
-            // Check if we need to handle tool calls
             const toolUseBlocks = response.content.filter(
               (block) => block.type === 'tool_use'
             )
@@ -898,7 +894,6 @@ export async function POST(request: NextRequest) {
             }
 
             if (toolUseBlocks.length > 0 && response.stop_reason === 'tool_use') {
-              // Process each tool call
               const toolResults: Anthropic.ToolResultBlockParam[] = []
 
               for (const toolBlock of toolUseBlocks) {
@@ -932,14 +927,12 @@ export async function POST(request: NextRequest) {
                 }
               }
 
-              // Add assistant response with tool use and tool results to messages
               apiMessages = [
                 ...apiMessages,
                 { role: 'assistant' as const, content: response.content as Anthropic.ContentBlockParam[] },
                 { role: 'user' as const, content: toolResults as Anthropic.ContentBlockParam[] },
               ]
 
-              // We need another round to get the final text response
               needsToolCall = true
             }
           }
@@ -947,7 +940,7 @@ export async function POST(request: NextRequest) {
           // Save final response to history
           if (assistantResponse) {
             history.push({ role: 'assistant', content: assistantResponse })
-            conversations.set(visitorId, history)
+            conversations.set(convoKey, history)
           }
 
           controller.enqueue(
