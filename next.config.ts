@@ -16,8 +16,8 @@ const cspDirectives = [
   // Scripts: self + CDNs used by the static app portal
   `script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net cdnjs.cloudflare.com unpkg.com cdn.sheetjs.com`,
 
-  // Styles: self + Google Fonts + Fontshare + inline (Leaflet, etc.)
-  `style-src 'self' 'unsafe-inline' fonts.googleapis.com api.fontshare.com`,
+  // Styles: self + Google Fonts + Fontshare + Leaflet CSS (unpkg) + inline
+  `style-src 'self' 'unsafe-inline' fonts.googleapis.com api.fontshare.com unpkg.com`,
 
   // Fonts
   `font-src 'self' fonts.gstatic.com api.fontshare.com data:`,
@@ -26,7 +26,7 @@ const cspDirectives = [
   `img-src 'self' ${SUPABASE_DOMAIN} *.tile.openstreetmap.org carto.com *.basemaps.cartocdn.com data: blob:`,
 
   // API / fetch connections
-  `connect-src 'self' ${SUPABASE_DOMAIN} maps.googleapis.com places.googleapis.com nominatim.openstreetmap.org`,
+  `connect-src 'self' ${SUPABASE_DOMAIN} maps.googleapis.com places.googleapis.com nominatim.openstreetmap.org smoitoza.github.io`,
 
   // Frames: only same-origin (the /app portal is loaded in-page)
   "frame-src 'self'",
