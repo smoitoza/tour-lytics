@@ -10373,6 +10373,7 @@ function rfpBuildDetailHtml(subs) {
         '</div>' +
       '</div>' +
       '<div style="display:flex;gap:var(--space-2);align-items:center">' +
+        '<button class="rfp-btn-secondary rfp-export-btn" onclick="rfpExportExcel()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export Excel</button>' +
         (canDelete ? '<button class="rfp-btn-danger" onclick="rfpDeleteSubmission(\'' + selected.id + '\')">Delete</button>' : '') +
       '</div>' +
     '</div>';
@@ -10648,6 +10649,212 @@ function rfpBuildGAAPTable(analysis) {
 
   html += '</tbody></table></div>';
   return html;
+}
+
+// ===== EXCEL EXPORT =====
+function rfpExportExcel() {
+  var selected = rfpGetCurrentSubmission();
+  if (!selected || !selected.analysis) {
+    alert('No financial analysis data to export.');
+    return;
+  }
+
+  var address = selected.building_address || selected.buildingAddress || 'Building';
+  var docType = (selected.doc_type || selected.docType || 'RFP').toUpperCase();
+  var analysis = selected.analysis;
+  var terms = selected.deal_terms || selected.terms || {};
+  var wb = XLSX.utils.book_new();
+
+  // Helper: format currency number for Excel (raw number, let Excel format it)
+  function n(v) { return (typeof v === 'number' && !isNaN(v)) ? v : (parseFloat(v) || 0); }
+
+  // ===== TAB 1: Deal Terms =====
+  var dtRows = [
+    ['Deal Terms - ' + address],
+    [''],
+    ['Term', 'Value'],
+    ['Building Address', address],
+    ['Document Type', docType],
+    ['Landlord', terms.landlord || ''],
+    ['Structure', terms.structure || ''],
+    ['RSF', n(terms.rsf)],
+    ['Lease Term (months)', n(terms.lease_term_months)],
+    ['Commencement Date', terms.commencement_date || ''],
+    ['Base Rent ($/RSF/yr)', n(terms.base_rent_rsf)],
+    ['Annual Escalation (%)', n(terms.annual_escalation_pct)],
+    ['Free Rent (months)', n(terms.free_rent_months)],
+    ['TI Allowance ($/RSF)', n(terms.ti_allowance_rsf)],
+    ['TI Allowance (Total)', n(terms.ti_allowance_total)],
+    ['OpEx (Monthly)', n(terms.opex_monthly)],
+    ['Parking Spots', n(terms.parking_spots)],
+    ['Parking Rate ($/mo)', n(terms.parking_rate_monthly)],
+    ['Parking Escalation (%)', n(terms.parking_escalation_pct)],
+    ['Security Deposit', n(terms.security_deposit)],
+    ['Rent Basis', terms.rent_basis || ''],
+    ['Notes', terms.notes || ''],
+  ];
+  var dtWS = XLSX.utils.aoa_to_sheet(dtRows);
+  // Widen columns
+  dtWS['!cols'] = [{ wch: 28 }, { wch: 22 }];
+  // Bold the title row
+  XLSX.utils.book_append_sheet(wb, dtWS, 'Deal Terms');
+
+  // ===== TAB 2: Assumptions =====
+  var buildingAddr = selected.building_address || selected.buildingAddress || '';
+  var a = buildingAddr ? (window._rfpState.assumptionsMap[buildingAddr] || {}) : {};
+  var fb = parseFloat(a.opex_food_beverage) || 0;
+  var wpe = parseFloat(a.opex_workplace_experience) || 0;
+  var maint = parseFloat(a.opex_maintenance_security) || 0;
+  var customItems = a.opex_custom_items || [];
+  var customTotal = 0;
+  customItems.forEach(function(item) { customTotal += parseFloat(item.monthly) || 0; });
+  var totalMonthlyOpex = fb + wpe + maint + customTotal;
+
+  var assumRows = [
+    ['Assumptions - ' + address],
+    [''],
+    ['Internal OpEx (Monthly)'],
+    ['Category', '$/Month'],
+    ['Food & Beverage', fb],
+    ['Workplace Experience', wpe],
+    ['Maintenance & Security', maint],
+  ];
+  customItems.forEach(function(item) {
+    assumRows.push([item.label || 'Custom', parseFloat(item.monthly) || 0]);
+  });
+  assumRows.push(['Total Monthly OpEx', totalMonthlyOpex]);
+  assumRows.push(['Total Annual OpEx', totalMonthlyOpex * 12]);
+  assumRows.push(['']);
+  assumRows.push(['Headcount & Density']);
+  assumRows.push(['Headcount', parseInt(a.headcount) || 0]);
+  assumRows.push(['Target Density (RSF/person)', parseInt(a.target_density_rsf) || 0]);
+  assumRows.push(['']);
+  assumRows.push(['GAAP Assumptions']);
+  assumRows.push(['Discount Rate / IBR (%)', parseFloat(a.discount_rate) || 6.0]);
+
+  var assumWS = XLSX.utils.aoa_to_sheet(assumRows);
+  assumWS['!cols'] = [{ wch: 32 }, { wch: 18 }];
+  XLSX.utils.book_append_sheet(wb, assumWS, 'Assumptions');
+
+  // ===== TAB 3: Straight-Line P&L =====
+  if (analysis.straight_line_pl && analysis.straight_line_pl.annual) {
+    var slTotals = analysis.straight_line_pl.totals || {};
+    var slRows = [
+      ['Straight-Line P&L - ' + address],
+      [''],
+      ['Year', 'Months', 'Base Rent', 'Free Rent', 'Net Rent', 'OpEx', 'Parking', 'Total Cost'],
+    ];
+    analysis.straight_line_pl.annual.forEach(function(row) {
+      slRows.push([
+        'Year ' + row.year,
+        row.months,
+        n(row.baseRent),
+        n(row.freeRent),
+        n(row.netRent),
+        n(row.opex),
+        n(row.parking),
+        n(row.totalCost),
+      ]);
+    });
+    // Summary section
+    slRows.push(['']);
+    slRows.push(['Summary Metrics']);
+    slRows.push(['Straight-Line Monthly Rent (net of TI)', n(slTotals.straightLineMonthlyRent)]);
+    slRows.push(['Straight-Line Annual Rent (net of TI)', n(slTotals.straightLineAnnualRent)]);
+    slRows.push(['Effective Rent/RSF', n(slTotals.effectiveRentRSF)]);
+    slRows.push(['Total Cost/RSF/Year', n(slTotals.totalCostPerRSFPerYear)]);
+    if (slTotals.tiAllowanceTotal) {
+      slRows.push(['TI Allowance Total', n(slTotals.tiAllowanceTotal)]);
+      slRows.push(['Monthly TI Amortization', n(slTotals.monthlyTIAmortization)]);
+    }
+
+    var slWS = XLSX.utils.aoa_to_sheet(slRows);
+    slWS['!cols'] = [{ wch: 42 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 16 }];
+    XLSX.utils.book_append_sheet(wb, slWS, 'Straight-Line P&L');
+  }
+
+  // ===== TAB 4: Cash Flow =====
+  if (analysis.cash_flow && analysis.cash_flow.monthly) {
+    var cfTotals = analysis.cash_flow.totals || {};
+    var cfRows = [
+      ['Cash Flow - ' + address],
+      [''],
+      ['Month', 'Period', 'Lease Year', 'Rent/RSF', 'Monthly Base Rent', 'Free Rent Credit', 'Net Cash Rent', 'OpEx', 'Parking', 'Total Monthly', 'Cumulative Cash'],
+    ];
+    analysis.cash_flow.monthly.forEach(function(row) {
+      cfRows.push([
+        row.month,
+        row.period,
+        row.leaseYear,
+        n(row.rentRSF),
+        n(row.monthlyBaseRent),
+        n(row.freeRentCredit),
+        n(row.netCashRent),
+        n(row.opex),
+        n(row.parking),
+        n(row.totalMonthlyCost),
+        n(row.cumulativeCash),
+      ]);
+    });
+    // Totals row
+    cfRows.push([
+      'TOTALS', '', '', '',
+      n(cfTotals.totalBaseRent),
+      n(cfTotals.totalFreeRentValue),
+      n(cfTotals.totalNetRent),
+      n(cfTotals.totalOpex),
+      n(cfTotals.totalParking),
+      n(cfTotals.totalAllInCost),
+      '',
+    ]);
+
+    var cfWS = XLSX.utils.aoa_to_sheet(cfRows);
+    cfWS['!cols'] = [{ wch: 10 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 18 }];
+    XLSX.utils.book_append_sheet(wb, cfWS, 'Cash Flow');
+  }
+
+  // ===== TAB 5: GAAP Analysis =====
+  if (analysis.gaap) {
+    var gaapSummary = analysis.gaap.summary || {};
+    var gaapSchedule = analysis.gaap.schedule || [];
+    var gaapRows = [
+      ['GAAP / ASC 842 Analysis - ' + address],
+      [''],
+      ['Summary'],
+      ['Discount Rate', n(gaapSummary.discountRate)],
+      ['Lease Liability (Day 1)', n(gaapSummary.leaseLiability)],
+      ['ROU Asset (Day 1)', n(gaapSummary.rouAsset)],
+      ['Total Lease Payments', n(gaapSummary.totalLeasePayments)],
+      ['TI Allowance', n(gaapSummary.tiAllowance)],
+      [''],
+      ['Month', 'Period', 'Cash Payment', 'Interest Expense', 'Principal Reduction', 'Lease Liability', 'ROU Amortization', 'ROU Asset', 'SL Expense', 'Total GAAP Expense'],
+    ];
+    gaapSchedule.forEach(function(row) {
+      gaapRows.push([
+        row.month,
+        row.period,
+        n(row.cashPayment),
+        n(row.interestExpense),
+        n(row.principalReduction),
+        n(row.leaseLiability),
+        n(row.rouAmortization),
+        n(row.rouAsset),
+        n(row.straightLineExpense),
+        n(row.totalGAAPExpense),
+      ]);
+    });
+
+    var gaapWS = XLSX.utils.aoa_to_sheet(gaapRows);
+    gaapWS['!cols'] = [{ wch: 28 }, { wch: 14 }, { wch: 16 }, { wch: 18 }, { wch: 20 }, { wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 14 }, { wch: 20 }];
+    XLSX.utils.book_append_sheet(wb, gaapWS, 'GAAP Analysis');
+  }
+
+  // Generate filename
+  var safeAddr = address.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-').substring(0, 40);
+  var dateStr = new Date().toISOString().split('T')[0];
+  var fileName = docType + '-' + safeAddr + '-' + dateStr + '.xlsx';
+
+  XLSX.writeFile(wb, fileName);
 }
 
 // ===== ASSUMPTIONS PANEL =====
