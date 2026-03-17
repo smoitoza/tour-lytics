@@ -11791,7 +11791,7 @@ async function surveySubmitUpload() {
     statusEl.innerHTML = '<div style="display:flex;align-items:center;gap:0.5rem;">' + spinnerHTML + ' AI is parsing ' + text.length.toLocaleString() + ' characters of survey data... This may take a moment.</div>';
 
     // Step 3: Send to AI for structured extraction + geocoding
-    var marketText = document.getElementById('projectSubtitle') ? document.getElementById('projectSubtitle').textContent : '';
+    var marketText = (document.getElementById('footerInfo') ? document.getElementById('footerInfo').textContent : '') || '';
     var res = await fetch('/api/survey-parse', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
