@@ -117,13 +117,13 @@ Return ONLY the JSON array, no other text.`
       const hood = b.neighborhood?.trim()
       
       if (hood) {
-        // Neighborhood already has city context (e.g. "DUMBO, Brooklyn")
-        // Just add "USA" to help the geocoder resolve to the right country
-        return `${addr}, ${hood}, USA`
+        // Neighborhood provides local context (e.g. "DUMBO, Brooklyn" or "City of London")
+        // Append market for broader geo context (handles international markets)
+        return `${addr}, ${hood}, ${marketCtx}`
       }
       
       // No neighborhood - use market context directly
-      return `${addr}, ${marketCtx}, USA`
+      return `${addr}, ${marketCtx}`
     }
 
     async function geocodeBuilding(b: any): Promise<void> {
