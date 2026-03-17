@@ -111,15 +111,27 @@ Return ONLY the JSON array, no other text.`
     const mapsApiKey = process.env.GOOGLE_MAPS_API_KEY
     const marketCtx = market || 'USA'
 
-    async function geocodeBuilding(b: any): Promise<void> {
-      // Build specific address: "45 Main Street, DUMBO, Brooklyn, New York"
-      const parts = [b.address]
-      if (b.neighborhood) parts.push(b.neighborhood)
-      parts.push(marketCtx)
-      const fullAddr = parts.join(', ')
+    // Build a clean geocoding address from building data + market context
+    function buildGeoAddress(b: any): string {
+      const addr = b.address?.trim()
+      const hood = b.neighborhood?.trim()
+      
+      if (hood) {
+        // Neighborhood already has city context (e.g. "DUMBO, Brooklyn")
+        // Just add "USA" to help the geocoder resolve to the right country
+        return `${addr}, ${hood}, USA`
+      }
+      
+      // No neighborhood - use market context directly
+      return `${addr}, ${marketCtx}, USA`
+    }
 
+    async function geocodeBuilding(b: any): Promise<void> {
+      const fullAddr = buildGeoAddress(b)
+      console.log('Geocoding:', fullAddr)
+
+      // Try Google Geocoding API first (building-level accuracy)
       if (mapsApiKey) {
-        // Use Google Geocoding API (building-level accuracy)
         try {
           const geoRes = await fetch(
             `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddr)}&key=${mapsApiKey}`
@@ -129,14 +141,18 @@ Return ONLY the JSON array, no other text.`
             const loc = geoData.results[0].geometry.location
             b.lat = loc.lat
             b.lng = loc.lng
+            console.log('  Google OK:', b.address, '->', b.lat, b.lng)
             return
           }
+          console.warn('  Google returned:', geoData.status, geoData.error_message || '')
         } catch (e) {
-          console.warn('Google geocode failed for:', b.address, e)
+          console.warn('  Google error for:', b.address, e)
         }
+      } else {
+        console.log('  No GOOGLE_MAPS_API_KEY, using Nominatim')
       }
 
-      // Fallback to Nominatim if no Google key or Google failed
+      // Fallback to Nominatim
       try {
         const geoRes = await fetch(
           `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddr)}&limit=1`,
@@ -146,25 +162,24 @@ Return ONLY the JSON array, no other text.`
         if (geoData?.[0]) {
           b.lat = parseFloat(geoData[0].lat)
           b.lng = parseFloat(geoData[0].lon)
+          console.log('  Nominatim OK:', b.address, '->', b.lat, b.lng)
+        } else {
+          console.warn('  Nominatim returned empty for:', fullAddr)
         }
       } catch (e) {
-        console.warn('Nominatim geocode failed for:', b.address, e)
+        console.warn('  Nominatim error for:', b.address, e)
       }
     }
 
-    // Google Geocoding API has no rate limit issues like Nominatim, so we can parallelize
-    if (mapsApiKey) {
-      await Promise.all(buildings.map(b => geocodeBuilding(b)))
-    } else {
-      // Sequential with delay for Nominatim
-      const delay = (ms: number) => new Promise(r => setTimeout(r, ms))
-      for (let i = 0; i < buildings.length; i++) {
-        try {
-          if (i > 0) await delay(1100)
-          await geocodeBuilding(buildings[i])
-        } catch (geoErr) {
-          console.warn('Geocode failed for:', buildings[i].address, geoErr)
-        }
+    // Geocode all buildings
+    // Use Nominatim sequentially (rate limit) unless Google key is available
+    const delay = (ms: number) => new Promise(r => setTimeout(r, ms))
+    for (let i = 0; i < buildings.length; i++) {
+      try {
+        if (!mapsApiKey && i > 0) await delay(1100) // Nominatim rate limit
+        await geocodeBuilding(buildings[i])
+      } catch (geoErr) {
+        console.warn('Geocode failed for:', buildings[i].address, geoErr)
       }
     }
 
