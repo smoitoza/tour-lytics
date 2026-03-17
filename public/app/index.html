@@ -11977,7 +11977,7 @@ function surveyMergeBuildings(newBuildings) {
 
     // Add to SURVEY_BUILDINGS array
     SURVEY_BUILDINGS.push(entry);
-    existingAddresses.add(normAddr);
+    existingAddrMap[normAddr] = SURVEY_BUILDINGS.length - 1;
 
     // Add marker to map
     var icon = L.divIcon({
