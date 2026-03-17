@@ -6,14 +6,14 @@ import { debitTokens } from '@/lib/tokens'
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { text, userEmail, projectId } = body
+    const { text, userEmail, projectId, market, pdfUrl } = body
 
     if (!text || text.trim().length < 50) {
       return NextResponse.json({ error: 'Survey text too short or missing.' }, { status: 400 })
     }
 
-    const apiKey = process.env.GOOGLE_AI_API_KEY
-    if (!apiKey) {
+    const aiApiKey = process.env.GOOGLE_AI_API_KEY
+    if (!aiApiKey) {
       return NextResponse.json({ error: 'AI API key not configured' }, { status: 500 })
     }
 
@@ -36,13 +36,13 @@ export async function POST(req: Request) {
       console.warn('Token debit skipped:', (e as Error).message)
     }
 
-    const ai = new GoogleGenAI({ apiKey })
+    const ai = new GoogleGenAI({ apiKey: aiApiKey })
 
     const prompt = `You are a commercial real estate data extraction expert. Parse this broker survey document and extract every building/property listed.
 
 For EACH building found, extract these fields (use null if not found):
 - address: The street address (just street, no city/state)
-- neighborhood: The neighborhood or district name
+- neighborhood: The neighborhood or district name (e.g. "DUMBO, Brooklyn" or "Financial District")
 - owner: The building owner/landlord name
 - yearBuiltClass: Year built and class info (e.g., "2015 / Class A Office")
 - buildingSF: Total building square footage (e.g., "307,235 SF")
@@ -50,12 +50,14 @@ For EACH building found, extract these fields (use null if not found):
 - spaceAvailable: Available space in SF (e.g., "35,648 SF")
 - rentalRate: The rental rate (e.g., "Mid $70's FSG")
 - directSublease: "Direct", "Sublease", or "Both"
+- estimatedPage: The estimated page number in the original document where this building's detailed listing begins (integer, starting from 1). Look at the document structure - typically a cover/intro page, then a location map, then individual building pages. If the document follows a pattern of one building per page, count accordingly.
 
 IMPORTANT: 
 - Extract ALL buildings listed, not just a few
 - Keep the exact phrasing from the document for rates, SF figures, etc.
 - If a building appears multiple times (different suites), consolidate into one entry with the combined available space
 - Include floor/suite details in a "floors" field if available
+- The estimatedPage field is critical for linking back to the source document - be as accurate as possible
 
 Return a JSON array. Example format:
 [
@@ -69,6 +71,7 @@ Return a JSON array. Example format:
     "spaceAvailable": "35,648 SF",
     "rentalRate": "Upper $70's FSG",
     "directSublease": "Direct",
+    "estimatedPage": 3,
     "floors": [
       { "floor": "14th Floor", "suite": "1400", "rsf": "12,500 SF", "available": "Now" }
     ]
@@ -101,58 +104,78 @@ Return ONLY the JSON array, no other text.`
       }, { status: 500 })
     }
 
-    // Geocode addresses to get lat/lng
-    // Build specific address: street + neighborhood + market for accuracy
-    const marketCtx = body.market || 'USA'
-    const delay = (ms: number) => new Promise(r => setTimeout(r, ms))
+    // Geocode addresses using Google Geocoding API for building-level accuracy
+    const mapsApiKey = process.env.GOOGLE_MAPS_API_KEY
+    const marketCtx = market || 'USA'
 
     async function geocodeBuilding(b: any): Promise<void> {
-      // Build the most specific query: "45 Main Street, DUMBO, Brooklyn, New York"
+      // Build specific address: "45 Main Street, DUMBO, Brooklyn, New York"
       const parts = [b.address]
       if (b.neighborhood) parts.push(b.neighborhood)
       parts.push(marketCtx)
-      const fullAddr = encodeURIComponent(parts.join(', '))
+      const fullAddr = parts.join(', ')
 
-      const geoRes = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${fullAddr}&limit=1`,
-        { headers: { 'User-Agent': 'TourLytics/1.0' } }
-      )
-      const geoData = await geoRes.json()
-      if (geoData && geoData[0]) {
-        b.lat = parseFloat(geoData[0].lat)
-        b.lng = parseFloat(geoData[0].lon)
-        return
+      if (mapsApiKey) {
+        // Use Google Geocoding API (building-level accuracy)
+        try {
+          const geoRes = await fetch(
+            `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddr)}&key=${mapsApiKey}`
+          )
+          const geoData = await geoRes.json()
+          if (geoData.status === 'OK' && geoData.results?.[0]?.geometry?.location) {
+            const loc = geoData.results[0].geometry.location
+            b.lat = loc.lat
+            b.lng = loc.lng
+            return
+          }
+        } catch (e) {
+          console.warn('Google geocode failed for:', b.address, e)
+        }
       }
 
-      // Fallback: try without neighborhood
-      await delay(1100)
-      const simpleAddr = encodeURIComponent(`${b.address}, ${marketCtx}`)
-      const fallbackRes = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${simpleAddr}&limit=1`,
-        { headers: { 'User-Agent': 'TourLytics/1.0' } }
-      )
-      const fallbackData = await fallbackRes.json()
-      if (fallbackData && fallbackData[0]) {
-        b.lat = parseFloat(fallbackData[0].lat)
-        b.lng = parseFloat(fallbackData[0].lon)
-      }
-    }
-
-    // Process sequentially to respect Nominatim 1 req/sec rate limit
-    for (let i = 0; i < buildings.length; i++) {
+      // Fallback to Nominatim if no Google key or Google failed
       try {
-        if (i > 0) await delay(1100)
-        await geocodeBuilding(buildings[i])
-      } catch (geoErr) {
-        console.warn('Geocode failed for:', buildings[i].address, geoErr)
+        const geoRes = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddr)}&limit=1`,
+          { headers: { 'User-Agent': 'TourLytics/1.0' } }
+        )
+        const geoData = await geoRes.json()
+        if (geoData?.[0]) {
+          b.lat = parseFloat(geoData[0].lat)
+          b.lng = parseFloat(geoData[0].lon)
+        }
+      } catch (e) {
+        console.warn('Nominatim geocode failed for:', b.address, e)
       }
     }
-    const geocoded = buildings
+
+    // Google Geocoding API has no rate limit issues like Nominatim, so we can parallelize
+    if (mapsApiKey) {
+      await Promise.all(buildings.map(b => geocodeBuilding(b)))
+    } else {
+      // Sequential with delay for Nominatim
+      const delay = (ms: number) => new Promise(r => setTimeout(r, ms))
+      for (let i = 0; i < buildings.length; i++) {
+        try {
+          if (i > 0) await delay(1100)
+          await geocodeBuilding(buildings[i])
+        } catch (geoErr) {
+          console.warn('Geocode failed for:', buildings[i].address, geoErr)
+        }
+      }
+    }
+
+    // Attach the PDF URL to each building so the popup can link back
+    if (pdfUrl) {
+      buildings.forEach((b: any) => {
+        b.surveyPdfUrl = pdfUrl
+      })
+    }
 
     return NextResponse.json({
-      buildings: geocoded,
-      count: geocoded.length,
-      geocoded_count: geocoded.filter((b: any) => b.lat && b.lng).length,
+      buildings,
+      count: buildings.length,
+      geocoded_count: buildings.filter((b: any) => b.lat && b.lng).length,
     })
   } catch (err) {
     console.error('Survey parse error:', err)

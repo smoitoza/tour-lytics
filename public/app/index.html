@@ -7593,15 +7593,23 @@ function buildSurveyPopup(b) {
     '</div>';
   }
 
-  // Address link: SF project links to survey PDF, other projects link to Google Maps
+  // Address link: link to the source survey PDF (specific page) or Google Maps as fallback
   var isSFProject = (getProjectId() === 'sf-office-search');
-  var pdfPage = (typeof PDF_PAGES !== 'undefined') ? PDF_PAGES[b.num] : undefined;
+  var sfPdfPage = (typeof PDF_PAGES !== 'undefined') ? PDF_PAGES[b.num] : undefined;
+  var linkSvg = ' <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;opacity:0.35;margin-left:2px"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>';
   var addressHTML = '';
-  if (isSFProject && pdfPage) {
-    addressHTML = '<a href="https://smoitoza.github.io/procore-sf-survey/survey-120dpi.pdf#page=' + pdfPage + '" class="survey-tooltip-name survey-tooltip-link" target="_blank" title="View in Survey">' + esc(b.address) + ' <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;opacity:0.35;margin-left:2px"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>';
+  if (isSFProject && sfPdfPage) {
+    // SF project: link to the original SF survey PDF
+    addressHTML = '<a href="https://smoitoza.github.io/procore-sf-survey/survey-120dpi.pdf#page=' + sfPdfPage + '" class="survey-tooltip-name survey-tooltip-link" target="_blank" title="View in Survey">' + esc(b.address) + linkSvg + '</a>';
+  } else if (b.surveyPdfUrl) {
+    // Uploaded survey PDF: link to stored PDF at estimated page
+    var pdfLink = b.surveyPdfUrl;
+    if (b.estimatedPage) pdfLink += '#page=' + b.estimatedPage;
+    addressHTML = '<a href="' + pdfLink + '" class="survey-tooltip-name survey-tooltip-link" target="_blank" title="View in Survey PDF">' + esc(b.address) + linkSvg + '</a>';
   } else {
+    // Fallback: Google Maps
     var mapsUrl = 'https://www.google.com/maps/search/' + encodeURIComponent(b.address + (b.neighborhood ? ', ' + b.neighborhood : ''));
-    addressHTML = '<a href="' + mapsUrl + '" class="survey-tooltip-name survey-tooltip-link" target="_blank" title="View on Google Maps">' + esc(b.address) + ' <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;opacity:0.35;margin-left:2px"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>';
+    addressHTML = '<a href="' + mapsUrl + '" class="survey-tooltip-name survey-tooltip-link" target="_blank" title="View on Google Maps">' + esc(b.address) + linkSvg + '</a>';
   }
 
   // Safe field access for potentially empty data
@@ -11703,10 +11711,28 @@ async function surveySubmitUpload() {
   var submitBtn = document.getElementById('surveySubmitBtn');
   submitBtn.disabled = true;
   statusEl.style.display = 'block';
-  statusEl.innerHTML = '<div style="display:flex;align-items:center;gap:0.5rem;"><div style="width:1rem;height:1rem;border:2px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div> Extracting text from document...</div>';
+  var currentProjectId = getProjectId();
+  var spinnerHTML = '<div style="width:1rem;height:1rem;border:2px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div>';
 
   try {
-    // Step 1: Parse the document client-side to extract text
+    // Step 1: Upload the PDF to storage so we have a permanent link
+    statusEl.innerHTML = '<div style="display:flex;align-items:center;gap:0.5rem;">' + spinnerHTML + ' Uploading survey document...</div>';
+    var pdfUrl = '';
+    try {
+      var uploadForm = new FormData();
+      uploadForm.append('file', _surveyUploadFile);
+      uploadForm.append('projectId', currentProjectId);
+      var uploadRes = await fetch('/api/survey-upload', { method: 'POST', body: uploadForm });
+      if (uploadRes.ok) {
+        var uploadData = await uploadRes.json();
+        pdfUrl = uploadData.url || '';
+      }
+    } catch (uploadErr) {
+      console.warn('PDF upload skipped:', uploadErr);
+    }
+
+    // Step 2: Parse the document client-side to extract text
+    statusEl.innerHTML = '<div style="display:flex;align-items:center;gap:0.5rem;">' + spinnerHTML + ' Extracting text from document...</div>';
     var text = await rfpParseDocument(_surveyUploadFile);
 
     if (!text || text.trim().length < 50) {
@@ -11715,14 +11741,14 @@ async function surveySubmitUpload() {
       return;
     }
 
-    statusEl.innerHTML = '<div style="display:flex;align-items:center;gap:0.5rem;"><div style="width:1rem;height:1rem;border:2px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div> AI is parsing ' + text.length.toLocaleString() + ' characters of survey data... This may take a moment.</div>';
+    statusEl.innerHTML = '<div style="display:flex;align-items:center;gap:0.5rem;">' + spinnerHTML + ' AI is parsing ' + text.length.toLocaleString() + ' characters of survey data... This may take a moment.</div>';
 
-    // Step 2: Send to AI for structured extraction + geocoding
-    var currentProjectId = getProjectId();
+    // Step 3: Send to AI for structured extraction + geocoding
+    var marketText = document.getElementById('projectSubtitle') ? document.getElementById('projectSubtitle').textContent : '';
     var res = await fetch('/api/survey-parse', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: text, userEmail: getCurrentUserEmail(), projectId: currentProjectId, market: document.getElementById('projectSubtitle') ? document.getElementById('projectSubtitle').textContent : '' })
+      body: JSON.stringify({ text: text, userEmail: getCurrentUserEmail(), projectId: currentProjectId, market: marketText, pdfUrl: pdfUrl })
     });
 
     if (!res.ok) {
@@ -11838,6 +11864,8 @@ function surveyMergeBuildings(newBuildings) {
       rentalRate: nb.rentalRate || '',
       directSublease: nb.directSublease || '',
       floors: nb.floors || [],
+      surveyPdfUrl: nb.surveyPdfUrl || '',
+      estimatedPage: nb.estimatedPage || null,
       lat: nb.lat,
       lng: nb.lng
     };
