@@ -3,6 +3,9 @@ import { GoogleGenAI } from '@google/genai'
 import { NextResponse } from 'next/server'
 import { debitTokens } from '@/lib/tokens'
 
+// Allow up to 60s for photo analysis (default 10s can timeout on large images)
+export const maxDuration = 60
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!

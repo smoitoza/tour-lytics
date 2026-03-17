@@ -3,6 +3,9 @@ import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { debitTokens } from '@/lib/tokens'
 
+// Allow up to 60s for RFP AI analysis (default 10s can timeout on complex proposals)
+export const maxDuration = 60
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!

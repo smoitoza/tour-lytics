@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+// Allow up to 30s for large PDF uploads to Supabase storage
+export const maxDuration = 30
+
 // POST /api/survey-upload - Upload a survey PDF to Supabase storage
 // Returns the public URL of the stored file
 export async function POST(req: Request) {

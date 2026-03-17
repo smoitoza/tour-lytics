@@ -2,6 +2,9 @@ import { GoogleGenAI } from '@google/genai'
 import { NextResponse } from 'next/server'
 import { debitTokens } from '@/lib/tokens'
 
+// Allow up to 60s for AI parsing + geocoding (default is 10s which times out)
+export const maxDuration = 60
+
 // POST /api/survey-parse - Parse a broker survey document and extract building data
 export async function POST(req: Request) {
   try {

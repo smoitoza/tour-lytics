@@ -3,6 +3,9 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { debitTokens } from '@/lib/tokens'
 import buildingContext from '@/data/building_context.json'
+
+// Allow up to 60s for AI chat responses (default 10s can timeout on complex queries)
+export const maxDuration = 60
 // Static financial_context.json removed - financials now come from live RFP submissions in Supabase
 
 const supabase = createClient(
