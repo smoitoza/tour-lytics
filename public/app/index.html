@@ -11762,21 +11762,38 @@ async function surveySubmitUpload() {
   var spinnerHTML = '<div style="width:1rem;height:1rem;border:2px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div>';
 
   try {
-    // Step 1: Upload the PDF to storage so we have a permanent link
+    // Step 1: Upload PDF directly to Supabase Storage (no serverless middleman)
+    // This avoids file size limits and timeout issues with Vercel functions
     statusEl.innerHTML = '<div style="display:flex;align-items:center;gap:0.5rem;">' + spinnerHTML + ' Uploading survey document...</div>';
     var pdfUrl = '';
     try {
-      var uploadForm = new FormData();
-      uploadForm.append('file', _surveyUploadFile);
-      uploadForm.append('projectId', currentProjectId);
-      var uploadRes = await fetch('/api/survey-upload', { method: 'POST', body: uploadForm });
-      if (uploadRes.ok) {
-        var uploadData = await uploadRes.json();
-        pdfUrl = uploadData.url || '';
-        console.log('PDF uploaded:', pdfUrl);
+      // 1a: Get a signed upload URL from our lightweight API
+      var signRes = await fetch('/api/survey-upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: currentProjectId,
+          filename: _surveyUploadFile.name,
+          contentType: _surveyUploadFile.type || 'application/pdf'
+        })
+      });
+      if (signRes.ok) {
+        var signData = await signRes.json();
+        // 1b: Upload the file directly to Supabase Storage using the signed URL
+        var directRes = await fetch(signData.signedUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': _surveyUploadFile.type || 'application/pdf' },
+          body: _surveyUploadFile
+        });
+        if (directRes.ok) {
+          pdfUrl = signData.publicUrl || '';
+          console.log('PDF uploaded directly to storage:', pdfUrl);
+        } else {
+          console.warn('Direct upload failed:', directRes.status, await directRes.text().catch(function() { return ''; }));
+        }
       } else {
-        var errText = await uploadRes.text().catch(function() { return ''; });
-        console.warn('PDF upload failed:', uploadRes.status, errText);
+        var errText = await signRes.text().catch(function() { return ''; });
+        console.warn('Signed URL request failed:', signRes.status, errText);
       }
     } catch (uploadErr) {
       console.warn('PDF upload skipped:', uploadErr);

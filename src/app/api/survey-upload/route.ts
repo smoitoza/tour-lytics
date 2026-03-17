@@ -1,67 +1,62 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// Allow up to 60s for large PDF uploads to Supabase storage
-export const maxDuration = 60
+// Lightweight endpoint - just generates a signed upload URL
+// The actual file upload goes directly from the browser to Supabase Storage
+export const maxDuration = 10
 
-// POST /api/survey-upload - Upload a survey PDF to Supabase storage
-// Returns the public URL of the stored file
+function getAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !serviceKey) throw new Error('Missing Supabase service config')
+  return createClient(url, serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+}
+
+// POST /api/survey-upload - Generate a signed upload URL for direct browser upload
+// Body: { projectId, filename, contentType }
+// Returns: { signedUrl, publicUrl, storagePath }
 export async function POST(req: Request) {
   try {
-    const formData = await req.formData()
-    const file = formData.get('file') as File
-    const projectId = formData.get('projectId') as string
+    const { projectId, filename, contentType } = await req.json()
 
-    if (!file) {
-      return NextResponse.json({ error: 'No file provided.' }, { status: 400 })
-    }
-    if (!projectId) {
-      return NextResponse.json({ error: 'Project ID required.' }, { status: 400 })
+    if (!projectId || !filename) {
+      return NextResponse.json({ error: 'projectId and filename required' }, { status: 400 })
     }
 
-    // Use service role key to bypass storage RLS (anon key may not have insert permissions)
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      serviceKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-
-    // Generate storage path: surveys/{projectId}/{timestamp}-{filename}
+    const supabase = getAdminClient()
     const timestamp = Date.now()
-    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
-    const storagePath = `${projectId}/${timestamp}-${safeName}`
+    const safeName = filename.replace(/[^a-zA-Z0-9.-]/g, '_')
+    const storagePath = `surveys/${projectId}/${timestamp}-${safeName}`
 
-    // Read file into buffer
-    const arrayBuffer = await file.arrayBuffer()
-    const buffer = new Uint8Array(arrayBuffer)
-
-    // Upload to tour-photos bucket (surveys subfolder) since bucket already exists
-    // We use a 'surveys/' prefix in the path to separate from photos
-    const { error: uploadError } = await supabase.storage
+    // Create a signed upload URL (valid for 5 minutes)
+    const { data, error } = await supabase.storage
       .from('tour-photos')
-      .upload(`surveys/${storagePath}`, buffer, {
-        contentType: file.type || 'application/pdf',
-        upsert: true,
-      })
+      .createSignedUploadUrl(storagePath)
 
-    if (uploadError) {
-      console.error('Survey upload error:', uploadError)
-      return NextResponse.json({ error: 'Upload failed: ' + uploadError.message }, { status: 500 })
+    if (error) {
+      console.error('Signed URL error:', error)
+      // Fallback: try direct upload via service role if signed URLs aren't supported
+      return NextResponse.json({
+        error: 'Could not create signed upload URL: ' + error.message,
+        fallback: true,
+      }, { status: 500 })
     }
 
-    // Get public URL
+    // Build the public URL for this file
     const { data: urlData } = supabase.storage
       .from('tour-photos')
-      .getPublicUrl(`surveys/${storagePath}`)
+      .getPublicUrl(storagePath)
 
     return NextResponse.json({
-      success: true,
-      url: urlData.publicUrl,
-      path: `surveys/${storagePath}`,
-      filename: file.name,
+      signedUrl: data.signedUrl,
+      token: data.token,
+      publicUrl: urlData.publicUrl,
+      storagePath,
     })
   } catch (err) {
-    console.error('Survey upload error:', err)
+    console.error('Survey upload endpoint error:', err)
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 }
