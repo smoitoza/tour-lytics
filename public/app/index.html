@@ -6102,7 +6102,7 @@ body {
     <div class="commute-page-header">
       <div>
         <h2 class="commute-page-title">Commute Study</h2>
-        <p class="commute-page-subtitle">Upload employee locations to calculate average drive and transit times to each building on the tour list.</p>
+        <p class="commute-page-subtitle">Upload employee locations to calculate average drive and transit times to each building on the shortlist.</p>
       </div>
     </div>
 
@@ -8513,6 +8513,8 @@ function switchPageTab(tabId) {
   // Initialize commute tab drag-drop when switching to it
   if (tabId === 'commute') {
     initCommuteDropzone();
+    // Ensure shortlist is loaded (commute now keys off shortlist)
+    if (!_shortlistLoaded) loadShortlist();
     commuteLoadSaved();
     commuteApplyRoleAccess();
   }
@@ -13845,7 +13847,7 @@ function commuteApplyRoleAccess() {
     // Update subtitle
     var sub = document.querySelector('.commute-page-subtitle');
     if (sub && _commuteResults) {
-      sub.textContent = 'View employee commute times to each building on the tour list.';
+      sub.textContent = 'View employee commute times to each building on the shortlist.';
     }
   }
 }
@@ -14067,9 +14069,9 @@ function commuteProcessRows(rows, filename) {
   var actions = document.getElementById('commuteActions');
   actions.style.display = 'flex';
   
-  var buildingCount = (_centralTourList && _centralTourList.length) || 0;
+  var buildingCount = (_shortlistItems && _shortlistItems.length) || 0;
   document.getElementById('commuteRunNote').textContent =
-    _commuteEmployees.length + ' employees x ' + buildingCount + ' buildings on tour list';
+    _commuteEmployees.length + ' employees x ' + buildingCount + ' buildings on shortlist';
 }
 
 function commuteClearFile() {
@@ -14094,8 +14096,8 @@ function commuteClearFile() {
 
 async function commuteRunStudy() {
   if (!_commuteEmployees.length) return;
-  if (!_centralTourList || !_centralTourList.length) {
-    alert('No buildings on the tour list. Add buildings to the tour list first.');
+  if (!_shortlistItems || !_shortlistItems.length) {
+    alert('No buildings on the shortlist. Add buildings to the shortlist first.');
     return;
   }
 
@@ -14104,7 +14106,7 @@ async function commuteRunStudy() {
   document.getElementById('commuteLoading').style.display = 'block';
   document.getElementById('commuteResults').style.display = 'none';
 
-  var buildings = _centralTourList.map(function(b) {
+  var buildings = _shortlistItems.map(function(b) {
     return {
       name: b.building_name || b.name || b.building_address || b.address || 'Unknown',
       address: b.building_address || b.address || '',
@@ -14266,12 +14268,12 @@ function commuteSetHeatmapMode(mode) {
   renderCommuteResults();
 }
 
-// Check if the tour list has changed since the last commute run
+// Check if the shortlist has changed since the last commute run
 function commuteCheckStale() {
   if (!_commuteResults || !_commuteEmployees.length) return; // no results to go stale
-  if (!_centralTourList) return;
+  if (!_shortlistItems) return;
 
-  var currentNames = _centralTourList.map(function(b) {
+  var currentNames = _shortlistItems.map(function(b) {
     return b.building_name || b.name || 'Unknown';
   }).sort();
   var currentCount = currentNames.length;
@@ -14309,7 +14311,7 @@ function commuteCheckStale() {
     banner.innerHTML =
       '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">' +
         '<div>' +
-          '<strong style="display:block;margin-bottom:0.25rem;">Tour list updated since last run</strong>' +
+          '<strong style="display:block;margin-bottom:0.25rem;">Shortlist updated since last run</strong>' +
           '<span style="font-size:0.8125rem;">' + changeText + ' (was ' + _commuteLastBuildingCount + ', now ' + currentCount + ' buildings)</span>' +
         '</div>' +
         '<button onclick="commuteRunStudy()" style="padding:0.5rem 1.25rem;background:#2563eb;color:#fff;border:none;border-radius:0.5rem;font-weight:600;font-size:0.8125rem;cursor:pointer;white-space:nowrap;">Recalculate Commutes</button>' +
