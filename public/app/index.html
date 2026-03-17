@@ -869,7 +869,8 @@ body {
     height: 10px;
   }
 
-  .legend-dot.survey {
+  .legend-dot.survey,
+  .legend-dot.on-tour {
     width: 8px;
     height: 8px;
   }
@@ -961,7 +962,7 @@ body {
 }
 
 /* ============================================================
-   Survey Markers (gray dots for evaluated buildings)
+   Survey Markers (blue dots for evaluated buildings)
    ============================================================ */
 
 .survey-marker {
@@ -971,7 +972,7 @@ body {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: #9ca3af;
+  background: #3b82f6;
   color: white;
   font-size: 0.5625rem;
   font-weight: 700;
@@ -980,12 +981,14 @@ body {
   border: 2px solid white;
   transition: all var(--transition);
   cursor: pointer;
-  opacity: 0.7;
+}
+
+.survey-marker.on-tour {
+  background: #f47920;
 }
 
 .survey-marker:hover {
   transform: scale(1.3);
-  opacity: 1;
   box-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 
@@ -1167,8 +1170,13 @@ body {
 .legend-dot.survey {
   width: 11px;
   height: 11px;
-  background: #9ca3af;
-  opacity: 0.7;
+  background: #3b82f6;
+}
+
+.legend-dot.on-tour {
+  width: 11px;
+  height: 11px;
+  background: #f47920;
 }
 
 .legend-label {
@@ -7652,14 +7660,16 @@ function buildSurveyPopup(b) {
 const surveyMarkers = [];
 
 SURVEY_BUILDINGS.forEach((b) => {
+  var onTour = isOnTourList('survey', b.num);
   const icon = L.divIcon({
     className: 'survey-marker-wrapper',
-    html: `<div class="survey-marker">${b.num}</div>`,
+    html: '<div class="survey-marker' + (onTour ? ' on-tour' : '') + '">' + b.num + '</div>',
     iconSize: [22, 22],
     iconAnchor: [11, 11]
   });
 
   const marker = L.marker([b.lat, b.lng], { icon }).addTo(map);
+  marker._surveyNum = b.num; // Store for color toggling
 
   marker.bindPopup(buildSurveyPopup(b), {
     className: 'survey-popup-wrapper',
@@ -7700,13 +7710,15 @@ if (allMarkers.length > 0) {
       if (!b.lat || !b.lng) return;
       SURVEY_BUILDINGS.push(b);
 
+      var bOnTour = isOnTourList('survey', b.num);
       var icon = L.divIcon({
         className: 'survey-marker-wrapper',
-        html: '<div class="survey-marker">' + b.num + '</div>',
+        html: '<div class="survey-marker' + (bOnTour ? ' on-tour' : '') + '">' + b.num + '</div>',
         iconSize: [22, 22],
         iconAnchor: [11, 11]
       });
       var marker = L.marker([b.lat, b.lng], { icon: icon }).addTo(map);
+      marker._surveyNum = b.num;
       marker.bindPopup(buildSurveyPopup(b), {
         className: 'survey-popup-wrapper',
         maxWidth: 420, minWidth: 320,
@@ -7738,8 +7750,9 @@ if (allMarkers.length > 0) {
 
 const legend = L.control({ position: 'topright' });
 
-// Shortlist color palette for tour book buildings
-var _shortlistColors = ['#f47920', '#2563eb', '#059669', '#7c3aed', '#dc2626', '#0891b2', '#ca8a04', '#be185d', '#4f46e5', '#15803d'];
+// Standard colors for all projects
+var MARKER_COLOR_SURVEY = '#3b82f6';   // Blue - general survey building
+var MARKER_COLOR_TOUR = '#f47920';     // Orange - on tour list
 
 function buildLegendHTML() {
   var tourList = [];
@@ -7747,11 +7760,10 @@ function buildLegendHTML() {
     tourList = _centralTourList;
   }
   var totalBuildings = SURVEY_BUILDINGS.length;
-  var shortlistCount = tourList.length;
-  var evaluatedCount = totalBuildings - shortlistCount;
+  var onTourCount = tourList.length;
+  var surveyCount = totalBuildings - onTourCount;
 
-  if (totalBuildings === 0 && shortlistCount === 0) {
-    // New project with no data yet
+  if (totalBuildings === 0 && onTourCount === 0) {
     return '<div class="legend-title">Legend</div>' +
       '<div class="legend-body">' +
         '<div class="legend-section">' +
@@ -7763,27 +7775,17 @@ function buildLegendHTML() {
 
   var html = '<div class="legend-title">Legend</div><div class="legend-body">';
 
-  // Tour Book / Shortlisted section
-  if (shortlistCount > 0) {
+  // Tour List (orange)
+  if (onTourCount > 0) {
     html += '<div class="legend-section">';
-    html += '<div class="legend-section-label">Tour Book (' + shortlistCount + ')</div>';
-    tourList.forEach(function(item, idx) {
-      var color = item.building_color || _shortlistColors[idx % _shortlistColors.length];
-      var name = item.building_name || item.building || ('Building ' + item.building_id);
-      html += '<div class="legend-item">' +
-        '<div class="legend-dot" style="background:' + color + ';"></div>' +
-        '<span class="legend-label">' + name + '</span>' +
-      '</div>';
-    });
+    html += '<div class="legend-item"><div class="legend-dot on-tour"></div><span class="legend-label">Tour List (' + onTourCount + ')</span></div>';
     html += '</div>';
   }
 
-  // Evaluated section
-  if (evaluatedCount > 0) {
-    if (shortlistCount > 0) html += '<div class="legend-divider"></div>';
+  // Survey buildings (blue)
+  if (surveyCount > 0) {
     html += '<div class="legend-section">';
-    html += '<div class="legend-section-label">Evaluated (' + evaluatedCount + ')</div>';
-    html += '<div class="legend-item"><div class="legend-dot survey"></div><span class="legend-label">Surveyed & passed</span></div>';
+    html += '<div class="legend-item"><div class="legend-dot survey"></div><span class="legend-label">Survey (' + surveyCount + ')</span></div>';
     html += '</div>';
   }
 
@@ -7922,6 +7924,7 @@ function toggleTourItem(type, id) {
   saveTourList(list);
   refreshTourUI();
   refreshAllTooltipButtons();
+  refreshMarkerColors();
 }
 
 function refreshTourUI() {
@@ -8032,6 +8035,24 @@ function refreshAllTooltipButtons() {
     btn.classList.toggle('added', onList);
     const span = btn.querySelector('span');
     if (span) span.textContent = onList ? 'On Tour List ✓ (click to remove)' : 'Add to Tour List';
+  });
+}
+
+// Update survey marker colors: blue = survey, orange = on tour list
+function refreshMarkerColors() {
+  surveyMarkers.forEach(function(marker) {
+    if (typeof marker._surveyNum === 'undefined') return;
+    var onTour = isOnTourList('survey', marker._surveyNum);
+    var el = marker.getElement();
+    if (!el) return;
+    var dot = el.querySelector('.survey-marker');
+    if (dot) {
+      if (onTour) {
+        dot.classList.add('on-tour');
+      } else {
+        dot.classList.remove('on-tour');
+      }
+    }
   });
 }
 
@@ -12009,6 +12030,7 @@ function surveyMergeBuildings(newBuildings) {
     });
 
     var marker = L.marker([nb.lat, nb.lng], { icon: icon }).addTo(map);
+    marker._surveyNum = nextNum;
     marker.bindPopup(buildSurveyPopup(entry), {
       className: 'survey-popup-wrapper',
       maxWidth: 420,
