@@ -990,6 +990,10 @@ body {
   background: #f47920;
 }
 
+.survey-marker.on-shortlist {
+  background: #10b981;
+}
+
 .survey-marker:hover {
   transform: scale(1.3);
   box-shadow: 0 2px 10px rgba(0,0,0,0.3);
@@ -1180,6 +1184,12 @@ body {
   width: 11px;
   height: 11px;
   background: #f47920;
+}
+
+.legend-dot.on-shortlist {
+  width: 11px;
+  height: 11px;
+  background: #10b981;
 }
 
 .legend-label {
@@ -6301,7 +6311,7 @@ const _SF_BUILDINGS = [
     address: "250 Brannan St, San Francisco, CA 94107",
     lat: 37.7829,
     lng: -122.3911,
-    color: "#f47920",
+    color: "#3b82f6",
     status: "negotiating",
     statusLabel: "Client Counter",
     dealType: "Sublease",
@@ -6347,7 +6357,7 @@ const _SF_BUILDINGS = [
     address: "123 Townsend St, San Francisco, CA 94107",
     lat: 37.7801,
     lng: -122.3910,
-    color: "#2563eb",
+    color: "#3b82f6",
     status: "negotiating",
     statusLabel: "LL Counter",
     dealType: "Direct Lease",
@@ -6393,7 +6403,7 @@ const _SF_BUILDINGS = [
     address: "301 Brannan St, San Francisco, CA 94107",
     lat: 37.7830,
     lng: -122.3930,
-    color: "#059669",
+    color: "#3b82f6",
     status: "touring",
     statusLabel: "Tour Week of 3/16",
     dealType: "TBD",
@@ -6438,7 +6448,7 @@ const _SF_BUILDINGS = [
     address: "475 Brannan St, San Francisco, CA 94107",
     lat: 37.7789,
     lng: -122.3956,
-    color: "#7c3aed",
+    color: "#3b82f6",
     status: "touring",
     statusLabel: "Tour Week of 3/16",
     dealType: "TBD",
@@ -6693,15 +6703,18 @@ function buildPopup(b) {
 
 const markers = [];
 
+var _buildingMarkers = [];
 BUILDINGS.forEach((b) => {
   const icon = L.divIcon({
     className: "custom-marker-wrapper",
-    html: `<div class="custom-marker" style="background:${b.color}" data-id="${b.id}">${b.id}</div>`,
+    html: `<div class="custom-marker" style="background:${MARKER_COLOR_SURVEY}" data-id="${b.id}">${b.id}</div>`,
     iconSize: [36, 36],
     iconAnchor: [18, 18]
   });
 
   const marker = L.marker([b.lat, b.lng], { icon }).addTo(map);
+  marker._buildingId = b.id;
+  _buildingMarkers.push(marker);
 
   const popupHTML = buildPopup(b);
 
@@ -8030,18 +8043,30 @@ const legend = L.control({ position: 'topright' });
 
 // Standard colors for all projects
 var MARKER_COLOR_SURVEY = '#3b82f6';   // Blue - general survey building
-var MARKER_COLOR_TOUR = '#f47920';     // Orange - on tour list
+var MARKER_COLOR_TOUR = '#f47920';     // Orange - on tour book
+var MARKER_COLOR_SHORTLIST = '#10b981'; // Emerald - on shortlist
 
 function buildLegendHTML() {
   var tourList = [];
   if (_centralTourListLoaded && _centralTourList) {
     tourList = _centralTourList;
   }
+  var shortlistCount = (_shortlistItems || []).length;
   var totalBuildings = SURVEY_BUILDINGS.length;
-  var onTourCount = tourList.length;
-  var surveyCount = totalBuildings - onTourCount;
+  var onTourIds = new Set();
+  tourList.forEach(function(item) { onTourIds.add(item.building_type + '-' + item.building_id); });
+  var onShortlistIds = new Set();
+  (_shortlistItems || []).forEach(function(item) { onShortlistIds.add(item.building_type + '-' + item.building_id); });
+  var onTourCount = onTourIds.size;
+  // Survey count = total minus those on tour or shortlist
+  var classifiedCount = 0;
+  SURVEY_BUILDINGS.forEach(function(b) {
+    var key = 'survey-' + b.num;
+    if (onTourIds.has(key) || onShortlistIds.has(key)) classifiedCount++;
+  });
+  var surveyCount = totalBuildings - classifiedCount;
 
-  if (totalBuildings === 0 && onTourCount === 0) {
+  if (totalBuildings === 0 && onTourCount === 0 && shortlistCount === 0) {
     return '<div class="legend-title">Legend</div>' +
       '<div class="legend-body">' +
         '<div class="legend-section">' +
@@ -8053,10 +8078,17 @@ function buildLegendHTML() {
 
   var html = '<div class="legend-title">Legend</div><div class="legend-body">';
 
-  // Tour List (orange)
+  // Shortlist (emerald)
+  if (shortlistCount > 0) {
+    html += '<div class="legend-section">';
+    html += '<div class="legend-item"><div class="legend-dot on-shortlist"></div><span class="legend-label">Shortlist (' + shortlistCount + ')</span></div>';
+    html += '</div>';
+  }
+
+  // Tour Book (orange)
   if (onTourCount > 0) {
     html += '<div class="legend-section">';
-    html += '<div class="legend-item"><div class="legend-dot on-tour"></div><span class="legend-label">Tour List (' + onTourCount + ')</span></div>';
+    html += '<div class="legend-item"><div class="legend-dot on-tour"></div><span class="legend-label">Tour Book (' + onTourCount + ')</span></div>';
     html += '</div>';
   }
 
@@ -8318,22 +8350,45 @@ function refreshAllTooltipButtons() {
   if (typeof refreshAllShortlistButtons === 'function') refreshAllShortlistButtons();
 }
 
-// Update survey marker colors: blue = survey, orange = on tour list
+// Update survey marker colors: blue = survey, orange = tour book, emerald = shortlist
 function refreshMarkerColors() {
   surveyMarkers.forEach(function(marker) {
     if (typeof marker._surveyNum === 'undefined') return;
     var onTour = isOnTourList('survey', marker._surveyNum);
+    var onShortlist = isOnShortlist('survey', marker._surveyNum);
     var el = marker.getElement();
     if (!el) return;
     var dot = el.querySelector('.survey-marker');
     if (dot) {
-      if (onTour) {
+      // Shortlist takes priority over tour book
+      dot.classList.remove('on-tour', 'on-shortlist');
+      if (onShortlist) {
+        dot.classList.add('on-shortlist');
+      } else if (onTour) {
         dot.classList.add('on-tour');
-      } else {
-        dot.classList.remove('on-tour');
       }
     }
   });
+  // Also update BUILDINGS markers (shortlist buildings from _SF_BUILDINGS etc.)
+  if (typeof _buildingMarkers !== 'undefined') {
+    _buildingMarkers.forEach(function(m) {
+      if (!m._buildingId) return;
+      var onTour = isOnTourList('shortlist', m._buildingId);
+      var onShortlist = isOnShortlist('shortlist', m._buildingId);
+      var el = m.getElement();
+      if (!el) return;
+      var dot = el.querySelector('.custom-marker');
+      if (dot) {
+        if (onShortlist) {
+          dot.style.background = MARKER_COLOR_SHORTLIST;
+        } else if (onTour) {
+          dot.style.background = MARKER_COLOR_TOUR;
+        } else {
+          dot.style.background = MARKER_COLOR_SURVEY;
+        }
+      }
+    });
+  }
 }
 
 function flyToTourItem(type, id) {
@@ -15086,6 +15141,8 @@ async function addToShortlist(type, id) {
   });
   refreshAllShortlistButtons();
   if (_shortlistLoaded) renderShortlist();
+  refreshMarkerColors();
+  refreshLegend();
 
   // Sync to server
   try {
@@ -15118,6 +15175,8 @@ async function removeFromShortlist(type, id) {
   });
   refreshAllShortlistButtons();
   if (_shortlistLoaded) renderShortlist();
+  refreshMarkerColors();
+  refreshLegend();
 
   // Sync to server
   try {
@@ -15153,8 +15212,12 @@ function refreshAllShortlistButtons() {
     if (res.ok) {
       _shortlistItems = await res.json();
       _shortlistLoaded = true;
-      // Update any visible shortlist buttons
-      setTimeout(refreshAllShortlistButtons, 500);
+      // Update any visible shortlist buttons and marker colors
+      setTimeout(function() {
+        refreshAllShortlistButtons();
+        refreshMarkerColors();
+        refreshLegend();
+      }, 500);
     }
   } catch(e) { console.error('Shortlist init error:', e); }
 })();
