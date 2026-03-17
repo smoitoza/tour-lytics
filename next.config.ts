@@ -14,7 +14,7 @@ const cspDirectives = [
   "default-src 'self'",
 
   // Scripts: self + CDNs used by the static app portal
-  `script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net cdnjs.cloudflare.com unpkg.com cdn.sheetjs.com`,
+  `script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net cdnjs.cloudflare.com unpkg.com`,
 
   // Styles: self + Google Fonts + Fontshare + Leaflet CSS (unpkg) + inline
   `style-src 'self' 'unsafe-inline' fonts.googleapis.com api.fontshare.com unpkg.com`,

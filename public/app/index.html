@@ -6052,7 +6052,7 @@ body {
 <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/heic-to@1.2.2/dist/iife/heic-to.js"></script>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script>
 // Storage abstraction for sandboxed environments
 var _storeMem = {};
@@ -10651,7 +10651,7 @@ function rfpBuildGAAPTable(analysis) {
   return html;
 }
 
-// ===== EXCEL EXPORT =====
+// ===== EXCEL EXPORT (STYLED) =====
 function rfpExportExcel() {
   var selected = rfpGetCurrentSubmission();
   if (!selected || !selected.analysis) {
@@ -10665,38 +10665,104 @@ function rfpExportExcel() {
   var terms = selected.deal_terms || selected.terms || {};
   var wb = XLSX.utils.book_new();
 
-  // Helper: format currency number for Excel (raw number, let Excel format it)
+  // ===== STYLE CONSTANTS =====
+  var BRAND = '1B4D6E';  // dark navy
+  var BRAND_LT = 'E8F0F6'; // light blue tint
+  var ACCENT = 'F47920';   // TourLytics orange
+  var GREEN = '16A34A';
+  var GREEN_LT = 'F0FDF4';
+  var GRAY_LT = 'F8F9FA';
+  var BORDER_CLR = 'D1D5DB';
+  var WHITE = 'FFFFFF';
+  var BLACK = '1F2937';
+
+  var titleStyle = { font: { name: 'Calibri', sz: 14, bold: true, color: { rgb: WHITE } }, fill: { fgColor: { rgb: BRAND } }, alignment: { horizontal: 'left', vertical: 'center' } };
+  var sectionStyle = { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: BRAND } }, fill: { fgColor: { rgb: BRAND_LT } }, border: { bottom: { style: 'thin', color: { rgb: BORDER_CLR } } } };
+  var headerStyle = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: WHITE } }, fill: { fgColor: { rgb: BRAND } }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true }, border: { bottom: { style: 'thin', color: { rgb: '000000' } } } };
+  var headerLeftStyle = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: WHITE } }, fill: { fgColor: { rgb: BRAND } }, alignment: { horizontal: 'left', vertical: 'center', wrapText: true }, border: { bottom: { style: 'thin', color: { rgb: '000000' } } } };
+  var labelStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: '6B7280' } }, alignment: { horizontal: 'left' } };
+  var valStyle = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: BLACK } }, alignment: { horizontal: 'right' } };
+  var currStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: BLACK } }, numFmt: '"$"#,##0', alignment: { horizontal: 'right' } };
+  var currBoldStyle = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: BLACK } }, numFmt: '"$"#,##0', alignment: { horizontal: 'right' } };
+  var currDecStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: BLACK } }, numFmt: '"$"#,##0.00', alignment: { horizontal: 'right' } };
+  var pctStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: BLACK } }, numFmt: '0.0%', alignment: { horizontal: 'right' } };
+  var numStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: BLACK } }, numFmt: '#,##0', alignment: { horizontal: 'right' } };
+  var centerStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: BLACK } }, alignment: { horizontal: 'center' } };
+  var totalRowStyle = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: WHITE } }, fill: { fgColor: { rgb: BRAND } }, numFmt: '"$"#,##0', alignment: { horizontal: 'right' }, border: { top: { style: 'double', color: { rgb: '000000' } } } };
+  var totalLabelStyle = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: WHITE } }, fill: { fgColor: { rgb: BRAND } }, alignment: { horizontal: 'left' }, border: { top: { style: 'double', color: { rgb: '000000' } } } };
+  var freeRentRowFill = { fgColor: { rgb: GREEN_LT } };
+  var altRowFill = { fgColor: { rgb: GRAY_LT } };
+  var greenCurrStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: GREEN } }, numFmt: '"$"#,##0', alignment: { horizontal: 'right' } };
+  var metricLabelStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: '6B7280' } }, alignment: { horizontal: 'left' }, border: { bottom: { style: 'hair', color: { rgb: BORDER_CLR } } } };
+  var metricValStyle = { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: BRAND } }, numFmt: '"$"#,##0', alignment: { horizontal: 'right' }, border: { bottom: { style: 'hair', color: { rgb: BORDER_CLR } } } };
+  var metricValDecStyle = { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: BRAND } }, numFmt: '"$"#,##0.00', alignment: { horizontal: 'right' }, border: { bottom: { style: 'hair', color: { rgb: BORDER_CLR } } } };
+
   function n(v) { return (typeof v === 'number' && !isNaN(v)) ? v : (parseFloat(v) || 0); }
+  function cellRef(r, c) { return XLSX.utils.encode_cell({ r: r, c: c }); }
+  function applyStyleToRow(ws, row, cols, style) {
+    for (var c = 0; c < cols; c++) {
+      var ref = cellRef(row, c);
+      if (!ws[ref]) ws[ref] = { v: '', t: 's' };
+      ws[ref].s = style;
+    }
+  }
+  function applyStyleToCell(ws, row, col, style) {
+    var ref = cellRef(row, col);
+    if (!ws[ref]) ws[ref] = { v: '', t: 's' };
+    ws[ref].s = Object.assign({}, ws[ref].s || {}, style);
+  }
+  function setCell(ws, row, col, val, style) {
+    var ref = cellRef(row, col);
+    var t = typeof val === 'number' ? 'n' : 's';
+    ws[ref] = { v: val, t: t, s: style };
+  }
+  function setFormula(ws, row, col, formula, style) {
+    var ref = cellRef(row, col);
+    ws[ref] = { f: formula, t: 'n', s: style };
+  }
 
   // ===== TAB 1: Deal Terms =====
-  var dtRows = [
-    ['Deal Terms - ' + address],
-    [''],
-    ['Term', 'Value'],
-    ['Building Address', address],
-    ['Document Type', docType],
-    ['Landlord', terms.landlord || ''],
-    ['Structure', terms.structure || ''],
-    ['RSF', n(terms.rsf)],
-    ['Lease Term (months)', n(terms.lease_term_months)],
-    ['Commencement Date', terms.commencement_date || ''],
-    ['Base Rent ($/RSF/yr)', n(terms.base_rent_rsf)],
-    ['Annual Escalation (%)', n(terms.annual_escalation_pct)],
-    ['Free Rent (months)', n(terms.free_rent_months)],
-    ['TI Allowance ($/RSF)', n(terms.ti_allowance_rsf)],
-    ['TI Allowance (Total)', n(terms.ti_allowance_total)],
-    ['OpEx (Monthly)', n(terms.opex_monthly)],
-    ['Parking Spots', n(terms.parking_spots)],
-    ['Parking Rate ($/mo)', n(terms.parking_rate_monthly)],
-    ['Parking Escalation (%)', n(terms.parking_escalation_pct)],
-    ['Security Deposit', n(terms.security_deposit)],
-    ['Rent Basis', terms.rent_basis || ''],
-    ['Notes', terms.notes || ''],
+  var dtWS = XLSX.utils.aoa_to_sheet([[''], [''], [''], ['']]);
+  dtWS['!cols'] = [{ wch: 30 }, { wch: 40 }];
+  dtWS['!rows'] = [{ hpt: 32 }];
+  dtWS['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }];
+  setCell(dtWS, 0, 0, 'Deal Terms - ' + address, titleStyle);
+  setCell(dtWS, 0, 1, '', titleStyle);
+  // Section header
+  setCell(dtWS, 2, 0, 'Term', headerLeftStyle);
+  setCell(dtWS, 2, 1, 'Value', headerStyle);
+
+  var dtFields = [
+    ['Building Address', address, 'text'],
+    ['Document Type', docType, 'text'],
+    ['Landlord', terms.landlord || '', 'text'],
+    ['Structure', terms.structure || '', 'text'],
+    ['RSF', n(terms.rsf), 'num'],
+    ['Lease Term (months)', n(terms.lease_term_months), 'num'],
+    ['Commencement Date', terms.commencement_date || '', 'text'],
+    ['Base Rent ($/RSF/yr)', n(terms.base_rent_rsf), 'curr_dec'],
+    ['Annual Escalation', n(terms.annual_escalation_pct) / 100, 'pct'],
+    ['Free Rent (months)', n(terms.free_rent_months), 'num'],
+    ['TI Allowance ($/RSF)', n(terms.ti_allowance_rsf), 'curr_dec'],
+    ['TI Allowance (Total)', n(terms.ti_allowance_total), 'curr'],
+    ['OpEx (Monthly)', n(terms.opex_monthly), 'curr'],
+    ['Parking Spots', n(terms.parking_spots), 'num'],
+    ['Parking Rate ($/mo)', n(terms.parking_rate_monthly), 'curr'],
+    ['Parking Escalation', n(terms.parking_escalation_pct) / 100, 'pct'],
+    ['Security Deposit', n(terms.security_deposit), 'curr'],
+    ['Rent Basis', terms.rent_basis || '', 'text'],
+    ['Notes', terms.notes || '', 'text'],
   ];
-  var dtWS = XLSX.utils.aoa_to_sheet(dtRows);
-  // Widen columns
-  dtWS['!cols'] = [{ wch: 28 }, { wch: 22 }];
-  // Bold the title row
+  dtFields.forEach(function(f, i) {
+    var row = 3 + i;
+    var vStyle = f[2] === 'curr' ? currBoldStyle : (f[2] === 'curr_dec' ? currDecStyle : (f[2] === 'pct' ? pctStyle : (f[2] === 'num' ? numStyle : valStyle)));
+    var lbl = Object.assign({}, labelStyle);
+    if (i % 2 === 0) { lbl = Object.assign({}, lbl, { fill: altRowFill }); vStyle = Object.assign({}, vStyle, { fill: altRowFill }); }
+    setCell(dtWS, row, 0, f[0], lbl);
+    setCell(dtWS, row, 1, f[1], vStyle);
+  });
+  var dtRange = { s: { r: 0, c: 0 }, e: { r: 2 + dtFields.length, c: 1 } };
+  dtWS['!ref'] = XLSX.utils.encode_range(dtRange);
   XLSX.utils.book_append_sheet(wb, dtWS, 'Deal Terms');
 
   // ===== TAB 2: Assumptions =====
@@ -10710,106 +10776,184 @@ function rfpExportExcel() {
   customItems.forEach(function(item) { customTotal += parseFloat(item.monthly) || 0; });
   var totalMonthlyOpex = fb + wpe + maint + customTotal;
 
-  var assumRows = [
-    ['Assumptions - ' + address],
-    [''],
-    ['Internal OpEx (Monthly)'],
-    ['Category', '$/Month'],
+  var aWS = XLSX.utils.aoa_to_sheet([['']]);
+  aWS['!cols'] = [{ wch: 34 }, { wch: 20 }, { wch: 20 }];
+  aWS['!rows'] = [{ hpt: 32 }];
+  aWS['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }];
+  setCell(aWS, 0, 0, 'Assumptions - ' + address, titleStyle);
+  setCell(aWS, 0, 1, '', titleStyle);
+  setCell(aWS, 0, 2, '', titleStyle);
+  // Section: Internal OpEx
+  setCell(aWS, 2, 0, 'Internal OpEx (Monthly)', sectionStyle);
+  setCell(aWS, 2, 1, '', sectionStyle);
+  setCell(aWS, 2, 2, '', sectionStyle);
+  setCell(aWS, 3, 0, 'Category', headerLeftStyle);
+  setCell(aWS, 3, 1, '$/Month', headerStyle);
+  setCell(aWS, 3, 2, '$/Year', headerStyle);
+
+  var aRow = 4;
+  var opexItems = [
     ['Food & Beverage', fb],
     ['Workplace Experience', wpe],
     ['Maintenance & Security', maint],
   ];
   customItems.forEach(function(item) {
-    assumRows.push([item.label || 'Custom', parseFloat(item.monthly) || 0]);
+    opexItems.push([item.label || 'Custom', parseFloat(item.monthly) || 0]);
   });
-  assumRows.push(['Total Monthly OpEx', totalMonthlyOpex]);
-  assumRows.push(['Total Annual OpEx', totalMonthlyOpex * 12]);
-  assumRows.push(['']);
-  assumRows.push(['Headcount & Density']);
-  assumRows.push(['Headcount', parseInt(a.headcount) || 0]);
-  assumRows.push(['Target Density (RSF/person)', parseInt(a.target_density_rsf) || 0]);
-  assumRows.push(['']);
-  assumRows.push(['GAAP Assumptions']);
-  assumRows.push(['Discount Rate / IBR (%)', parseFloat(a.discount_rate) || 6.0]);
+  var firstOpexRow = aRow; // for SUM formula
+  opexItems.forEach(function(item, i) {
+    var rowFill = (i % 2 === 0) ? { fill: altRowFill } : {};
+    setCell(aWS, aRow, 0, item[0], Object.assign({}, labelStyle, rowFill));
+    setCell(aWS, aRow, 1, item[1], Object.assign({}, currStyle, rowFill));
+    // Annual = Monthly * 12 (formula)
+    var bRef = 'B' + (aRow + 1);
+    setFormula(aWS, aRow, 2, bRef + '*12', Object.assign({}, currStyle, rowFill));
+    aRow++;
+  });
+  var lastOpexRow = aRow - 1;
+  // Totals with SUM formulas
+  var sumMonthly = 'SUM(' + XLSX.utils.encode_cell({r:firstOpexRow,c:1}) + ':' + XLSX.utils.encode_cell({r:lastOpexRow,c:1}) + ')';
+  var sumAnnual = 'SUM(' + XLSX.utils.encode_cell({r:firstOpexRow,c:2}) + ':' + XLSX.utils.encode_cell({r:lastOpexRow,c:2}) + ')';
+  setCell(aWS, aRow, 0, 'Total OpEx', totalLabelStyle);
+  setFormula(aWS, aRow, 1, sumMonthly, totalRowStyle);
+  setFormula(aWS, aRow, 2, sumAnnual, totalRowStyle);
+  aRow += 2;
 
-  var assumWS = XLSX.utils.aoa_to_sheet(assumRows);
-  assumWS['!cols'] = [{ wch: 32 }, { wch: 18 }];
-  XLSX.utils.book_append_sheet(wb, assumWS, 'Assumptions');
+  // Section: Headcount & Density
+  setCell(aWS, aRow, 0, 'Headcount & Density', sectionStyle);
+  setCell(aWS, aRow, 1, '', sectionStyle);
+  setCell(aWS, aRow, 2, '', sectionStyle);
+  aRow++;
+  setCell(aWS, aRow, 0, 'Headcount', labelStyle);
+  setCell(aWS, aRow, 1, parseInt(a.headcount) || 0, numStyle);
+  aRow++;
+  setCell(aWS, aRow, 0, 'Target Density (RSF/person)', Object.assign({}, labelStyle, { fill: altRowFill }));
+  setCell(aWS, aRow, 1, parseInt(a.target_density_rsf) || 0, Object.assign({}, numStyle, { fill: altRowFill }));
+  aRow += 2;
+
+  // Section: GAAP
+  setCell(aWS, aRow, 0, 'GAAP Assumptions', sectionStyle);
+  setCell(aWS, aRow, 1, '', sectionStyle);
+  setCell(aWS, aRow, 2, '', sectionStyle);
+  aRow++;
+  setCell(aWS, aRow, 0, 'Discount Rate / IBR', labelStyle);
+  setCell(aWS, aRow, 1, (parseFloat(a.discount_rate) || 6.0) / 100, pctStyle);
+
+  aWS['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: aRow, c: 2 } });
+  XLSX.utils.book_append_sheet(wb, aWS, 'Assumptions');
 
   // ===== TAB 3: Straight-Line P&L =====
   if (analysis.straight_line_pl && analysis.straight_line_pl.annual) {
+    var slData = analysis.straight_line_pl.annual;
     var slTotals = analysis.straight_line_pl.totals || {};
-    var slRows = [
-      ['Straight-Line P&L - ' + address],
-      [''],
-      ['Year', 'Months', 'Base Rent', 'Free Rent', 'Net Rent', 'OpEx', 'Parking', 'Total Cost'],
-    ];
-    analysis.straight_line_pl.annual.forEach(function(row) {
-      slRows.push([
-        'Year ' + row.year,
-        row.months,
-        n(row.baseRent),
-        n(row.freeRent),
-        n(row.netRent),
-        n(row.opex),
-        n(row.parking),
-        n(row.totalCost),
-      ]);
+    var slCols = 8;
+    var slWS = XLSX.utils.aoa_to_sheet([['']]);
+    slWS['!cols'] = [{ wch: 12 }, { wch: 10 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 18 }];
+    slWS['!rows'] = [{ hpt: 32 }];
+    slWS['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: slCols - 1 } }];
+    setCell(slWS, 0, 0, 'Straight-Line P&L - ' + address, titleStyle);
+    for (var tc = 1; tc < slCols; tc++) setCell(slWS, 0, tc, '', titleStyle);
+
+    var slHeaders = ['Year', 'Months', 'Base Rent', 'Free Rent', 'Net Rent', 'OpEx', 'Parking', 'Total Cost'];
+    slHeaders.forEach(function(h, i) { setCell(slWS, 2, i, h, i === 0 ? headerLeftStyle : headerStyle); });
+
+    var slStartRow = 3;
+    slData.forEach(function(row, i) {
+      var r = slStartRow + i;
+      var rowFill = (i % 2 === 0) ? { fill: altRowFill } : {};
+      var hasFreeRent = row.freeRent && row.freeRent > 0;
+      if (hasFreeRent) rowFill = { fill: freeRentRowFill };
+      setCell(slWS, r, 0, 'Year ' + row.year, Object.assign({}, labelStyle, rowFill));
+      setCell(slWS, r, 1, row.months, Object.assign({}, centerStyle, rowFill));
+      setCell(slWS, r, 2, n(row.baseRent), Object.assign({}, currStyle, rowFill));
+      setCell(slWS, r, 3, n(row.freeRent), Object.assign({}, (hasFreeRent ? greenCurrStyle : currStyle), rowFill));
+      setCell(slWS, r, 4, n(row.netRent), Object.assign({}, currStyle, rowFill));
+      setCell(slWS, r, 5, n(row.opex), Object.assign({}, currStyle, rowFill));
+      setCell(slWS, r, 6, n(row.parking), Object.assign({}, currStyle, rowFill));
+      setCell(slWS, r, 7, n(row.totalCost), Object.assign({}, currBoldStyle, rowFill));
     });
-    // Summary section
-    slRows.push(['']);
-    slRows.push(['Summary Metrics']);
-    slRows.push(['Straight-Line Monthly Rent (net of TI)', n(slTotals.straightLineMonthlyRent)]);
-    slRows.push(['Straight-Line Annual Rent (net of TI)', n(slTotals.straightLineAnnualRent)]);
-    slRows.push(['Effective Rent/RSF', n(slTotals.effectiveRentRSF)]);
-    slRows.push(['Total Cost/RSF/Year', n(slTotals.totalCostPerRSFPerYear)]);
-    if (slTotals.tiAllowanceTotal) {
-      slRows.push(['TI Allowance Total', n(slTotals.tiAllowanceTotal)]);
-      slRows.push(['Monthly TI Amortization', n(slTotals.monthlyTIAmortization)]);
+
+    // Totals row with SUM formulas
+    var slTotalRow = slStartRow + slData.length;
+    setCell(slWS, slTotalRow, 0, 'TOTALS', totalLabelStyle);
+    setCell(slWS, slTotalRow, 1, '', Object.assign({}, totalLabelStyle, { alignment: { horizontal: 'center' } }));
+    for (var sc = 2; sc < slCols; sc++) {
+      var colLetter = XLSX.utils.encode_cell({ r: 0, c: sc }).replace(/\d+/, '');
+      setFormula(slWS, slTotalRow, sc, 'SUM(' + colLetter + (slStartRow + 1) + ':' + colLetter + slTotalRow + ')', totalRowStyle);
     }
 
-    var slWS = XLSX.utils.aoa_to_sheet(slRows);
-    slWS['!cols'] = [{ wch: 42 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 16 }];
+    // Summary metrics below
+    var smRow = slTotalRow + 2;
+    setCell(slWS, smRow, 0, 'Summary Metrics', sectionStyle);
+    for (var smc = 1; smc < slCols; smc++) setCell(slWS, smRow, smc, '', sectionStyle);
+    smRow++;
+    var slMetrics = [
+      ['Straight-Line Monthly Rent (net of TI)', n(slTotals.straightLineMonthlyRent), 'curr'],
+      ['Straight-Line Annual Rent (net of TI)', n(slTotals.straightLineAnnualRent), 'curr'],
+      ['Effective Rent/RSF', n(slTotals.effectiveRentRSF), 'curr_dec'],
+      ['Total Cost/RSF/Year', n(slTotals.totalCostPerRSFPerYear), 'curr_dec'],
+    ];
+    if (slTotals.tiAllowanceTotal) {
+      slMetrics.push(['TI Allowance Total', n(slTotals.tiAllowanceTotal), 'curr']);
+      slMetrics.push(['Monthly TI Amortization', n(slTotals.monthlyTIAmortization), 'curr']);
+    }
+    slMetrics.forEach(function(m) {
+      setCell(slWS, smRow, 0, m[0], metricLabelStyle);
+      setCell(slWS, smRow, 1, m[1], m[2] === 'curr_dec' ? metricValDecStyle : metricValStyle);
+      smRow++;
+    });
+
+    slWS['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: smRow - 1, c: slCols - 1 } });
     XLSX.utils.book_append_sheet(wb, slWS, 'Straight-Line P&L');
   }
 
   // ===== TAB 4: Cash Flow =====
   if (analysis.cash_flow && analysis.cash_flow.monthly) {
-    var cfTotals = analysis.cash_flow.totals || {};
-    var cfRows = [
-      ['Cash Flow - ' + address],
-      [''],
-      ['Month', 'Period', 'Lease Year', 'Rent/RSF', 'Monthly Base Rent', 'Free Rent Credit', 'Net Cash Rent', 'OpEx', 'Parking', 'Total Monthly', 'Cumulative Cash'],
-    ];
-    analysis.cash_flow.monthly.forEach(function(row) {
-      cfRows.push([
-        row.month,
-        row.period,
-        row.leaseYear,
-        n(row.rentRSF),
-        n(row.monthlyBaseRent),
-        n(row.freeRentCredit),
-        n(row.netCashRent),
-        n(row.opex),
-        n(row.parking),
-        n(row.totalMonthlyCost),
-        n(row.cumulativeCash),
-      ]);
-    });
-    // Totals row
-    cfRows.push([
-      'TOTALS', '', '', '',
-      n(cfTotals.totalBaseRent),
-      n(cfTotals.totalFreeRentValue),
-      n(cfTotals.totalNetRent),
-      n(cfTotals.totalOpex),
-      n(cfTotals.totalParking),
-      n(cfTotals.totalAllInCost),
-      '',
-    ]);
+    var cfData = analysis.cash_flow.monthly;
+    var cfCols = 11;
+    var cfWS = XLSX.utils.aoa_to_sheet([['']]);
+    cfWS['!cols'] = [{ wch: 8 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 18 }];
+    cfWS['!rows'] = [{ hpt: 32 }];
+    cfWS['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: cfCols - 1 } }];
+    setCell(cfWS, 0, 0, 'Cash Flow - ' + address, titleStyle);
+    for (var cft = 1; cft < cfCols; cft++) setCell(cfWS, 0, cft, '', titleStyle);
 
-    var cfWS = XLSX.utils.aoa_to_sheet(cfRows);
-    cfWS['!cols'] = [{ wch: 10 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 18 }];
+    var cfHeaders = ['Mo', 'Period', 'Year', 'Rent/RSF', 'Base Rent', 'Free Rent', 'Net Cash Rent', 'OpEx', 'Parking', 'Total Monthly', 'Cumulative'];
+    cfHeaders.forEach(function(h, i) { setCell(cfWS, 2, i, h, (i < 3) ? headerLeftStyle : headerStyle); });
+
+    var cfStartRow = 3;
+    cfData.forEach(function(row, i) {
+      var r = cfStartRow + i;
+      var isFreeRent = row.freeRentCredit && row.freeRentCredit > 0;
+      var rowFill = isFreeRent ? { fill: freeRentRowFill } : ((i % 2 === 0) ? { fill: altRowFill } : {});
+      setCell(cfWS, r, 0, row.month, Object.assign({}, centerStyle, rowFill));
+      setCell(cfWS, r, 1, row.period, Object.assign({}, labelStyle, rowFill));
+      setCell(cfWS, r, 2, row.leaseYear, Object.assign({}, centerStyle, rowFill));
+      setCell(cfWS, r, 3, n(row.rentRSF), Object.assign({}, currDecStyle, rowFill));
+      setCell(cfWS, r, 4, n(row.monthlyBaseRent), Object.assign({}, currStyle, rowFill));
+      setCell(cfWS, r, 5, n(row.freeRentCredit), Object.assign({}, (isFreeRent ? greenCurrStyle : currStyle), rowFill));
+      setCell(cfWS, r, 6, n(row.netCashRent), Object.assign({}, currStyle, rowFill));
+      setCell(cfWS, r, 7, n(row.opex), Object.assign({}, currStyle, rowFill));
+      setCell(cfWS, r, 8, n(row.parking), Object.assign({}, currStyle, rowFill));
+      setCell(cfWS, r, 9, n(row.totalMonthlyCost), Object.assign({}, currBoldStyle, rowFill));
+      setCell(cfWS, r, 10, n(row.cumulativeCash), Object.assign({}, currStyle, rowFill));
+    });
+
+    // Totals row with SUM formulas
+    var cfTotalRow = cfStartRow + cfData.length;
+    setCell(cfWS, cfTotalRow, 0, 'TOTALS', totalLabelStyle);
+    setCell(cfWS, cfTotalRow, 1, '', totalLabelStyle);
+    setCell(cfWS, cfTotalRow, 2, '', totalLabelStyle);
+    setCell(cfWS, cfTotalRow, 3, '', totalLabelStyle);
+    for (var cc = 4; cc <= 9; cc++) {
+      var cLetter = XLSX.utils.encode_cell({ r: 0, c: cc }).replace(/\d+/, '');
+      setFormula(cfWS, cfTotalRow, cc, 'SUM(' + cLetter + (cfStartRow + 1) + ':' + cLetter + cfTotalRow + ')', totalRowStyle);
+    }
+    setCell(cfWS, cfTotalRow, 10, '', totalLabelStyle);
+
+    cfWS['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: cfTotalRow, c: cfCols - 1 } });
+    // Freeze header rows
+    cfWS['!freeze'] = { xSplit: 0, ySplit: 3 };
     XLSX.utils.book_append_sheet(wb, cfWS, 'Cash Flow');
   }
 
@@ -10817,39 +10961,59 @@ function rfpExportExcel() {
   if (analysis.gaap) {
     var gaapSummary = analysis.gaap.summary || {};
     var gaapSchedule = analysis.gaap.schedule || [];
-    var gaapRows = [
-      ['GAAP / ASC 842 Analysis - ' + address],
-      [''],
-      ['Summary'],
-      ['Discount Rate', n(gaapSummary.discountRate)],
-      ['Lease Liability (Day 1)', n(gaapSummary.leaseLiability)],
-      ['ROU Asset (Day 1)', n(gaapSummary.rouAsset)],
-      ['Total Lease Payments', n(gaapSummary.totalLeasePayments)],
-      ['TI Allowance', n(gaapSummary.tiAllowance)],
-      [''],
-      ['Month', 'Period', 'Cash Payment', 'Interest Expense', 'Principal Reduction', 'Lease Liability', 'ROU Amortization', 'ROU Asset', 'SL Expense', 'Total GAAP Expense'],
+    var gCols = 10;
+    var gWS = XLSX.utils.aoa_to_sheet([['']]);
+    gWS['!cols'] = [{ wch: 8 }, { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 18 }];
+    gWS['!rows'] = [{ hpt: 32 }];
+    gWS['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: gCols - 1 } }];
+    setCell(gWS, 0, 0, 'GAAP / ASC 842 Analysis - ' + address, titleStyle);
+    for (var gt = 1; gt < gCols; gt++) setCell(gWS, 0, gt, '', titleStyle);
+
+    // Summary section
+    setCell(gWS, 2, 0, 'Summary', sectionStyle);
+    for (var gs = 1; gs < gCols; gs++) setCell(gWS, 2, gs, '', sectionStyle);
+    var gaapMetrics = [
+      ['Discount Rate', n(gaapSummary.discountRate), 'pct'],
+      ['Lease Liability (Day 1)', n(gaapSummary.leaseLiability), 'curr'],
+      ['ROU Asset (Day 1)', n(gaapSummary.rouAsset), 'curr'],
+      ['Total Lease Payments', n(gaapSummary.totalLeasePayments), 'curr'],
+      ['TI Allowance', n(gaapSummary.tiAllowance), 'curr'],
     ];
-    gaapSchedule.forEach(function(row) {
-      gaapRows.push([
-        row.month,
-        row.period,
-        n(row.cashPayment),
-        n(row.interestExpense),
-        n(row.principalReduction),
-        n(row.leaseLiability),
-        n(row.rouAmortization),
-        n(row.rouAsset),
-        n(row.straightLineExpense),
-        n(row.totalGAAPExpense),
-      ]);
+    gaapMetrics.forEach(function(m, i) {
+      var r = 3 + i;
+      var rowFill = (i % 2 === 0) ? { fill: altRowFill } : {};
+      setCell(gWS, r, 0, m[0], Object.assign({}, metricLabelStyle, rowFill));
+      var vs = m[2] === 'pct' ? Object.assign({}, pctStyle, { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: BRAND } } }) : metricValStyle;
+      setCell(gWS, r, 1, m[1], Object.assign({}, vs, rowFill));
     });
 
-    var gaapWS = XLSX.utils.aoa_to_sheet(gaapRows);
-    gaapWS['!cols'] = [{ wch: 28 }, { wch: 14 }, { wch: 16 }, { wch: 18 }, { wch: 20 }, { wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 14 }, { wch: 20 }];
-    XLSX.utils.book_append_sheet(wb, gaapWS, 'GAAP Analysis');
+    // Schedule header
+    var gHdrRow = 3 + gaapMetrics.length + 1;
+    var gHeaders = ['Mo', 'Period', 'Cash Payment', 'Interest Exp', 'Principal Red.', 'Lease Liability', 'ROU Amort.', 'ROU Asset', 'SL Expense', 'Total GAAP Exp'];
+    gHeaders.forEach(function(h, i) { setCell(gWS, gHdrRow, i, h, (i < 2) ? headerLeftStyle : headerStyle); });
+
+    var gStartRow = gHdrRow + 1;
+    gaapSchedule.forEach(function(row, i) {
+      var r = gStartRow + i;
+      var rowFill = (i % 2 === 0) ? { fill: altRowFill } : {};
+      setCell(gWS, r, 0, row.month, Object.assign({}, centerStyle, rowFill));
+      setCell(gWS, r, 1, row.period, Object.assign({}, labelStyle, rowFill));
+      setCell(gWS, r, 2, n(row.cashPayment), Object.assign({}, currStyle, rowFill));
+      setCell(gWS, r, 3, n(row.interestExpense), Object.assign({}, currStyle, rowFill));
+      setCell(gWS, r, 4, n(row.principalReduction), Object.assign({}, currStyle, rowFill));
+      setCell(gWS, r, 5, n(row.leaseLiability), Object.assign({}, currStyle, rowFill));
+      setCell(gWS, r, 6, n(row.rouAmortization), Object.assign({}, currStyle, rowFill));
+      setCell(gWS, r, 7, n(row.rouAsset), Object.assign({}, currStyle, rowFill));
+      setCell(gWS, r, 8, n(row.straightLineExpense), Object.assign({}, currStyle, rowFill));
+      setCell(gWS, r, 9, n(row.totalGAAPExpense), Object.assign({}, currBoldStyle, rowFill));
+    });
+
+    var gLastRow = gStartRow + gaapSchedule.length - 1;
+    gWS['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: gLastRow, c: gCols - 1 } });
+    XLSX.utils.book_append_sheet(wb, gWS, 'GAAP Analysis');
   }
 
-  // Generate filename
+  // Generate filename and download
   var safeAddr = address.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-').substring(0, 40);
   var dateStr = new Date().toISOString().split('T')[0];
   var fileName = docType + '-' + safeAddr + '-' + dateStr + '.xlsx';
