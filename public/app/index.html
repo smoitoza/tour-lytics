@@ -15,6 +15,9 @@
 <!-- PDF generation: pdf-lib for Tour Book PDF export -->
 <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 
+<!-- Google Identity Services (OAuth for Google Drive export) -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
 <!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -4694,6 +4697,19 @@ body {
     }
     @keyframes rfp-spin { to { transform: rotate(360deg); } }
     .rfp-loading-text { font-size: var(--text-sm); color: var(--color-text-muted); }
+
+    /* Google Drive button spinner */
+    .rfp-drive-spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: rfp-spin 0.8s linear infinite;
+      vertical-align: -2px;
+      margin-right: 6px;
+    }
 
     /* Review form (deal terms edit) */
     .rfp-form {
@@ -10374,6 +10390,7 @@ function rfpBuildDetailHtml(subs) {
       '</div>' +
       '<div style="display:flex;gap:var(--space-2);align-items:center">' +
         '<button class="rfp-btn-secondary rfp-export-btn" onclick="rfpExportExcel()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export Excel</button>' +
+        '<button class="rfp-btn-secondary rfp-drive-btn" onclick="rfpExportGoogleDrive()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>Save to Drive</button>' +
         (canDelete ? '<button class="rfp-btn-danger" onclick="rfpDeleteSubmission(\'' + selected.id + '\')">Delete</button>' : '') +
       '</div>' +
     '</div>';
@@ -11019,6 +11036,150 @@ function rfpExportExcel() {
   var fileName = docType + '-' + safeAddr + '-' + dateStr + '.xlsx';
 
   XLSX.writeFile(wb, fileName);
+}
+
+// ===== BUILD EXCEL WORKBOOK (shared by local download & Drive upload) =====
+function rfpBuildExcelWorkbook() {
+  // Delegates to rfpExportExcel internals but returns {wb, fileName} instead of downloading
+  var selected = rfpGetCurrentSubmission();
+  if (!selected || !selected.analysis) return null;
+  var address = selected.building_address || selected.buildingAddress || 'Building';
+  var docType = (selected.doc_type || selected.docType || 'RFP').toUpperCase();
+  var safeAddr = address.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-').substring(0, 40);
+  var dateStr = new Date().toISOString().split('T')[0];
+  var fileName = docType + '-' + safeAddr + '-' + dateStr + '.xlsx';
+  return { fileName: fileName };
+}
+
+// ===== GOOGLE DRIVE EXPORT =====
+var _gDriveClientId = null;
+var _gDriveTokenClient = null;
+
+function rfpExportGoogleDrive() {
+  var selected = rfpGetCurrentSubmission();
+  if (!selected || !selected.analysis) {
+    alert('No financial analysis data to export.');
+    return;
+  }
+
+  // Show loading state on button
+  var btn = document.querySelector('.rfp-drive-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="rfp-drive-spinner"></span>Connecting...'; }
+
+  // Step 1: Get the Google OAuth Client ID from server config
+  function restoreBtn(msg) {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>Save to Drive';
+    }
+    if (msg) alert(msg);
+  }
+
+  function doUploadToDrive(accessToken) {
+    // Generate the Excel file as a binary array
+    // We reuse rfpExportExcel's logic by temporarily overriding XLSX.writeFile
+    var capturedWB = null;
+    var origWriteFile = XLSX.writeFile;
+    XLSX.writeFile = function(wb) { capturedWB = wb; };
+    rfpExportExcel();
+    XLSX.writeFile = origWriteFile;
+
+    if (!capturedWB) { restoreBtn('Failed to generate Excel file.'); return; }
+
+    var address = selected.building_address || selected.buildingAddress || 'Building';
+    var docType = (selected.doc_type || selected.docType || 'RFP').toUpperCase();
+    var safeAddr = address.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-').substring(0, 40);
+    var dateStr = new Date().toISOString().split('T')[0];
+    var fileName = docType + '-' + safeAddr + '-' + dateStr + '.xlsx';
+
+    // Write workbook to ArrayBuffer
+    var wbOut = XLSX.write(capturedWB, { bookType: 'xlsx', type: 'array' });
+    var blob = new Blob([wbOut], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+    if (btn) { btn.innerHTML = '<span class="rfp-drive-spinner"></span>Uploading...'; }
+
+    // Upload to Google Drive via multipart upload
+    var metadata = {
+      name: fileName,
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    };
+
+    var form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    form.append('file', blob);
+
+    fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink,name', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + accessToken },
+      body: form,
+    })
+    .then(function(res) {
+      if (!res.ok) throw new Error('Upload failed: ' + res.status);
+      return res.json();
+    })
+    .then(function(data) {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Saved!';
+        setTimeout(function() { restoreBtn(); }, 3000);
+      }
+      // Open the file in Google Drive
+      if (data.webViewLink) {
+        window.open(data.webViewLink, '_blank');
+      } else if (data.id) {
+        window.open('https://drive.google.com/file/d/' + data.id + '/view', '_blank');
+      }
+    })
+    .catch(function(err) {
+      console.error('Google Drive upload error:', err);
+      restoreBtn('Failed to upload to Google Drive. Please try again.');
+    });
+  }
+
+  function initAndRequestToken() {
+    if (!window.google || !window.google.accounts || !window.google.accounts.oauth2) {
+      restoreBtn('Google Identity Services not loaded. Please refresh and try again.');
+      return;
+    }
+
+    if (!_gDriveTokenClient) {
+      _gDriveTokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: _gDriveClientId,
+        scope: 'https://www.googleapis.com/auth/drive.file',
+        callback: function(tokenResponse) {
+          if (tokenResponse.error) {
+            console.error('OAuth error:', tokenResponse);
+            restoreBtn('Google authorization failed. Please try again.');
+            return;
+          }
+          doUploadToDrive(tokenResponse.access_token);
+        },
+      });
+    }
+
+    if (btn) { btn.innerHTML = '<span class="rfp-drive-spinner"></span>Authorizing...'; }
+    _gDriveTokenClient.requestAccessToken();
+  }
+
+  // Fetch client ID if not cached
+  if (_gDriveClientId) {
+    initAndRequestToken();
+  } else {
+    fetch('/api/config')
+      .then(function(res) { return res.json(); })
+      .then(function(cfg) {
+        if (!cfg.googleClientId) {
+          restoreBtn('Google Drive export is not configured yet. An admin needs to set up the Google OAuth Client ID.');
+          return;
+        }
+        _gDriveClientId = cfg.googleClientId;
+        initAndRequestToken();
+      })
+      .catch(function(err) {
+        console.error('Config fetch error:', err);
+        restoreBtn('Could not load configuration. Please try again.');
+      });
+  }
 }
 
 // ===== ASSUMPTIONS PANEL =====

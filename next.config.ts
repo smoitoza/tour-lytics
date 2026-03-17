@@ -13,11 +13,11 @@ const cspDirectives = [
   // Default: only same-origin
   "default-src 'self'",
 
-  // Scripts: self + CDNs used by the static app portal
-  `script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net cdnjs.cloudflare.com unpkg.com`,
+  // Scripts: self + CDNs used by the static app portal + Google Identity Services
+  `script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net cdnjs.cloudflare.com unpkg.com accounts.google.com`,
 
-  // Styles: self + Google Fonts + Fontshare + Leaflet CSS (unpkg) + inline
-  `style-src 'self' 'unsafe-inline' fonts.googleapis.com api.fontshare.com unpkg.com`,
+  // Styles: self + Google Fonts + Fontshare + Leaflet CSS (unpkg) + Google GIS
+  `style-src 'self' 'unsafe-inline' fonts.googleapis.com api.fontshare.com unpkg.com accounts.google.com`,
 
   // Fonts
   `font-src 'self' fonts.gstatic.com api.fontshare.com data:`,
@@ -25,11 +25,11 @@ const cspDirectives = [
   // Images: self + Supabase storage + tile servers + data URIs
   `img-src 'self' ${SUPABASE_DOMAIN} *.tile.openstreetmap.org carto.com *.basemaps.cartocdn.com data: blob:`,
 
-  // API / fetch connections
-  `connect-src 'self' ${SUPABASE_DOMAIN} maps.googleapis.com places.googleapis.com nominatim.openstreetmap.org smoitoza.github.io`,
+  // API / fetch connections (includes Google Drive upload API)
+  `connect-src 'self' ${SUPABASE_DOMAIN} maps.googleapis.com places.googleapis.com nominatim.openstreetmap.org smoitoza.github.io www.googleapis.com`,
 
-  // Frames: only same-origin (the /app portal is loaded in-page)
-  "frame-src 'self'",
+  // Frames: same-origin + Google OAuth popup
+  "frame-src 'self' accounts.google.com",
 
   // No plugins / embeds
   "object-src 'none'",
