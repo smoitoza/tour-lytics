@@ -9955,7 +9955,7 @@ function rfpParseDocument(file) {
           var pages = [];
           var total = pdf.numPages;
           function getPage(i) {
-            if (i > total) { resolve(pages.join('\n')); return; }
+            if (i > total) { resolve(pages.map(function(p, idx) { return '--- PAGE ' + (idx + 1) + ' ---\n' + p; }).join('\n')); return; }
             pdf.getPage(i).then(function(page) {
               page.getTextContent().then(function(tc) {
                 pages.push(tc.items.map(function(item) { return item.str; }).join(' '));

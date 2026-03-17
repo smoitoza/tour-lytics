@@ -107,6 +107,56 @@ Return ONLY the JSON array, no other text.`
       }, { status: 500 })
     }
 
+    // ============================================================
+    // Fix page numbers: match each building's address to actual PDF pages
+    // The client sends text with "--- PAGE N ---" delimiters
+    // ============================================================
+    const pagePattern = /--- PAGE (\d+) ---\n([\s\S]*?)(?=--- PAGE \d+ ---|$)/g
+    const pageTexts: { page: number; text: string }[] = []
+    let pageMatch
+    while ((pageMatch = pagePattern.exec(text)) !== null) {
+      pageTexts.push({ page: parseInt(pageMatch[1]), text: pageMatch[2] })
+    }
+
+    if (pageTexts.length > 0) {
+      // For each building, find which page contains its street address
+      for (const b of buildings) {
+        if (!b.address) continue
+        // Extract the street number + name for matching (e.g. "401 W. 4th" from "401 W. 4th Street")
+        const addrClean = b.address.replace(/[.,]/g, '').toLowerCase()
+        // Try matching progressively: full address, then street number + first word
+        const addrWords = addrClean.split(/\s+/)
+        const streetNum = addrWords[0] || ''
+        
+        let bestPage = -1
+        for (const pt of pageTexts) {
+          const pageText = pt.text.toLowerCase().replace(/[.,]/g, '')
+          // Look for the full address on this page
+          if (pageText.includes(addrClean)) {
+            bestPage = pt.page
+            break
+          }
+        }
+        
+        // Fallback: match street number + next word (handles "401 W" vs "401 W.")
+        if (bestPage === -1 && addrWords.length >= 2) {
+          const partial = streetNum + ' ' + addrWords[1].replace(/\./g, '')
+          for (const pt of pageTexts) {
+            const pageText = pt.text.toLowerCase().replace(/[.,]/g, '')
+            if (pageText.includes(partial)) {
+              bestPage = pt.page
+              break
+            }
+          }
+        }
+
+        if (bestPage > 0) {
+          console.log('Page match:', b.address, '-> page', bestPage, '(was', b.estimatedPage, ')')
+          b.estimatedPage = bestPage
+        }
+      }
+    }
+
     // Geocode addresses using Google Geocoding API for building-level accuracy
     const mapsApiKey = process.env.GOOGLE_MAPS_API_KEY
     const marketCtx = market || 'USA'
