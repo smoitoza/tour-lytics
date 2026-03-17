@@ -8201,6 +8201,7 @@ function toggleTourItem(type, id) {
         _centralTourList = _centralTourList.filter(item => !(item.building_type === type && item.building_id === id));
       }
       refreshLegend();
+      refreshMarkerColors();
     }
   } else {
     const info = getBuildingInfo(type, id);
@@ -8227,6 +8228,7 @@ function toggleTourItem(type, id) {
           });
         }
         refreshLegend();
+        refreshMarkerColors();
       }
     }
   }
@@ -9248,6 +9250,7 @@ async function fetchCentralTourList() {
     _centralTourList = Array.isArray(data) ? data : [];
     _centralTourListLoaded = true;
     refreshLegend();
+    refreshMarkerColors();
     return _centralTourList;
   } catch(e) {
     console.error('Failed to fetch tour list:', e);
