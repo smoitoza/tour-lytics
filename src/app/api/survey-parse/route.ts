@@ -116,13 +116,19 @@ Return ONLY the JSON array, no other text.`
       const addr = b.address?.trim()
       const hood = b.neighborhood?.trim()
       
-      if (hood) {
-        // Neighborhood provides local context (e.g. "DUMBO, Brooklyn" or "City of London")
-        // Append market for broader geo context (handles international markets)
+      // Skip CRE jargon neighborhoods that confuse geocoders
+      // (e.g. "CBD Submarket", "East Submarket", "Class A District")
+      const isRealNeighborhood = hood && 
+        !/(submarket|district|corridor|class\s*[abc])/i.test(hood) &&
+        hood.length > 2
+      
+      if (isRealNeighborhood) {
+        // Real neighborhood (e.g. "DUMBO, Brooklyn" or "City of London")
+        // Use: address, neighborhood, market
         return `${addr}, ${hood}, ${marketCtx}`
       }
       
-      // No neighborhood - use market context directly
+      // No useful neighborhood - rely on market context
       return `${addr}, ${marketCtx}`
     }
 
