@@ -11773,6 +11773,10 @@ async function surveySubmitUpload() {
       if (uploadRes.ok) {
         var uploadData = await uploadRes.json();
         pdfUrl = uploadData.url || '';
+        console.log('PDF uploaded:', pdfUrl);
+      } else {
+        var errText = await uploadRes.text().catch(function() { return ''; });
+        console.warn('PDF upload failed:', uploadRes.status, errText);
       }
     } catch (uploadErr) {
       console.warn('PDF upload skipped:', uploadErr);

@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// Allow up to 30s for large PDF uploads to Supabase storage
-export const maxDuration = 30
+// Allow up to 60s for large PDF uploads to Supabase storage
+export const maxDuration = 60
 
 // POST /api/survey-upload - Upload a survey PDF to Supabase storage
 // Returns the public URL of the stored file
@@ -19,9 +19,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Project ID required.' }, { status: 400 })
     }
 
+    // Use service role key to bypass storage RLS (anon key may not have insert permissions)
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      serviceKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     )
 
     // Generate storage path: surveys/{projectId}/{timestamp}-{filename}
@@ -39,7 +41,7 @@ export async function POST(req: Request) {
       .from('tour-photos')
       .upload(`surveys/${storagePath}`, buffer, {
         contentType: file.type || 'application/pdf',
-        upsert: false,
+        upsert: true,
       })
 
     if (uploadError) {
