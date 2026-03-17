@@ -1436,6 +1436,30 @@ body {
     .tooltip-tour-btn.added:hover {
       background: linear-gradient(135deg, #dc2626, #b91c1c);
     }
+    /* Dual button row: Tour Book + Shortlist side by side */
+    .tooltip-btn-row {
+      display: flex; gap: 6px; margin-top: var(--space-3);
+    }
+    .tooltip-btn-row .tooltip-tour-btn,
+    .tooltip-btn-row .tooltip-shortlist-btn {
+      width: auto; flex: 1; margin-top: 0; font-size: 11px; padding: 7px 4px;
+    }
+    .tooltip-shortlist-btn {
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+      padding: 7px 4px;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #fff; border: none; border-radius: 8px;
+      font-family: var(--font-body); font-size: 11px;
+      font-weight: 600; cursor: pointer;
+      transition: all 0.2s ease; letter-spacing: 0.01em;
+    }
+    .tooltip-shortlist-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 12px rgba(37,99,235,0.3); }
+    .tooltip-shortlist-btn.added {
+      background: linear-gradient(135deg, #059669, #047857);
+    }
+    .tooltip-shortlist-btn.added:hover {
+      background: linear-gradient(135deg, #dc2626, #b91c1c);
+    }
 
     /* Overlay when panel is open (mobile) */
     .tour-overlay {
@@ -1812,6 +1836,8 @@ body {
 
     /* Role-based visibility */
     body.touree-mode .tooltip-tour-btn,
+    body.touree-mode .tooltip-shortlist-btn,
+    body.touree-mode .tooltip-btn-row,
     body.touree-mode .tour-item-remove,
     body.touree-mode .tour-btn-secondary,
     body.touree-mode .admin-only {
@@ -2608,6 +2634,109 @@ body {
       .team-add-field { min-width: 100%; }
       .team-member-card { flex-wrap: wrap; padding: var(--space-3); }
       .team-member-actions { width: 100%; justify-content: flex-end; margin-top: var(--space-1); }
+    }
+
+    /* ============================================================
+       Shortlist Page
+       ============================================================ */
+    .shortlist-page {
+      padding: var(--space-6); max-width: 960px; margin: 0 auto;
+    }
+    .shortlist-page-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      margin-bottom: var(--space-6);
+    }
+    .shortlist-page-title {
+      font-size: var(--text-xl); font-weight: 700; color: var(--color-text);
+      margin: 0 0 var(--space-1) 0;
+    }
+    .shortlist-page-subtitle {
+      font-size: var(--text-sm); color: var(--color-text-muted);
+      margin: 0; line-height: 1.5;
+    }
+    .shortlist-empty {
+      text-align: center; padding: var(--space-12) var(--space-6);
+      color: var(--color-text-muted);
+    }
+    .shortlist-empty p { margin: var(--space-2) 0; }
+    .shortlist-empty-hint {
+      font-size: var(--text-xs); color: var(--color-text-faint);
+    }
+    .shortlist-cards {
+      display: flex; flex-direction: column; gap: var(--space-4);
+    }
+    .shortlist-card {
+      background: var(--color-bg); border: 1px solid var(--color-border);
+      border-radius: 12px; overflow: hidden;
+      transition: border-color 0.15s;
+    }
+    .shortlist-card:hover { border-color: var(--color-primary); }
+    .shortlist-card-header {
+      display: flex; align-items: center; gap: var(--space-3);
+      padding: var(--space-4); cursor: pointer;
+    }
+    .shortlist-card-dot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    }
+    .shortlist-card-info { flex: 1; min-width: 0; }
+    .shortlist-card-name {
+      font-size: var(--text-sm); font-weight: 600; color: var(--color-text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .shortlist-card-address {
+      font-size: var(--text-xs); color: var(--color-text-muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .shortlist-card-actions {
+      display: flex; align-items: center; gap: var(--space-2); flex-shrink: 0;
+    }
+    .shortlist-remove-btn {
+      background: none; border: 1px solid var(--color-border); border-radius: 6px;
+      padding: 4px 10px; font-size: var(--text-xs); color: var(--color-text-muted);
+      cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 4px;
+    }
+    .shortlist-remove-btn:hover {
+      border-color: #ef4444; color: #ef4444; background: rgba(239,68,68,0.06);
+    }
+    .shortlist-card-body {
+      padding: 0 var(--space-4) var(--space-4);
+      border-top: 1px solid var(--color-border);
+    }
+    .shortlist-card-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);
+      padding-top: var(--space-3);
+    }
+    .shortlist-card-field-label {
+      font-size: 10px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.05em; color: var(--color-text-faint); margin-bottom: 2px;
+    }
+    .shortlist-card-field-value {
+      font-size: var(--text-sm); color: var(--color-text);
+    }
+    .shortlist-card-section {
+      margin-top: var(--space-3); padding-top: var(--space-3);
+      border-top: 1px solid var(--color-border);
+    }
+    .shortlist-card-section-title {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.05em; color: var(--color-text-muted);
+      margin-bottom: var(--space-2);
+    }
+    .shortlist-card-summary-row {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: var(--text-xs); color: var(--color-text-muted);
+      padding: 3px 0;
+    }
+    .shortlist-card-summary-value {
+      font-weight: 600; color: var(--color-text);
+    }
+    .shortlist-card-no-data {
+      font-size: var(--text-xs); color: var(--color-text-faint);
+      font-style: italic;
+    }
+    @media (max-width: 768px) {
+      .shortlist-page { padding: var(--space-3); }
+      .shortlist-card-grid { grid-template-columns: 1fr; }
     }
 
     /* ============================================================
@@ -5783,6 +5912,10 @@ body {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
     Scores
   </button>
+  <button class="page-tab" onclick="switchPageTab('shortlist')" data-page-tab="shortlist">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 21 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
+    Shortlist
+  </button>
   <button class="page-tab" onclick="switchPageTab('photos')" data-page-tab="photos">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
     Photos
@@ -5940,6 +6073,26 @@ body {
 
     <div id="scoresContent">
       <div class="scores-loading">Loading survey scores...</div>
+    </div>
+  </div>
+</div>
+
+<div class="tab-content" id="tab-shortlist">
+  <div class="shortlist-page">
+    <div class="shortlist-page-header">
+      <div>
+        <h2 class="shortlist-page-title">Shortlist</h2>
+        <p class="shortlist-page-subtitle">Buildings under serious consideration. Add buildings from the map to build your shortlist for RFPs, commute studies, and deeper analysis.</p>
+      </div>
+    </div>
+    <div id="shortlistContent">
+      <div class="shortlist-loading" style="display:none;">Loading shortlist...</div>
+      <div class="shortlist-empty" id="shortlistEmpty">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.3"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 21 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
+        <p>No buildings shortlisted yet</p>
+        <p class="shortlist-empty-hint">Click "Add to Shortlist" on any building in the map to get started.</p>
+      </div>
+      <div class="shortlist-cards" id="shortlistCards"></div>
     </div>
   </div>
 </div>
@@ -6406,10 +6559,16 @@ function buildPopup(b) {
             <span>Material terms pending - tour scheduled week of 3/16/26</span>
           </div>
           <div class="tooltip-photos-section" id="photo-section-shortlist-${b.id}"><div class="tooltip-photos-header"><span class="tooltip-photos-title">Photos</span></div><div class="tooltip-photo-grid" style="margin-top:6px"><div class="tooltip-photo-add-btn" onclick="openPhotoUpload('shortlist', ${b.id}, '${b.name}', '${b.address}')" title="Add Photo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div></div></div>
-          <button class="tooltip-tour-btn" onclick="toggleTourItem('shortlist', ${b.id})" id="tour-btn-shortlist-${b.id}">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            <span>Add to Tour List</span>
-          </button>
+          <div class="tooltip-btn-row">
+            <button class="tooltip-tour-btn" onclick="toggleTourItem('shortlist', ${b.id})" id="tour-btn-shortlist-${b.id}">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              <span>Tour Book</span>
+            </button>
+            <button class="tooltip-shortlist-btn" onclick="toggleShortlistItem('shortlist', ${b.id})" id="shortlist-btn-shortlist-${b.id}">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 21 8"/></svg>
+              <span>Shortlist</span>
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -6514,10 +6673,16 @@ function buildPopup(b) {
         </div>
         <div class="tooltip-photos-section" id="photo-section-shortlist-${b.id}"><div class="tooltip-photos-header"><span class="tooltip-photos-title">Photos</span></div><div class="tooltip-photo-grid" style="margin-top:6px"><div class="tooltip-photo-add-btn" onclick="openPhotoUpload('shortlist', ${b.id}, '${b.name}', '${b.address || ''}')" title="Add Photo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div></div></div>
       </div>
-      <button class="tooltip-tour-btn" onclick="toggleTourItem('shortlist', ${b.id})" id="tour-btn-shortlist-${b.id}" style="margin:0 var(--space-4) var(--space-4);display:flex;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-        <span>Add to Tour List</span>
-      </button>
+      <div class="tooltip-btn-row" style="margin:0 var(--space-4) var(--space-4);">
+        <button class="tooltip-tour-btn" onclick="toggleTourItem('shortlist', ${b.id})" id="tour-btn-shortlist-${b.id}">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <span>Tour Book</span>
+        </button>
+        <button class="tooltip-shortlist-btn" onclick="toggleShortlistItem('shortlist', ${b.id})" id="shortlist-btn-shortlist-${b.id}">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 21 8"/></svg>
+          <span>Shortlist</span>
+        </button>
+      </div>
     </div>
   `;
 }
@@ -7756,10 +7921,16 @@ function buildSurveyPopup(b) {
       '</div>' +
       floorHTML +
       '<div class="tooltip-photos-section" id="photo-section-survey-' + b.num + '"><div class="tooltip-photos-header"><span class="tooltip-photos-title">Photos</span></div><div class="tooltip-photo-grid" style="margin-top:6px"><div class="tooltip-photo-add-btn" onclick="openPhotoUpload(\'survey\', ' + b.num + ', \'' + (b.address || '').replace(/'/g, "\\'") + '\', \'' + (b.neighborhood || '').replace(/'/g, "\\'") + '\')" title="Add Photo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div></div></div>' +
-      '<button class="tooltip-tour-btn" onclick="toggleTourItem(\'survey\', ' + b.num + ')" id="tour-btn-survey-' + b.num + '">' +
-        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' +
-        '<span>Add to Tour List</span>' +
-      '</button>' +
+      '<div class="tooltip-btn-row">' +
+        '<button class="tooltip-tour-btn" onclick="toggleTourItem(\'survey\', ' + b.num + ')" id="tour-btn-survey-' + b.num + '">' +
+          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' +
+          '<span>Tour Book</span>' +
+        '</button>' +
+        '<button class="tooltip-shortlist-btn" onclick="toggleShortlistItem(\'survey\', ' + b.num + ')" id="shortlist-btn-survey-' + b.num + '">' +
+          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 21 8"/></svg>' +
+          '<span>Shortlist</span>' +
+        '</button>' +
+      '</div>' +
     '</div>' +
   '</div>';
 }
@@ -8130,7 +8301,7 @@ function refreshTourUI() {
 }
 
 function refreshAllTooltipButtons() {
-  // Update any visible tooltip buttons
+  // Update tour book buttons
   document.querySelectorAll('.tooltip-tour-btn').forEach(btn => {
     const id = btn.id; // e.g. "tour-btn-survey-5" or "tour-btn-shortlist-2"
     if (!id) return;
@@ -8141,8 +8312,10 @@ function refreshAllTooltipButtons() {
     const onList = isOnTourList(type, numId);
     btn.classList.toggle('added', onList);
     const span = btn.querySelector('span');
-    if (span) span.textContent = onList ? 'On Tour List ✓ (click to remove)' : 'Add to Tour List';
+    if (span) span.textContent = onList ? 'On Tour Book' : 'Tour Book';
   });
+  // Also refresh shortlist buttons
+  if (typeof refreshAllShortlistButtons === 'function') refreshAllShortlistButtons();
 }
 
 // Update survey marker colors: blue = survey, orange = on tour list
@@ -8350,6 +8523,10 @@ function switchPageTab(tabId) {
   // Load AI usage dashboard when switching to it
   if (tabId === 'ai-usage') {
     aiUsageLoad();
+  }
+  // Load shortlist when switching to it
+  if (tabId === 'shortlist') {
+    loadShortlist();
   }
 }
 
@@ -14652,6 +14829,332 @@ function commuteSetGroupMode(mode) {
     scrollToBottom();
     input.focus();
   }
+})();
+</script>
+
+<script>
+// ============================================================
+// Shortlist Feature
+// ============================================================
+
+var _shortlistItems = []; // cached shortlist from server
+var _shortlistLoaded = false;
+
+// Load shortlist items from server
+async function loadShortlist() {
+  var container = document.getElementById('shortlistCards');
+  var empty = document.getElementById('shortlistEmpty');
+  if (!container) return;
+
+  try {
+    var res = await fetch('/api/shortlist?projectId=' + getProjectId());
+    if (!res.ok) throw new Error('Failed to load shortlist');
+    _shortlistItems = await res.json();
+    _shortlistLoaded = true;
+  } catch(e) {
+    console.error('Shortlist load error:', e);
+    _shortlistItems = [];
+  }
+
+  renderShortlist();
+}
+
+// Render shortlist cards
+function renderShortlist() {
+  var container = document.getElementById('shortlistCards');
+  var empty = document.getElementById('shortlistEmpty');
+  if (!container || !empty) return;
+
+  if (_shortlistItems.length === 0) {
+    empty.style.display = '';
+    container.innerHTML = '';
+    return;
+  }
+
+  empty.style.display = 'none';
+  var html = '';
+
+  _shortlistItems.forEach(function(item) {
+    var buildingName = item.building_name || 'Unknown';
+    var buildingAddr = item.building_address || '';
+    var buildingColor = item.building_color || '#9ca3af';
+    var metaStr = item.building_meta || '';
+    var tags = item.building_tags || [];
+
+    // Try to get extra info from SURVEY_BUILDINGS or BUILDINGS
+    var extraInfo = getShortlistBuildingDetails(item.building_type, item.building_id);
+
+    // Look up commute data for this building
+    var commuteInfo = getShortlistCommuteData(buildingName);
+
+    // Look up RFP/financials data for this building
+    var financialsInfo = getShortlistFinancialsData(item.building_type, item.building_id, buildingName);
+
+    html += '<div class="shortlist-card" data-type="' + item.building_type + '" data-id="' + item.building_id + '">';
+    html += '<div class="shortlist-card-header">';
+    html += '<div class="shortlist-card-dot" style="background:' + buildingColor + '"></div>';
+    html += '<div class="shortlist-card-info">';
+    html += '<div class="shortlist-card-name">' + escHtml(buildingName) + '</div>';
+    if (buildingAddr && buildingAddr !== buildingName) {
+      html += '<div class="shortlist-card-address">' + escHtml(buildingAddr) + '</div>';
+    }
+    html += '</div>';
+    html += '<div class="shortlist-card-actions">';
+    if (hasAdminAccess()) {
+      html += '<button class="shortlist-remove-btn" onclick="removeFromShortlist(\'' + item.building_type + '\', ' + item.building_id + ')">';
+      html += '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+      html += 'Remove';
+      html += '</button>';
+    }
+    html += '</div>';
+    html += '</div>'; // end header
+
+    // Card body with building details
+    html += '<div class="shortlist-card-body">';
+    html += '<div class="shortlist-card-grid">';
+
+    // Building details from survey/shortlist data
+    if (extraInfo.owner) {
+      html += '<div><div class="shortlist-card-field-label">Owner</div><div class="shortlist-card-field-value">' + escHtml(extraInfo.owner) + '</div></div>';
+    }
+    if (extraInfo.buildingClass) {
+      html += '<div><div class="shortlist-card-field-label">Class</div><div class="shortlist-card-field-value">' + escHtml(extraInfo.buildingClass) + '</div></div>';
+    }
+    if (extraInfo.size) {
+      html += '<div><div class="shortlist-card-field-label">Building Size</div><div class="shortlist-card-field-value">' + escHtml(extraInfo.size) + '</div></div>';
+    }
+    if (extraInfo.available) {
+      html += '<div><div class="shortlist-card-field-label">Available</div><div class="shortlist-card-field-value">' + escHtml(extraInfo.available) + '</div></div>';
+    }
+    if (extraInfo.rentalRate) {
+      html += '<div><div class="shortlist-card-field-label">Rental Rate</div><div class="shortlist-card-field-value">' + escHtml(extraInfo.rentalRate) + '</div></div>';
+    }
+    if (extraInfo.neighborhood) {
+      html += '<div><div class="shortlist-card-field-label">Neighborhood</div><div class="shortlist-card-field-value">' + escHtml(extraInfo.neighborhood) + '</div></div>';
+    }
+    if (metaStr && !extraInfo.owner) {
+      html += '<div style="grid-column:1/-1"><div class="shortlist-card-field-label">Details</div><div class="shortlist-card-field-value">' + escHtml(metaStr) + '</div></div>';
+    }
+    if (tags.length > 0 && typeof tags[0] === 'string') {
+      html += '<div style="grid-column:1/-1"><div class="shortlist-card-field-label">Tags</div><div class="shortlist-card-field-value">' + tags.map(function(t) { return escHtml(t); }).join(', ') + '</div></div>';
+    }
+
+    html += '</div>'; // end grid
+
+    // Commute summary section
+    html += '<div class="shortlist-card-section">';
+    html += '<div class="shortlist-card-section-title">Commute Analysis</div>';
+    if (commuteInfo) {
+      html += '<div class="shortlist-card-summary-row"><span>Avg Drive</span><span class="shortlist-card-summary-value">' + commuteInfo.avgDrive + '</span></div>';
+      html += '<div class="shortlist-card-summary-row"><span>Avg Transit</span><span class="shortlist-card-summary-value">' + commuteInfo.avgTransit + '</span></div>';
+    } else {
+      html += '<div class="shortlist-card-no-data">No commute study data yet</div>';
+    }
+    html += '</div>';
+
+    // Financials summary section
+    html += '<div class="shortlist-card-section">';
+    html += '<div class="shortlist-card-section-title">Financials</div>';
+    if (financialsInfo) {
+      if (financialsInfo.docType) {
+        html += '<div class="shortlist-card-summary-row"><span>Document</span><span class="shortlist-card-summary-value">' + escHtml(financialsInfo.docType) + '</span></div>';
+      }
+      if (financialsInfo.term) {
+        html += '<div class="shortlist-card-summary-row"><span>Term</span><span class="shortlist-card-summary-value">' + escHtml(financialsInfo.term) + '</span></div>';
+      }
+      if (financialsInfo.baseRent) {
+        html += '<div class="shortlist-card-summary-row"><span>Base Rent</span><span class="shortlist-card-summary-value">' + escHtml(financialsInfo.baseRent) + '</span></div>';
+      }
+    } else {
+      html += '<div class="shortlist-card-no-data">No RFP/LOI submitted yet</div>';
+    }
+    html += '</div>';
+
+    html += '</div>'; // end body
+    html += '</div>'; // end card
+  });
+
+  container.innerHTML = html;
+}
+
+// Get extra building details from SURVEY_BUILDINGS or BUILDINGS arrays
+function getShortlistBuildingDetails(type, id) {
+  var info = { owner: '', buildingClass: '', size: '', available: '', rentalRate: '', neighborhood: '' };
+  if (type === 'survey' && typeof SURVEY_BUILDINGS !== 'undefined') {
+    var sb = SURVEY_BUILDINGS.find(function(b) { return b.num === id; });
+    if (sb) {
+      info.owner = sb.owner || '';
+      info.buildingClass = sb.buildingClass || sb.class || '';
+      info.size = sb.buildingSize || sb.totalSF || '';
+      info.available = sb.spaceAvailable || sb.availableSF || '';
+      info.rentalRate = sb.rentalRate || sb.askingRent || '';
+      info.neighborhood = sb.neighborhood || '';
+    }
+  } else if (typeof BUILDINGS !== 'undefined') {
+    var db = BUILDINGS.find(function(b) { return b.id === id; });
+    if (db) {
+      info.size = db.premisesRSF || '';
+      info.neighborhood = db.address || '';
+    }
+  }
+  return info;
+}
+
+// Get commute data for a building by name
+function getShortlistCommuteData(buildingName) {
+  if (typeof _commuteResults === 'undefined' || !_commuteResults || !_commuteResults.summaries) return null;
+  var match = _commuteResults.summaries.find(function(s) {
+    return s.building && s.building.toLowerCase() === buildingName.toLowerCase();
+  });
+  if (!match) return null;
+  return {
+    avgDrive: match.avgDrive || match.avg_drive || 'N/A',
+    avgTransit: match.avgTransit || match.avg_transit || 'N/A'
+  };
+}
+
+// Get financials/RFP data for a building
+function getShortlistFinancialsData(type, id, buildingName) {
+  // Check if rfpData is available (from the financials tab)
+  if (typeof _rfpAnalyses === 'undefined' || !_rfpAnalyses) return null;
+  // Search rfp analyses for matching building
+  var key = type + '-' + id;
+  if (_rfpAnalyses[key]) {
+    var rfp = _rfpAnalyses[key];
+    return {
+      docType: rfp.doc_type || rfp.docType || '',
+      term: rfp.term || '',
+      baseRent: rfp.base_rent || rfp.baseRent || ''
+    };
+  }
+  // Try matching by name
+  for (var k in _rfpAnalyses) {
+    if (_rfpAnalyses[k].building_name && _rfpAnalyses[k].building_name.toLowerCase() === buildingName.toLowerCase()) {
+      var r = _rfpAnalyses[k];
+      return { docType: r.doc_type || '', term: r.term || '', baseRent: r.base_rent || '' };
+    }
+  }
+  return null;
+}
+
+// HTML escape helper
+function escHtml(str) {
+  if (!str) return '';
+  var div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// Toggle a building on/off the shortlist (called from tooltip buttons)
+function toggleShortlistItem(type, id) {
+  if (!hasAdminAccess()) return;
+
+  var isOnList = isOnShortlist(type, id);
+  if (isOnList) {
+    removeFromShortlist(type, id);
+  } else {
+    addToShortlist(type, id);
+  }
+}
+
+// Check if a building is on the shortlist
+function isOnShortlist(type, id) {
+  return _shortlistItems.some(function(item) {
+    return item.building_type === type && item.building_id === id;
+  });
+}
+
+// Add a building to the shortlist
+async function addToShortlist(type, id) {
+  var info = getBuildingInfo(type, id);
+  if (!info) return;
+
+  // Optimistic UI update
+  _shortlistItems.push({
+    building_type: type,
+    building_id: id,
+    building_name: info.name,
+    building_address: info.address || '',
+    building_color: info.color || '#9ca3af',
+    building_meta: info.meta || '',
+    building_tags: info.tags || [],
+    lat: info.lat,
+    lng: info.lng,
+    pdf_page: info.pdfPage
+  });
+  refreshAllShortlistButtons();
+  if (_shortlistLoaded) renderShortlist();
+
+  // Sync to server
+  try {
+    await fetch('/api/shortlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        projectId: getProjectId(),
+        buildingType: type,
+        buildingId: id,
+        buildingName: info.name,
+        buildingAddress: info.address || '',
+        buildingColor: info.color || '#9ca3af',
+        buildingMeta: info.meta || '',
+        buildingTags: info.tags || [],
+        lat: info.lat,
+        lng: info.lng,
+        pdfPage: info.pdfPage,
+        addedBy: getCurrentUserEmail()
+      })
+    });
+  } catch(e) { console.error('Failed to add to shortlist:', e); }
+}
+
+// Remove a building from the shortlist
+async function removeFromShortlist(type, id) {
+  // Optimistic UI update
+  _shortlistItems = _shortlistItems.filter(function(item) {
+    return !(item.building_type === type && item.building_id === id);
+  });
+  refreshAllShortlistButtons();
+  if (_shortlistLoaded) renderShortlist();
+
+  // Sync to server
+  try {
+    await fetch('/api/shortlist?projectId=' + getProjectId() + '&buildingType=' + encodeURIComponent(type) + '&buildingId=' + id, {
+      method: 'DELETE'
+    });
+  } catch(e) { console.error('Failed to remove from shortlist:', e); }
+}
+
+// Refresh all shortlist button states in tooltips
+function refreshAllShortlistButtons() {
+  document.querySelectorAll('.tooltip-shortlist-btn').forEach(function(btn) {
+    var idAttr = btn.id; // e.g. 'shortlist-btn-survey-5'
+    if (!idAttr) return;
+    var parts = idAttr.replace('shortlist-btn-', '').split('-');
+    var type = parts[0];
+    var id = parseInt(parts[1]);
+    var onList = isOnShortlist(type, id);
+    if (onList) {
+      btn.classList.add('added');
+      btn.querySelector('span').textContent = 'On Shortlist';
+    } else {
+      btn.classList.remove('added');
+      btn.querySelector('span').textContent = 'Shortlist';
+    }
+  });
+}
+
+// Load shortlist on initial page load (for button state)
+(async function initShortlist() {
+  try {
+    var res = await fetch('/api/shortlist?projectId=' + getProjectId());
+    if (res.ok) {
+      _shortlistItems = await res.json();
+      _shortlistLoaded = true;
+      // Update any visible shortlist buttons
+      setTimeout(refreshAllShortlistButtons, 500);
+    }
+  } catch(e) { console.error('Shortlist init error:', e); }
 })();
 </script>
 
