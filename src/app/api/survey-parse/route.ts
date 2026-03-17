@@ -102,28 +102,52 @@ Return ONLY the JSON array, no other text.`
     }
 
     // Geocode addresses to get lat/lng
-    // Use project market for geocoding context, fall back to general US
-    const geocodeCity = body.market || 'USA'
-    const geocoded = await Promise.all(
-      buildings.map(async (b: any) => {
-        try {
-          // Use Nominatim (free, no key needed) for geocoding
-          const addr = encodeURIComponent(`${b.address}, ${geocodeCity}`)
-          const geoRes = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${addr}&limit=1`,
-            { headers: { 'User-Agent': 'TourLytics/1.0' } }
-          )
-          const geoData = await geoRes.json()
-          if (geoData && geoData[0]) {
-            b.lat = parseFloat(geoData[0].lat)
-            b.lng = parseFloat(geoData[0].lon)
-          }
-        } catch (geoErr) {
-          console.warn('Geocode failed for:', b.address, geoErr)
-        }
-        return b
-      })
-    )
+    // Build specific address: street + neighborhood + market for accuracy
+    const marketCtx = body.market || 'USA'
+    const delay = (ms: number) => new Promise(r => setTimeout(r, ms))
+
+    async function geocodeBuilding(b: any): Promise<void> {
+      // Build the most specific query: "45 Main Street, DUMBO, Brooklyn, New York"
+      const parts = [b.address]
+      if (b.neighborhood) parts.push(b.neighborhood)
+      parts.push(marketCtx)
+      const fullAddr = encodeURIComponent(parts.join(', '))
+
+      const geoRes = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${fullAddr}&limit=1`,
+        { headers: { 'User-Agent': 'TourLytics/1.0' } }
+      )
+      const geoData = await geoRes.json()
+      if (geoData && geoData[0]) {
+        b.lat = parseFloat(geoData[0].lat)
+        b.lng = parseFloat(geoData[0].lon)
+        return
+      }
+
+      // Fallback: try without neighborhood
+      await delay(1100)
+      const simpleAddr = encodeURIComponent(`${b.address}, ${marketCtx}`)
+      const fallbackRes = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${simpleAddr}&limit=1`,
+        { headers: { 'User-Agent': 'TourLytics/1.0' } }
+      )
+      const fallbackData = await fallbackRes.json()
+      if (fallbackData && fallbackData[0]) {
+        b.lat = parseFloat(fallbackData[0].lat)
+        b.lng = parseFloat(fallbackData[0].lon)
+      }
+    }
+
+    // Process sequentially to respect Nominatim 1 req/sec rate limit
+    for (let i = 0; i < buildings.length; i++) {
+      try {
+        if (i > 0) await delay(1100)
+        await geocodeBuilding(buildings[i])
+      } catch (geoErr) {
+        console.warn('Geocode failed for:', buildings[i].address, geoErr)
+      }
+    }
+    const geocoded = buildings
 
     return NextResponse.json({
       buildings: geocoded,
