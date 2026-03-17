@@ -9072,7 +9072,12 @@ function getProjectId() {
 
   if (pid === 'sf-office-search' || !pid) {
     // SF defaults while API loads
-    if (subtitleEl) subtitleEl.innerHTML = '33 Buildings Evaluated &middot; 4 Shortlisted';
+    var sfSurveyCount = SURVEY_BUILDINGS.length;
+    var sfBuildingsCount = BUILDINGS.length;
+    var sfSubParts = [];
+    if (sfSurveyCount) sfSubParts.push(sfSurveyCount + ' Buildings Evaluated');
+    if (sfBuildingsCount) sfSubParts.push(sfBuildingsCount + ' Shortlisted');
+    if (subtitleEl) subtitleEl.innerHTML = sfSubParts.join(' &middot; ');
     if (footerEl) footerEl.innerHTML = 'Broker Survey &middot; Feb 19, 2026';
   } else {
     // New project defaults
