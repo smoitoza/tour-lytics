@@ -7,7 +7,10 @@ import type { NextConfig } from "next";
 // ---------------------------------------------------------------------------
 
 // Domains the app legitimately loads resources from
-const SUPABASE_DOMAIN = "lsckcmvoqmwxovqejvyl.supabase.co";
+// Use env var so dev/staging/prod each allow their own Supabase instance
+const SUPABASE_DOMAIN =
+  process.env.NEXT_PUBLIC_SUPABASE_URL?.replace("https://", "") ??
+  "lsckcmvoqmwxovqejvyl.supabase.co";
 
 const cspDirectives = [
   // Default: only same-origin
@@ -20,7 +23,7 @@ const cspDirectives = [
   `style-src 'self' 'unsafe-inline' fonts.googleapis.com api.fontshare.com unpkg.com accounts.google.com`,
 
   // Fonts
-  `font-src 'self' fonts.gstatic.com api.fontshare.com data:`,
+  `font-src 'self' fonts.gstatic.com api.fontshare.com cdn.fontshare.com data:`,
 
   // Images: self + Supabase storage + tile servers + data URIs
   `img-src 'self' ${SUPABASE_DOMAIN} *.tile.openstreetmap.org carto.com *.basemaps.cartocdn.com data: blob:`,
