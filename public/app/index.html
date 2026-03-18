@@ -8046,6 +8046,10 @@ var MARKER_COLOR_SURVEY = '#3b82f6';   // Blue - general survey building
 var MARKER_COLOR_TOUR = '#f47920';     // Orange - on tour book
 var MARKER_COLOR_SHORTLIST = '#10b981'; // Emerald - on shortlist
 
+// Forward-declare shortlist state (populated by initShortlist in a later <script> block)
+var _shortlistItems = [];
+var _shortlistLoaded = false;
+
 function buildLegendHTML() {
   var tourList = [];
   if (_centralTourListLoaded && _centralTourList) {
@@ -14902,8 +14906,9 @@ function commuteSetGroupMode(mode) {
 // Shortlist Feature
 // ============================================================
 
-var _shortlistItems = []; // cached shortlist from server
-var _shortlistLoaded = false;
+// _shortlistItems and _shortlistLoaded declared earlier (in main script block)
+// var _shortlistItems = []; // forward-declared above buildLegendHTML
+// var _shortlistLoaded = false;
 
 // Load shortlist items from server
 async function loadShortlist() {
