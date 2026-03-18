@@ -68,6 +68,9 @@ interface Project {
   sqft: string
   shortlisted_count: number
   created_by: string
+  owner_id?: string
+  user_role?: string
+  user_persona?: string
   created_at: string
   updated_at: string
 }
@@ -434,6 +437,163 @@ export default function DashboardPage() {
   const displayName = user?.email?.split('@')[0] || 'there'
   const isAdmin = user?.email === 'samoitoza@gmail.com'
 
+  /* Role badge colors */
+  const ROLE_BADGE: Record<string, { bg: string; color: string; label: string }> = {
+    owner:  { bg: 'rgba(234,124,28,0.1)', color: '#b45309', label: 'Owner' },
+    admin:  { bg: 'rgba(37,99,235,0.08)', color: '#2563eb', label: 'Admin' },
+    member: { bg: 'rgba(124,58,237,0.08)', color: '#7c3aed', label: 'Member' },
+    viewer: { bg: 'rgba(100,116,139,0.08)', color: '#64748b', label: 'Viewer' },
+  }
+
+  /* Reusable project card renderer */
+  function renderProjectCard(project: Project, updatedDate: string, canDelete: boolean) {
+    const roleBadge = ROLE_BADGE[project.user_role || ''] || null
+    return (
+      <div
+        key={project.id}
+        className="project-card-wrap"
+        style={{ position: 'relative', marginBottom: '0.75rem' }}
+        onMouseEnter={() => setHoveredCard(project.id)}
+        onMouseLeave={() => setHoveredCard(null)}
+      >
+        <Link
+          href={`/project/${project.id}`}
+          className="no-underline"
+          style={{
+            display: 'block',
+            background: hoveredCard === project.id
+              ? 'linear-gradient(135deg, #ffffff 0%, #f8faff 100%)'
+              : '#ffffff',
+            borderRadius: '1rem',
+            border: hoveredCard === project.id ? '1px solid rgba(37,99,235,0.25)' : '1px solid #e2e8f0',
+            padding: '1.5rem',
+            textDecoration: 'none',
+            transition: 'all 0.25s cubic-bezier(0.4,0,0.2,1)',
+            boxShadow: hoveredCard === project.id
+              ? '0 8px 32px rgba(37,99,235,0.08), 0 2px 8px rgba(0,0,0,0.04)'
+              : '0 1px 3px rgba(0,0,0,0.02)',
+            transform: hoveredCard === project.id ? 'translateY(-2px)' : 'translateY(0)',
+          }}
+        >
+          {/* Status + role badge + arrow */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.375rem',
+                padding: '0.25rem 0.75rem',
+                borderRadius: '9999px',
+                fontSize: '0.6875rem',
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                background: project.status === 'active' ? 'rgba(34,197,94,0.08)' : 'rgba(100,116,139,0.08)',
+                color: project.status === 'active' ? '#16a34a' : '#64748b',
+              }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: project.status === 'active' ? '#22c55e' : '#94a3b8', animation: project.status === 'active' ? 'pulse 2s infinite' : 'none' }} />
+                {project.status === 'active' ? 'Active' : project.status}
+              </span>
+              {roleBadge && (
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '0.25rem 0.625rem',
+                  borderRadius: '9999px',
+                  fontSize: '0.625rem',
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  background: roleBadge.bg,
+                  color: roleBadge.color,
+                }}>
+                  {roleBadge.label}
+                </span>
+              )}
+            </div>
+            <div style={{
+              width: '2rem',
+              height: '2rem',
+              borderRadius: '50%',
+              background: hoveredCard === project.id ? 'rgba(37,99,235,0.08)' : '#f8fafc',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+            }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={hoveredCard === project.id ? '#2563eb' : '#94a3b8'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'all 0.2s', transform: hoveredCard === project.id ? 'translateX(2px)' : 'translateX(0)' }}>
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </div>
+          </div>
+
+          {/* Project info */}
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.125rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.25rem', letterSpacing: '-0.01em' }}>
+            {project.name}
+          </h2>
+          <p style={{ fontSize: '0.8125rem', color: '#64748b', marginBottom: '0.25rem' }}>{project.market}</p>
+          <p style={{ fontSize: '0.8125rem', color: '#94a3b8', marginBottom: '1.25rem', lineHeight: 1.5 }}>{project.description}</p>
+
+          {/* Stats row */}
+          <div style={{ display: 'flex', gap: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #f1f5f9', alignItems: 'flex-end' }}>
+            <div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700, color: '#0f172a' }}>{project.buildings_count}</div>
+              <div style={{ fontSize: '0.625rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>Buildings</div>
+            </div>
+            {project.sqft && (
+              <div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700, color: '#0f172a' }}>{project.sqft}+</div>
+                <div style={{ fontSize: '0.625rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>Sq Ft</div>
+              </div>
+            )}
+            <div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700, color: '#2563eb' }}>{project.shortlisted_count}</div>
+              <div style={{ fontSize: '0.625rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>Shortlisted</div>
+            </div>
+            {updatedDate && (
+              <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+                <div style={{ fontSize: '0.6875rem', color: '#94a3b8' }}>Updated</div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 500, color: '#475569' }}>{updatedDate}</div>
+              </div>
+            )}
+          </div>
+        </Link>
+        {/* Delete link - below the card, far from the open arrow */}
+        {canDelete && (
+          <div className="delete-project-btn" style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            padding: '0.375rem 0.5rem 0',
+          }}>
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteTarget(project) }}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '0.6875rem',
+                color: '#94a3b8',
+                fontFamily: 'inherit',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+                padding: '0.25rem 0.375rem',
+                borderRadius: '0.375rem',
+                transition: 'all 0.15s',
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+              </svg>
+              Delete
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', flexDirection: 'column' }}>
       <style>{`
@@ -583,140 +743,46 @@ export default function DashboardPage() {
         {/* -- Two-column layout: project + activity -- */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
 
-          {/* -- Project card -- */}
+          {/* -- Project cards: My Projects + Shared -- */}
           <div className="dash-fade dash-fade-3">
-            <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
-              Active Projects
-            </div>
-            {projects.map((project) => {
-              const updatedDate = project.updated_at ? new Date(project.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
-              const canDelete = isAdmin && project.id !== 'sf-office-search'
-              return (
-                <div
-                  key={project.id}
-                  className="project-card-wrap"
-                  style={{ position: 'relative', marginBottom: '0.75rem' }}
-                  onMouseEnter={() => setHoveredCard(project.id)}
-                  onMouseLeave={() => setHoveredCard(null)}
-                >
-                <Link
-                  href={`/project/${project.id}`}
-                  className="no-underline"
-                  style={{
-                    display: 'block',
-                    background: hoveredCard === project.id
-                      ? 'linear-gradient(135deg, #ffffff 0%, #f8faff 100%)'
-                      : '#ffffff',
-                    borderRadius: '1rem',
-                    border: hoveredCard === project.id ? '1px solid rgba(37,99,235,0.25)' : '1px solid #e2e8f0',
-                    padding: '1.5rem',
-                    textDecoration: 'none',
-                    transition: 'all 0.25s cubic-bezier(0.4,0,0.2,1)',
-                    boxShadow: hoveredCard === project.id
-                      ? '0 8px 32px rgba(37,99,235,0.08), 0 2px 8px rgba(0,0,0,0.04)'
-                      : '0 1px 3px rgba(0,0,0,0.02)',
-                    transform: hoveredCard === project.id ? 'translateY(-2px)' : 'translateY(0)',
-                  }}
-                >
-                  {/* Status + arrow */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                    <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.375rem',
-                      padding: '0.25rem 0.75rem',
-                      borderRadius: '9999px',
-                      fontSize: '0.6875rem',
-                      fontWeight: 600,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                      background: project.status === 'active' ? 'rgba(34,197,94,0.08)' : 'rgba(100,116,139,0.08)',
-                      color: project.status === 'active' ? '#16a34a' : '#64748b',
-                    }}>
-                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: project.status === 'active' ? '#22c55e' : '#94a3b8', animation: project.status === 'active' ? 'pulse 2s infinite' : 'none' }} />
-                      {project.status === 'active' ? 'Active' : project.status}
-                    </span>
-                    <div style={{
-                      width: '2rem',
-                      height: '2rem',
-                      borderRadius: '50%',
-                      background: hoveredCard === project.id ? 'rgba(37,99,235,0.08)' : '#f8fafc',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'all 0.2s',
-                    }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={hoveredCard === project.id ? '#2563eb' : '#94a3b8'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'all 0.2s', transform: hoveredCard === project.id ? 'translateX(2px)' : 'translateX(0)' }}>
-                        <polyline points="9 18 15 12 9 6" />
-                      </svg>
-                    </div>
-                  </div>
-
-                  {/* Project info */}
-                  <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.125rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.25rem', letterSpacing: '-0.01em' }}>
-                    {project.name}
-                  </h2>
-                  <p style={{ fontSize: '0.8125rem', color: '#64748b', marginBottom: '0.25rem' }}>{project.market}</p>
-                  <p style={{ fontSize: '0.8125rem', color: '#94a3b8', marginBottom: '1.25rem', lineHeight: 1.5 }}>{project.description}</p>
-
-                  {/* Stats row */}
-                  <div style={{ display: 'flex', gap: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #f1f5f9', alignItems: 'flex-end' }}>
-                    <div>
-                      <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700, color: '#0f172a' }}>{project.buildings_count}</div>
-                      <div style={{ fontSize: '0.625rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>Buildings</div>
-                    </div>
-                    {project.sqft && (
-                      <div>
-                        <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700, color: '#0f172a' }}>{project.sqft}+</div>
-                        <div style={{ fontSize: '0.625rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>Sq Ft</div>
-                      </div>
-                    )}
-                    <div>
-                      <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700, color: '#2563eb' }}>{project.shortlisted_count}</div>
-                      <div style={{ fontSize: '0.625rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>Shortlisted</div>
-                    </div>
-                    {updatedDate && (
-                      <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-                        <div style={{ fontSize: '0.6875rem', color: '#94a3b8' }}>Updated</div>
-                        <div style={{ fontSize: '0.75rem', fontWeight: 500, color: '#475569' }}>{updatedDate}</div>
-                      </div>
-                    )}
-                  </div>
-                </Link>
-                {/* Delete link - below the card, far from the open arrow */}
-                {canDelete && (
-                  <div className="delete-project-btn" style={{
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                    padding: '0.375rem 0.5rem 0',
-                  }}>
-                    <button
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteTarget(project) }}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: '0.6875rem',
-                        color: '#94a3b8',
-                        fontFamily: 'inherit',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.25rem',
-                        padding: '0.25rem 0.375rem',
-                        borderRadius: '0.375rem',
-                        transition: 'all 0.15s',
-                      }}
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="3 6 5 6 21 6" />
-                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                      </svg>
-                      Delete
-                    </button>
+            {(() => {
+              const myProjects = projects.filter(p => p.user_role === 'owner' || p.owner_id === user?.email || p.created_by === user?.email)
+              const sharedProjects = projects.filter(p => p.user_role !== 'owner' && p.owner_id !== user?.email && p.created_by !== user?.email)
+              return (<>
+                {myProjects.length > 0 && (
+                  <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
+                    My Projects
                   </div>
                 )}
-                </div>
-              )
+                {myProjects.map((project) => {
+                  const updatedDate = project.updated_at ? new Date(project.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
+                  const canDelete = isAdmin && project.id !== 'sf-office-search'
+                  return renderProjectCard(project, updatedDate, canDelete)
+                })}
+
+                {sharedProjects.length > 0 && (
+                  <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem', marginTop: myProjects.length > 0 ? '1.5rem' : '0' }}>
+                    Shared With Me
+                  </div>
+                )}
+                {sharedProjects.map((project) => {
+                  const updatedDate = project.updated_at ? new Date(project.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
+                  const canDelete = false // shared projects can't be deleted by non-owner
+                  return renderProjectCard(project, updatedDate, canDelete)
+                })}
+
+                {myProjects.length === 0 && sharedProjects.length === 0 && (
+                  <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
+                    Active Projects
+                  </div>
+                )}
+              </>)
+            })()}
+            {/* Fallback: render all projects without sections if no role data */}
+            {!projects.some(p => p.user_role) && projects.map((project) => {
+              const updatedDate = project.updated_at ? new Date(project.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
+              const canDelete = isAdmin && project.id !== 'sf-office-search'
+              return renderProjectCard(project, updatedDate, canDelete)
             })}
 
             {/* Add new project button - admin only */}

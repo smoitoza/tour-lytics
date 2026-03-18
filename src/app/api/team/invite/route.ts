@@ -23,7 +23,7 @@ function generateTempPassword(): string {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { email, displayName, persona, projectId = 'sf-office-search', addedBy } = body
+    const { email, displayName, persona, role, projectId = 'sf-office-search', addedBy } = body
 
     if (!email || !persona) {
       return NextResponse.json({ error: 'Email and persona are required' }, { status: 400 })
@@ -84,6 +84,13 @@ export async function POST(req: Request) {
       )
     }
 
+    // Determine role: if not provided, infer from persona
+    let memberRole = role || 'member'
+    if (!role) {
+      if (persona === 'admin') memberRole = 'admin'
+      else if (persona === 'touree') memberRole = 'viewer'
+    }
+
     // Step 2: Add to project_members (upsert)
     const { data: member, error: memberError } = await supabase
       .from('project_members')
@@ -92,6 +99,7 @@ export async function POST(req: Request) {
           email: cleanEmail,
           display_name: displayName || null,
           persona,
+          role: memberRole,
           project_id: projectId,
           added_by: addedBy || null,
         },

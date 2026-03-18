@@ -6066,7 +6066,7 @@ body {
     <div class="team-page-header">
       <div>
         <h2 class="team-page-title">Project Team</h2>
-        <p class="team-page-subtitle">Manage who has access to this project. Everyone listed here can view the map, tour book, photos, and financials.</p>
+        <p class="team-page-subtitle">Manage who has access to this project. The Project Owner controls billing and cannot be removed. Admins can manage the team, Members can edit, and Viewers have read-only access.</p>
       </div>
       <div class="team-member-count" id="teamMemberCount"></div>
     </div>
@@ -6087,9 +6087,16 @@ body {
           <input type="text" id="teamNewName" placeholder="First Last" />
         </div>
         <div class="team-add-field">
-          <label>Role</label>
-          <select id="teamNewRole">
+          <label>Permission</label>
+          <select id="teamNewPermRole">
             <option value="admin">Admin</option>
+            <option value="member" selected>Member</option>
+            <option value="viewer">Viewer</option>
+          </select>
+        </div>
+        <div class="team-add-field">
+          <label>Type</label>
+          <select id="teamNewRole">
             <option value="broker">Broker</option>
             <option value="cre_team">CRE Team</option>
             <option value="touree" selected>Touree</option>
@@ -8509,11 +8516,12 @@ map.on('popupopen', function(e) {
 
 // --- Role & Centralized Tour List (must be before initTourList) ---
 var ADMIN_EMAIL = 'samoitoza@gmail.com';
-var _userRole = null; // 'admin', 'broker', 'cre_team', 'touree', or null
+var _userRole = null; // 'admin', 'broker', 'cre_team', 'touree', or null (persona/functional type)
+var _userPermRole = null; // 'owner', 'admin', 'member', 'viewer', or null (permission role)
 var _centralTourList = null; // fetched from server
 var _centralTourListLoaded = false;
 
-// Fetch the current user's persona from the team API
+// Fetch the current user's persona and role from the team API
 async function fetchUserRole() {
   var email = getCurrentUserEmail();
   if (!email) return null;
@@ -8521,9 +8529,11 @@ async function fetchUserRole() {
     var res = await fetch('/api/team?projectId=' + getProjectId());
     if (!res.ok) return null;
     var members = await res.json();
+    _teamMembers = members; // Cache for team page
     var me = members.find(function(m) { return m.email.toLowerCase() === email.toLowerCase(); });
     if (me) {
       _userRole = me.persona;
+      _userPermRole = me.role || null; // new role field
       return me.persona;
     }
   } catch(e) { console.error('Failed to fetch user role:', e); }
@@ -9163,9 +9173,16 @@ function isAdmin() {
 })();
 
 // Admin, Broker, and CRE Team all get full access (edit tour list, manage buildings, etc.)
+// Also checks new role hierarchy: owner and admin roles always have access
 function hasAdminAccess() {
   if (isAdmin()) return true;
+  if (_userPermRole && ['owner', 'admin'].includes(_userPermRole)) return true;
   return ['admin', 'broker', 'cre_team'].includes(_userRole);
+}
+
+// Check if the current user is the project owner
+function isProjectOwner() {
+  return _userPermRole === 'owner';
 }
 
 function isReadOnlyTourList() {
@@ -13346,6 +13363,14 @@ var PERSONA_CONFIG = {
   touree:   { bg: 'rgba(22,163,74,0.08)',  color: '#16a34a', border: 'rgba(22,163,74,0.2)',  label: 'Touree',   avatarBg: '#16a34a' }
 };
 
+// Role hierarchy config (permission level, separate from persona/functional type)
+var ROLE_CONFIG = {
+  owner:  { bg: 'rgba(234,124,28,0.10)', color: '#b45309', border: 'rgba(234,124,28,0.25)', label: 'Owner',  rank: 4 },
+  admin:  { bg: 'rgba(37,99,235,0.08)',  color: '#2563eb', border: 'rgba(37,99,235,0.2)',  label: 'Admin',  rank: 3 },
+  member: { bg: 'rgba(124,58,237,0.08)', color: '#7c3aed', border: 'rgba(124,58,237,0.2)', label: 'Member', rank: 2 },
+  viewer: { bg: 'rgba(100,116,139,0.08)',color: '#64748b', border: 'rgba(100,116,139,0.2)',label: 'Viewer', rank: 1 }
+};
+
 // Open email compose -- Gmail web for Gmail users, mailto fallback for others
 function openComposeEmail(to, subject, body) {
   var senderEmail = getCurrentUserEmail().toLowerCase();
@@ -13411,33 +13436,56 @@ function renderTeamPage() {
     return;
   }
 
+  // Sort: owner first, then admins, then by created_at
+  var roleOrder = { owner: 0, admin: 1, member: 2, viewer: 3 };
+  var sortedMembers = _teamMembers.slice().sort(function(a, b) {
+    var ra = roleOrder[a.role] !== undefined ? roleOrder[a.role] : 2;
+    var rb = roleOrder[b.role] !== undefined ? roleOrder[b.role] : 2;
+    if (ra !== rb) return ra - rb;
+    return new Date(a.created_at) - new Date(b.created_at);
+  });
+
   var html = '';
-  _teamMembers.forEach(function(m) {
+  sortedMembers.forEach(function(m) {
     var cfg = PERSONA_CONFIG[m.persona] || PERSONA_CONFIG.touree;
+    var roleCfg = ROLE_CONFIG[m.role] || ROLE_CONFIG.member;
     var name = m.display_name || m.email.split('@')[0];
     var initials = name.split(' ').map(function(w) { return w[0]; }).join('').substring(0, 2);
     var isMe = currentEmail && m.email.toLowerCase() === currentEmail.toLowerCase();
+    var isOwner = m.role === 'owner';
 
     html += '<div class="team-member-card">';
     html += '<div class="team-member-avatar" style="background:' + cfg.avatarBg + ';">' + initials + '</div>';
     html += '<div class="team-member-info">';
-    html += '<div class="team-member-name">' + name + (isMe ? ' <span style="font-weight:400;color:var(--color-text-faint);">(you)</span>' : '') + '</div>';
+    html += '<div class="team-member-name">' + name;
+    if (isMe) html += ' <span style="font-weight:400;color:var(--color-text-faint);">(you)</span>';
+    html += '</div>';
     html += '<div class="team-member-email">' + m.email + '</div>';
     html += '</div>';
-    if (canManage && !isMe) {
-      // Editable role dropdown
-      html += '<select class="team-role-select" style="background-color:' + cfg.bg + ';color:' + cfg.color + ';border-color:' + cfg.border + ';" onchange="teamChangeRole(\'' + m.email.replace(/'/g, "\\'") + '\', this.value)">';
-      ['admin', 'broker', 'cre_team', 'touree'].forEach(function(p) {
-        var pCfg = PERSONA_CONFIG[p];
-        html += '<option value="' + p + '"' + (m.persona === p ? ' selected' : '') + '>' + pCfg.label + '</option>';
+
+    // Role badge (Owner is always a static badge, never editable)
+    if (isOwner) {
+      html += '<span class="team-member-badge" style="background:' + roleCfg.bg + ';color:' + roleCfg.color + ';border:1px solid ' + roleCfg.border + ';font-weight:700;">';
+      html += '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;vertical-align:-1px;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
+      html += 'Owner</span>';
+    } else if (canManage && !isMe) {
+      // Editable role dropdown for non-owners
+      html += '<select class="team-role-select" style="background-color:' + roleCfg.bg + ';color:' + roleCfg.color + ';border-color:' + roleCfg.border + ';" onchange="teamChangeRole(\'' + m.email.replace(/'/g, "\\'") + '\', this.value)">';
+      ['admin', 'member', 'viewer'].forEach(function(r) {
+        var rCfg = ROLE_CONFIG[r];
+        html += '<option value="' + r + '"' + (m.role === r ? ' selected' : '') + '>' + rCfg.label + '</option>';
       });
       html += '</select>';
     } else {
       // Static badge for self or non-admin viewers
-      html += '<span class="team-member-badge" style="background:' + cfg.bg + ';color:' + cfg.color + ';border:1px solid ' + cfg.border + ';">' + cfg.label + '</span>';
+      html += '<span class="team-member-badge" style="background:' + roleCfg.bg + ';color:' + roleCfg.color + ';border:1px solid ' + roleCfg.border + ';">' + roleCfg.label + '</span>';
     }
 
-    if (canManage && !isMe) {
+    // Persona badge (smaller, secondary)
+    html += '<span class="team-member-badge" style="background:' + cfg.bg + ';color:' + cfg.color + ';border:1px solid ' + cfg.border + ';font-size:0.625rem;padding:2px 8px;">' + cfg.label + '</span>';
+
+    // Actions (no actions for owner - can't remove or change)
+    if (canManage && !isMe && !isOwner) {
       html += '<div class="team-member-actions">';
       html += '<button class="team-action-btn reset-pw" onclick="teamResetPassword(\'' + m.email.replace(/'/g, "\\'") + '\', \'' + (m.display_name || '').replace(/'/g, "\\'") + '\')">Reset Password</button>';
       html += '<button class="team-action-btn resend" onclick="teamResendInvite(\'' + m.email.replace(/'/g, "\\'") + '\', \'' + (m.display_name || '').replace(/'/g, "\\'") + '\', \'' + m.persona + '\')">Resend Invite</button>';
@@ -13455,12 +13503,14 @@ async function teamAddMember() {
   var emailEl = document.getElementById('teamNewEmail');
   var nameEl = document.getElementById('teamNewName');
   var roleEl = document.getElementById('teamNewRole');
+  var permRoleEl = document.getElementById('teamNewPermRole');
   var btn = document.getElementById('teamAddBtn');
   var statusEl = document.getElementById('teamAddStatus');
 
   var email = emailEl.value.trim();
   var displayName = nameEl.value.trim();
   var persona = roleEl.value;
+  var permRole = permRoleEl ? permRoleEl.value : 'member';
 
   if (!email) {
     statusEl.style.display = 'block';
@@ -13481,6 +13531,7 @@ async function teamAddMember() {
         email: email,
         displayName: displayName,
         persona: persona,
+        role: permRole,
         projectId: getProjectId(),
         addedBy: getCurrentUserEmail()
       })
@@ -13615,12 +13666,12 @@ async function teamRemoveMember(email) {
   }
 }
 
-async function teamChangeRole(email, newPersona) {
+async function teamChangeRole(email, newRole) {
   try {
     var res = await fetch('/api/team', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email, persona: newPersona, projectId: getProjectId() })
+      body: JSON.stringify({ email: email, role: newRole, projectId: getProjectId() })
     });
     if (!res.ok) {
       var errData = await res.json();
@@ -13632,7 +13683,7 @@ async function teamChangeRole(email, newPersona) {
     // Update local data and re-render to refresh colors
     _teamMembers.forEach(function(m) {
       if (m.email.toLowerCase() === email.toLowerCase()) {
-        m.persona = newPersona;
+        m.role = newRole;
       }
     });
     renderTeamPage();

@@ -20,15 +20,55 @@ export async function GET(req: NextRequest) {
   const supabase = createClient(supabaseUrl, supabaseKey)
   const email = req.nextUrl.searchParams.get('email')
 
-  let query = supabase
+  if (email) {
+    // Return projects the user is a member of, with their role
+    const { data: memberships, error: memberError } = await supabase
+      .from('project_members')
+      .select('role, persona, project_id')
+      .eq('email', email.toLowerCase().trim())
+
+    if (memberError) {
+      return NextResponse.json({ error: memberError.message }, { status: 500 })
+    }
+
+    // Get all project IDs this user belongs to
+    const projectIds = (memberships || []).map(m => m.project_id)
+
+    if (projectIds.length === 0) {
+      return NextResponse.json([])
+    }
+
+    const { data: projects, error: projectError } = await supabase
+      .from('projects')
+      .select('*')
+      .in('id', projectIds)
+      .neq('status', 'deleted')
+      .order('created_at', { ascending: false })
+
+    if (projectError) {
+      return NextResponse.json({ error: projectError.message }, { status: 500 })
+    }
+
+    // Merge role info into projects
+    const memberMap = new Map(
+      (memberships || []).map(m => [m.project_id, { role: m.role, persona: m.persona }])
+    )
+
+    const enriched = (projects || []).map(p => ({
+      ...p,
+      user_role: memberMap.get(p.id)?.role || 'viewer',
+      user_persona: memberMap.get(p.id)?.persona || 'touree',
+    }))
+
+    return NextResponse.json(enriched)
+  }
+
+  // No email filter - return all non-deleted projects
+  const { data, error } = await supabase
     .from('projects')
     .select('*')
     .neq('status', 'deleted')
     .order('created_at', { ascending: false })
-
-  // If email is provided, show projects the user created or is a member of
-  // For now, show all projects (access control via project_members in the future)
-  const { data, error } = await query
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
@@ -47,9 +87,18 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: 'Project ID is required.' }, { status: 400 })
   }
 
-  // Only the admin email can delete projects
-  if (email !== 'samoitoza@gmail.com') {
-    return NextResponse.json({ error: 'Only admins can delete projects.' }, { status: 403 })
+  // Check if user is the project owner or the global admin
+  const { data: project } = await supabase
+    .from('projects')
+    .select('owner_id, created_by')
+    .eq('id', projectId)
+    .single()
+
+  const isOwner = email === project?.owner_id || email === project?.created_by
+  const isGlobalAdmin = email === 'samoitoza@gmail.com'
+
+  if (!isOwner && !isGlobalAdmin) {
+    return NextResponse.json({ error: 'Only the project owner can delete projects.' }, { status: 403 })
   }
 
   // Prevent deleting the SF demo project
@@ -57,7 +106,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: 'Cannot delete the demo project.' }, { status: 400 })
   }
 
-  // Soft-delete: mark status as 'deleted' (RLS update policy exists)
+  // Soft-delete: mark status as 'deleted'
   const { error } = await supabase
     .from('projects')
     .update({ status: 'deleted' })
@@ -110,6 +159,7 @@ export async function POST(req: NextRequest) {
       sqft: '',
       shortlisted_count: 0,
       created_by: createdBy,
+      owner_id: createdBy, // Project creator is the owner
     }
 
     const { data, error } = await supabase
@@ -122,13 +172,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Also add the creator as an admin member on the project
+    // Add the creator as owner + admin persona on the project
     await supabase
       .from('project_members')
       .upsert({
         email: createdBy,
         project_id: slug,
         persona: 'admin',
+        role: 'owner',
         display_name: createdBy.split('@')[0],
       }, { onConflict: 'email,project_id' })
 
