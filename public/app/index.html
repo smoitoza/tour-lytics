@@ -14926,7 +14926,51 @@ async function loadShortlist() {
     _shortlistItems = [];
   }
 
+  // Eagerly load commute + RFP data so shortlist cards show summaries
+  await shortlistEnsureSupportingData();
   renderShortlist();
+}
+
+// Pre-fetch commute study and RFP submissions so the shortlist cards
+// can display summary data without requiring the user to visit those tabs first.
+async function shortlistEnsureSupportingData() {
+  var pid = getProjectId();
+  var promises = [];
+
+  // Commute data (only if not already loaded)
+  if (!_commuteResults) {
+    promises.push(
+      fetch('/api/commute-study?projectId=' + pid)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data && data.results) {
+            _commuteResults = data.results;
+          }
+        })
+        .catch(function() { /* commute data optional */ })
+    );
+  }
+
+  // RFP/financials data (only if not already loaded)
+  if (!window._rfpState.submissions || window._rfpState.submissions.length === 0) {
+    var email = getCurrentUserEmail();
+    var url = '/api/rfp?projectId=' + pid;
+    if (email) url += '&userEmail=' + encodeURIComponent(email);
+    promises.push(
+      fetch(url)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data && !data.error) {
+            window._rfpState.submissions = data.submissions || data || [];
+          }
+        })
+        .catch(function() { /* rfp data optional */ })
+    );
+  }
+
+  if (promises.length > 0) {
+    await Promise.all(promises);
+  }
 }
 
 // Render shortlist cards
@@ -15033,7 +15077,10 @@ function renderShortlist() {
         html += '<div class="shortlist-card-summary-row"><span>Term</span><span class="shortlist-card-summary-value">' + escHtml(financialsInfo.term) + '</span></div>';
       }
       if (financialsInfo.baseRent) {
-        html += '<div class="shortlist-card-summary-row"><span>Base Rent</span><span class="shortlist-card-summary-value">' + escHtml(financialsInfo.baseRent) + '</span></div>';
+        html += '<div class="shortlist-card-summary-row"><span>Eff. Rent</span><span class="shortlist-card-summary-value">' + escHtml(financialsInfo.baseRent) + '</span></div>';
+      }
+      if (financialsInfo.totalCost != null && !isNaN(financialsInfo.totalCost)) {
+        html += '<div class="shortlist-card-summary-row"><span>Total All-in</span><span class="shortlist-card-summary-value">' + '$' + Number(financialsInfo.totalCost).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + '</span></div>';
       }
     } else {
       html += '<div class="shortlist-card-no-data">No RFP/LOI submitted yet</div>';
@@ -15083,28 +15130,41 @@ function getShortlistCommuteData(buildingName) {
   };
 }
 
-// Get financials/RFP data for a building
+// Get financials/RFP data for a building from _rfpState.submissions
 function getShortlistFinancialsData(type, id, buildingName) {
-  // Check if rfpData is available (from the financials tab)
-  if (typeof _rfpAnalyses === 'undefined' || !_rfpAnalyses) return null;
-  // Search rfp analyses for matching building
-  var key = type + '-' + id;
-  if (_rfpAnalyses[key]) {
-    var rfp = _rfpAnalyses[key];
-    return {
-      docType: rfp.doc_type || rfp.docType || '',
-      term: rfp.term || '',
-      baseRent: rfp.base_rent || rfp.baseRent || ''
-    };
-  }
-  // Try matching by name
-  for (var k in _rfpAnalyses) {
-    if (_rfpAnalyses[k].building_name && _rfpAnalyses[k].building_name.toLowerCase() === buildingName.toLowerCase()) {
-      var r = _rfpAnalyses[k];
-      return { docType: r.doc_type || '', term: r.term || '', baseRent: r.base_rent || '' };
-    }
-  }
-  return null;
+  var subs = (window._rfpState && window._rfpState.submissions) ? window._rfpState.submissions : [];
+  if (subs.length === 0) return null;
+
+  // Find submissions matching this building by building_num or building_address/name
+  var matches = subs.filter(function(s) {
+    var bNum = s.building_num || s.buildingNum;
+    if (bNum !== undefined && bNum !== null && parseInt(bNum) === id) return true;
+    // Fallback: match by address or name
+    var addr = (s.building_address || s.buildingAddress || '').toLowerCase();
+    var bName = (s.building_name || s.buildingName || '').toLowerCase();
+    var target = buildingName.toLowerCase();
+    if (addr && addr === target) return true;
+    if (bName && bName === target) return true;
+    // Partial match - building name contained in address or vice versa
+    if (addr && target && (addr.indexOf(target) >= 0 || target.indexOf(addr) >= 0)) return true;
+    return false;
+  });
+
+  if (matches.length === 0) return null;
+
+  // Use the latest submission
+  var latest = matches[matches.length - 1];
+  var summary = (latest.analysis && latest.analysis.summary) ? latest.analysis.summary : {};
+  var docType = latest.doc_type || latest.docType || 'RFP';
+  var termMonths = summary.termMonths || '';
+  var effRent = summary.effectiveRentRSF;
+
+  return {
+    docType: docType,
+    term: termMonths ? termMonths + ' months' : '',
+    baseRent: effRent != null && !isNaN(effRent) ? '$' + Number(effRent).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '/RSF' : '',
+    totalCost: summary.totalAllInCost
+  };
 }
 
 // HTML escape helper
