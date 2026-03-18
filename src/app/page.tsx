@@ -105,12 +105,12 @@ export default function LandingPage() {
     e.preventDefault()
     setFormState('sending')
     try {
-      const res = await fetch('https://lsckcmvoqmwxovqejvyl.supabase.co/rest/v1/demo_requests', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/demo_requests`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxzY2tjbXZvcW13eG92cWVqdnlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMzYxMzYsImV4cCI6MjA4ODkxMjEzNn0.JT3c9zakHYv0mIJmflLk15NXlaLoqvSYAPro4lr6eDs',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxzY2tjbXZvcW13eG92cWVqdnlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMzYxMzYsImV4cCI6MjA4ODkxMjEzNn0.JT3c9zakHYv0mIJmflLk15NXlaLoqvSYAPro4lr6eDs',
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
           'Prefer': 'return=minimal'
         },
         body: JSON.stringify({
