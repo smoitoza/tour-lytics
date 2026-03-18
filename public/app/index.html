@@ -2744,6 +2744,41 @@ body {
       font-size: var(--text-xs); color: var(--color-text-faint);
       font-style: italic;
     }
+    /* All-In Occupancy Cost metrics grid (mirrors financials tab layout) */
+    .shortlist-card-metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-2);
+      background: var(--color-surface-alt, #f9fafb);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md, 8px);
+      padding: var(--space-3);
+      margin-bottom: var(--space-2);
+    }
+    .shortlist-card-metrics-sub {
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      background: transparent;
+      border: 1px solid var(--color-border);
+      padding: var(--space-2) var(--space-3);
+    }
+    .shortlist-card-metric {
+      text-align: left;
+    }
+    .shortlist-card-metric-value {
+      font-size: var(--text-lg, 18px);
+      font-weight: 700;
+      color: var(--color-text);
+      line-height: 1.2;
+    }
+    .shortlist-card-metrics-sub .shortlist-card-metric-value {
+      font-size: var(--text-sm, 14px);
+      font-weight: 600;
+    }
+    .shortlist-card-metric-label {
+      font-size: 10px;
+      color: var(--color-text-muted);
+      margin-top: 2px;
+    }
     @media (max-width: 768px) {
       .shortlist-page { padding: var(--space-3); }
       .shortlist-card-grid { grid-template-columns: 1fr; }
@@ -14931,8 +14966,8 @@ async function loadShortlist() {
   renderShortlist();
 }
 
-// Pre-fetch commute study and RFP submissions so the shortlist cards
-// can display summary data without requiring the user to visit those tabs first.
+// Pre-fetch commute study, RFP submissions, and assumptions so the shortlist
+// cards can display all-in occupancy summaries without visiting other tabs first.
 async function shortlistEnsureSupportingData() {
   var pid = getProjectId();
   var promises = [];
@@ -14968,9 +15003,40 @@ async function shortlistEnsureSupportingData() {
     );
   }
 
+  // Assumptions data (only if not already loaded)
+  if (!window._rfpState.assumptionsMap || Object.keys(window._rfpState.assumptionsMap).length === 0) {
+    var aEmail = getCurrentUserEmail();
+    var aUrl = '/api/assumptions?projectId=' + pid;
+    if (aEmail) aUrl += '&userEmail=' + encodeURIComponent(aEmail);
+    promises.push(
+      fetch(aUrl)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (Array.isArray(data)) {
+            var map = {};
+            data.forEach(function(row) {
+              if (row.building_address) map[row.building_address] = row;
+            });
+            window._rfpState.assumptionsMap = map;
+          }
+        })
+        .catch(function() { /* assumptions optional */ })
+    );
+  }
+
   if (promises.length > 0) {
     await Promise.all(promises);
   }
+}
+
+// Currency formatting for shortlist cards
+function shortlistFmtCurrency(v) {
+  if (v == null || isNaN(v)) return '--';
+  return '$' + Math.round(Math.abs(v)).toLocaleString('en-US');
+}
+function shortlistFmtCurrencyDecimals(v) {
+  if (v == null || isNaN(v)) return '--';
+  return '$' + Number(Math.abs(v)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 // Render shortlist cards
@@ -15066,23 +15132,40 @@ function renderShortlist() {
     }
     html += '</div>';
 
-    // Financials summary section
+    // Financials / All-In Occupancy Cost summary section
     html += '<div class="shortlist-card-section">';
-    html += '<div class="shortlist-card-section-title">Financials</div>';
-    if (financialsInfo) {
-      if (financialsInfo.docType) {
-        html += '<div class="shortlist-card-summary-row"><span>Document</span><span class="shortlist-card-summary-value">' + escHtml(financialsInfo.docType) + '</span></div>';
+    if (financialsInfo && financialsInfo.hasAllIn) {
+      // --- All-In Occupancy Cost headline metrics ---
+      html += '<div class="shortlist-card-section-title">All-In Occupancy Cost</div>';
+      html += '<div class="shortlist-card-metrics-grid">';
+      html += '<div class="shortlist-card-metric"><div class="shortlist-card-metric-value">' + shortlistFmtCurrency(financialsInfo.allInMonthly) + '</div><div class="shortlist-card-metric-label">All-In Monthly</div></div>';
+      html += '<div class="shortlist-card-metric"><div class="shortlist-card-metric-value">' + shortlistFmtCurrency(financialsInfo.allInAnnual) + '</div><div class="shortlist-card-metric-label">All-In Annual</div></div>';
+      html += '<div class="shortlist-card-metric"><div class="shortlist-card-metric-value">' + shortlistFmtCurrencyDecimals(financialsInfo.allInPerRSF) + '</div><div class="shortlist-card-metric-label">All-In $/RSF/yr</div></div>';
+      html += '</div>';
+      // Lease + OpEx breakdown row
+      html += '<div class="shortlist-card-metrics-grid shortlist-card-metrics-sub">';
+      html += '<div class="shortlist-card-metric"><div class="shortlist-card-metric-value">' + shortlistFmtCurrency(financialsInfo.slMonthly) + '</div><div class="shortlist-card-metric-label">Lease (SL Monthly)</div></div>';
+      if (financialsInfo.hasAssumptions) {
+        html += '<div class="shortlist-card-metric"><div class="shortlist-card-metric-value" style="color:#d97706">+' + shortlistFmtCurrency(financialsInfo.totalMonthlyOpex) + '</div><div class="shortlist-card-metric-label">Internal OpEx/mo</div></div>';
       }
-      if (financialsInfo.term) {
-        html += '<div class="shortlist-card-summary-row"><span>Term</span><span class="shortlist-card-summary-value">' + escHtml(financialsInfo.term) + '</span></div>';
+      html += '</div>';
+      // Headcount / Density / Cost per Employee row (if assumptions set)
+      if (financialsInfo.headcount > 0) {
+        html += '<div class="shortlist-card-metrics-grid shortlist-card-metrics-sub">';
+        html += '<div class="shortlist-card-metric"><div class="shortlist-card-metric-value">' + financialsInfo.headcount + '</div><div class="shortlist-card-metric-label">Headcount</div></div>';
+        if (financialsInfo.densityFit > 0) {
+          html += '<div class="shortlist-card-metric"><div class="shortlist-card-metric-value">' + financialsInfo.densityFit + ' RSF</div><div class="shortlist-card-metric-label">Actual Density/Person</div></div>';
+        }
+        if (financialsInfo.costPerEmployee > 0) {
+          html += '<div class="shortlist-card-metric"><div class="shortlist-card-metric-value">' + shortlistFmtCurrency(financialsInfo.costPerEmployee) + '</div><div class="shortlist-card-metric-label">Cost/Employee/yr</div></div>';
+        }
+        html += '</div>';
       }
-      if (financialsInfo.baseRent) {
-        html += '<div class="shortlist-card-summary-row"><span>Eff. Rent</span><span class="shortlist-card-summary-value">' + escHtml(financialsInfo.baseRent) + '</span></div>';
-      }
-      if (financialsInfo.totalCost != null && !isNaN(financialsInfo.totalCost)) {
-        html += '<div class="shortlist-card-summary-row"><span>Total All-in</span><span class="shortlist-card-summary-value">' + '$' + Number(financialsInfo.totalCost).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + '</span></div>';
-      }
+    } else if (financialsInfo && !financialsInfo.hasAllIn) {
+      html += '<div class="shortlist-card-section-title">Financials</div>';
+      html += '<div class="shortlist-card-summary-row"><span>' + escHtml(financialsInfo.docType) + ' submitted</span></div>';
     } else {
+      html += '<div class="shortlist-card-section-title">Financials</div>';
       html += '<div class="shortlist-card-no-data">No RFP/LOI submitted yet</div>';
     }
     html += '</div>';
@@ -15130,7 +15213,8 @@ function getShortlistCommuteData(buildingName) {
   };
 }
 
-// Get financials/RFP data for a building from _rfpState.submissions
+// Get financials/RFP data + all-in occupancy cost for a building.
+// Mirrors the exact calculation from the financials Assumptions tab.
 function getShortlistFinancialsData(type, id, buildingName) {
   var subs = (window._rfpState && window._rfpState.submissions) ? window._rfpState.submissions : [];
   if (subs.length === 0) return null;
@@ -15139,13 +15223,11 @@ function getShortlistFinancialsData(type, id, buildingName) {
   var matches = subs.filter(function(s) {
     var bNum = s.building_num || s.buildingNum;
     if (bNum !== undefined && bNum !== null && parseInt(bNum) === id) return true;
-    // Fallback: match by address or name
     var addr = (s.building_address || s.buildingAddress || '').toLowerCase();
     var bName = (s.building_name || s.buildingName || '').toLowerCase();
     var target = buildingName.toLowerCase();
     if (addr && addr === target) return true;
     if (bName && bName === target) return true;
-    // Partial match - building name contained in address or vice versa
     if (addr && target && (addr.indexOf(target) >= 0 || target.indexOf(addr) >= 0)) return true;
     return false;
   });
@@ -15156,14 +15238,48 @@ function getShortlistFinancialsData(type, id, buildingName) {
   var latest = matches[matches.length - 1];
   var summary = (latest.analysis && latest.analysis.summary) ? latest.analysis.summary : {};
   var docType = latest.doc_type || latest.docType || 'RFP';
-  var termMonths = summary.termMonths || '';
-  var effRent = summary.effectiveRentRSF;
+  var buildingAddr = latest.building_address || latest.buildingAddress || '';
+
+  // Look up assumptions for this building address
+  var a = (window._rfpState.assumptionsMap && buildingAddr) ? (window._rfpState.assumptionsMap[buildingAddr] || {}) : {};
+
+  // Compute internal OpEx (same math as financials tab)
+  var fb = parseFloat(a.opex_food_beverage) || 0;
+  var wpe = parseFloat(a.opex_workplace_experience) || 0;
+  var maint = parseFloat(a.opex_maintenance_security) || 0;
+  var customItems = a.opex_custom_items || [];
+  var customTotal = 0;
+  customItems.forEach(function(item) { customTotal += parseFloat(item.monthly) || 0; });
+  var totalMonthlyOpex = fb + wpe + maint + customTotal;
+
+  // Straight-line lease rent from RFP analysis
+  var slMonthly = summary.straightLineMonthlyRent || 0;
+
+  // All-In Occupancy Cost
+  var allInMonthly = slMonthly + totalMonthlyOpex;
+  var allInAnnual = allInMonthly * 12;
+  var rsf = summary.rsf || 0;
+  var allInPerRSF = rsf > 0 ? Math.round(allInAnnual / rsf * 100) / 100 : 0;
+
+  // Headcount & density
+  var headcount = parseInt(a.headcount) || 0;
+  var densityFit = (headcount > 0 && rsf > 0) ? Math.round(rsf / headcount) : 0;
+  var costPerEmployee = (headcount > 0 && allInAnnual > 0) ? Math.round(allInAnnual / headcount) : 0;
 
   return {
     docType: docType,
-    term: termMonths ? termMonths + ' months' : '',
-    baseRent: effRent != null && !isNaN(effRent) ? '$' + Number(effRent).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '/RSF' : '',
-    totalCost: summary.totalAllInCost
+    termMonths: summary.termMonths || 0,
+    slMonthly: slMonthly,
+    totalMonthlyOpex: totalMonthlyOpex,
+    allInMonthly: allInMonthly,
+    allInAnnual: allInAnnual,
+    allInPerRSF: allInPerRSF,
+    rsf: rsf,
+    headcount: headcount,
+    densityFit: densityFit,
+    costPerEmployee: costPerEmployee,
+    hasAllIn: (slMonthly > 0),
+    hasAssumptions: (totalMonthlyOpex > 0)
   };
 }
 
