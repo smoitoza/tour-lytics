@@ -8867,6 +8867,7 @@ function getBuildingInfo(type, id) {
   } else {
     const b = SURVEY_BUILDINGS.find(x => x.num === id);
     if (!b) return null;
+    var isSF = (getProjectId() === 'sf-office-search');
     return {
       type, id,
       name: b.address,
@@ -8875,7 +8876,8 @@ function getBuildingInfo(type, id) {
       meta: b.buildingSF + ' · ' + b.spaceAvailable + ' avail',
       tags: [b.directSublease, b.rentalRate].filter(Boolean),
       lat: b.lat, lng: b.lng,
-      pdfPage: PDF_PAGES[b.num]
+      pdfPage: isSF ? PDF_PAGES[b.num] : (b.estimatedPage || null),
+      surveyPdfUrl: isSF ? PDF_FILE : (b.surveyPdfUrl || '')
     };
   }
 }
@@ -9144,10 +9146,21 @@ function exportTourList() {
   const list = getTourList();
   if (list.length === 0) return;
 
+  var isSF = (getProjectId() === 'sf-office-search');
   let csv = 'Name,Address,Type,Rate,PDF Link\n';
   list.forEach(item => {
-    const pdfUrl = 'https://smoitoza.github.io/procore-sf-survey/survey-120dpi.pdf#page=' + (item.pdfPage || '');
-    csv += '"' + item.name + '","' + item.address + '","' + (item.tags[0]||'') + '","' + (item.tags[1]||'') + '","' + pdfUrl + '"\n';
+    var itemPdfUrl = '';
+    if (item.surveyPdfUrl && item.pdfPage) {
+      itemPdfUrl = item.surveyPdfUrl + '#page=' + item.pdfPage;
+    } else if (isSF && item.pdfPage) {
+      itemPdfUrl = PDF_FILE + '#page=' + item.pdfPage;
+    } else if (item.type === 'survey') {
+      var sb = SURVEY_BUILDINGS.find(function(b) { return b.num === item.id; });
+      if (sb && sb.surveyPdfUrl && sb.estimatedPage) {
+        itemPdfUrl = sb.surveyPdfUrl + '#page=' + sb.estimatedPage;
+      }
+    }
+    csv += '"' + item.name + '","' + item.address + '","' + (item.tags[0]||'') + '","' + (item.tags[1]||'') + '","' + itemPdfUrl + '"\n';
   });
 
   const blob = new Blob([csv], { type: 'text/csv' });
@@ -9966,7 +9979,7 @@ async function fetchCentralTourList() {
 
 // Convert server tour list item to local format
 function serverToLocalItem(item) {
-  return {
+  var result = {
     type: item.building_type,
     id: item.building_id,
     name: item.building_name,
@@ -9978,6 +9991,21 @@ function serverToLocalItem(item) {
     lng: item.lng,
     pdfPage: item.pdf_page
   };
+  // Enrich with surveyPdfUrl from SURVEY_BUILDINGS if available
+  if (result.type === 'survey') {
+    var isSF = (getProjectId() === 'sf-office-search');
+    if (isSF) {
+      result.surveyPdfUrl = PDF_FILE;
+      if (!result.pdfPage) result.pdfPage = PDF_PAGES[result.id];
+    } else {
+      var sb = (typeof SURVEY_BUILDINGS !== 'undefined') ? SURVEY_BUILDINGS.find(function(b) { return b.num === result.id; }) : null;
+      if (sb) {
+        result.surveyPdfUrl = sb.surveyPdfUrl || '';
+        if (!result.pdfPage) result.pdfPage = sb.estimatedPage || null;
+      }
+    }
+  }
+  return result;
 }
 
 // Save a building to the centralized tour list (admin only)
@@ -10477,29 +10505,84 @@ async function exportTourBook() {
 
   try {
     var { PDFDocument, rgb, StandardFonts } = PDFLib;
+    var isSFProject = (getProjectId() === 'sf-office-search');
 
-    // Fetch the source survey PDF
-    var surveyBytes = await fetch(PDF_FILE).then(function(r) { return r.arrayBuffer(); });
-    var surveyPdf = await PDFDocument.load(surveyBytes);
-    var totalSurveyPages = surveyPdf.getPageCount();
-
-    // Build sorted list of all building start pages to compute page ranges
-    var allPageStarts = Object.entries(PDF_PAGES)
-      .map(function(e) { return { num: e[0], page: e[1] }; })
-      .sort(function(a, b) { return a.page - b.page; });
-
-    function getPageRange(pdfPage) {
-      // Find this building's index in sorted list
-      var idx = allPageStarts.findIndex(function(e) { return e.page === pdfPage; });
-      var startPage = pdfPage - 1; // pdf-lib uses 0-indexed
-      var endPage;
-      if (idx >= 0 && idx < allPageStarts.length - 1) {
-        endPage = allPageStarts[idx + 1].page - 2; // up to the page before next building starts
-      } else {
-        // Last building - go to end of PDF (or start + 3 pages as safe default)
-        endPage = Math.min(startPage + 3, totalSurveyPages - 1);
+    // Enrich tour list items with survey PDF data from SURVEY_BUILDINGS
+    // so that each item knows its own surveyPdfUrl and page number
+    var enrichedList = list.map(function(item) {
+      // If item already has surveyPdfUrl (from getBuildingInfo), use it
+      if (item.surveyPdfUrl) return item;
+      // For SF project, use the hardcoded globals
+      if (isSFProject && item.type === 'survey') {
+        return Object.assign({}, item, {
+          surveyPdfUrl: PDF_FILE,
+          pdfPage: item.pdfPage || PDF_PAGES[item.id]
+        });
       }
-      return { start: startPage, end: endPage };
+      // For non-SF projects, look up the survey building to get its PDF info
+      if (item.type === 'survey') {
+        var sb = SURVEY_BUILDINGS.find(function(b) { return b.num === item.id; });
+        if (sb && sb.surveyPdfUrl) {
+          return Object.assign({}, item, {
+            surveyPdfUrl: sb.surveyPdfUrl,
+            pdfPage: sb.estimatedPage || item.pdfPage
+          });
+        }
+      }
+      return item;
+    });
+
+    // Collect unique survey PDF URLs and fetch each once
+    var pdfCache = {}; // url -> { pdf: PDFDocument, pageCount: number }
+    var uniqueUrls = [];
+    enrichedList.forEach(function(item) {
+      if (item.surveyPdfUrl && item.pdfPage && uniqueUrls.indexOf(item.surveyPdfUrl) === -1) {
+        uniqueUrls.push(item.surveyPdfUrl);
+      }
+    });
+
+    for (var u = 0; u < uniqueUrls.length; u++) {
+      var pdfUrl = uniqueUrls[u];
+      try {
+        var bytes = await fetch(pdfUrl).then(function(r) { return r.arrayBuffer(); });
+        var loadedPdf = await PDFDocument.load(bytes);
+        pdfCache[pdfUrl] = { pdf: loadedPdf, pageCount: loadedPdf.getPageCount() };
+      } catch(fetchErr) {
+        console.warn('Could not fetch survey PDF:', pdfUrl, fetchErr);
+      }
+    }
+
+    // For SF project, build sorted page starts for range computation
+    var sfPageStarts = null;
+    if (isSFProject) {
+      sfPageStarts = Object.entries(PDF_PAGES)
+        .map(function(e) { return { num: e[0], page: e[1] }; })
+        .sort(function(a, b) { return a.page - b.page; });
+    }
+
+    // Compute page range for a building in a given survey PDF
+    function getPageRange(pdfPage, surveyUrl) {
+      var cached = pdfCache[surveyUrl];
+      if (!cached) return null;
+      var totalPages = cached.pageCount;
+      var startPage = pdfPage - 1; // pdf-lib uses 0-indexed
+
+      if (isSFProject && sfPageStarts) {
+        // SF project: use the hardcoded page mapping to compute ranges
+        var idx = sfPageStarts.findIndex(function(e) { return e.page === pdfPage; });
+        var endPage;
+        if (idx >= 0 && idx < sfPageStarts.length - 1) {
+          endPage = sfPageStarts[idx + 1].page - 2;
+        } else {
+          endPage = Math.min(startPage + 3, totalPages - 1);
+        }
+        return { start: startPage, end: endPage };
+      } else {
+        // Non-SF projects: extract a fixed window of pages (start page + up to 3 more)
+        // since we only have estimated page numbers, not exact ranges
+        var endPage = Math.min(startPage + 3, totalPages - 1);
+        return { start: startPage, end: endPage };
+      }
     }
 
     // Create new PDF
@@ -10517,12 +10600,12 @@ async function exportTourBook() {
     coverPage.drawRectangle({ x: 0, y: 592, width: 612, height: 200, color: rgb(0.059, 0.090, 0.165) });
 
     // Logo text
-    coverPage.drawText('Tour-Lytics', {
+    coverPage.drawText('TourLytics', {
       x: 50, y: 740, size: 28, font: helveticaBold, color: rgb(1, 1, 1)
     });
 
     // Project name (dynamic)
-    var _pdfProjectName = document.getElementById('projectTitle') ? document.getElementById('projectTitle').textContent : 'Tour-Lytics Project';
+    var _pdfProjectName = document.getElementById('projectTitle') ? document.getElementById('projectTitle').textContent : 'TourLytics Project';
     coverPage.drawText(_pdfProjectName, {
       x: 50, y: 690, size: 20, font: helvetica, color: rgb(0.58, 0.64, 0.72)
     });
@@ -10598,17 +10681,22 @@ async function exportTourBook() {
     });
 
     // ---- BUILDING SURVEY PAGES ----
-    for (var i = 0; i < list.length; i++) {
-      var item = list[i];
+    for (var i = 0; i < enrichedList.length; i++) {
+      var item = enrichedList[i];
+      var surveyUrl = item.surveyPdfUrl;
       var pdfPage = item.pdfPage;
-      if (!pdfPage) continue;
+      if (!surveyUrl || !pdfPage || !pdfCache[surveyUrl]) continue;
 
-      var range = getPageRange(pdfPage);
+      var range = getPageRange(pdfPage, surveyUrl);
+      if (!range) continue;
+
+      var surveyPdf = pdfCache[surveyUrl].pdf;
+      var totalSurveyPages = pdfCache[surveyUrl].pageCount;
 
       // Add a separator page before each building's survey pages
       var sepPage = newPdf.addPage([612, 792]);
       sepPage.drawRectangle({ x: 0, y: 692, width: 612, height: 100, color: rgb(0.059, 0.090, 0.165) });
-      sepPage.drawText('Building ' + (i + 1) + ' of ' + list.length, {
+      sepPage.drawText('Building ' + (i + 1) + ' of ' + enrichedList.length, {
         x: 50, y: 740, size: 11, font: helvetica, color: rgb(0.58, 0.64, 0.72)
       });
       sepPage.drawText(item.name, {
@@ -10656,8 +10744,10 @@ async function exportTourBook() {
       for (var p = range.start; p <= range.end && p < totalSurveyPages; p++) {
         pageIndices.push(p);
       }
-      var copiedPages = await newPdf.copyPages(surveyPdf, pageIndices);
-      copiedPages.forEach(function(pg) { newPdf.addPage(pg); });
+      if (pageIndices.length > 0) {
+        var copiedPages = await newPdf.copyPages(surveyPdf, pageIndices);
+        copiedPages.forEach(function(pg) { newPdf.addPage(pg); });
+      }
     }
 
     // Save and download
