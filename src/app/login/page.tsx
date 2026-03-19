@@ -84,6 +84,7 @@ function LoginPageInner() {
   const [jobTitle, setJobTitle] = useState('')
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [isSignUp, setIsSignUp] = useState(startOnSignUp)
+  const [isForgotPassword, setIsForgotPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -93,6 +94,32 @@ function LoginPageInner() {
   useEffect(() => {
     if (startOnSignUp) setIsSignUp(true)
   }, [startOnSignUp])
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    setMessage(null)
+
+    if (!email.trim()) {
+      setError('Please enter your email address.')
+      setLoading(false)
+      return
+    }
+
+    const supabase = createClient()
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/api/auth/callback?next=/reset-password`,
+    })
+
+    if (error) {
+      setError(error.message)
+    } else {
+      setMessage('Check your email for a password reset link.')
+    }
+
+    setLoading(false)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -259,7 +286,7 @@ function LoginPageInner() {
               marginBottom: '0.25rem',
             }}
           >
-            {isSignUp ? 'Create Account' : 'Welcome Back'}
+            {isForgotPassword ? 'Reset Password' : isSignUp ? 'Create Account' : 'Welcome Back'}
           </h1>
           <p
             style={{
@@ -269,10 +296,98 @@ function LoginPageInner() {
               marginBottom: '2rem',
             }}
           >
-            {isSignUp
-              ? 'Get started with Tour-Lytics'
-              : 'Sign in to your Tour-Lytics account'}
+            {isForgotPassword
+              ? 'Enter your email and we will send you a reset link'
+              : isSignUp
+                ? 'Get started with TourLytics'
+                : 'Sign in to your TourLytics account'}
           </p>
+
+          {isForgotPassword ? (
+            <form onSubmit={handleForgotPassword}>
+              <FormInput
+                id="resetEmail"
+                label="Email"
+                type="email"
+                value={email}
+                onChange={setEmail}
+                placeholder="you@company.com"
+              />
+
+              {error && (
+                <div
+                  style={{
+                    fontSize: '0.875rem',
+                    color: '#dc2626',
+                    background: '#fef2f2',
+                    borderRadius: '0.5rem',
+                    padding: '0.625rem 0.875rem',
+                    marginBottom: '1rem',
+                  }}
+                >
+                  {error}
+                </div>
+              )}
+
+              {message && (
+                <div
+                  style={{
+                    fontSize: '0.875rem',
+                    color: '#16a34a',
+                    background: '#f0fdf4',
+                    borderRadius: '0.5rem',
+                    padding: '0.625rem 0.875rem',
+                    marginBottom: '1rem',
+                  }}
+                >
+                  {message}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                style={{
+                  width: '100%',
+                  background: '#2563eb',
+                  color: 'white',
+                  padding: '0.625rem',
+                  borderRadius: '0.5rem',
+                  fontWeight: 600,
+                  fontSize: '0.875rem',
+                  border: 'none',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  opacity: loading ? 0.5 : 1,
+                  transition: 'all 0.15s',
+                  fontFamily: 'inherit',
+                }}
+              >
+                {loading ? 'Sending...' : 'Send Reset Link'}
+              </button>
+
+              <div style={{ textAlign: 'center', marginTop: '1.25rem' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsForgotPassword(false)
+                    setError(null)
+                    setMessage(null)
+                  }}
+                  style={{
+                    color: '#2563eb',
+                    fontWeight: 500,
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  Back to sign in
+                </button>
+              </div>
+            </form>
+          ) : (
 
           <form onSubmit={handleSubmit}>
             {/* Sign-up only fields */}
@@ -324,6 +439,31 @@ function LoginPageInner() {
               placeholder={isSignUp ? 'At least 6 characters' : 'Your password'}
               minLength={6}
             />
+
+            {/* Forgot password link - sign in only */}
+            {!isSignUp && (
+              <div style={{ textAlign: 'right', marginTop: '-0.5rem', marginBottom: '1rem' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsForgotPassword(true)
+                    setError(null)
+                    setMessage(null)
+                  }}
+                  style={{
+                    color: '#2563eb',
+                    fontWeight: 500,
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    fontSize: '0.8125rem',
+                  }}
+                >
+                  Forgot password?
+                </button>
+              </div>
+            )}
 
             {/* Terms checkbox - sign up only */}
             {isSignUp && (
@@ -434,7 +574,9 @@ function LoginPageInner() {
                   : 'Sign In'}
             </button>
           </form>
+          )}
 
+          {!isForgotPassword && (
           <div
             style={{
               marginTop: '1.5rem',
@@ -489,6 +631,7 @@ function LoginPageInner() {
               </>
             )}
           </div>
+          )}
         </div>
 
         {/* Footer links */}

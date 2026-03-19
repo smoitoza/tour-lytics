@@ -45,6 +45,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // Allow /reset-password even when logged in (recovery flow)
+  if (request.nextUrl.pathname === '/reset-password') {
+    return supabaseResponse
+  }
+
   // Redirect logged-in users away from login page
   if (user && request.nextUrl.pathname === '/login') {
     const url = request.nextUrl.clone()
