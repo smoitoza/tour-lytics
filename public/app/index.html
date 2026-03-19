@@ -13580,8 +13580,17 @@ function renderTeamPage() {
       html += '<span class="team-member-badge" style="background:' + roleCfg.bg + ';color:' + roleCfg.color + ';border:1px solid ' + roleCfg.border + ';">' + roleCfg.label + '</span>';
     }
 
-    // Persona badge (smaller, secondary)
-    html += '<span class="team-member-badge" style="background:' + cfg.bg + ';color:' + cfg.color + ';border:1px solid ' + cfg.border + ';font-size:0.625rem;padding:2px 8px;">' + cfg.label + '</span>';
+    // Persona badge (editable dropdown for admins, static for others)
+    if (canManage && !isMe && !isOwner) {
+      html += '<select class="team-role-select" style="background-color:' + cfg.bg + ';color:' + cfg.color + ';border-color:' + cfg.border + ';font-size:0.625rem;padding:2px 8px;min-width:auto;" onchange="teamChangePersona(\'' + m.email.replace(/'/g, "\\'") + '\', this.value)">';
+      ['admin', 'broker', 'cre_team', 'touree'].forEach(function(p) {
+        var pCfg = PERSONA_CONFIG[p];
+        html += '<option value="' + p + '"' + (m.persona === p ? ' selected' : '') + '>' + pCfg.label + '</option>';
+      });
+      html += '</select>';
+    } else {
+      html += '<span class="team-member-badge" style="background:' + cfg.bg + ';color:' + cfg.color + ';border:1px solid ' + cfg.border + ';font-size:0.625rem;padding:2px 8px;">' + cfg.label + '</span>';
+    }
 
     // Actions (no actions for owner - can't remove or change)
     if (canManage && !isMe && !isOwner) {
@@ -13788,6 +13797,34 @@ async function teamChangeRole(email, newRole) {
     renderTeamPage();
   } catch(e) {
     alert('Failed to change role: ' + e.message);
+    _teamLoaded = false;
+    await loadTeamMembers();
+  }
+}
+
+async function teamChangePersona(email, newPersona) {
+  try {
+    var res = await fetch('/api/team', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, persona: newPersona, projectId: getProjectId() })
+    });
+    if (!res.ok) {
+      var errData = await res.json();
+      alert('Failed to change type: ' + (errData.error || 'Unknown error'));
+      _teamLoaded = false;
+      await loadTeamMembers();
+      return;
+    }
+    // Update local data and re-render to refresh colors
+    _teamMembers.forEach(function(m) {
+      if (m.email.toLowerCase() === email.toLowerCase()) {
+        m.persona = newPersona;
+      }
+    });
+    renderTeamPage();
+  } catch(e) {
+    alert('Failed to change type: ' + e.message);
     _teamLoaded = false;
     await loadTeamMembers();
   }
