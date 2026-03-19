@@ -803,7 +803,7 @@ body {
     display: none;
   }
   .header-right {
-    display: none;
+    gap: var(--space-2);
   }
   .header-title {
     font-size: var(--text-sm);
@@ -5862,6 +5862,558 @@ body {
 
   .chat-messages {
     max-height: 300px;
+  }
+}
+
+/* ============================================================
+   MOBILE RESPONSIVE PASS
+   Comprehensive mobile-first fixes for all pages
+   ============================================================ */
+
+/* --- VIEWPORT META: ensure proper mobile scaling --- */
+
+/* --- HEADER: keep user avatar/sign-out accessible on all sizes --- */
+@media (max-width: 500px) {
+  .header-inner {
+    gap: var(--space-2);
+  }
+  .header-left {
+    gap: var(--space-2);
+    min-width: 0;
+    flex: 1;
+  }
+  .header-title-group {
+    min-width: 0;
+  }
+  .header-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* Keep avatar button visible and accessible */
+  .user-avatar-btn {
+    width: 30px;
+    height: 30px;
+    font-size: 11px;
+  }
+  /* Dropdown: full-width on mobile */
+  .user-dropdown {
+    min-width: 200px;
+    right: -8px;
+  }
+}
+
+/* --- PAGE TABS: scrollable with fade hints --- */
+@media (max-width: 600px) {
+  .page-tabs {
+    padding: var(--space-1) 0;
+    gap: 0;
+    -ms-overflow-style: none;
+    position: relative;
+  }
+  .page-tab {
+    padding: 8px 12px;
+    font-size: 0.72rem;
+    gap: 4px;
+    min-height: 40px; /* minimum touch target */
+  }
+  .page-tab svg {
+    width: 14px;
+    height: 14px;
+  }
+  /* Subtle scroll shadow hints */
+  .page-tabs::before,
+  .page-tabs::after {
+    content: '';
+    position: sticky;
+    top: 0;
+    bottom: 0;
+    min-width: 16px;
+    flex-shrink: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .page-tabs::before {
+    left: 0;
+    background: linear-gradient(to right, var(--color-surface), transparent);
+  }
+  .page-tabs::after {
+    right: 0;
+    background: linear-gradient(to left, var(--color-surface), transparent);
+  }
+}
+
+@media (max-width: 380px) {
+  .page-tab {
+    padding: 7px 10px;
+    font-size: 0.68rem;
+  }
+  .page-tab svg {
+    display: none; /* hide icons on very small screens to fit more tabs */
+  }
+}
+
+/* --- MAP PAGE: better touch experience --- */
+@media (max-width: 600px) {
+  #map {
+    min-height: calc(100dvh - 140px);
+  }
+  /* Tour toggle button: bigger touch target */
+  .tour-toggle {
+    min-height: 36px;
+    padding: 8px 14px;
+  }
+  /* Leaflet zoom controls: bigger on touch */
+  .leaflet-control-zoom a {
+    width: 36px !important;
+    height: 36px !important;
+    line-height: 36px !important;
+    font-size: 18px !important;
+  }
+  /* Map popups: ensure they don't overflow viewport */
+  .building-popup-wrapper .leaflet-popup-content {
+    min-width: 240px;
+    max-width: calc(100vw - 48px);
+  }
+  .building-tooltip {
+    min-width: 260px;
+    max-width: calc(100vw - 32px);
+  }
+  .building-tooltip.wide {
+    min-width: 260px;
+    max-width: calc(100vw - 32px);
+  }
+  .tooltip-btn-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .tooltip-btn-row .tooltip-tour-btn,
+  .tooltip-btn-row .tooltip-shortlist-btn {
+    width: 100%;
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+}
+
+/* --- TOUR LIST PANEL: mobile improvements --- */
+@media (max-width: 600px) {
+  .tour-panel-header {
+    padding: var(--space-3) var(--space-4);
+  }
+  .tour-panel-body {
+    padding: var(--space-3) var(--space-4);
+  }
+  .tour-panel-footer {
+    padding: var(--space-3) var(--space-4);
+  }
+  .tour-item {
+    padding: var(--space-3);
+  }
+  .tour-item-terms {
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 8px;
+    font-size: 0.7rem;
+  }
+}
+
+/* --- TOUR BOOK PAGE: stack scores, better card layout --- */
+@media (max-width: 500px) {
+  .tourbook-container {
+    padding: var(--space-3);
+  }
+  .tourbook-header {
+    flex-direction: column;
+    gap: var(--space-2);
+    align-items: flex-start;
+  }
+  .tourbook-header h2 {
+    font-size: var(--text-base);
+  }
+  .tourbook-export-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .tourbook-card-title {
+    font-size: var(--text-sm);
+  }
+  .tourbook-star svg {
+    width: 20px;
+    height: 20px;
+  }
+  .tourbook-score-label {
+    font-size: 0.6rem;
+  }
+  .tourbook-notes textarea {
+    min-height: 80px;
+  }
+  .tourbook-summary {
+    padding: var(--space-3);
+  }
+  .tourbook-rank-item {
+    gap: var(--space-2);
+  }
+  .tourbook-sort-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  /* Tour book schedule section */
+  .tourbook-schedule {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .tourbook-schedule input {
+    width: 100%;
+  }
+}
+
+/* --- SCORES PAGE: cards stack properly --- */
+@media (max-width: 500px) {
+  .scores-page {
+    padding: var(--space-3);
+  }
+  .scores-page-header {
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+  }
+  .scores-page-title {
+    font-size: var(--text-lg);
+  }
+  .score-card {
+    border-radius: var(--radius-md);
+  }
+  .score-card-main {
+    padding: var(--space-3);
+    gap: var(--space-2);
+  }
+  .score-value-area {
+    min-width: auto;
+    width: 100%;
+    text-align: left;
+  }
+  .score-details-btn {
+    width: 100%;
+    justify-content: center;
+    margin-top: var(--space-1);
+  }
+}
+
+/* --- SHORTLIST PAGE: responsive cards --- */
+@media (max-width: 500px) {
+  .shortlist-page {
+    padding: var(--space-3);
+  }
+  .shortlist-page-header {
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+  }
+  .shortlist-page-title {
+    font-size: var(--text-lg);
+  }
+  .shortlist-card-header {
+    padding: var(--space-3);
+  }
+  .shortlist-card-body {
+    padding: 0 var(--space-3) var(--space-3);
+  }
+  .shortlist-card-actions {
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+  .shortlist-card-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    padding: var(--space-2);
+  }
+  .shortlist-card-metric-value {
+    font-size: var(--text-base);
+  }
+}
+
+/* --- PHOTOS PAGE: better grid on small screens --- */
+@media (max-width: 500px) {
+  .photos-page {
+    padding: var(--space-3);
+  }
+  .photos-filters {
+    padding: var(--space-3);
+    gap: var(--space-2);
+  }
+  .photos-filter-group {
+    width: 100%;
+  }
+  .photos-filter-select,
+  .photos-filter-input {
+    min-width: 100%;
+  }
+  .photos-upload-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .photos-grid-inner {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-2);
+  }
+  .photos-card-img {
+    height: 110px;
+  }
+  .photos-building-header {
+    flex-direction: column;
+    gap: var(--space-1);
+    align-items: flex-start;
+  }
+  .photos-building-picker-inner {
+    width: 95%;
+    padding: 16px;
+    max-height: 85vh;
+  }
+  /* Lightbox: full-width on mobile */
+  .photo-lightbox-body {
+    max-width: 100vw;
+    padding: 0 var(--space-2);
+  }
+  .photo-lightbox-body img {
+    max-height: 60vh;
+    border-radius: var(--radius-md);
+  }
+}
+
+/* --- FINANCIALS PAGE: already handled, minor improvements --- */
+@media (max-width: 500px) {
+  .financials-view {
+    padding: var(--space-2);
+  }
+  .fin-sheet-title {
+    font-size: var(--text-base);
+  }
+  .fin-sheet-subtitle {
+    font-size: 0.7rem;
+  }
+  /* RFP building cards */
+  .rfp-building-card {
+    border-radius: var(--radius-md);
+  }
+  .rfp-top-bar {
+    gap: var(--space-2);
+  }
+}
+
+/* --- COMMUTE PAGE: overflow fix, card stack --- */
+@media (max-width: 500px) {
+  .commute-page {
+    padding: var(--space-3);
+  }
+  .commute-page-title {
+    font-size: var(--text-lg);
+  }
+  .commute-upload-card {
+    padding: var(--space-3);
+  }
+  .commute-dropzone {
+    padding: 1.25rem;
+  }
+  .commute-dropzone-title {
+    font-size: var(--text-sm);
+  }
+  .commute-actions {
+    flex-direction: column;
+  }
+  .commute-run-btn {
+    width: 100%;
+  }
+  .commute-mode-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* --- TEAM PAGE: better stacking and mobile layout --- */
+@media (max-width: 500px) {
+  .team-page {
+    padding: var(--space-3);
+  }
+  .team-page-header {
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+  }
+  .team-page-title {
+    font-size: var(--text-base);
+  }
+  .team-member-count {
+    align-self: flex-start;
+  }
+  .team-add-form {
+    padding: var(--space-3);
+  }
+  .team-add-fields {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .team-add-field {
+    min-width: 100%;
+  }
+  .team-add-btn {
+    width: 100%;
+  }
+  .team-member-card {
+    flex-wrap: wrap;
+    padding: var(--space-3);
+    gap: var(--space-2);
+  }
+  .team-member-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: var(--text-xs);
+  }
+  .team-member-info {
+    min-width: 0;
+    flex: 1;
+  }
+  .team-member-name {
+    font-size: var(--text-xs);
+  }
+  .team-member-email {
+    font-size: 0.65rem;
+  }
+  .team-role-select {
+    font-size: 0.6rem;
+    padding: 0.2rem 1.25rem 0.2rem 0.4rem;
+  }
+  .team-member-actions {
+    width: 100%;
+    justify-content: flex-end;
+    margin-top: 0;
+    gap: var(--space-1);
+  }
+  .team-member-badge {
+    font-size: 0.55rem;
+    padding: 2px 8px;
+  }
+  /* Permissions legend: stack into single column */
+  .team-perm-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- AI USAGE PAGE: already handled, minor touch --- */
+@media (max-width: 500px) {
+  .ai-usage-page {
+    padding: var(--space-3);
+  }
+  .ai-usage-title {
+    font-size: var(--text-base);
+  }
+}
+
+/* --- AI CHAT PANEL: better mobile positioning --- */
+@media (max-width: 500px) {
+  .chat-panel {
+    width: calc(100vw - 16px);
+    left: 8px;
+    right: 8px;
+    bottom: auto;
+    top: 100px;
+    max-height: calc(100dvh - 120px);
+    border-radius: var(--radius-lg);
+  }
+  .chat-panel.expanded {
+    width: calc(100vw - 8px);
+    left: 4px;
+    top: 4px;
+    max-height: calc(100dvh - 8px);
+  }
+  .chat-fab {
+    width: 38px;
+    height: 38px;
+  }
+  .chat-fab svg {
+    width: 18px;
+    height: 18px;
+  }
+  .chat-messages {
+    max-height: 250px;
+    min-height: 150px;
+  }
+  .chat-input-area {
+    padding: var(--space-2) var(--space-3);
+  }
+}
+
+/* --- MODALS: ensure they fit mobile screens --- */
+@media (max-width: 500px) {
+  .pw-modal {
+    max-width: calc(100vw - 32px);
+    padding: 20px;
+    margin: 0 16px;
+  }
+  .pw-modal h3 {
+    font-size: 15px;
+  }
+  .pw-modal-actions {
+    flex-direction: column-reverse;
+  }
+  .pw-modal-btn {
+    width: 100%;
+    text-align: center;
+  }
+  /* Photo lightbox */
+  .photo-lightbox-close {
+    top: 8px;
+    right: 8px;
+  }
+  .photo-lightbox-nav.prev {
+    left: 4px;
+  }
+  .photo-lightbox-nav.next {
+    right: 4px;
+  }
+}
+
+/* --- SURVEY UPLOAD MODAL: mobile fit --- */
+@media (max-width: 600px) {
+  .survey-upload-modal-inner {
+    width: 95%;
+    max-height: 90vh;
+    padding: var(--space-3);
+  }
+}
+
+/* --- FOOTER: compact on mobile --- */
+@media (max-width: 500px) {
+  .footer {
+    padding: var(--space-1) var(--space-2);
+  }
+  .footer a {
+    font-size: 0.5625rem;
+  }
+}
+
+/* --- TOUCH IMPROVEMENTS: larger tap targets globally --- */
+@media (pointer: coarse) {
+  button, [role="button"], select, a {
+    min-height: 36px;
+  }
+  .page-tab {
+    min-height: 42px;
+    padding: 10px 14px;
+  }
+  /* Prevent 300ms tap delay */
+  html {
+    touch-action: manipulation;
+  }
+}
+
+/* --- SAFE AREA INSETS for notched phones --- */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .footer {
+    padding-bottom: calc(var(--space-2) + env(safe-area-inset-bottom));
+  }
+  .chat-fab {
+    bottom: calc(20px + env(safe-area-inset-bottom));
+  }
+  .tour-toggle {
+    bottom: calc(24px + env(safe-area-inset-bottom));
   }
 }
 
