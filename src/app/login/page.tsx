@@ -360,9 +360,21 @@ function LoginPageInner() {
                   }}
                 >
                   I agree to the{' '}
-                  <span style={{ color: '#2563eb', fontWeight: 500 }}>Terms of Service</span>{' '}
+                  <Link
+                    href="/terms"
+                    target="_blank"
+                    style={{ color: '#2563eb', textDecoration: 'underline' }}
+                  >
+                    Terms of Service
+                  </Link>{' '}
                   and{' '}
-                  <span style={{ color: '#2563eb', fontWeight: 500 }}>Privacy Policy</span>
+                  <Link
+                    href="/privacy"
+                    target="_blank"
+                    style={{ color: '#2563eb', textDecoration: 'underline' }}
+                  >
+                    Privacy Policy
+                  </Link>
                 </label>
               </div>
             )}
@@ -479,13 +491,34 @@ function LoginPageInner() {
           </div>
         </div>
 
-        {/* Footer */}
-        <div style={{ textAlign: 'center', marginTop: '2rem', fontSize: '0.75rem' }}>
+        {/* Footer links */}
+        <div
+          style={{
+            textAlign: 'center',
+            marginTop: '1.5rem',
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '1.5rem',
+            flexWrap: 'wrap' as const,
+          }}
+        >
+          <Link
+            href="/terms"
+            style={{ color: '#64748b', textDecoration: 'none', fontSize: '0.75rem' }}
+          >
+            Terms
+          </Link>
+          <Link
+            href="/privacy"
+            style={{ color: '#64748b', textDecoration: 'none', fontSize: '0.75rem' }}
+          >
+            Privacy
+          </Link>
           <a
             href="https://www.perplexity.ai/computer"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: '#64748b', textDecoration: 'none' }}
+            style={{ color: '#64748b', textDecoration: 'none', fontSize: '0.75rem' }}
           >
             Created with Perplexity Computer
           </a>

@@ -1414,6 +1414,8 @@ export default function LandingPage() {
         <div className="flex flex-col md:flex-row items-center justify-between flex-wrap" style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem', gap: '1rem' }}>
           <div className="text-xs" style={{ color: '#64748b' }}>&copy; 2026 Tour-Lytics. All rights reserved.</div>
           <div className="flex items-center" style={{ gap: '1.5rem' }}>
+            <Link href="/terms" className="text-xs no-underline transition-colors" style={{ color: '#64748b' }}>Terms</Link>
+            <Link href="/privacy" className="text-xs no-underline transition-colors" style={{ color: '#64748b' }}>Privacy</Link>
             <Link href="/investors" className="text-xs no-underline transition-colors" style={{ color: '#64748b' }}>Investors</Link>
             <a
               href="https://www.perplexity.ai/computer"
