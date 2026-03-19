@@ -1,7 +1,7 @@
 'use client'
 
 import { createClient } from '@/lib/supabase-browser'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 
@@ -73,7 +73,7 @@ function FormInput({
   )
 }
 
-export default function LoginPage() {
+function LoginPageInner() {
   const searchParams = useSearchParams()
   const startOnSignUp = searchParams.get('signup') === 'true'
 
@@ -492,5 +492,17 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: '#64748b', fontSize: '0.875rem' }}>Loading...</div>
+      </div>
+    }>
+      <LoginPageInner />
+    </Suspense>
   )
 }
