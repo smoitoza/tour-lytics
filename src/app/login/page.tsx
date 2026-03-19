@@ -360,21 +360,9 @@ export default function LoginPage() {
                   }}
                 >
                   I agree to the{' '}
-                  <Link
-                    href="/terms"
-                    target="_blank"
-                    style={{ color: '#2563eb', textDecoration: 'underline' }}
-                  >
-                    Terms of Service
-                  </Link>{' '}
+                  <span style={{ color: '#2563eb', fontWeight: 500 }}>Terms of Service</span>{' '}
                   and{' '}
-                  <Link
-                    href="/privacy"
-                    target="_blank"
-                    style={{ color: '#2563eb', textDecoration: 'underline' }}
-                  >
-                    Privacy Policy
-                  </Link>
+                  <span style={{ color: '#2563eb', fontWeight: 500 }}>Privacy Policy</span>
                 </label>
               </div>
             )}
@@ -491,34 +479,13 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Footer links */}
-        <div
-          style={{
-            textAlign: 'center',
-            marginTop: '1.5rem',
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '1.5rem',
-            flexWrap: 'wrap' as const,
-          }}
-        >
-          <Link
-            href="/terms"
-            style={{ color: '#64748b', textDecoration: 'none', fontSize: '0.75rem' }}
-          >
-            Terms
-          </Link>
-          <Link
-            href="/privacy"
-            style={{ color: '#64748b', textDecoration: 'none', fontSize: '0.75rem' }}
-          >
-            Privacy
-          </Link>
+        {/* Footer */}
+        <div style={{ textAlign: 'center', marginTop: '2rem', fontSize: '0.75rem' }}>
           <a
             href="https://www.perplexity.ai/computer"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: '#64748b', textDecoration: 'none', fontSize: '0.75rem' }}
+            style={{ color: '#64748b', textDecoration: 'none' }}
           >
             Created with Perplexity Computer
           </a>
