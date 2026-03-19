@@ -370,8 +370,8 @@ export default function DashboardPage() {
     }
   }
 
-  const getSignupUrl = () => 'https://tour-lytics.com/login'
-  const getProjectUrl = () => 'https://tour-lytics.com/project/sf-office-search'
+  const getSignupUrl = () => 'https://tourlytics.ai/login'
+  const getProjectUrl = () => 'https://tourlytics.ai/project/sf-office-search'
 
   const buildInviteEmail = (email: string, displayName: string, persona: string, tempPassword?: string) => {
     const firstName = displayName ? displayName.split(' ')[0] : ''

@@ -342,7 +342,7 @@ export default function LandingPage() {
                 color: isFullscreen ? '#cbd5e1' : '#94a3b8',
                 border: isFullscreen ? '1px solid rgba(255,255,255,0.15)' : '1px solid #e2e8f0',
               }}>
-                tour-lytics.com/projects/sf-office-search/map
+                tourlytics.ai/projects/sf-office-search/map
               </span>
               <button
                 onClick={() => setIsFullscreen(!isFullscreen)}
@@ -411,7 +411,7 @@ export default function LandingPage() {
               <span className="rounded-full" style={{ width: '10px', height: '10px', background: '#f59e0b' }} />
               <span className="rounded-full" style={{ width: '10px', height: '10px', background: '#22c55e' }} />
               <span className="flex-1 text-xs" style={{ marginLeft: '1rem', background: '#fff', borderRadius: '0.5rem', padding: '0.25rem 0.75rem', color: '#94a3b8', border: '1px solid #e2e8f0' }}>
-                tour-lytics.com/projects/sf-office-search/tourbook
+                tourlytics.ai/projects/sf-office-search/tourbook
               </span>
             </div>
 
@@ -550,7 +550,7 @@ export default function LandingPage() {
               <span className="rounded-full" style={{ width: '10px', height: '10px', background: '#f59e0b' }} />
               <span className="rounded-full" style={{ width: '10px', height: '10px', background: '#22c55e' }} />
               <span className="flex-1 text-xs" style={{ marginLeft: '1rem', background: '#fff', borderRadius: '0.5rem', padding: '0.25rem 0.75rem', color: '#94a3b8', border: '1px solid #e2e8f0' }}>
-                tour-lytics.com/projects/sf-office-search/chat
+                tourlytics.ai/projects/sf-office-search/chat
               </span>
             </div>
 
@@ -645,7 +645,7 @@ export default function LandingPage() {
               <span className="rounded-full" style={{ width: '10px', height: '10px', background: '#f59e0b' }} />
               <span className="rounded-full" style={{ width: '10px', height: '10px', background: '#22c55e' }} />
               <span className="flex-1 text-xs" style={{ marginLeft: '1rem', background: '#fff', borderRadius: '0.5rem', padding: '0.25rem 0.75rem', color: '#94a3b8', border: '1px solid #e2e8f0' }}>
-                tour-lytics.com/app - Commute Study
+                tourlytics.ai/app - Commute Study
               </span>
             </div>
             {/* Dark header */}

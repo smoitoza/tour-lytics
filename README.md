@@ -41,5 +41,5 @@ npm run dev
 
 1. Import `smoitoza/tour-lytics` repo in Vercel dashboard
 2. Set environment variables above
-3. Connect tour-lytics.com domain
+3. Connect tourlytics.ai domain
 4. Deploy
