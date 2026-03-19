@@ -157,6 +157,13 @@ export default function LandingPage() {
             <a href="#features" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Features</a>
             <Link href="/investors" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }}>Investors</Link>
             <Link
+              href="/login?signup=true"
+              className="font-semibold text-sm no-underline transition-all"
+              style={{ backgroundColor: '#ffffff', color: '#0f172a', padding: '0.5rem 1.25rem', borderRadius: '0.75rem', border: '1px solid #e2e8f0' }}
+            >
+              Create Account
+            </Link>
+            <Link
               href="/login"
               className="font-semibold text-sm no-underline transition-all"
               style={{ backgroundColor: '#2563eb', color: '#ffffff', padding: '0.5rem 1.25rem', borderRadius: '0.75rem' }}
@@ -199,7 +206,8 @@ export default function LandingPage() {
               <a href="#analysis" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Analysis</a>
               <a href="#features" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Features</a>
               <Link href="/investors" className="text-base no-underline" style={{ color: '#475569' }}>Investors</Link>
-              <Link href="/login" className="text-center font-semibold text-sm no-underline" style={{ backgroundColor: '#2563eb', color: '#fff', padding: '0.75rem 1.5rem', borderRadius: '0.75rem', marginTop: '0.5rem' }}>Sign In</Link>
+              <Link href="/login?signup=true" className="text-center font-semibold text-sm no-underline" style={{ backgroundColor: '#ffffff', color: '#0f172a', padding: '0.75rem 1.5rem', borderRadius: '0.75rem', marginTop: '0.5rem' }}>Create Account</Link>
+              <Link href="/login" className="text-center font-semibold text-sm no-underline" style={{ backgroundColor: '#2563eb', color: '#fff', padding: '0.75rem 1.5rem', borderRadius: '0.75rem' }}>Sign In</Link>
             </div>
           </div>
         )}
@@ -252,6 +260,14 @@ export default function LandingPage() {
               Request Demo
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
             </a>
+            <Link
+              href="/login?signup=true"
+              className="inline-flex items-center font-semibold no-underline transition-all"
+              style={{ gap: '0.5rem', backgroundColor: '#ffffff', color: '#0f172a', padding: '0.75rem 2rem', borderRadius: '0.75rem', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', border: 'none', cursor: 'pointer' }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4-4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" /></svg>
+              Create Account
+            </Link>
             <a
               href="#demo"
               className="inline-flex items-center font-medium no-underline transition-all"
