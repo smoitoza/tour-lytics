@@ -1447,13 +1447,16 @@ body {
    ============================================================ */
 
 .poi-search-container {
-  position: absolute;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
+  position: fixed;
+  bottom: 82px;
+  right: 20px;
   z-index: 1000;
-  width: 380px;
-  max-width: calc(100vw - 24px);
+  width: 340px;
+}
+
+/* Hide search bar when chat panel is open */
+.poi-search-container.hidden {
+  display: none;
 }
 
 .poi-search-bar {
@@ -1553,7 +1556,7 @@ body {
 /* POI search suggestions dropdown */
 .poi-search-suggestions {
   position: absolute;
-  top: 46px;
+  bottom: 46px;
   left: 0;
   right: 0;
   background: var(--color-surface);
@@ -1793,8 +1796,9 @@ body {
   }
 
   .poi-search-container {
-    width: calc(100vw - 24px);
-    top: 8px;
+    width: calc(100vw - 84px);
+    right: 12px;
+    bottom: 78px;
   }
 
   .poi-search-bar {
@@ -10605,6 +10609,10 @@ function switchPageTab(tabId) {
     surveyToggle.style.display = (tabId === 'map') ? '' : 'none';
   }
 
+  // Show/hide POI search bar based on tab
+  var poiSearch = document.getElementById('poi-search-container');
+  if (poiSearch) poiSearch.style.display = (tabId === 'map') ? '' : 'none';
+
   // Invalidate map size when switching back to map
   if (tabId === 'map' && typeof map !== 'undefined') {
     setTimeout(() => map.invalidateSize(), 100);
@@ -16789,6 +16797,9 @@ function commuteSetGroupMode(mode) {
     panel.classList.toggle('visible', isOpen);
     fab.classList.toggle('open', isOpen);
     fab.style.display = isOpen ? 'none' : '';  // Hide FAB when panel is open
+    // Hide POI search bar when chat is open to avoid overlap
+    var poiSearch = document.getElementById('poi-search-container');
+    if (poiSearch) poiSearch.classList.toggle('hidden', isOpen);
     if (isOpen) {
       setTimeout(() => input.focus(), 250);
     }
