@@ -119,34 +119,64 @@ Return ONLY the JSON array, no other text.`
     }
 
     if (pageTexts.length > 0) {
+      // Detect pages that list many addresses (TOC/map pages) so we can deprioritize them
+      // Count how many building addresses appear on each page
+      const pageAddrCounts: Record<number, number> = {}
+      for (const pt of pageTexts) {
+        const pageText = pt.text.toLowerCase().replace(/[.,]/g, '')
+        let count = 0
+        for (const b of buildings) {
+          if (!b.address) continue
+          const ac = b.address.replace(/[.,]/g, '').toLowerCase()
+          if (pageText.includes(ac)) count++
+        }
+        pageAddrCounts[pt.page] = count
+      }
+      // Pages with more than half the buildings are likely TOC/map overview pages
+      const overviewThreshold = Math.max(Math.ceil(buildings.length * 0.5), 5)
+
       // For each building, find which page contains its street address
       for (const b of buildings) {
         if (!b.address) continue
-        // Extract the street number + name for matching (e.g. "401 W. 4th" from "401 W. 4th Street")
         const addrClean = b.address.replace(/[.,]/g, '').toLowerCase()
-        // Try matching progressively: full address, then street number + first word
         const addrWords = addrClean.split(/\s+/)
         const streetNum = addrWords[0] || ''
-        
-        let bestPage = -1
+
+        // Collect all pages that mention this address
+        const matchingPages: number[] = []
         for (const pt of pageTexts) {
           const pageText = pt.text.toLowerCase().replace(/[.,]/g, '')
-          // Look for the full address on this page
-          // Do NOT break - keep scanning so we land on the LAST (detail) page,
-          // not the first (TOC/map page that lists all addresses)
           if (pageText.includes(addrClean)) {
-            bestPage = pt.page
+            matchingPages.push(pt.page)
           }
         }
-        
+
+        // Prefer non-overview pages (content pages vs TOC/map)
+        let bestPage = -1
+        const contentPages = matchingPages.filter(p => (pageAddrCounts[p] || 0) < overviewThreshold)
+        if (contentPages.length > 0) {
+          // Use the FIRST content page (the building's listing page)
+          bestPage = contentPages[0]
+        } else if (matchingPages.length > 0) {
+          // All matching pages are overview pages - use the last one
+          bestPage = matchingPages[matchingPages.length - 1]
+        }
+
         // Fallback: match street number + next word (handles "401 W" vs "401 W.")
         if (bestPage === -1 && addrWords.length >= 2) {
           const partial = streetNum + ' ' + addrWords[1].replace(/\./g, '')
+          const fallbackPages: number[] = []
           for (const pt of pageTexts) {
             const pageText = pt.text.toLowerCase().replace(/[.,]/g, '')
             if (pageText.includes(partial)) {
-              bestPage = pt.page
+              fallbackPages.push(pt.page)
             }
+          }
+          const fbContent = fallbackPages.filter(p => (pageAddrCounts[p] || 0) < overviewThreshold)
+          if (fbContent.length > 0) {
+            bestPage = fbContent[0]
+          } else if (fallbackPages.length > 0) {
+            bestPage = fallbackPages[fallbackPages.length - 1]
           }
         }
 
