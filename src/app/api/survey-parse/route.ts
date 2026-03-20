@@ -123,7 +123,7 @@ function mapLinksToBuildings(
       // Street number + second word (e.g. "4453 first")
       if (addrWords.length >= 2) {
         // Skip directional prefixes (N, S, E, W)
-        const meaningful = addrWords.filter(w => !['n', 's', 'e', 'w', 'st', 'rd', 'ave', 'blvd', 'dr', 'pl', 'ln'].includes(w))
+        const meaningful = addrWords.filter((w: string) => !['n', 's', 'e', 'w', 'st', 'rd', 'ave', 'blvd', 'dr', 'pl', 'ln'].includes(w))
         if (meaningful.length >= 2) variants.push(meaningful[0] + ' ' + meaningful[1])
       }
 
