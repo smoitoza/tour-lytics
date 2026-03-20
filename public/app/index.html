@@ -1270,6 +1270,539 @@ body {
 }
 
 /* ============================================================
+   Layer Control Panel
+   ============================================================ */
+
+.layer-control {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  font-family: var(--font-body);
+  min-width: 220px;
+  max-width: 260px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.layer-control-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  user-select: none;
+}
+
+.layer-control-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--color-text);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.layer-control-title svg {
+  width: 14px;
+  height: 14px;
+  opacity: 0.5;
+}
+
+.layer-control-chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-muted);
+  transition: transform 0.2s ease;
+}
+
+.layer-control.collapsed .layer-control-chevron {
+  transform: rotate(-90deg);
+}
+
+.layer-control-body {
+  padding: 0 var(--space-4) var(--space-3);
+  max-height: 400px;
+  overflow-y: auto;
+  transition: max-height 0.2s ease, padding 0.2s ease;
+}
+
+.layer-control.collapsed .layer-control-body {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+}
+
+.layer-section {
+  margin-bottom: var(--space-3);
+}
+
+.layer-section:last-child {
+  margin-bottom: 0;
+}
+
+.layer-section-label {
+  font-size: 0.5625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-faint);
+  margin-bottom: var(--space-1);
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.layer-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 3px 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.layer-toggle:hover {
+  opacity: 0.8;
+}
+
+.layer-toggle input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--color-text-faint);
+  border-radius: 3px;
+  flex-shrink: 0;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.layer-toggle input[type="checkbox"]:checked {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.layer-toggle input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 1px;
+  width: 5px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+
+.layer-toggle-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.layer-toggle-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  font-weight: 500;
+  line-height: 1.3;
+  flex: 1;
+}
+
+.layer-toggle-count {
+  font-size: 0.625rem;
+  color: var(--color-text-faint);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.layer-divider {
+  height: 1px;
+  background: var(--color-divider);
+  margin: var(--space-2) 0;
+}
+
+/* Loading spinner for layer data */
+.layer-loading {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: layer-spin 0.6s linear infinite;
+}
+
+@keyframes layer-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================================
+   POI Search Bar
+   ============================================================ */
+
+.poi-search-container {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  width: 380px;
+  max-width: calc(100vw - 24px);
+}
+
+.poi-search-bar {
+  display: flex;
+  align-items: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  padding: 0 var(--space-4);
+  height: 40px;
+  gap: var(--space-2);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.poi-search-bar:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-lg), 0 0 0 3px rgba(244, 121, 32, 0.1);
+}
+
+.poi-search-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-faint);
+  flex-shrink: 0;
+}
+
+.poi-search-input {
+  flex: 1;
+  border: none;
+  background: none;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  outline: none;
+  padding: 0;
+}
+
+.poi-search-input::placeholder {
+  color: var(--color-text-faint);
+}
+
+.poi-search-clear {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: var(--color-surface-2);
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.poi-search-clear.visible {
+  display: flex;
+}
+
+.poi-search-clear:hover {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+.poi-search-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: var(--color-primary);
+  border-radius: 50%;
+  cursor: pointer;
+  color: white;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.poi-search-submit:hover {
+  background: var(--color-primary-hover);
+}
+
+.poi-search-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.poi-search-submit svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* POI search suggestions dropdown */
+.poi-search-suggestions {
+  position: absolute;
+  top: 46px;
+  left: 0;
+  right: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  max-height: 200px;
+  overflow-y: auto;
+  display: none;
+  z-index: 1001;
+}
+
+.poi-search-suggestions.visible {
+  display: block;
+}
+
+.poi-suggestion {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.poi-suggestion:hover {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+
+.poi-suggestion-icon {
+  width: 14px;
+  height: 14px;
+  opacity: 0.5;
+}
+
+/* ============================================================
+   POI Markers & Popups
+   ============================================================ */
+
+.poi-marker {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  font-size: 11px;
+  color: white;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.poi-marker:hover {
+  transform: scale(1.15);
+}
+
+.poi-marker.technology { background: #7c3aed; }
+.poi-marker.manufacturing { background: #dc2626; }
+.poi-marker.energy { background: #d97706; }
+.poi-marker.custom { background: #6366f1; }
+
+/* Cluster markers */
+.poi-cluster {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: white;
+  font-weight: 700;
+  font-size: 12px;
+  font-family: var(--font-body);
+  border: 2px solid white;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+.poi-cluster.technology { background: rgba(124, 58, 237, 0.85); }
+.poi-cluster.manufacturing { background: rgba(220, 38, 38, 0.85); }
+.poi-cluster.energy { background: rgba(217, 119, 6, 0.85); }
+.poi-cluster.custom { background: rgba(99, 102, 241, 0.85); }
+
+.poi-cluster.small { width: 32px; height: 32px; }
+.poi-cluster.medium { width: 40px; height: 40px; font-size: 13px; }
+.poi-cluster.large { width: 48px; height: 48px; font-size: 14px; }
+
+/* POI popup */
+.poi-popup .leaflet-popup-content-wrapper {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 0;
+}
+
+.poi-popup .leaflet-popup-content {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-body);
+  min-width: 200px;
+}
+
+.poi-popup .leaflet-popup-tip {
+  box-shadow: none;
+}
+
+.poi-popup-name {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 2px;
+}
+
+.poi-popup-type {
+  font-size: 0.6875rem;
+  color: var(--color-text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+}
+
+.poi-popup-address {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  line-height: 1.4;
+  margin-bottom: var(--space-2);
+}
+
+.poi-popup-links {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.poi-popup-link {
+  font-size: 0.6875rem;
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.poi-popup-link:hover {
+  text-decoration: underline;
+}
+
+.poi-popup-link svg {
+  width: 11px;
+  height: 11px;
+}
+
+/* ============================================================
+   Transit Markers & Lines
+   ============================================================ */
+
+.transit-station {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  cursor: pointer;
+}
+
+.transit-station.bart { background: #009bda; }
+.transit-station.subway { background: #0039a6; }
+.transit-station.rail { background: #e31837; }
+.transit-station.tram { background: #00a84f; }
+.transit-station.bus-rapid { background: #6b21a8; }
+.transit-station.default-transit { background: #6b7280; }
+
+.transit-popup .leaflet-popup-content-wrapper {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 0;
+}
+
+.transit-popup .leaflet-popup-content {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-body);
+  min-width: 180px;
+}
+
+.transit-popup .leaflet-popup-tip {
+  box-shadow: none;
+}
+
+.transit-popup-name {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 2px;
+}
+
+.transit-popup-type {
+  font-size: 0.6875rem;
+  color: var(--color-text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  margin-bottom: var(--space-1);
+}
+
+.transit-popup-lines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.transit-line-badge {
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: white;
+  line-height: 1.4;
+}
+
+/* ============================================================
+   Mobile Layer Control
+   ============================================================ */
+
+@media (max-width: 768px) {
+  .layer-control {
+    min-width: 180px;
+    max-width: 200px;
+  }
+
+  .layer-control-body {
+    max-height: 300px;
+  }
+
+  .poi-search-container {
+    width: calc(100vw - 24px);
+    top: 8px;
+  }
+
+  .poi-search-bar {
+    height: 36px;
+  }
+}
+
+/* ============================================================
    Updated Header Subtitle
    ============================================================ */
 
@@ -6677,6 +7210,21 @@ body {
 <main class="main">
   <div id="map"></div>
 
+  <!-- POI Search Bar -->
+  <div class="poi-search-container" id="poi-search-container">
+    <div class="poi-search-bar">
+      <svg class="poi-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" class="poi-search-input" id="poi-search-input" placeholder="Search nearby... e.g. &quot;tech companies&quot; or &quot;Amazon&quot;" autocomplete="off" />
+      <button class="poi-search-clear" id="poi-search-clear" title="Clear search">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+      <button class="poi-search-submit" id="poi-search-submit" title="Search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+      </button>
+    </div>
+    <div class="poi-search-suggestions" id="poi-search-suggestions"></div>
+  </div>
+
 
 
 
@@ -7038,6 +7586,9 @@ body {
 
 <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
 <script src="https://cdn.jsdelivr.net/npm/heic-to@1.2.2/dist/iife/heic-to.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script>
@@ -8903,6 +9454,724 @@ legend.onAdd = function(map) {
 };
 
 legend.addTo(map);
+
+
+// ============================================================
+// POI & Map Layer Controls
+// ============================================================
+
+(function() {
+  'use strict';
+
+  // ---- State ----
+  var poiState = {
+    layers: {
+      technology: { active: false, markers: null, data: [], loading: false },
+      manufacturing: { active: false, markers: null, data: [], loading: false },
+      energy: { active: false, markers: null, data: [], loading: false },
+    },
+    transit: { active: false, layerGroup: null, data: null, loading: false },
+    customSearch: { markers: null, data: [] },
+    cache: {},       // cache key = category + bounds hash
+    transitCache: {} // cache key = bounds hash
+  };
+
+  var POI_COLORS = {
+    technology: '#7c3aed',
+    manufacturing: '#dc2626',
+    energy: '#d97706',
+    custom: '#6366f1'
+  };
+
+  var POI_ICONS = {
+    technology: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>',
+    manufacturing: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20"/><path d="M5 20V8l5 4V8l5 4V4l5 4v12"/></svg>',
+    energy: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>',
+    custom: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>'
+  };
+
+  // ---- Helpers ----
+  function getBoundsHash() {
+    var b = map.getBounds();
+    return [b.getSouth().toFixed(3), b.getWest().toFixed(3), b.getNorth().toFixed(3), b.getEast().toFixed(3)].join(',');
+  }
+
+  function getMapCenter() {
+    var c = map.getCenter();
+    return { lat: c.lat, lng: c.lng };
+  }
+
+  function getSearchRadius() {
+    // Approximate radius from map bounds in meters
+    var b = map.getBounds();
+    var ne = b.getNorthEast();
+    var sw = b.getSouthWest();
+    var dist = map.distance(ne, sw) / 2;
+    return Math.min(Math.max(dist, 1000), 50000);
+  }
+
+  // ---- Layer Control Panel (Leaflet Control) ----
+  var layerControl = L.control({ position: 'topright' });
+
+  layerControl.onAdd = function() {
+    var div = L.DomUtil.create('div', 'layer-control');
+    L.DomEvent.disableClickPropagation(div);
+    L.DomEvent.disableScrollPropagation(div);
+
+    div.innerHTML = buildLayerControlHTML();
+
+    // Toggle collapse
+    div.querySelector('.layer-control-header').addEventListener('click', function() {
+      div.classList.toggle('collapsed');
+    });
+
+    // POI toggles
+    ['technology', 'manufacturing', 'energy'].forEach(function(cat) {
+      var cb = div.querySelector('#layer-toggle-' + cat);
+      if (cb) {
+        cb.addEventListener('change', function() {
+          togglePOILayer(cat, this.checked);
+        });
+      }
+    });
+
+    // Transit toggle
+    var transitCb = div.querySelector('#layer-toggle-transit');
+    if (transitCb) {
+      transitCb.addEventListener('change', function() {
+        toggleTransitLayer(this.checked);
+      });
+    }
+
+    return div;
+  };
+
+  function buildLayerControlHTML() {
+    return '<div class="layer-control-header">' +
+      '<div class="layer-control-title">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/></svg>' +
+        'Map Layers' +
+      '</div>' +
+      '<svg class="layer-control-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>' +
+    '</div>' +
+    '<div class="layer-control-body">' +
+      // Survey buildings (always on)
+      '<div class="layer-section">' +
+        '<div class="layer-section-label">Buildings</div>' +
+        '<label class="layer-toggle">' +
+          '<input type="checkbox" checked disabled />' +
+          '<div class="layer-toggle-dot" style="background:#3b82f6"></div>' +
+          '<span class="layer-toggle-label">Survey Buildings</span>' +
+          '<span class="layer-toggle-count" id="layer-count-survey">' + (SURVEY_BUILDINGS.length || 0) + '</span>' +
+        '</label>' +
+      '</div>' +
+
+      '<div class="layer-divider"></div>' +
+
+      // Company POIs
+      '<div class="layer-section">' +
+        '<div class="layer-section-label">Nearby Companies</div>' +
+        '<label class="layer-toggle">' +
+          '<input type="checkbox" id="layer-toggle-technology" />' +
+          '<div class="layer-toggle-dot" style="background:#7c3aed"></div>' +
+          '<span class="layer-toggle-label">Technology</span>' +
+          '<span class="layer-toggle-count" id="layer-count-technology"></span>' +
+        '</label>' +
+        '<label class="layer-toggle">' +
+          '<input type="checkbox" id="layer-toggle-manufacturing" />' +
+          '<div class="layer-toggle-dot" style="background:#dc2626"></div>' +
+          '<span class="layer-toggle-label">Manufacturing</span>' +
+          '<span class="layer-toggle-count" id="layer-count-manufacturing"></span>' +
+        '</label>' +
+        '<label class="layer-toggle">' +
+          '<input type="checkbox" id="layer-toggle-energy" />' +
+          '<div class="layer-toggle-dot" style="background:#d97706"></div>' +
+          '<span class="layer-toggle-label">Energy</span>' +
+          '<span class="layer-toggle-count" id="layer-count-energy"></span>' +
+        '</label>' +
+      '</div>' +
+
+      '<div class="layer-divider"></div>' +
+
+      // Transit
+      '<div class="layer-section">' +
+        '<div class="layer-section-label">Transit</div>' +
+        '<label class="layer-toggle">' +
+          '<input type="checkbox" id="layer-toggle-transit" />' +
+          '<div class="layer-toggle-dot" style="background:#009bda"></div>' +
+          '<span class="layer-toggle-label">Stations & Lines</span>' +
+          '<span class="layer-toggle-count" id="layer-count-transit"></span>' +
+        '</label>' +
+      '</div>' +
+    '</div>';
+  }
+
+  layerControl.addTo(map);
+
+  // ---- Update layer count display ----
+  function updateLayerCount(id, count, loading) {
+    var el = document.getElementById('layer-count-' + id);
+    if (!el) return;
+    if (loading) {
+      el.innerHTML = '<span class="layer-loading"></span>';
+    } else if (typeof count === 'number' && count > 0) {
+      el.textContent = count;
+    } else {
+      el.textContent = '';
+    }
+  }
+
+  // ---- POI Layer Logic ----
+  function createPOIMarker(poi, category) {
+    var color = POI_COLORS[category] || POI_COLORS.custom;
+    var iconSvg = POI_ICONS[category] || POI_ICONS.custom;
+    var icon = L.divIcon({
+      className: '',
+      html: '<div class="poi-marker ' + category + '">' + iconSvg + '</div>',
+      iconSize: [24, 24],
+      iconAnchor: [12, 12]
+    });
+
+    var marker = L.marker([poi.lat, poi.lng], { icon: icon });
+
+    var popupHtml = '<div class="poi-popup-name">' + escapeHtml(poi.name) + '</div>' +
+      (poi.typeLabel ? '<div class="poi-popup-type">' + escapeHtml(poi.typeLabel) + '</div>' : '') +
+      '<div class="poi-popup-address">' + escapeHtml(poi.address) + '</div>' +
+      '<div class="poi-popup-links">' +
+        (poi.website ? '<a href="' + poi.website + '" target="_blank" rel="noopener" class="poi-popup-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Website</a>' : '') +
+        (poi.mapsUrl ? '<a href="' + poi.mapsUrl + '" target="_blank" rel="noopener" class="poi-popup-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>Maps</a>' : '') +
+      '</div>';
+
+    marker.bindPopup(popupHtml, {
+      className: 'poi-popup',
+      maxWidth: 280,
+      minWidth: 200,
+      closeButton: true,
+      autoPan: true,
+      offset: [0, -8]
+    });
+
+    return marker;
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function createClusterGroup(category) {
+    var color = POI_COLORS[category] || POI_COLORS.custom;
+    return L.markerClusterGroup({
+      maxClusterRadius: 50,
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false,
+      zoomToBoundsOnClick: true,
+      iconCreateFunction: function(cluster) {
+        var count = cluster.getChildCount();
+        var sizeClass = count < 10 ? 'small' : count < 50 ? 'medium' : 'large';
+        return L.divIcon({
+          html: '<div class="poi-cluster ' + category + ' ' + sizeClass + '">' + count + '</div>',
+          className: '',
+          iconSize: [40, 40],
+          iconAnchor: [20, 20]
+        });
+      }
+    });
+  }
+
+  async function loadPOIData(category) {
+    var layer = poiState.layers[category];
+    if (!layer || layer.loading) return;
+
+    var center = getMapCenter();
+    var radius = getSearchRadius();
+    var cacheKey = category + ':' + center.lat.toFixed(2) + ',' + center.lng.toFixed(2) + ':' + Math.round(radius/1000);
+
+    // Use cached data if available
+    if (poiState.cache[cacheKey]) {
+      layer.data = poiState.cache[cacheKey];
+      renderPOILayer(category);
+      return;
+    }
+
+    layer.loading = true;
+    updateLayerCount(category, 0, true);
+
+    try {
+      var resp = await fetch('/api/poi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category: category,
+          lat: center.lat,
+          lng: center.lng,
+          radius: radius,
+          maxResults: 20
+        })
+      });
+
+      if (!resp.ok) throw new Error('API error: ' + resp.status);
+      var data = await resp.json();
+      layer.data = data.pois || [];
+      poiState.cache[cacheKey] = layer.data;
+    } catch (err) {
+      console.error('POI load error (' + category + '):', err);
+      layer.data = [];
+    }
+
+    layer.loading = false;
+    renderPOILayer(category);
+  }
+
+  function renderPOILayer(category) {
+    var layer = poiState.layers[category];
+    if (!layer) return;
+
+    // Remove existing
+    if (layer.markers) {
+      map.removeLayer(layer.markers);
+      layer.markers = null;
+    }
+
+    if (!layer.active || layer.data.length === 0) {
+      updateLayerCount(category, 0, false);
+      return;
+    }
+
+    var cluster = createClusterGroup(category);
+    layer.data.forEach(function(poi) {
+      if (poi.lat && poi.lng) {
+        cluster.addLayer(createPOIMarker(poi, category));
+      }
+    });
+
+    layer.markers = cluster;
+    map.addLayer(cluster);
+    updateLayerCount(category, layer.data.length, false);
+  }
+
+  function togglePOILayer(category, on) {
+    var layer = poiState.layers[category];
+    if (!layer) return;
+    layer.active = on;
+
+    if (on) {
+      loadPOIData(category);
+    } else {
+      if (layer.markers) {
+        map.removeLayer(layer.markers);
+        layer.markers = null;
+      }
+      updateLayerCount(category, 0, false);
+    }
+  }
+
+  // Reload active POI layers when map moves significantly
+  var poiReloadDebounce = null;
+  map.on('moveend', function() {
+    clearTimeout(poiReloadDebounce);
+    poiReloadDebounce = setTimeout(function() {
+      Object.keys(poiState.layers).forEach(function(cat) {
+        if (poiState.layers[cat].active) {
+          loadPOIData(cat);
+        }
+      });
+      if (poiState.transit.active) {
+        loadTransitData();
+      }
+    }, 800);
+  });
+
+  // ---- Transit Layer Logic (Overpass API) ----
+  var TRANSIT_COLORS = {
+    subway: '#0039a6',
+    light_rail: '#e31837',
+    tram: '#00a84f',
+    monorail: '#6b21a8',
+    rail: '#e31837',
+    default: '#6b7280'
+  };
+
+  function getTransitClass(type) {
+    if (type === 'subway') return 'subway';
+    if (type === 'light_rail' || type === 'tram') return 'tram';
+    if (type === 'rail') return 'rail';
+    if (type === 'monorail') return 'bus-rapid';
+    return 'default-transit';
+  }
+
+  async function loadTransitData() {
+    if (poiState.transit.loading) return;
+
+    var bounds = map.getBounds();
+    var zoom = map.getZoom();
+
+    // Only load transit at zoom >= 11 (city level)
+    if (zoom < 11) {
+      if (poiState.transit.layerGroup) {
+        map.removeLayer(poiState.transit.layerGroup);
+        poiState.transit.layerGroup = null;
+      }
+      updateLayerCount('transit', 0, false);
+      return;
+    }
+
+    var bbox = bounds.getSouth().toFixed(4) + ',' + bounds.getWest().toFixed(4) + ',' +
+              bounds.getNorth().toFixed(4) + ',' + bounds.getEast().toFixed(4);
+
+    var cacheKey = bbox;
+    if (poiState.transitCache[cacheKey]) {
+      renderTransitLayer(poiState.transitCache[cacheKey]);
+      return;
+    }
+
+    poiState.transit.loading = true;
+    updateLayerCount('transit', 0, true);
+
+    try {
+      // Query Overpass for stations and rail routes in bounds
+      var query = '[out:json][timeout:15];(' +
+        'node["railway"="station"]('+bbox+');' +
+        'node["railway"="halt"]('+bbox+');' +
+        'node["station"="subway"]('+bbox+');' +
+        'node["station"="light_rail"]('+bbox+');' +
+        'relation["route"="subway"]('+bbox+');' +
+        'relation["route"="light_rail"]('+bbox+');' +
+        'relation["route"="tram"]('+bbox+');' +
+        'relation["route"="monorail"]('+bbox+');' +
+      ');out body;>;out skel qt;';
+
+      var resp = await fetch('https://overpass-api.de/api/interpreter', {
+        method: 'POST',
+        body: 'data=' + encodeURIComponent(query)
+      });
+
+      if (!resp.ok) throw new Error('Overpass API error: ' + resp.status);
+      var data = await resp.json();
+
+      // Parse stations and routes
+      var stations = [];
+      var routes = [];
+      var nodeMap = {};
+
+      (data.elements || []).forEach(function(el) {
+        if (el.type === 'node') {
+          nodeMap[el.id] = el;
+          if (el.tags && (el.tags.railway === 'station' || el.tags.railway === 'halt' || el.tags.station)) {
+            var stationType = el.tags.station || el.tags.railway || 'station';
+            var lines = [];
+            if (el.tags.line) lines.push(el.tags.line);
+            if (el.tags['network:short']) lines.push(el.tags['network:short']);
+            stations.push({
+              id: el.id,
+              name: el.tags.name || 'Station',
+              lat: el.lat,
+              lng: el.lon,
+              type: stationType,
+              network: el.tags.network || el.tags.operator || '',
+              lines: lines
+            });
+          }
+        }
+      });
+
+      // Build route geometries from relations
+      (data.elements || []).forEach(function(el) {
+        if (el.type === 'way' && el.nodes) {
+          var coords = [];
+          el.nodes.forEach(function(nid) {
+            if (nodeMap[nid]) coords.push([nodeMap[nid].lat, nodeMap[nid].lon]);
+          });
+          if (coords.length >= 2) {
+            routes.push({ coords: coords, id: el.id });
+          }
+        }
+        if (el.type === 'relation' && el.tags && el.tags.route) {
+          // Attach route info to stations via member nodes
+          var routeName = el.tags.name || el.tags.ref || '';
+          var routeColor = el.tags.colour || el.tags.color || TRANSIT_COLORS[el.tags.route] || TRANSIT_COLORS.default;
+          if (el.members) {
+            el.members.forEach(function(m) {
+              if (m.type === 'node' && m.role === 'stop') {
+                var st = stations.find(function(s) { return s.id === m.ref; });
+                if (st && routeName) {
+                  if (st.lines.indexOf(routeName) === -1) st.lines.push(routeName);
+                  if (!st.routeColor) st.routeColor = routeColor;
+                }
+              }
+            });
+          }
+        }
+      });
+
+      var transitData = { stations: stations, routes: routes };
+      poiState.transitCache[cacheKey] = transitData;
+      poiState.transit.data = transitData;
+      renderTransitLayer(transitData);
+    } catch (err) {
+      console.error('Transit load error:', err);
+      updateLayerCount('transit', 0, false);
+    }
+
+    poiState.transit.loading = false;
+  }
+
+  function renderTransitLayer(transitData) {
+    // Remove existing
+    if (poiState.transit.layerGroup) {
+      map.removeLayer(poiState.transit.layerGroup);
+    }
+
+    if (!poiState.transit.active) {
+      updateLayerCount('transit', 0, false);
+      return;
+    }
+
+    var group = L.layerGroup();
+
+    // Draw route lines
+    (transitData.routes || []).forEach(function(route) {
+      L.polyline(route.coords, {
+        color: '#0078d4',
+        weight: 3,
+        opacity: 0.5,
+        dashArray: null
+      }).addTo(group);
+    });
+
+    // Draw station markers
+    (transitData.stations || []).forEach(function(st) {
+      var cssClass = getTransitClass(st.type);
+      var icon = L.divIcon({
+        className: '',
+        html: '<div class="transit-station ' + cssClass + '"></div>',
+        iconSize: [12, 12],
+        iconAnchor: [6, 6]
+      });
+
+      var marker = L.marker([st.lat, st.lng], { icon: icon });
+
+      // Build popup
+      var linesHtml = '';
+      if (st.lines && st.lines.length > 0) {
+        var lineColor = st.routeColor || TRANSIT_COLORS[st.type] || TRANSIT_COLORS.default;
+        linesHtml = '<div class="transit-popup-lines">' +
+          st.lines.map(function(line) {
+            return '<span class="transit-line-badge" style="background:' + lineColor + '">' + escapeHtml(line) + '</span>';
+          }).join('') +
+        '</div>';
+      }
+
+      var typeLabel = st.type === 'subway' ? 'Subway Station' :
+                      st.type === 'light_rail' ? 'Light Rail' :
+                      st.type === 'tram' ? 'Tram Stop' :
+                      st.type === 'halt' ? 'Rail Stop' :
+                      'Rail Station';
+
+      var popupHtml = '<div class="transit-popup-name">' + escapeHtml(st.name) + '</div>' +
+        '<div class="transit-popup-type">' + typeLabel + (st.network ? ' / ' + escapeHtml(st.network) : '') + '</div>' +
+        linesHtml;
+
+      marker.bindPopup(popupHtml, {
+        className: 'transit-popup',
+        maxWidth: 250,
+        minWidth: 160,
+        closeButton: true,
+        offset: [0, -4]
+      });
+
+      marker.addTo(group);
+    });
+
+    poiState.transit.layerGroup = group;
+    group.addTo(map);
+    updateLayerCount('transit', (transitData.stations || []).length, false);
+  }
+
+  function toggleTransitLayer(on) {
+    poiState.transit.active = on;
+    if (on) {
+      loadTransitData();
+    } else {
+      if (poiState.transit.layerGroup) {
+        map.removeLayer(poiState.transit.layerGroup);
+        poiState.transit.layerGroup = null;
+      }
+      updateLayerCount('transit', 0, false);
+    }
+  }
+
+  // ---- POI Search Bar ----
+  var searchInput = document.getElementById('poi-search-input');
+  var searchClear = document.getElementById('poi-search-clear');
+  var searchSubmit = document.getElementById('poi-search-submit');
+  var searchSuggestions = document.getElementById('poi-search-suggestions');
+
+  // Quick suggestions
+  var SUGGESTIONS = [
+    { label: 'Tech companies nearby', query: 'technology companies', icon: POI_ICONS.technology },
+    { label: 'Manufacturing companies', query: 'manufacturing companies', icon: POI_ICONS.manufacturing },
+    { label: 'Energy companies nearby', query: 'energy companies', icon: POI_ICONS.energy },
+    { label: 'Restaurants nearby', query: 'restaurants', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>' },
+    { label: 'Coffee shops', query: 'coffee shops', icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v2"/><path d="M14 2v2"/><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2h-1"/><path d="M6 2v2"/></svg>' },
+  ];
+
+  if (searchInput) {
+    searchInput.addEventListener('focus', function() {
+      if (!this.value.trim()) showSuggestions();
+    });
+
+    searchInput.addEventListener('input', function() {
+      searchClear.classList.toggle('visible', this.value.length > 0);
+      if (!this.value.trim()) {
+        showSuggestions();
+      } else {
+        hideSuggestions();
+      }
+    });
+
+    searchInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        executePOISearch(this.value.trim());
+        hideSuggestions();
+      }
+      if (e.key === 'Escape') {
+        hideSuggestions();
+        this.blur();
+      }
+    });
+  }
+
+  if (searchClear) {
+    searchClear.addEventListener('click', function() {
+      searchInput.value = '';
+      searchClear.classList.remove('visible');
+      clearCustomSearch();
+      hideSuggestions();
+    });
+  }
+
+  if (searchSubmit) {
+    searchSubmit.addEventListener('click', function() {
+      var q = searchInput.value.trim();
+      if (q) {
+        executePOISearch(q);
+        hideSuggestions();
+      }
+    });
+  }
+
+  // Close suggestions when clicking outside
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.poi-search-container')) {
+      hideSuggestions();
+    }
+  });
+
+  function showSuggestions() {
+    if (!searchSuggestions) return;
+    searchSuggestions.innerHTML = SUGGESTIONS.map(function(s) {
+      return '<div class="poi-suggestion" data-query="' + s.query + '">' +
+        '<span class="poi-suggestion-icon">' + s.icon + '</span>' +
+        '<span>' + s.label + '</span>' +
+      '</div>';
+    }).join('');
+
+    searchSuggestions.querySelectorAll('.poi-suggestion').forEach(function(el) {
+      el.addEventListener('click', function() {
+        var q = this.getAttribute('data-query');
+        searchInput.value = q;
+        searchClear.classList.add('visible');
+        executePOISearch(q);
+        hideSuggestions();
+      });
+    });
+
+    searchSuggestions.classList.add('visible');
+  }
+
+  function hideSuggestions() {
+    if (searchSuggestions) searchSuggestions.classList.remove('visible');
+  }
+
+  async function executePOISearch(query) {
+    if (!query) return;
+
+    // Clear previous custom search
+    clearCustomSearch();
+
+    searchSubmit.disabled = true;
+
+    try {
+      var center = getMapCenter();
+      var radius = getSearchRadius();
+
+      var resp = await fetch('/api/poi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category: 'custom',
+          query: query,
+          lat: center.lat,
+          lng: center.lng,
+          radius: radius,
+          maxResults: 20
+        })
+      });
+
+      if (!resp.ok) throw new Error('Search error: ' + resp.status);
+      var data = await resp.json();
+      var pois = data.pois || [];
+
+      if (pois.length === 0) {
+        // Could show a "no results" message
+        return;
+      }
+
+      // Create cluster group for search results
+      var cluster = createClusterGroup('custom');
+      pois.forEach(function(poi) {
+        if (poi.lat && poi.lng) {
+          cluster.addLayer(createPOIMarker(poi, 'custom'));
+        }
+      });
+
+      poiState.customSearch.markers = cluster;
+      poiState.customSearch.data = pois;
+      map.addLayer(cluster);
+
+      // Fit map to results if they're spread out
+      if (pois.length > 1) {
+        var bounds = L.latLngBounds(pois.map(function(p) { return [p.lat, p.lng]; }));
+        map.fitBounds(bounds.pad(0.2));
+      } else if (pois.length === 1) {
+        map.setView([pois[0].lat, pois[0].lng], 15);
+      }
+    } catch (err) {
+      console.error('POI search error:', err);
+    }
+
+    searchSubmit.disabled = false;
+  }
+
+  function clearCustomSearch() {
+    if (poiState.customSearch.markers) {
+      map.removeLayer(poiState.customSearch.markers);
+      poiState.customSearch.markers = null;
+    }
+    poiState.customSearch.data = [];
+  }
+
+  // Update survey count in layer control when buildings change
+  var origRefreshLegend = window.refreshLegend;
+  window.refreshLegend = function() {
+    if (origRefreshLegend) origRefreshLegend();
+    var countEl = document.getElementById('layer-count-survey');
+    if (countEl) countEl.textContent = SURVEY_BUILDINGS.length || '0';
+  };
+
+})();
 
 
 // ============================================================

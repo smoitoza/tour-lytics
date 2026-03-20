@@ -20,7 +20,7 @@ const cspDirectives = [
   `script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net cdnjs.cloudflare.com unpkg.com accounts.google.com`,
 
   // Styles: self + Google Fonts + Fontshare + Leaflet CSS (unpkg) + Google GIS
-  `style-src 'self' 'unsafe-inline' fonts.googleapis.com api.fontshare.com unpkg.com accounts.google.com`,
+  `style-src 'self' 'unsafe-inline' fonts.googleapis.com api.fontshare.com unpkg.com accounts.google.com cdn.jsdelivr.net`,
 
   // Fonts
   `font-src 'self' fonts.gstatic.com api.fontshare.com cdn.fontshare.com data:`,
@@ -29,7 +29,7 @@ const cspDirectives = [
   `img-src 'self' ${SUPABASE_DOMAIN} *.tile.openstreetmap.org carto.com *.basemaps.cartocdn.com data: blob:`,
 
   // API / fetch connections (includes Google Drive upload API)
-  `connect-src 'self' ${SUPABASE_DOMAIN} maps.googleapis.com places.googleapis.com nominatim.openstreetmap.org smoitoza.github.io www.googleapis.com`,
+  `connect-src 'self' ${SUPABASE_DOMAIN} maps.googleapis.com places.googleapis.com nominatim.openstreetmap.org smoitoza.github.io www.googleapis.com overpass-api.de`,
 
   // Frames: same-origin + Google OAuth popup
   "frame-src 'self' accounts.google.com",
