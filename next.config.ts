@@ -77,6 +77,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // pdfjs-dist uses the optional native 'canvas' module for server-side rendering.
+  // Both must be excluded from the serverless function bundle so they load at runtime.
+  serverExternalPackages: ['pdfjs-dist', 'canvas'],
   async headers() {
     return [
       // Global security headers on every route
