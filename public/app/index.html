@@ -1117,6 +1117,63 @@ body {
   line-height: 1.3;
 }
 
+/* Survey link buttons (Virtual Tour, Brochure, Floor Plan) */
+.survey-links-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: var(--space-2);
+}
+.survey-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+  cursor: pointer;
+  line-height: 1;
+  white-space: nowrap;
+}
+.survey-link-btn:hover {
+  background: var(--color-surface-alt);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.survey-link-btn svg {
+  flex-shrink: 0;
+}
+.survey-link-btn.virtual-tour {
+  border-color: #0ea5e9;
+  color: #0ea5e9;
+  background: rgba(14, 165, 233, 0.06);
+}
+.survey-link-btn.virtual-tour:hover {
+  background: rgba(14, 165, 233, 0.14);
+}
+.survey-link-btn.brochure {
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+}
+.survey-link-btn.brochure:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.survey-link-btn.floorplan {
+  border-color: #10b981;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.06);
+}
+.survey-link-btn.floorplan:hover {
+  background: rgba(16, 185, 129, 0.14);
+}
+
 /* ============================================================
    Legend
    ============================================================ */
@@ -8607,6 +8664,28 @@ function buildSurveyPopup(b) {
   // Show rental rate row if present
   var rentalHTML = rentalVal ? '<div class="survey-tooltip-field"><span class="survey-tooltip-field-label">Rental Rate</span><span class="survey-tooltip-field-value">' + esc(rentalVal) + '</span></div>' : '';
 
+  // Build links row (Virtual Tour, Brochure, Floor Plan buttons)
+  var linksHTML = '';
+  if (b.links && b.links.length > 0) {
+    var linkBtns = b.links.map(function(link) {
+      var cls = 'survey-link-btn';
+      var icon = '';
+      if (link.type === 'virtual_tour') {
+        cls += ' virtual-tour';
+        // 360 camera icon
+        icon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>';
+      } else if (link.type === 'floorplan') {
+        cls += ' floorplan';
+        icon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="12" y1="3" x2="12" y2="21"/></svg>';
+      } else {
+        cls += ' brochure';
+        icon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+      }
+      return '<a href="' + esc(link.url) + '" class="' + cls + '" target="_blank" rel="noopener noreferrer" title="' + esc(link.label) + '">' + icon + '<span>' + esc(link.label) + '</span></a>';
+    }).join('');
+    linksHTML = '<div class="survey-links-row">' + linkBtns + '</div>';
+  }
+
   return '<div class="survey-tooltip">' +
     '<div class="survey-tooltip-bar"></div>' +
     '<div class="survey-tooltip-inner">' +
@@ -8624,6 +8703,7 @@ function buildSurveyPopup(b) {
         '<div class="survey-tooltip-field"><span class="survey-tooltip-field-label">Available</span><span class="survey-tooltip-field-value">' + esc(availVal) + '</span></div>' +
         rentalHTML +
       '</div>' +
+      linksHTML +
       floorHTML +
       '<div class="tooltip-photos-section" id="photo-section-survey-' + b.num + '"><div class="tooltip-photos-header"><span class="tooltip-photos-title">Photos</span></div><div class="tooltip-photo-grid" style="margin-top:6px"><div class="tooltip-photo-add-btn" onclick="openPhotoUpload(\'survey\', ' + b.num + ', \'' + (b.address || '').replace(/'/g, "\\'") + '\', \'' + (b.neighborhood || '').replace(/'/g, "\\'") + '\')" title="Add Photo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div></div></div>' +
       '<div class="tooltip-btn-row">' +
@@ -13740,6 +13820,7 @@ function surveyMergeBuildings(newBuildings) {
       if (nb.floors && nb.floors.length > 0 && (!existing.floors || existing.floors.length === 0)) existing.floors = nb.floors;
       if (nb.surveyPdfUrl && !existing.surveyPdfUrl) existing.surveyPdfUrl = nb.surveyPdfUrl;
       if (nb.estimatedPage && !existing.estimatedPage) existing.estimatedPage = nb.estimatedPage;
+      if (nb.links && nb.links.length > 0 && (!existing.links || existing.links.length === 0)) existing.links = nb.links;
       updated++;
       details.push({ address: nb.address, status: 'updated' });
       return;
@@ -13760,6 +13841,7 @@ function surveyMergeBuildings(newBuildings) {
       floors: nb.floors || [],
       surveyPdfUrl: nb.surveyPdfUrl || '',
       estimatedPage: nb.estimatedPage || null,
+      links: nb.links || [],
       lat: nb.lat,
       lng: nb.lng
     };

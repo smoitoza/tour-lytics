@@ -2,8 +2,184 @@ import { GoogleGenAI } from '@google/genai'
 import { NextResponse } from 'next/server'
 import { debitTokens } from '@/lib/tokens'
 
-// Allow up to 60s for AI parsing + geocoding (default is 10s which times out)
-export const maxDuration = 60
+// Allow up to 90s for AI parsing + geocoding + link extraction
+export const maxDuration = 90
+
+// ============================================================
+// PDF Link Extraction - Extracts hyperlink annotations from PDFs
+// and maps them to buildings using page + Y-position correlation
+// ============================================================
+type ExtractedLink = { type: string; label: string; url: string }
+type PageLinkData = {
+  page: number
+  links: { url: string; y: number }[]
+  textItems: { str: string; y: number; x: number }[]
+  pageHeight: number
+}
+
+const VIRTUAL_TOUR_DOMAINS = [
+  'matterport.com', 'cloudpano.com', 'shoootin.com',
+  'kuula.co', 'my.matterport', 'cupix.com', 'asteroom.com',
+  '3dvista.com', 'teliportme.com',
+]
+
+const FLOORPLAN_KEYWORDS = ['floorplan', 'floor-plan', 'floor_plan']
+
+function classifyLink(url: string): { type: string; label: string } {
+  const lower = url.toLowerCase()
+  if (VIRTUAL_TOUR_DOMAINS.some(d => lower.includes(d))) {
+    return { type: 'virtual_tour', label: 'Virtual Tour' }
+  }
+  if (FLOORPLAN_KEYWORDS.some(k => lower.includes(k))) {
+    return { type: 'floorplan', label: 'Floor Plan' }
+  }
+  return { type: 'brochure', label: 'Brochure' }
+}
+
+async function extractPdfLinks(pdfUrl: string): Promise<PageLinkData[]> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js')
+
+    // Fetch the PDF binary from storage
+    const res = await fetch(pdfUrl)
+    if (!res.ok) {
+      console.warn('Failed to fetch PDF for link extraction:', res.status)
+      return []
+    }
+    const arrayBuf = await res.arrayBuffer()
+    const data = new Uint8Array(arrayBuf)
+
+    const doc = await pdfjsLib.getDocument({ data }).promise
+    const pageData: PageLinkData[] = []
+
+    for (let i = 1; i <= doc.numPages; i++) {
+      const page = await doc.getPage(i)
+      const viewport = page.getViewport({ scale: 1.0 })
+      const pageHeight = viewport.height
+
+      // Get text content with positions
+      const textContent = await page.getTextContent()
+      const textItems = (textContent.items as any[]).map(item => ({
+        str: item.str,
+        y: pageHeight - item.transform[5], // Convert to top-down coords
+        x: item.transform[4],
+      }))
+
+      // Get link annotations
+      const annotations = await page.getAnnotations()
+      const links = annotations
+        .filter((a: any) => a.subtype === 'Link' && a.url)
+        .map((a: any) => ({
+          url: a.url,
+          y: pageHeight - a.rect[3], // Top of link box in top-down coords
+        }))
+
+      if (links.length > 0) {
+        pageData.push({ page: i, links, textItems, pageHeight })
+      }
+    }
+
+    console.log(`PDF link extraction: found links on ${pageData.length} pages`)
+    return pageData
+  } catch (err) {
+    console.warn('PDF link extraction failed (non-fatal):', err)
+    return []
+  }
+}
+
+function mapLinksToBuildings(
+  buildings: any[],
+  pageData: PageLinkData[]
+): void {
+  if (pageData.length === 0) return
+
+  // Group buildings by their estimated page
+  const buildingsByPage: Record<number, any[]> = {}
+  for (const b of buildings) {
+    const pg = b.estimatedPage
+    if (!pg) continue
+    if (!buildingsByPage[pg]) buildingsByPage[pg] = []
+    buildingsByPage[pg].push(b)
+  }
+
+  for (const pd of pageData) {
+    const pageBldgs = buildingsByPage[pd.page]
+    if (!pageBldgs || pageBldgs.length === 0) continue
+
+    // Find each building's Y position on this page
+    const bldgPositions: { building: any; y: number }[] = []
+    for (const b of pageBldgs) {
+      if (!b.address) continue
+      const addrClean = b.address.replace(/[.,]/g, '').toLowerCase().trim()
+      const addrWords = addrClean.split(/\s+/)
+
+      // Build multiple search variants for robust matching
+      const variants: string[] = []
+      // Full address
+      variants.push(addrClean)
+      // Street number + first 2 words (e.g. "400 w california")
+      if (addrWords.length >= 3) variants.push(addrWords.slice(0, 3).join(' '))
+      // Street number + second word (e.g. "4453 first")
+      if (addrWords.length >= 2) {
+        // Skip directional prefixes (N, S, E, W)
+        const meaningful = addrWords.filter(w => !['n', 's', 'e', 'w', 'st', 'rd', 'ave', 'blvd', 'dr', 'pl', 'ln'].includes(w))
+        if (meaningful.length >= 2) variants.push(meaningful[0] + ' ' + meaningful[1])
+      }
+
+      let foundY = -1
+      for (const variant of variants) {
+        for (const item of pd.textItems) {
+          const clean = item.str.replace(/[.,]/g, '').toLowerCase()
+          if (clean.length > 2 && clean.includes(variant)) {
+            foundY = item.y
+            break
+          }
+        }
+        if (foundY >= 0) break
+      }
+
+      // Fallback: just match the street number if unique enough (4+ digits)
+      if (foundY < 0) {
+        const streetNum = addrWords[0]
+        if (streetNum && streetNum.length >= 3 && /^\d+$/.test(streetNum)) {
+          for (const item of pd.textItems) {
+            if (item.str.includes(streetNum)) {
+              foundY = item.y
+              break
+            }
+          }
+        }
+      }
+
+      if (foundY >= 0) {
+        bldgPositions.push({ building: b, y: foundY })
+      }
+    }
+
+    // Sort buildings by Y position (top to bottom)
+    bldgPositions.sort((a, b) => a.y - b.y)
+
+    // Assign links to buildings based on Y-zone
+    for (let i = 0; i < bldgPositions.length; i++) {
+      const { building, y: bldgY } = bldgPositions[i]
+      const nextY = i + 1 < bldgPositions.length
+        ? bldgPositions[i + 1].y
+        : pd.pageHeight + 50 // allow some overflow for last building
+
+      // Links in this building's zone: from 10px above the address to the next building
+      const zoneLinks = pd.links.filter(l => l.y >= bldgY - 10 && l.y < nextY)
+
+      if (zoneLinks.length > 0) {
+        building.links = zoneLinks.map(l => {
+          const { type, label } = classifyLink(l.url)
+          return { type, label, url: l.url }
+        })
+        console.log(`  Links mapped: ${building.address} -> ${building.links.length} links`)
+      }
+    }
+  }
+}
 
 // POST /api/survey-parse - Parse a broker survey document and extract building data
 export async function POST(req: Request) {
@@ -276,10 +452,29 @@ Return ONLY the JSON array, no other text.`
       })
     }
 
+    // ============================================================
+    // Extract embedded hyperlinks from the PDF and map to buildings
+    // (virtual tours, brochures, floorplans)
+    // ============================================================
+    if (pdfUrl) {
+      try {
+        console.log('Extracting PDF links from:', pdfUrl)
+        const pageData = await extractPdfLinks(pdfUrl)
+        if (pageData.length > 0) {
+          mapLinksToBuildings(buildings, pageData)
+          const withLinks = buildings.filter((b: any) => b.links && b.links.length > 0)
+          console.log(`Link extraction complete: ${withLinks.length}/${buildings.length} buildings have links`)
+        }
+      } catch (linkErr) {
+        console.warn('Link extraction skipped (non-fatal):', linkErr)
+      }
+    }
+
     return NextResponse.json({
       buildings,
       count: buildings.length,
       geocoded_count: buildings.filter((b: any) => b.lat && b.lng).length,
+      links_count: buildings.filter((b: any) => b.links && b.links.length > 0).length,
     })
   } catch (err) {
     console.error('Survey parse error:', err)
