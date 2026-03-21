@@ -4590,6 +4590,9 @@ body {
     }
     .commute-map-page-body {
       flex: 1; min-height: 0; position: relative; overflow: hidden;
+      /* Fallback: explicit height so Leaflet always gets real dimensions.
+         Header ~72px + page-tabs ~44px + toolbar ~48px = ~164px */
+      height: calc(100vh - 164px);
     }
     .commute-map-page-map {
       position: absolute; top: 0; left: 0; right: 0; bottom: 0;
@@ -4624,6 +4627,10 @@ body {
 
     @media (max-width: 640px) {
       .commute-map-container { height: 350px; }
+      .commute-map-page-body {
+        /* Mobile: 52px mobile strip + ~44px toolbar = ~96px */
+        height: calc(var(--app-height, 100vh) - 96px);
+      }
       .commute-map-page-toolbar {
         padding: var(--space-2) var(--space-3); gap: var(--space-2);
       }
