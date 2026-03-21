@@ -2234,6 +2234,214 @@ body {
     }
     .tourbook-export-btn:hover { background: var(--color-primary-hover); }
 
+    /* Plan Route button - matches sort btn style but with accent */
+    .tourbook-route-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      font-size: var(--text-xs);
+      font-weight: 600;
+      color: #fff;
+      background: linear-gradient(135deg, #475569, #334155);
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .tourbook-route-btn:hover {
+      background: linear-gradient(135deg, #334155, #1e293b);
+      transform: translateY(-1px);
+      box-shadow: 0 3px 12px rgba(51,65,85,0.3);
+    }
+    .tourbook-route-btn:disabled {
+      opacity: 0.5; cursor: not-allowed; transform: none;
+      box-shadow: none;
+    }
+    .tourbook-route-btn.active {
+      background: linear-gradient(135deg, #059669, #047857);
+    }
+    .tourbook-route-btn.active:hover {
+      background: linear-gradient(135deg, #dc2626, #b91c1c);
+    }
+
+    /* ===== TOUR DAY ROUTE PANEL ===== */
+    .route-panel {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      margin-bottom: var(--space-4);
+      overflow: hidden;
+      display: none;
+    }
+    .route-panel.visible { display: block; }
+
+    .route-summary {
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-4) var(--space-5);
+      background: linear-gradient(135deg, #1e293b, #334155);
+      color: #fff;
+    }
+    .route-summary-stat {
+      text-align: center;
+      flex: 1;
+    }
+    .route-summary-value {
+      font-family: var(--font-display);
+      font-size: var(--text-lg);
+      font-weight: 800;
+      line-height: 1;
+    }
+    .route-summary-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: rgba(255,255,255,0.6);
+      margin-top: 2px;
+    }
+    .route-summary-divider {
+      width: 1px;
+      height: 36px;
+      background: rgba(255,255,255,0.15);
+    }
+
+    .route-mode-toggle {
+      display: flex;
+      gap: var(--space-1);
+      padding: var(--space-3) var(--space-5);
+      background: var(--color-surface-2);
+      border-bottom: 1px solid var(--color-border);
+    }
+    .route-mode-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 7px 12px;
+      font-size: var(--text-xs);
+      font-weight: 600;
+      color: var(--color-text-muted);
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .route-mode-btn:hover { background: var(--color-surface); }
+    .route-mode-btn.active {
+      background: var(--color-surface);
+      color: var(--color-text);
+      border-color: var(--color-border);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .route-legs {
+      padding: 0;
+    }
+    .route-leg {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-5);
+      border-bottom: 1px solid var(--color-border);
+      font-size: var(--text-sm);
+    }
+    .route-leg:last-child { border-bottom: none; }
+    .route-leg-number {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--color-primary);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .route-leg-info { flex: 1; min-width: 0; }
+    .route-leg-name {
+      font-weight: 600;
+      color: var(--color-text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .route-leg-travel {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.7rem;
+      color: var(--color-text-faint);
+      margin-top: 2px;
+    }
+    .route-leg-travel svg { flex-shrink: 0; }
+    .route-leg-stop-time {
+      font-size: 0.65rem;
+      color: var(--color-primary);
+      font-weight: 600;
+      margin-top: 2px;
+    }
+    .route-leg-eta {
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+      text-align: right;
+      flex-shrink: 0;
+      min-width: 60px;
+    }
+
+    .route-finish {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-5);
+      background: rgba(5, 150, 105, 0.06);
+      border-top: 1px solid rgba(5, 150, 105, 0.15);
+    }
+    .route-finish-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #059669;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .route-finish-text {
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: #059669;
+    }
+    .route-finish-time {
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+    }
+
+    .route-loading {
+      padding: var(--space-8);
+      text-align: center;
+      color: var(--color-text-muted);
+      font-size: var(--text-sm);
+    }
+    .route-loading .spinner {
+      width: 24px; height: 24px;
+      border: 3px solid var(--color-border);
+      border-top-color: var(--color-primary);
+      border-radius: 50%;
+      animation: route-spin 0.8s linear infinite;
+      margin: 0 auto var(--space-3);
+    }
+    @keyframes route-spin {
+      to { transform: rotate(360deg); }
+    }
+
     .tourbook-card {
       background: var(--color-surface);
       border: 1px solid var(--color-border);
@@ -10998,6 +11206,18 @@ function switchPageTab(tabId) {
   var poiSearch = document.getElementById('poi-search-container');
   if (poiSearch) poiSearch.style.display = (tabId === 'map') ? '' : 'none';
 
+  // Clear route overlay when leaving tourbook tab
+  if (tabId !== 'tourbook' && _tourDayActive) {
+    // Keep data but remove map layer so it doesn't clutter other tabs
+    if (_tourDayRouteLayer && typeof map !== 'undefined') {
+      map.removeLayer(_tourDayRouteLayer);
+    }
+  }
+  // Restore route overlay when returning to tourbook
+  if (tabId === 'tourbook' && _tourDayActive && _tourDayRouteLayer && typeof map !== 'undefined') {
+    _tourDayRouteLayer.addTo(map);
+  }
+
   // Invalidate map size when switching back to map
   if (tabId === 'map' && typeof map !== 'undefined') {
     setTimeout(() => map.invalidateSize(), 100);
@@ -11321,6 +11541,10 @@ function renderTourBook() {
     '<div class="tourbook-header">' +
       '<div><h2>Tour Book</h2><span>' + list.length + ' location' + (list.length !== 1 ? 's' : '') + ' on tour</span></div>' +
       '<div style="display:flex;gap:var(--space-2);align-items:center;">' +
+        '<button class="tourbook-route-btn' + (_tourDayActive ? ' active' : '') + '" id="planRouteBtn" onclick="toggleTourDayRoute()"' + (list.length < 2 ? ' disabled title="Add at least 2 buildings"' : ' title="Plan optimized driving route"') + '>' +
+          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>' +
+          (_tourDayActive ? 'Clear Route' : 'Plan Route') +
+        '</button>' +
         '<button class="tourbook-sort-btn" onclick="sortTourListByDate()" title="Sort by tour date">' +
           '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' +
           'Sort by Date' +
@@ -11353,6 +11577,9 @@ function renderTourBook() {
         '</button>' : '') +
       '<div class="tourbook-invite-status" id="invite-status" style="display:none;"></div>' +
     '</div>';
+
+  // Tour Day route panel
+  html += '<div class="route-panel" id="routePanel"></div>';
 
   // Ranking summary (only shows if 2+ buildings have scores)
   html += '<div class="tourbook-summary" id="tourbook-ranking" style="display:none;"></div>';
@@ -12523,6 +12750,292 @@ async function exportTourBook() {
       btn.style.opacity = '1';
     }
   }
+}
+
+// ============================================================
+// TOUR DAY - ROUTE OPTIMIZATION
+// ============================================================
+
+var _tourDayActive = false;
+var _tourDayRouteLayer = null;
+var _tourDayMode = 'driving';
+var _tourDayData = null;
+
+function toggleTourDayRoute() {
+  if (_tourDayActive) {
+    clearTourDayRoute();
+  } else {
+    planTourDayRoute();
+  }
+}
+
+function clearTourDayRoute() {
+  _tourDayActive = false;
+  _tourDayData = null;
+  if (_tourDayRouteLayer && typeof map !== 'undefined') {
+    map.removeLayer(_tourDayRouteLayer);
+    _tourDayRouteLayer = null;
+  }
+  var panel = document.getElementById('routePanel');
+  if (panel) { panel.classList.remove('visible'); panel.innerHTML = ''; }
+  // Re-render to update button state
+  renderTourBook();
+}
+
+async function planTourDayRoute(mode) {
+  mode = mode || _tourDayMode;
+  _tourDayMode = mode;
+
+  var list = getTourList();
+  if (list.length < 2) return;
+
+  // Show loading state
+  _tourDayActive = true;
+  var panel = document.getElementById('routePanel');
+  if (panel) {
+    panel.classList.add('visible');
+    panel.innerHTML = '<div class="route-loading"><div class="spinner"></div>Optimizing your tour route...</div>';
+  }
+
+  // Update button state
+  var btn = document.getElementById('planRouteBtn');
+  if (btn) {
+    btn.classList.add('active');
+    btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>Clear Route';
+  }
+
+  // Build stops array from tour list
+  var stops = list.map(function(item) {
+    return {
+      lat: item.lat,
+      lng: item.lng,
+      name: item.name,
+      id: item.id,
+      type: item.type
+    };
+  });
+
+  try {
+    var resp = await fetch('/api/route-optimize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stops: stops, mode: mode, optimize: true })
+    });
+
+    if (!resp.ok) {
+      var errData = await resp.json().catch(function() { return { error: 'Route calculation failed' }; });
+      throw new Error(errData.error || 'Failed to calculate route');
+    }
+
+    var data = await resp.json();
+    _tourDayData = data;
+    _tourDayData._stops = stops;
+
+    // Draw route on map
+    drawRouteOnMap(data);
+
+    // Render route panel
+    renderRoutePanel(data, stops);
+
+  } catch (err) {
+    console.error('Route optimization error:', err);
+    if (panel) {
+      panel.innerHTML = '<div class="route-loading" style="color:#dc2626;">' +
+        '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>' +
+        '<div style="margin-top:8px;">' + (err.message || 'Route calculation failed') + '</div></div>';
+    }
+  }
+}
+
+function drawRouteOnMap(data) {
+  if (_tourDayRouteLayer && typeof map !== 'undefined') {
+    map.removeLayer(_tourDayRouteLayer);
+  }
+  if (!data.overviewPolyline || typeof map === 'undefined' || typeof L === 'undefined') return;
+
+  _tourDayRouteLayer = L.layerGroup();
+
+  // Decode Google encoded polyline
+  var points = decodePolyline(data.overviewPolyline);
+
+  // Draw the polyline
+  var routeColor = _tourDayMode === 'walking' ? '#8b5cf6' : '#2563eb';
+  var polyline = L.polyline(points, {
+    color: routeColor,
+    weight: 5,
+    opacity: 0.8,
+    smoothFactor: 1,
+    dashArray: _tourDayMode === 'walking' ? '8, 12' : null
+  });
+  _tourDayRouteLayer.addLayer(polyline);
+
+  // Add numbered stop markers
+  var stops = _tourDayData._stops;
+  var order = data.optimizedOrder;
+  for (var i = 0; i < order.length; i++) {
+    var stop = stops[order[i]];
+    if (!stop) continue;
+    var icon = L.divIcon({
+      className: 'route-stop-marker',
+      html: '<div style="width:32px;height:32px;border-radius:50%;background:' + routeColor + ';border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:13px;font-family:var(--font-display);">' + (i + 1) + '</div>',
+      iconSize: [32, 32],
+      iconAnchor: [16, 16]
+    });
+    var marker = L.marker([stop.lat, stop.lng], { icon: icon, zIndexOffset: 1000 + i });
+    marker.bindTooltip(stop.name, { direction: 'top', offset: [0, -20] });
+    _tourDayRouteLayer.addLayer(marker);
+  }
+
+  _tourDayRouteLayer.addTo(map);
+
+  // Fit map to route bounds
+  if (data.bounds) {
+    map.fitBounds([
+      [data.bounds.southwest.lat, data.bounds.southwest.lng],
+      [data.bounds.northeast.lat, data.bounds.northeast.lng]
+    ], { padding: [40, 40] });
+  }
+}
+
+// Decode Google encoded polyline string into lat/lng array
+function decodePolyline(encoded) {
+  var points = [];
+  var index = 0, lat = 0, lng = 0;
+  while (index < encoded.length) {
+    var b, shift = 0, result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    var dlat = (result & 1) ? ~(result >> 1) : (result >> 1);
+    lat += dlat;
+    shift = 0;
+    result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    var dlng = (result & 1) ? ~(result >> 1) : (result >> 1);
+    lng += dlng;
+    points.push([lat / 1e5, lng / 1e5]);
+  }
+  return points;
+}
+
+function renderRoutePanel(data, stops) {
+  var panel = document.getElementById('routePanel');
+  if (!panel) return;
+
+  var STOP_MINUTES = 30;
+  var totalStopTime = (data.optimizedOrder.length) * STOP_MINUTES;
+  var totalTripMinutes = Math.round(data.totalDuration.value / 60) + totalStopTime;
+  var totalTripHours = Math.floor(totalTripMinutes / 60);
+  var totalTripMins = totalTripMinutes % 60;
+  var tripTimeStr = totalTripHours > 0 ? totalTripHours + 'h ' + totalTripMins + 'm' : totalTripMins + 'm';
+
+  var html = '';
+
+  // Summary bar
+  html += '<div class="route-summary">' +
+    '<div class="route-summary-stat">' +
+      '<div class="route-summary-value">' + data.optimizedOrder.length + '</div>' +
+      '<div class="route-summary-label">Stops</div>' +
+    '</div>' +
+    '<div class="route-summary-divider"></div>' +
+    '<div class="route-summary-stat">' +
+      '<div class="route-summary-value">' + data.totalDistance.text + '</div>' +
+      '<div class="route-summary-label">Total Distance</div>' +
+    '</div>' +
+    '<div class="route-summary-divider"></div>' +
+    '<div class="route-summary-stat">' +
+      '<div class="route-summary-value">' + data.totalDuration.text + '</div>' +
+      '<div class="route-summary-label">' + (_tourDayMode === 'driving' ? 'Drive' : 'Walk') + ' Time</div>' +
+    '</div>' +
+    '<div class="route-summary-divider"></div>' +
+    '<div class="route-summary-stat">' +
+      '<div class="route-summary-value">' + tripTimeStr + '</div>' +
+      '<div class="route-summary-label">Total w/ Stops</div>' +
+    '</div>' +
+  '</div>';
+
+  // Mode toggle
+  html += '<div class="route-mode-toggle">' +
+    '<button class="route-mode-btn' + (_tourDayMode === 'driving' ? ' active' : '') + '" onclick="planTourDayRoute(\'driving\')">' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="2"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/><path d="M16 3h3l3 7v7h-2"/><path d="M8 16h8"/></svg>' +
+      'Driving' +
+    '</button>' +
+    '<button class="route-mode-btn' + (_tourDayMode === 'walking' ? ' active' : '') + '" onclick="planTourDayRoute(\'walking\')">' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="13" cy="4" r="2"/><path d="m7 21 3-9 2.5 1V21"/><path d="M16 8l-4 2-3.5 7"/><path d="M10 10l2 1"/></svg>' +
+      'Walking' +
+    '</button>' +
+  '</div>';
+
+  // Leg-by-leg itinerary
+  html += '<div class="route-legs">';
+  var cumulativeMinutes = 0;
+  var order = data.optimizedOrder;
+
+  for (var i = 0; i < order.length; i++) {
+    var stop = stops[order[i]];
+    if (!stop) continue;
+
+    // ETA calculation
+    var etaStr = '';
+    if (cumulativeMinutes > 0) {
+      var etaH = Math.floor(cumulativeMinutes / 60);
+      var etaM = cumulativeMinutes % 60;
+      etaStr = '+' + (etaH > 0 ? etaH + 'h ' : '') + etaM + 'm';
+    } else {
+      etaStr = 'Start';
+    }
+
+    html += '<div class="route-leg">' +
+      '<div class="route-leg-number">' + (i + 1) + '</div>' +
+      '<div class="route-leg-info">' +
+        '<div class="route-leg-name">' + stop.name + '</div>';
+
+    // Travel info from previous stop
+    if (i > 0 && data.legs[i - 1]) {
+      var leg = data.legs[i - 1];
+      var travelIcon = _tourDayMode === 'walking'
+        ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="13" cy="4" r="2"/><path d="m7 21 3-9 2.5 1V21"/><path d="M16 8l-4 2-3.5 7"/></svg>'
+        : '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="2"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>';
+      html += '<div class="route-leg-travel">' + travelIcon + ' ' + leg.duration.text + ' / ' + leg.distance.text + ' from ' + leg.startName + '</div>';
+    }
+
+    html += '<div class="route-leg-stop-time">' + STOP_MINUTES + ' min tour stop</div>' +
+      '</div>' +
+      '<div class="route-leg-eta">' + etaStr + '</div>' +
+    '</div>';
+
+    // Add travel time + stop time to cumulative
+    if (i < data.legs.length) {
+      cumulativeMinutes += Math.round(data.legs[i].duration.value / 60);
+    }
+    cumulativeMinutes += STOP_MINUTES;
+  }
+
+  html += '</div>';
+
+  // Finish line
+  var finishH = Math.floor(cumulativeMinutes / 60);
+  var finishM = cumulativeMinutes % 60;
+  var finishStr = (finishH > 0 ? finishH + 'h ' : '') + finishM + 'm after start';
+
+  html += '<div class="route-finish">' +
+    '<div class="route-finish-icon">' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>' +
+    '</div>' +
+    '<div>' +
+      '<div class="route-finish-text">Tour Complete</div>' +
+      '<div class="route-finish-time">Estimated ' + finishStr + '</div>' +
+    '</div>' +
+  '</div>';
+
+  panel.innerHTML = html;
+  panel.classList.add('visible');
 }
 
 // ============================================================
