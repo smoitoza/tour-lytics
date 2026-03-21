@@ -790,17 +790,7 @@ body {
 }
 
 @media (max-width: 500px) {
-  /* Constrain body to viewport so map doesn't overflow */
-  body {
-    height: 100dvh;
-    max-height: 100dvh;
-    overflow: hidden;
-  }
-  #map {
-    min-height: 0;
-  }
-
-  /* Compact header on mobile */
+  /* Compact header on mobile (header hidden via mobile redesign, but kept for graceful degradation) */
   .header {
     padding: var(--space-2) var(--space-3);
   }
@@ -7015,6 +7005,215 @@ body {
   }
   .map-action-buttons {
     bottom: calc(20px + env(safe-area-inset-bottom));
+  }
+}
+
+/* ============================================================
+   MOBILE REDESIGN: Zillow-style bottom tab bar
+   Only applies at 768px and below. Desktop is untouched.
+   ============================================================ */
+
+/* Hidden on desktop */
+.mobile-tab-bar,
+.mobile-more-overlay,
+.mobile-more-drawer {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* --- Hide desktop header and top tab bar on mobile --- */
+  .header {
+    display: none !important;
+  }
+  .page-tabs {
+    display: none !important;
+  }
+
+  /* --- Body: full viewport, no scroll on map tab --- */
+  body {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+
+  /* --- Tab content fills viewport above bottom bar --- */
+  .tab-content.active {
+    height: calc(100dvh - 60px - env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+  }
+
+  /* --- Map: fill the full space, no min-height forcing --- */
+  #map {
+    min-height: 0 !important;
+    height: 100%;
+  }
+
+  /* --- MOBILE BOTTOM TAB BAR --- */
+  .mobile-tab-bar {
+    display: flex !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: calc(60px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+    z-index: 10000;
+    align-items: flex-start;
+    justify-content: space-around;
+  }
+
+  .mobile-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    flex: 1;
+    height: 60px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-text-muted);
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    transition: color 0.15s ease;
+    padding: 6px 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-tab svg {
+    width: 22px;
+    height: 22px;
+    stroke-width: 1.8;
+  }
+
+  .mobile-tab.active {
+    color: var(--color-primary);
+  }
+
+  .mobile-tab:active {
+    opacity: 0.7;
+  }
+
+  /* --- MORE DRAWER --- */
+  .mobile-more-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.3);
+    z-index: 10001;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+  .mobile-more-overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .mobile-more-drawer {
+    display: block;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--color-surface);
+    border-radius: 16px 16px 0 0;
+    z-index: 10002;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    padding: 8px 0 calc(16px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.12);
+  }
+  .mobile-more-drawer.open {
+    transform: translateY(0);
+  }
+
+  .mobile-more-handle {
+    width: 36px;
+    height: 4px;
+    background: var(--color-border);
+    border-radius: 2px;
+    margin: 4px auto 12px;
+  }
+
+  .mobile-more-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 14px 24px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--color-text);
+    text-align: left;
+    transition: background 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobile-more-item:active {
+    background: var(--color-surface-2);
+  }
+  .mobile-more-item svg {
+    width: 20px;
+    height: 20px;
+    color: var(--color-text-muted);
+    flex-shrink: 0;
+  }
+
+  .mobile-more-divider {
+    height: 1px;
+    background: var(--color-border);
+    margin: 4px 24px;
+  }
+
+  /* --- Floating controls repositioned above bottom bar --- */
+  .map-action-buttons {
+    bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
+    left: 12px !important;
+  }
+
+  .chat-fab {
+    bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
+    right: 12px !important;
+  }
+
+  .poi-search-container {
+    /* Float at top of map like Zillow search bar */
+    top: 12px !important;
+    bottom: auto !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+  }
+
+  /* --- Chat panel above bottom bar --- */
+  .chat-panel {
+    bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* --- Layer control: compact for mobile --- */
+  .layer-control {
+    max-width: 180px !important;
+  }
+
+  /* --- Non-map tab content needs padding for bottom bar --- */
+  #tab-tourbook,
+  #tab-scores,
+  #tab-shortlist,
+  #tab-photos,
+  #tab-financials,
+  #tab-commute,
+  #tab-team,
+  #tab-ai-usage {
+    padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -17613,6 +17812,108 @@ function refreshAllShortlistButtons() {
       }, 500);
     }
   } catch(e) { console.error('Shortlist init error:', e); }
+})();
+</script>
+
+<!-- ============================================================
+     MOBILE BOTTOM TAB BAR (visible only on mobile)
+     ============================================================ -->
+<nav class="mobile-tab-bar" id="mobileTabBar">
+  <button class="mobile-tab active" onclick="mobileTabSwitch('map')" data-mob-tab="map">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+    <span>Map</span>
+  </button>
+  <button class="mobile-tab" onclick="mobileTabSwitch('tourbook')" data-mob-tab="tourbook">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+    <span>Tour Book</span>
+  </button>
+  <button class="mobile-tab" onclick="mobileTabSwitch('scores')" data-mob-tab="scores">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    <span>Scores</span>
+  </button>
+  <button class="mobile-tab" onclick="mobileTabSwitch('shortlist')" data-mob-tab="shortlist">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 21 8"/></svg>
+    <span>Shortlist</span>
+  </button>
+  <button class="mobile-tab" onclick="toggleMobileMore()" data-mob-tab="more" id="mobileMoreBtn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+    <span>More</span>
+  </button>
+</nav>
+
+<!-- Mobile "More" drawer -->
+<div class="mobile-more-overlay" id="mobileMoreOverlay" onclick="closeMobileMore()"></div>
+<div class="mobile-more-drawer" id="mobileMoreDrawer">
+  <div class="mobile-more-handle"></div>
+  <button class="mobile-more-item" onclick="mobileTabSwitch('photos'); closeMobileMore();">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    Photos
+  </button>
+  <button class="mobile-more-item" onclick="mobileTabSwitch('financials'); closeMobileMore();">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+    Financials
+  </button>
+  <button class="mobile-more-item" onclick="mobileTabSwitch('commute'); closeMobileMore();">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    Commute
+  </button>
+  <button class="mobile-more-item" onclick="mobileTabSwitch('team'); closeMobileMore();">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+    Team
+  </button>
+  <button class="mobile-more-item admin-only" id="mobileAiUsageBtn" style="display:none;" onclick="mobileTabSwitch('ai-usage'); closeMobileMore();">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4z"/><circle cx="9" cy="15" r="1"/><circle cx="15" cy="15" r="1"/></svg>
+    AI Usage
+  </button>
+  <div class="mobile-more-divider"></div>
+  <button class="mobile-more-item" onclick="toggleUserMenu(); closeMobileMore();">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    Account
+  </button>
+</div>
+
+<script>
+// Mobile tab bar logic
+function mobileTabSwitch(tabId) {
+  // Delegate to existing switchPageTab
+  switchPageTab(tabId);
+  // Update mobile tab bar active state
+  document.querySelectorAll('.mobile-tab').forEach(function(t) { t.classList.remove('active'); });
+  var activeBtn = document.querySelector('.mobile-tab[data-mob-tab="' + tabId + '"]');
+  if (activeBtn) {
+    activeBtn.classList.add('active');
+  } else {
+    // Tab is in the "More" menu -- highlight More button
+    document.getElementById('mobileMoreBtn').classList.add('active');
+  }
+  // Also sync the desktop page-tabs for consistency
+  document.querySelectorAll('.page-tab').forEach(function(t) { t.classList.remove('active'); });
+  var desktopTab = document.querySelector('.page-tab[data-page-tab="' + tabId + '"]');
+  if (desktopTab) desktopTab.classList.add('active');
+}
+
+function toggleMobileMore() {
+  var drawer = document.getElementById('mobileMoreDrawer');
+  var overlay = document.getElementById('mobileMoreOverlay');
+  var isOpen = drawer.classList.contains('open');
+  drawer.classList.toggle('open', !isOpen);
+  overlay.classList.toggle('visible', !isOpen);
+}
+
+function closeMobileMore() {
+  document.getElementById('mobileMoreDrawer').classList.remove('open');
+  document.getElementById('mobileMoreOverlay').classList.remove('visible');
+}
+
+// Show AI Usage in mobile more menu for admin
+(function() {
+  try {
+    var p = new URLSearchParams(window.location.search);
+    if ((p.get('userEmail') || '').toLowerCase() === 'samoitoza@gmail.com') {
+      var btn = document.getElementById('mobileAiUsageBtn');
+      if (btn) btn.style.display = '';
+    }
+  } catch(e) {}
 })();
 </script>
 
