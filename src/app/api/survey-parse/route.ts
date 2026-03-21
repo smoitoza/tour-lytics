@@ -23,15 +23,26 @@ const VIRTUAL_TOUR_DOMAINS = [
   '3dvista.com', 'teliportme.com',
 ]
 
-const FLOORPLAN_KEYWORDS = ['floorplan', 'floor-plan', 'floor_plan']
+const FLOORPLAN_KEYWORDS = ['floorplan', 'floor-plan', 'floor_plan', 'floor+plan', 'masterplan', 'master-plan', 'master_plan', 'siteplan', 'site-plan']
 
-function classifyLink(url: string): { type: string; label: string } {
+function classifyLink(url: string, nearbyText?: string): { type: string; label: string } {
   const lower = url.toLowerCase()
+  const text = (nearbyText || '').toLowerCase()
   if (VIRTUAL_TOUR_DOMAINS.some(d => lower.includes(d))) {
     return { type: 'virtual_tour', label: 'Virtual Tour' }
   }
   if (FLOORPLAN_KEYWORDS.some(k => lower.includes(k))) {
     return { type: 'floorplan', label: 'Floor Plan' }
+  }
+  // Check nearby text for "CLICK FOR" patterns
+  if (text.includes('floor plan') || text.includes('floorplan')) {
+    return { type: 'floorplan', label: 'Floor Plan' }
+  }
+  if (text.includes('masterplan') || text.includes('master plan') || text.includes('site plan') || text.includes('siteplan')) {
+    return { type: 'floorplan', label: 'Site Plan' }
+  }
+  if (text.includes('virtual tour') || text.includes('3d tour') || text.includes('360')) {
+    return { type: 'virtual_tour', label: 'Virtual Tour' }
   }
   return { type: 'brochure', label: 'Brochure' }
 }
@@ -94,13 +105,17 @@ function mapLinksToBuildings(
 ): void {
   if (pageData.length === 0) return
 
-  // Group buildings by their estimated page
+  // Group buildings by their estimated page (and adjacent pages for tolerance)
   const buildingsByPage: Record<number, any[]> = {}
   for (const b of buildings) {
     const pg = b.estimatedPage
     if (!pg) continue
-    if (!buildingsByPage[pg]) buildingsByPage[pg] = []
-    buildingsByPage[pg].push(b)
+    // Map to exact page and +/- 1 page for tolerance
+    for (const p of [pg - 1, pg, pg + 1]) {
+      if (p < 1) continue
+      if (!buildingsByPage[p]) buildingsByPage[p] = []
+      if (!buildingsByPage[p].includes(b)) buildingsByPage[p].push(b)
+    }
   }
 
   for (const pd of pageData) {
@@ -172,7 +187,12 @@ function mapLinksToBuildings(
 
       if (zoneLinks.length > 0) {
         building.links = zoneLinks.map(l => {
-          const { type, label } = classifyLink(l.url)
+          // Find nearby text (within 20px of the link) to help classify it
+          const nearbyText = pd.textItems
+            .filter(t => Math.abs(t.y - l.y) < 20)
+            .map(t => t.str)
+            .join(' ')
+          const { type, label } = classifyLink(l.url, nearbyText)
           return { type, label, url: l.url }
         })
         console.log(`  Links mapped: ${building.address} -> ${building.links.length} links`)
