@@ -746,55 +746,54 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* -- Two-column layout: project + activity -- */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+        {/* -- Three-section layout: My Projects, Shared With Me, Clients -- */}
+        {(() => {
+          const myProjects = projects.filter(p => p.user_role === 'owner' || p.owner_id === user?.email || p.created_by === user?.email)
+          const sharedProjects = projects.filter(p => p.user_role !== 'owner' && p.owner_id !== user?.email && p.created_by !== user?.email)
+          // Fallback: if no role data, treat all as "my projects"
+          const effectiveMy = projects.some(p => p.user_role) ? myProjects : projects
+          const effectiveShared = projects.some(p => p.user_role) ? sharedProjects : []
 
-          {/* -- Project cards: My Projects + Shared -- */}
-          <div className="dash-fade dash-fade-3">
-            {(() => {
-              const myProjects = projects.filter(p => p.user_role === 'owner' || p.owner_id === user?.email || p.created_by === user?.email)
-              const sharedProjects = projects.filter(p => p.user_role !== 'owner' && p.owner_id !== user?.email && p.created_by !== user?.email)
-              return (<>
-                {myProjects.length > 0 && (
-                  <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
-                    My Projects
-                  </div>
-                )}
-                {myProjects.map((project) => {
-                  const updatedDate = project.updated_at ? new Date(project.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
-                  const canDelete = isAdmin && project.id !== 'sf-office-search'
-                  return renderProjectCard(project, updatedDate, canDelete)
-                })}
+          // Build client list from all projects that have a client_name
+          const clientMap = new Map<string, { name: string; projectCount: number; totalBuildings: number; markets: string[] }>()
+          projects.forEach(p => {
+            const cn = (p.client_name || '').trim()
+            if (!cn) return
+            const existing = clientMap.get(cn.toLowerCase())
+            if (existing) {
+              existing.projectCount++
+              existing.totalBuildings += p.buildings_count || 0
+              if (p.market && !existing.markets.includes(p.market)) existing.markets.push(p.market)
+            } else {
+              clientMap.set(cn.toLowerCase(), {
+                name: cn,
+                projectCount: 1,
+                totalBuildings: p.buildings_count || 0,
+                markets: p.market ? [p.market] : [],
+              })
+            }
+          })
+          const clients = Array.from(clientMap.values()).sort((a, b) => a.name.localeCompare(b.name))
 
-                {sharedProjects.length > 0 && (
-                  <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem', marginTop: myProjects.length > 0 ? '1.5rem' : '0' }}>
-                    Shared With Me
-                  </div>
-                )}
-                {sharedProjects.map((project) => {
-                  const updatedDate = project.updated_at ? new Date(project.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
-                  const canDelete = false // shared projects can't be deleted by non-owner
-                  return renderProjectCard(project, updatedDate, canDelete)
-                })}
-
-                {myProjects.length === 0 && sharedProjects.length === 0 && (
-                  <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
-                    Active Projects
-                  </div>
-                )}
-              </>)
-            })()}
-            {/* Fallback: render all projects without sections if no role data */}
-            {!projects.some(p => p.user_role) && projects.map((project) => {
+          return (<>
+        {/* --- My Projects --- */}
+        <div className="dash-fade dash-fade-3" style={{ marginBottom: '2rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              My Projects
+            </div>
+            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{effectiveMy.length} project{effectiveMy.length !== 1 ? 's' : ''}</div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '0.75rem' }}>
+            {effectiveMy.map((project) => {
               const updatedDate = project.updated_at ? new Date(project.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
               const canDelete = isAdmin && project.id !== 'sf-office-search'
               return renderProjectCard(project, updatedDate, canDelete)
             })}
-
             {/* Add new project button - admin only */}
             {isAdmin && (
               <button
-                onClick={() => { setShowCreateModal(true); setCreateError(null); setNewProjectName(''); setNewProjectMarket('') }}
+                onClick={() => { setShowCreateModal(true); setCreateError(null); setNewProjectName(''); setNewProjectMarket(''); setNewProjectClient('') }}
                 className="create-project-btn"
                 style={{
                   borderRadius: '1rem',
@@ -833,9 +832,114 @@ export default function DashboardPage() {
               </button>
             )}
           </div>
+        </div>
 
-          {/* -- Activity feed -- */}
-          <div className="dash-fade dash-fade-4">
+        {/* --- Shared With Me --- */}
+        {effectiveShared.length > 0 && (
+          <div className="dash-fade dash-fade-4" style={{ marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+              <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Shared With Me
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{effectiveShared.length} project{effectiveShared.length !== 1 ? 's' : ''}</div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '0.75rem' }}>
+              {effectiveShared.map((project) => {
+                const updatedDate = project.updated_at ? new Date(project.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
+                return renderProjectCard(project, updatedDate, false)
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* --- Clients --- */}
+        <div className="dash-fade dash-fade-5" style={{ marginBottom: '2rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              Clients
+            </div>
+            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{clients.length} client{clients.length !== 1 ? 's' : ''}</div>
+          </div>
+          {clients.length > 0 ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '0.75rem' }}>
+              {clients.map((client) => (
+                <div
+                  key={client.name}
+                  style={{
+                    background: '#ffffff',
+                    borderRadius: '1rem',
+                    border: '1px solid #e2e8f0',
+                    padding: '1.25rem',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                    <div style={{
+                      width: '2.25rem',
+                      height: '2.25rem',
+                      borderRadius: '0.625rem',
+                      background: 'linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '0.8125rem',
+                      fontWeight: 700,
+                      color: '#2563eb',
+                      flexShrink: 0,
+                    }}>
+                      {client.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.9375rem', fontWeight: 700, color: '#0f172a', lineHeight: 1.3 }}>
+                        {client.name}
+                      </div>
+                      {client.markets.length > 0 && (
+                        <div style={{ fontSize: '0.75rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {client.markets.join(', ')}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '1.5rem', paddingTop: '0.75rem', borderTop: '1px solid #f1f5f9' }}>
+                    <div>
+                      <div style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>{client.projectCount}</div>
+                      <div style={{ fontSize: '0.625rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>Projects</div>
+                    </div>
+                    <div>
+                      <div style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 700, color: '#2563eb' }}>{client.totalBuildings}</div>
+                      <div style={{ fontSize: '0.625rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 500 }}>Buildings</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{
+              background: '#ffffff',
+              borderRadius: '1rem',
+              border: '1px solid #e2e8f0',
+              padding: '2rem',
+              textAlign: 'center',
+            }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 0.75rem' }}>
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+              <p style={{ fontSize: '0.875rem', color: '#64748b', margin: 0 }}>No clients yet</p>
+              <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>Add a client name when creating a project to start organizing by client.</p>
+            </div>
+          )}
+        </div>
+
+          </>)
+        })()}
+
+        {/* --- Recent Activity --- */}
+        <div style={{ marginBottom: '2rem' }}>
+          <div className="dash-fade dash-fade-6">
             <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
               Recent Activity
             </div>
