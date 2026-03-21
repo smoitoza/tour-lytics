@@ -2442,6 +2442,72 @@ body {
       to { transform: rotate(360deg); }
     }
 
+    /* Floating route panel on the map */
+    .route-panel-float {
+      position: fixed;
+      top: 80px;
+      left: 16px;
+      width: 360px;
+      max-height: calc(100vh - 120px);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      z-index: 2000;
+      overflow-y: auto;
+      display: none;
+      scrollbar-width: thin;
+    }
+    .route-panel-float.visible { display: block; }
+    .route-panel-float .route-panel-close {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.3);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      transition: background 0.15s ease;
+    }
+    .route-panel-float .route-panel-close:hover { background: rgba(0,0,0,0.5); }
+
+    /* Mobile: floating route panel becomes a bottom sheet */
+    @media (max-width: 768px) {
+      .route-panel-float {
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        max-height: 50vh;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        border-bottom: none;
+      }
+      .route-panel-float .route-summary {
+        padding: var(--space-2) var(--space-3);
+        gap: var(--space-2);
+      }
+      .route-panel-float .route-summary-value {
+        font-size: var(--text-sm) !important;
+      }
+      .route-panel-float .route-mode-toggle {
+        padding: var(--space-1) var(--space-3) !important;
+      }
+      .route-panel-float .route-leg {
+        padding: var(--space-2) var(--space-3) !important;
+      }
+      .route-panel-float .route-finish {
+        padding: var(--space-2) var(--space-3) !important;
+      }
+    }
+
     .tourbook-card {
       background: var(--color-surface);
       border: 1px solid var(--color-border);
@@ -7724,6 +7790,9 @@ body {
 <main class="main">
   <div id="map"></div>
 
+  <!-- Tour Day Route Panel (floating on map) -->
+  <div class="route-panel-float" id="routePanelFloat"></div>
+
   <!-- POI Search Bar -->
   <div class="poi-search-container" id="poi-search-container">
     <div class="poi-search-bar">
@@ -11206,16 +11275,23 @@ function switchPageTab(tabId) {
   var poiSearch = document.getElementById('poi-search-container');
   if (poiSearch) poiSearch.style.display = (tabId === 'map') ? '' : 'none';
 
-  // Clear route overlay when leaving tourbook tab
-  if (tabId !== 'tourbook' && _tourDayActive) {
-    // Keep data but remove map layer so it doesn't clutter other tabs
+  // Show/hide route floating panel based on tab
+  var floatPanel = document.getElementById('routePanelFloat');
+  if (tabId === 'map' && _tourDayActive && floatPanel) {
+    floatPanel.classList.add('visible');
+  } else if (floatPanel) {
+    floatPanel.classList.remove('visible');
+  }
+  // Keep route overlay on map visible when on map tab, hide otherwise
+  if (tabId !== 'map' && tabId !== 'tourbook' && _tourDayActive) {
     if (_tourDayRouteLayer && typeof map !== 'undefined') {
       map.removeLayer(_tourDayRouteLayer);
     }
   }
-  // Restore route overlay when returning to tourbook
-  if (tabId === 'tourbook' && _tourDayActive && _tourDayRouteLayer && typeof map !== 'undefined') {
-    _tourDayRouteLayer.addTo(map);
+  if ((tabId === 'map' || tabId === 'tourbook') && _tourDayActive && _tourDayRouteLayer && typeof map !== 'undefined') {
+    if (!map.hasLayer(_tourDayRouteLayer)) {
+      _tourDayRouteLayer.addTo(map);
+    }
   }
 
   // Invalidate map size when switching back to map
@@ -12778,6 +12854,8 @@ function clearTourDayRoute() {
   }
   var panel = document.getElementById('routePanel');
   if (panel) { panel.classList.remove('visible'); panel.innerHTML = ''; }
+  var floatPanel = document.getElementById('routePanelFloat');
+  if (floatPanel) { floatPanel.classList.remove('visible'); floatPanel.innerHTML = ''; }
   // Re-render to update button state
   renderTourBook();
 }
@@ -12796,6 +12874,14 @@ async function planTourDayRoute(mode) {
     panel.classList.add('visible');
     panel.innerHTML = '<div class="route-loading"><div class="spinner"></div>Optimizing your tour route...</div>';
   }
+  // Also show loading on the floating map panel
+  var floatPanel = document.getElementById('routePanelFloat');
+  if (floatPanel) {
+    floatPanel.classList.add('visible');
+    floatPanel.innerHTML = '<div class="route-loading"><div class="spinner"></div>Optimizing your tour route...</div>';
+  }
+  // Switch to Map tab so user sees the route
+  switchPageTab('map');
 
   // Update button state
   var btn = document.getElementById('planRouteBtn');
@@ -12834,16 +12920,17 @@ async function planTourDayRoute(mode) {
     // Draw route on map
     drawRouteOnMap(data);
 
-    // Render route panel
+    // Render route panel (both inline in Tour Book and floating on Map)
     renderRoutePanel(data, stops);
+    renderRoutePanelFloat(data, stops);
 
   } catch (err) {
     console.error('Route optimization error:', err);
-    if (panel) {
-      panel.innerHTML = '<div class="route-loading" style="color:#dc2626;">' +
-        '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>' +
-        '<div style="margin-top:8px;">' + (err.message || 'Route calculation failed') + '</div></div>';
-    }
+    var errorHtml = '<div class="route-loading" style="color:#dc2626;">' +
+      '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>' +
+      '<div style="margin-top:8px;">' + (err.message || 'Route calculation failed') + '</div></div>';
+    if (panel) panel.innerHTML = errorHtml;
+    if (floatPanel) floatPanel.innerHTML = errorHtml;
   }
 }
 
@@ -13031,6 +13118,108 @@ function renderRoutePanel(data, stops) {
     '<div>' +
       '<div class="route-finish-text">Tour Complete</div>' +
       '<div class="route-finish-time">Estimated ' + finishStr + '</div>' +
+    '</div>' +
+  '</div>';
+
+  panel.innerHTML = html;
+  panel.classList.add('visible');
+}
+
+function renderRoutePanelFloat(data, stops) {
+  var panel = document.getElementById('routePanelFloat');
+  if (!panel) return;
+
+  var STOP_MINUTES = 30;
+  var totalStopTime = (data.optimizedOrder.length) * STOP_MINUTES;
+  var totalTripMinutes = Math.round(data.totalDuration.value / 60) + totalStopTime;
+  var totalTripHours = Math.floor(totalTripMinutes / 60);
+  var totalTripMins = totalTripMinutes % 60;
+  var tripTimeStr = totalTripHours > 0 ? totalTripHours + 'h ' + totalTripMins + 'm' : totalTripMins + 'm';
+
+  var html = '<button class="route-panel-close" onclick="clearTourDayRoute()" title="Close route">' +
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+  '</button>';
+
+  // Compact summary
+  html += '<div class="route-summary" style="padding:var(--space-3) var(--space-4);gap:var(--space-3);">' +
+    '<div class="route-summary-stat">' +
+      '<div class="route-summary-value" style="font-size:var(--text-md);">' + data.optimizedOrder.length + '</div>' +
+      '<div class="route-summary-label">Stops</div>' +
+    '</div>' +
+    '<div class="route-summary-divider" style="height:28px;"></div>' +
+    '<div class="route-summary-stat">' +
+      '<div class="route-summary-value" style="font-size:var(--text-md);">' + data.totalDistance.text + '</div>' +
+      '<div class="route-summary-label">Distance</div>' +
+    '</div>' +
+    '<div class="route-summary-divider" style="height:28px;"></div>' +
+    '<div class="route-summary-stat">' +
+      '<div class="route-summary-value" style="font-size:var(--text-md);">' + data.totalDuration.text + '</div>' +
+      '<div class="route-summary-label">' + (_tourDayMode === 'driving' ? 'Drive' : 'Walk') + '</div>' +
+    '</div>' +
+    '<div class="route-summary-divider" style="height:28px;"></div>' +
+    '<div class="route-summary-stat">' +
+      '<div class="route-summary-value" style="font-size:var(--text-md);">' + tripTimeStr + '</div>' +
+      '<div class="route-summary-label">Total</div>' +
+    '</div>' +
+  '</div>';
+
+  // Mode toggle
+  html += '<div class="route-mode-toggle" style="padding:var(--space-2) var(--space-4);">' +
+    '<button class="route-mode-btn' + (_tourDayMode === 'driving' ? ' active' : '') + '" onclick="planTourDayRoute(\'driving\')">' +
+      '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="2"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/><path d="M16 3h3l3 7v7h-2"/><path d="M8 16h8"/></svg>' +
+      'Driving' +
+    '</button>' +
+    '<button class="route-mode-btn' + (_tourDayMode === 'walking' ? ' active' : '') + '" onclick="planTourDayRoute(\'walking\')">' +
+      '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="13" cy="4" r="2"/><path d="m7 21 3-9 2.5 1V21"/><path d="M16 8l-4 2-3.5 7"/></svg>' +
+      'Walking' +
+    '</button>' +
+  '</div>';
+
+  // Compact leg list
+  html += '<div class="route-legs">';
+  var cumulativeMinutes = 0;
+  var order = data.optimizedOrder;
+
+  for (var i = 0; i < order.length; i++) {
+    var stop = stops[order[i]];
+    if (!stop) continue;
+
+    var etaStr = cumulativeMinutes > 0
+      ? '+' + (Math.floor(cumulativeMinutes / 60) > 0 ? Math.floor(cumulativeMinutes / 60) + 'h ' : '') + (cumulativeMinutes % 60) + 'm'
+      : 'Start';
+
+    html += '<div class="route-leg" style="padding:var(--space-2) var(--space-4);">' +
+      '<div class="route-leg-number" style="width:22px;height:22px;font-size:10px;">' + (i + 1) + '</div>' +
+      '<div class="route-leg-info">' +
+        '<div class="route-leg-name" style="font-size:var(--text-xs);">' + stop.name + '</div>';
+
+    if (i > 0 && data.legs[i - 1]) {
+      var leg = data.legs[i - 1];
+      html += '<div class="route-leg-travel">' + leg.duration.text + ' / ' + leg.distance.text + '</div>';
+    }
+
+    html += '</div>' +
+      '<div class="route-leg-eta" style="font-size:0.65rem;">' + etaStr + '</div>' +
+    '</div>';
+
+    if (i < data.legs.length) {
+      cumulativeMinutes += Math.round(data.legs[i].duration.value / 60);
+    }
+    cumulativeMinutes += STOP_MINUTES;
+  }
+
+  html += '</div>';
+
+  // Finish line
+  var finishH = Math.floor(cumulativeMinutes / 60);
+  var finishM = cumulativeMinutes % 60;
+  html += '<div class="route-finish" style="padding:var(--space-2) var(--space-4);">' +
+    '<div class="route-finish-icon" style="width:22px;height:22px;">' +
+      '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>' +
+    '</div>' +
+    '<div>' +
+      '<div class="route-finish-text" style="font-size:var(--text-xs);">Tour Complete</div>' +
+      '<div class="route-finish-time" style="font-size:0.65rem;">~' + (finishH > 0 ? finishH + 'h ' : '') + finishM + 'm total</div>' +
     '</div>' +
   '</div>';
 
