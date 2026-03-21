@@ -4487,7 +4487,72 @@ body {
       color: #ffffff;
     }
 
+    /* Commute Map */
+    .commute-map-section {
+      margin-top: var(--space-5);
+    }
+    .commute-map-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: var(--space-3); flex-wrap: wrap; gap: var(--space-2);
+    }
+    .commute-map-title {
+      font-size: 0.625rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--color-text-muted);
+    }
+    .commute-map-controls {
+      display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;
+    }
+    .commute-map-select {
+      padding: 5px 28px 5px 10px; font-size: var(--text-xs); font-weight: 600;
+      border: 1px solid var(--color-border); border-radius: var(--radius-md);
+      background: var(--color-surface); color: var(--color-text);
+      font-family: inherit; cursor: pointer;
+      appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 8px center;
+    }
+    .commute-map-container {
+      width: 100%; height: 500px;
+      border-radius: var(--radius-lg); border: 1px solid var(--color-border);
+      overflow: hidden; position: relative;
+    }
+    .commute-map-legend {
+      position: absolute; bottom: 16px; left: 16px; z-index: 1000;
+      background: rgba(255,255,255,0.95); backdrop-filter: blur(6px);
+      border: 1px solid var(--color-border); border-radius: var(--radius-md);
+      padding: 10px 14px; max-height: 260px; overflow-y: auto;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .commute-map-legend-title {
+      font-size: 0.6rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--color-text-muted); margin-bottom: 6px;
+    }
+    .commute-map-legend-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 2px 0; font-size: var(--text-xs); color: var(--color-text);
+    }
+    .commute-map-legend-dot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+      border: 2px solid rgba(255,255,255,0.8); box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+    .commute-emp-marker {
+      width: 14px; height: 14px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.9);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+      transition: transform 0.15s ease;
+      cursor: pointer;
+    }
+    .commute-emp-marker:hover {
+      transform: scale(1.5);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+    }
+    .commute-map-emp-count {
+      font-size: var(--text-xs); color: var(--color-text-muted); font-weight: 500;
+    }
+
     @media (max-width: 640px) {
+      .commute-map-container { height: 350px; }
+      .commute-map-header { flex-direction: column; align-items: flex-start; }
       .commute-page { padding: var(--space-3); overflow-x: hidden; }
       .commute-summary-grid { grid-template-columns: 1fr; }
       .commute-upload-card { padding: var(--space-4); }
@@ -17397,6 +17462,9 @@ function commuteStartNew() {
   _commuteLatCol = -1;
   _commuteLngCol = -1;
   _commuteGroupCol = null;
+  _commuteMapSegment = null;
+  if (_commuteMap) { _commuteMap.remove(); _commuteMap = null; }
+  _commuteMapMarkers = [];
   // Re-init dropzone state
   document.getElementById('commuteDropzone').style.display = '';
   document.getElementById('commuteFileInfo').style.display = 'none';
@@ -17777,6 +17845,9 @@ function renderCommuteResults() {
   html += '</div>';
   html += '</div>';
 
+  // Employee Location Map
+  html += renderCommuteMapHTML();
+
   // Ranked table
   html += '<div class="commute-ranked-section">';
   html += '<div class="commute-section-title">Building Rankings by Average Drive Time</div>';
@@ -17838,6 +17909,242 @@ function renderCommuteResults() {
   html += '</tbody></table></div></div>';
 
   container.innerHTML = html;
+
+  // Initialize the commute map after DOM is ready
+  setTimeout(function() { initCommuteMap(); }, 50);
+}
+
+// ============================================================
+// Commute Map - Employee Location Visualization
+// ============================================================
+var _commuteMap = null;
+var _commuteMapMarkers = [];
+var _commuteMapSegment = null; // currently selected segment column
+
+// Palette for segment color-coding (up to 20 distinct groups)
+var COMMUTE_MAP_COLORS = [
+  '#2563eb', '#f47920', '#10b981', '#8b5cf6', '#ec4899',
+  '#06b6d4', '#eab308', '#ef4444', '#14b8a6', '#f97316',
+  '#6366f1', '#84cc16', '#d946ef', '#0ea5e9', '#f43f5e',
+  '#a855f7', '#22c55e', '#e11d48', '#3b82f6', '#78716c'
+];
+
+function getCommuteMapGroupableCols() {
+  // Find columns with 2-30 unique values (good for color-coding)
+  var metaCols = _commuteHeaders.filter(function(h, hi) {
+    return hi !== _commuteLatCol && hi !== _commuteLngCol;
+  });
+  var groupable = [];
+  metaCols.forEach(function(col) {
+    var vals = {};
+    _commuteEmployees.forEach(function(emp) {
+      var v = (emp.meta[col] || '').trim();
+      if (v) vals[v] = true;
+    });
+    var uniqueCount = Object.keys(vals).length;
+    if (uniqueCount >= 2 && uniqueCount <= 30) {
+      groupable.push({ col: col, count: uniqueCount });
+    }
+  });
+  return groupable;
+}
+
+function renderCommuteMapHTML() {
+  if (!_commuteEmployees.length) return '';
+
+  var groupable = getCommuteMapGroupableCols();
+
+  // Auto-select segment column if not set
+  if (!_commuteMapSegment || !groupable.find(function(g) { return g.col === _commuteMapSegment; })) {
+    // Prefer department/team/business unit columns
+    var pref = groupable.find(function(g) {
+      var lc = g.col.toLowerCase();
+      return lc.indexOf('business') >= 0 || lc.indexOf('unit') >= 0 ||
+             lc.indexOf('department') >= 0 || lc.indexOf('team') >= 0 || lc.indexOf('group') >= 0;
+    });
+    _commuteMapSegment = pref ? pref.col : (groupable.length ? groupable[0].col : null);
+  }
+
+  var html = '<div class="commute-map-section">';
+  html += '<div class="commute-map-header">';
+  html += '<div style="display:flex;align-items:center;gap:var(--space-3)">';
+  html += '<span class="commute-map-title">Employee Location Map</span>';
+  html += '<span class="commute-map-emp-count">' + _commuteEmployees.length + ' employees</span>';
+  html += '</div>';
+
+  if (groupable.length > 0) {
+    html += '<div class="commute-map-controls">';
+    html += '<span style="font-size:var(--text-xs);color:var(--color-text-muted);font-weight:500;">Color by:</span>';
+    html += '<select class="commute-map-select" id="commuteMapSegmentSelect" onchange="commuteMapChangeSegment(this.value)">';
+    groupable.forEach(function(g) {
+      html += '<option value="' + g.col + '"' + (g.col === _commuteMapSegment ? ' selected' : '') + '>' + g.col + ' (' + g.count + ')</option>';
+    });
+    html += '<option value="__none__">No grouping</option>';
+    html += '</select>';
+    html += '</div>';
+  }
+
+  html += '</div>';
+  html += '<div class="commute-map-container" id="commuteMapContainer"></div>';
+  html += '</div>';
+  return html;
+}
+
+function initCommuteMap() {
+  var container = document.getElementById('commuteMapContainer');
+  if (!container || !_commuteEmployees.length) return;
+
+  // Destroy previous map if exists
+  if (_commuteMap) {
+    _commuteMap.remove();
+    _commuteMap = null;
+  }
+  _commuteMapMarkers = [];
+
+  // Create Leaflet map
+  _commuteMap = L.map(container, {
+    zoomControl: true,
+    scrollWheelZoom: true
+  });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '\u00a9 OpenStreetMap contributors \u00a9 CARTO',
+    maxZoom: 19
+  }).addTo(_commuteMap);
+
+  // Render employee markers
+  renderCommuteMapMarkers();
+}
+
+function renderCommuteMapMarkers() {
+  if (!_commuteMap) return;
+
+  // Clear existing markers
+  _commuteMapMarkers.forEach(function(m) { _commuteMap.removeLayer(m); });
+  _commuteMapMarkers = [];
+
+  // Remove existing legend
+  var existingLegend = document.querySelector('.commute-map-legend');
+  if (existingLegend) existingLegend.remove();
+
+  var segCol = _commuteMapSegment;
+  var useSegment = segCol && segCol !== '__none__';
+
+  // Build group -> color mapping
+  var groupColors = {};
+  var groupCounts = {};
+  if (useSegment) {
+    var uniqueGroups = [];
+    _commuteEmployees.forEach(function(emp) {
+      var val = (emp.meta[segCol] || 'Unknown').trim();
+      if (!groupColors[val]) {
+        groupColors[val] = COMMUTE_MAP_COLORS[uniqueGroups.length % COMMUTE_MAP_COLORS.length];
+        uniqueGroups.push(val);
+        groupCounts[val] = 0;
+      }
+      groupCounts[val]++;
+    });
+  }
+
+  var defaultColor = '#2563eb';
+  var bounds = [];
+
+  _commuteEmployees.forEach(function(emp) {
+    if (!emp.lat || !emp.lng) return;
+    var groupVal = useSegment ? (emp.meta[segCol] || 'Unknown').trim() : '';
+    var color = useSegment ? (groupColors[groupVal] || defaultColor) : defaultColor;
+
+    var icon = L.divIcon({
+      className: 'commute-emp-marker-wrapper',
+      html: '<div class="commute-emp-marker" style="background:' + color + ';"></div>',
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    });
+
+    var marker = L.marker([emp.lat, emp.lng], { icon: icon }).addTo(_commuteMap);
+
+    // Build tooltip content
+    var tipHtml = '<div style="font-family:var(--font-body);">';
+    tipHtml += '<div style="font-weight:700;font-size:12px;margin-bottom:2px;">' + emp.name.replace(/ #\d+$/, '') + '</div>';
+    if (useSegment && groupVal) {
+      tipHtml += '<div style="font-size:11px;color:#64748b;">' + segCol + ': <strong>' + groupVal + '</strong></div>';
+    }
+    // Show a few meta fields in tooltip
+    var metaKeys = Object.keys(emp.meta);
+    var shown = 0;
+    metaKeys.forEach(function(k) {
+      if (k === segCol || shown >= 3) return;
+      tipHtml += '<div style="font-size:10px;color:#94a3b8;">' + k + ': ' + emp.meta[k] + '</div>';
+      shown++;
+    });
+    tipHtml += '</div>';
+
+    marker.bindTooltip(tipHtml, { direction: 'top', offset: [0, -8], className: 'building-tooltip' });
+    _commuteMapMarkers.push(marker);
+    bounds.push([emp.lat, emp.lng]);
+  });
+
+  // Also add shortlist building markers if we have commute results
+  if (_commuteResults && _commuteResults.summaries) {
+    _commuteResults.summaries.forEach(function(s, idx) {
+      // Try to find building coords from BUILDINGS or SURVEY_BUILDINGS
+      var bCoords = findBuildingCoords(s.building);
+      if (bCoords) {
+        var bIcon = L.divIcon({
+          className: 'commute-bldg-marker-wrapper',
+          html: '<div style="width:24px;height:24px;border-radius:50%;background:#1e293b;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:10px;font-family:var(--font-display);">' + (idx + 1) + '</div>',
+          iconSize: [24, 24],
+          iconAnchor: [12, 12]
+        });
+        var bMarker = L.marker([bCoords.lat, bCoords.lng], { icon: bIcon, zIndexOffset: 2000 }).addTo(_commuteMap);
+        bMarker.bindTooltip('<div style="font-weight:700;font-size:12px;">' + s.building + '</div><div style="font-size:10px;color:#64748b;">Avg. drive: ' + (s.driving_avg_text || 'N/A') + '</div>', { direction: 'top', offset: [0, -14], className: 'building-tooltip' });
+        _commuteMapMarkers.push(bMarker);
+        bounds.push([bCoords.lat, bCoords.lng]);
+      }
+    });
+  }
+
+  // Fit map to bounds
+  if (bounds.length > 0) {
+    _commuteMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
+  }
+
+  // Add legend
+  if (useSegment) {
+    var sortedGroups = Object.keys(groupColors).sort();
+    var legendDiv = document.createElement('div');
+    legendDiv.className = 'commute-map-legend';
+    var legendHtml = '<div class="commute-map-legend-title">' + segCol + '</div>';
+    sortedGroups.forEach(function(g) {
+      legendHtml += '<div class="commute-map-legend-item">';
+      legendHtml += '<div class="commute-map-legend-dot" style="background:' + groupColors[g] + ';"></div>';
+      legendHtml += '<span>' + g + ' (' + groupCounts[g] + ')</span>';
+      legendHtml += '</div>';
+    });
+    legendDiv.innerHTML = legendHtml;
+    var container = document.getElementById('commuteMapContainer');
+    if (container) container.appendChild(legendDiv);
+  }
+}
+
+function findBuildingCoords(name) {
+  // Search in BUILDINGS (shortlist) and SURVEY_BUILDINGS
+  if (typeof BUILDINGS !== 'undefined') {
+    var b = BUILDINGS.find(function(x) { return x.name === name; });
+    if (b) return { lat: b.lat, lng: b.lng };
+  }
+  if (typeof SURVEY_BUILDINGS !== 'undefined') {
+    var s = SURVEY_BUILDINGS.find(function(x) {
+      return (x.address || '') === name || (x.name || '') === name;
+    });
+    if (s) return { lat: s.lat, lng: s.lng };
+  }
+  return null;
+}
+
+function commuteMapChangeSegment(val) {
+  _commuteMapSegment = val;
+  renderCommuteMapMarkers();
 }
 
 function commuteSetHeatmapMode(mode) {
