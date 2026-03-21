@@ -117,7 +117,8 @@ export async function POST(req: NextRequest) {
     // Google returns waypoint_order for the middle stops (indices 0-based relative to waypoints array)
     // We need to map: [origin, ...reorderedWaypoints, destination]
     let optimizedOrder: number[]
-    if (route.waypoint_order && route.waypoint_order.length > 0) {
+    if (optimize && route.waypoint_order && route.waypoint_order.length > 0) {
+      // Only use Google's reordering when optimization was requested
       // waypoint_order maps to stops[1] through stops[N-2]
       optimizedOrder = [
         0,
@@ -125,6 +126,7 @@ export async function POST(req: NextRequest) {
         stops.length - 1,
       ]
     } else {
+      // When not optimizing, preserve the original stop order (already sorted by schedule)
       optimizedOrder = stops.map((_: RouteStop, i: number) => i)
     }
 
