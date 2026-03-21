@@ -896,7 +896,7 @@ body {
   }
 
   .building-popup-wrapper .leaflet-popup-content .tooltip-inner {
-    max-height: 300px;
+    max-height: 45vh;
     padding: var(--space-3) var(--space-4);
   }
 
@@ -913,10 +913,13 @@ body {
     gap: var(--space-2);
   }
 
-  /* Survey popups */
+  /* Survey popups: constrain height on mobile */
   .survey-popup-wrapper .leaflet-popup-content {
     min-width: 240px;
-    max-width: 280px;
+    max-width: 300px;
+  }
+  .survey-tooltip-inner {
+    max-height: 45vh;
   }
 
   /* Footer */
@@ -1041,7 +1044,15 @@ body {
 
 .survey-tooltip-inner {
   padding: var(--space-3) var(--space-4);
+  max-height: 380px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
 }
+.survey-tooltip-inner::-webkit-scrollbar { width: 5px; }
+.survey-tooltip-inner::-webkit-scrollbar-track { background: transparent; }
+.survey-tooltip-inner::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+.survey-tooltip-inner::-webkit-scrollbar-thumb:hover { background: var(--color-text-faint); }
 
 .survey-tooltip-header {
   display: flex;
@@ -2062,6 +2073,11 @@ body {
     /* Dual button row: Tour Book + Shortlist side by side */
     .tooltip-btn-row {
       display: flex; gap: 6px; margin-top: var(--space-3);
+      position: sticky; bottom: 0;
+      background: var(--color-surface);
+      padding-top: var(--space-2);
+      padding-bottom: var(--space-1);
+      z-index: 5;
     }
     .tooltip-btn-row .tooltip-tour-btn,
     .tooltip-btn-row .tooltip-shortlist-btn,
