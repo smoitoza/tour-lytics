@@ -10084,8 +10084,8 @@ function buildSurveyPopup(b) {
       };
     });
   }
-  var floorHTML = '';
-  if (floorRows.length > 0) {
+  var floorHTML = ''; // Available Floors removed from tooltip -- brochure link is cleaner
+  if (false && floorRows.length > 0) {
     var rows = floorRows.map(function(f) {
       var availClass = (f.availability || '').toLowerCase().indexOf('immediate') >= 0 ? 'floor-avail-now' : 'floor-avail-future';
       var typeClass = (f.type || '').toLowerCase() === 'sublease' ? 'sublease' : 'direct';
