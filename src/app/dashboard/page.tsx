@@ -438,7 +438,7 @@ export default function DashboardPage() {
   }
 
   const displayName = user?.email?.split('@')[0] || 'there'
-  const isAdmin = user?.email === 'samoitoza@gmail.com'
+  const isAdmin = !!user?.email // Every authenticated user is the admin of their own account
 
   /* Role badge colors */
   const ROLE_BADGE: Record<string, { bg: string; color: string; label: string }> = {
@@ -787,10 +787,10 @@ export default function DashboardPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '0.75rem' }}>
             {effectiveMy.map((project) => {
               const updatedDate = project.updated_at ? new Date(project.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
-              const canDelete = isAdmin && project.id !== 'sf-office-search'
+              const canDelete = (project.owner_id === user?.email || project.created_by === user?.email) && project.id !== 'sf-office-search'
               return renderProjectCard(project, updatedDate, canDelete)
             })}
-            {/* Add new project button - admin only */}
+            {/* Add new project button - any authenticated user */}
             {isAdmin && (
               <button
                 onClick={() => { setShowCreateModal(true); setCreateError(null); setNewProjectName(''); setNewProjectMarket(''); setNewProjectClient('') }}

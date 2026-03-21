@@ -119,7 +119,7 @@ export async function DELETE(req: NextRequest) {
   return NextResponse.json({ success: true })
 }
 
-/* POST /api/projects -- create a new project (admin only) */
+/* POST /api/projects -- create a new project (any authenticated user) */
 export async function POST(req: NextRequest) {
   const supabase = createClient(supabaseUrl, supabaseKey)
 
