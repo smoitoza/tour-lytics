@@ -73,18 +73,13 @@ export default function ProjectPage() {
 
   return (
     <>
-      {/* Inline style to hide parent header on mobile and use real viewport height */}
+      {/* Use window.innerHeight so the shell fits the real visible area on iOS Safari */}
       <style>{`
-        .project-shell { height: 100vh; display: flex; flex-direction: column; background: #f8fafc; }
+        .project-shell { height: var(--app-height, 100vh); display: flex; flex-direction: column; background: #f8fafc; overflow: hidden; }
         .project-header { background: #ffffff; border-bottom: 1px solid #e2e8f0; flex-shrink: 0; }
-        .project-iframe-wrap { flex: 1; position: relative; }
+        .project-iframe-wrap { flex: 1; position: relative; min-height: 0; }
         .project-iframe-wrap iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
-        @media (max-width: 768px) {
-          .project-header { display: none !important; }
-          .project-shell { height: calc(var(--app-height, 100vh)); }
-        }
       `}</style>
-      {/* JS to set --app-height from window.innerHeight (iOS Safari fix) */}
       <script dangerouslySetInnerHTML={{ __html: `
         (function() {
           var s = function() { document.documentElement.style.setProperty('--app-height', window.innerHeight + 'px'); };
