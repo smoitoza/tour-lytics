@@ -69,6 +69,7 @@ interface Project {
   shortlisted_count: number
   created_by: string
   owner_id?: string
+  client_name?: string
   user_role?: string
   user_persona?: string
   created_at: string
@@ -168,6 +169,7 @@ export default function DashboardPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newProjectName, setNewProjectName] = useState('')
   const [newProjectMarket, setNewProjectMarket] = useState('')
+  const [newProjectClient, setNewProjectClient] = useState('')
   const [creatingProject, setCreatingProject] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
 
@@ -287,6 +289,7 @@ export default function DashboardPage() {
         body: JSON.stringify({
           name: newProjectName.trim(),
           market: newProjectMarket.trim(),
+          client_name: newProjectClient.trim(),
           createdBy: user?.email,
         }),
       })
@@ -531,6 +534,9 @@ export default function DashboardPage() {
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.125rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.25rem', letterSpacing: '-0.01em' }}>
             {project.name}
           </h2>
+          {project.client_name && (
+            <p style={{ fontSize: '0.8125rem', color: '#2563eb', fontWeight: 500, marginBottom: '0.125rem' }}>{project.client_name}</p>
+          )}
           <p style={{ fontSize: '0.8125rem', color: '#64748b', marginBottom: '0.25rem' }}>{project.market}</p>
           <p style={{ fontSize: '0.8125rem', color: '#94a3b8', marginBottom: '1.25rem', lineHeight: 1.5 }}>{project.description}</p>
 
@@ -997,6 +1003,31 @@ export default function DashboardPage() {
                   onChange={(e) => setNewProjectName(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleCreateProject() }}
                   autoFocus
+                  style={{
+                    width: '100%',
+                    padding: '0.625rem 0.875rem',
+                    fontSize: '0.875rem',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '0.625rem',
+                    background: '#f8fafc',
+                    color: '#0f172a',
+                    fontFamily: 'inherit',
+                    boxSizing: 'border-box',
+                    transition: 'border-color 0.15s, box-shadow 0.15s',
+                  }}
+                />
+              </div>
+
+              {/* Client Name */}
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#334155', marginBottom: '0.375rem' }}>Client Name <span style={{ fontWeight: 400, color: '#94a3b8' }}>(optional)</span></label>
+                <input
+                  type="text"
+                  className="team-input"
+                  placeholder="e.g. Acme Corp"
+                  value={newProjectClient}
+                  onChange={(e) => setNewProjectClient(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleCreateProject() }}
                   style={{
                     width: '100%',
                     padding: '0.625rem 0.875rem',

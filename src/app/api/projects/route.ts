@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { name, market, description, createdBy } = body
+    const { name, market, description, createdBy, client_name } = body
 
     if (!name || !name.trim()) {
       return NextResponse.json({ error: 'Project name is required.' }, { status: 400 })
@@ -154,6 +154,7 @@ export async function POST(req: NextRequest) {
       name: name.trim(),
       market: (market || '').trim(),
       description: (description || '').trim(),
+      client_name: (client_name || '').trim(),
       status: 'active',
       buildings_count: 0,
       sqft: '',
