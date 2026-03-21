@@ -6426,8 +6426,8 @@ body {
   .chat-panel {
     width: calc(100vw - 24px);
     right: 12px; left: auto;
-    bottom: 74px; top: auto;
-    max-height: calc(var(--app-height, 100vh) - 100px);
+    bottom: 94px; top: auto;
+    max-height: calc(var(--app-height, 100vh) - 120px);
   }
 
   .chat-panel.expanded {
@@ -6904,8 +6904,8 @@ body {
   .chat-panel {
     width: calc(100vw - 16px);
     right: 8px; left: auto;
-    bottom: 124px; top: auto;
-    max-height: calc(var(--app-height, 100vh) - 160px);
+    bottom: 94px; top: auto;
+    max-height: calc(var(--app-height, 100vh) - 120px);
     border-radius: var(--radius-lg);
   }
   .chat-panel.expanded {
@@ -7015,6 +7015,7 @@ body {
 
 /* Hidden on desktop */
 .mobile-tab-bar,
+.mobile-project-strip,
 .mobile-more-overlay,
 .mobile-more-drawer {
   display: none;
@@ -7041,8 +7042,9 @@ body {
   }
 
   /* --- Tab content fills viewport above bottom bar --- */
+  /* 80px = 28px project strip + 52px tab bar */
   .tab-content.active {
-    height: calc(var(--app-height, 100vh) - 60px - env(safe-area-inset-bottom, 0px));
+    height: calc(var(--app-height, 100vh) - 80px - env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
   }
 
@@ -7052,6 +7054,48 @@ body {
     height: 100%;
   }
 
+  /* --- MOBILE PROJECT INFO STRIP (above tab bar) --- */
+  .mobile-project-strip {
+    display: flex !important;
+    position: fixed;
+    bottom: calc(52px + env(safe-area-inset-bottom, 0px));
+    left: 0;
+    right: 0;
+    height: 28px;
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 12px;
+  }
+  .mobile-project-name {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60%;
+  }
+  .mobile-project-location {
+    font-size: 10px;
+    color: var(--color-text-muted);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .mobile-project-user {
+    font-size: 10px;
+    color: var(--color-text-muted);
+    margin-left: auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 30%;
+  }
+
   /* --- MOBILE BOTTOM TAB BAR --- */
   .mobile-tab-bar {
     display: flex !important;
@@ -7059,7 +7103,7 @@ body {
     bottom: 0;
     left: 0;
     right: 0;
-    height: calc(60px + env(safe-area-inset-bottom, 0px));
+    height: calc(52px + env(safe-area-inset-bottom, 0px));
     padding-bottom: env(safe-area-inset-bottom, 0px);
     background: var(--color-surface);
     border-top: 1px solid var(--color-border);
@@ -7073,25 +7117,25 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
+    gap: 1px;
     flex: 1;
-    height: 60px;
+    height: 52px;
     background: none;
     border: none;
     cursor: pointer;
     color: var(--color-text-muted);
     font-family: var(--font-body);
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 600;
     letter-spacing: 0.01em;
     transition: color 0.15s ease;
-    padding: 6px 0;
+    padding: 4px 0;
     -webkit-tap-highlight-color: transparent;
   }
 
   .mobile-tab svg {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     stroke-width: 1.8;
   }
 
@@ -7180,12 +7224,12 @@ body {
 
   /* --- Floating controls repositioned above bottom bar --- */
   .map-action-buttons {
-    bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: calc(88px + env(safe-area-inset-bottom, 0px)) !important;
     left: 12px !important;
   }
 
   .chat-fab {
-    bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: calc(88px + env(safe-area-inset-bottom, 0px)) !important;
     right: 12px !important;
     /* Expanded pill with label on mobile */
     width: auto !important;
@@ -11437,9 +11481,17 @@ function getProjectId() {
   var subtitleEl = document.getElementById('projectSubtitle');
   var footerEl = document.getElementById('footerInfo');
 
+  // Mobile project strip elements
+  var mobName = document.getElementById('mobileProjectName');
+  var mobLoc = document.getElementById('mobileProjectLocation');
+  var mobUser = document.getElementById('mobileProjectUser');
+  var userEmail = getCurrentUserEmail() || '';
+  if (mobUser && userEmail) mobUser.textContent = userEmail;
+
   // Immediate fallback from slug (shows right away, no flash of empty)
   var fallbackTitle = pid.replace(/-/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
   if (titleEl) titleEl.textContent = fallbackTitle;
+  if (mobName) mobName.textContent = fallbackTitle;
   document.title = fallbackTitle;
 
   if (pid === 'sf-office-search' || !pid) {
@@ -11465,12 +11517,14 @@ function getProjectId() {
         var proj = data.find(function(p) { return p.id === pid; });
         if (proj) {
           if (titleEl) titleEl.textContent = proj.name;
+          if (mobName) mobName.textContent = proj.name;
           document.title = proj.name;
           var parts = [];
           if (proj.buildings_count) parts.push(proj.buildings_count + ' Buildings Evaluated');
           if (proj.shortlisted_count) parts.push(proj.shortlisted_count + ' Shortlisted');
           if (subtitleEl && parts.length) subtitleEl.innerHTML = parts.join(' &middot; ');
           if (footerEl && proj.market) footerEl.textContent = proj.market;
+          if (mobLoc && proj.market) mobLoc.textContent = proj.market;
         }
       }
     })
@@ -17917,6 +17971,13 @@ function refreshAllShortlistButtons() {
 <!-- ============================================================
      MOBILE BOTTOM TAB BAR (visible only on mobile)
      ============================================================ -->
+<!-- Mobile project info strip (hidden on desktop) -->
+<div class="mobile-project-strip" id="mobileProjectStrip">
+  <span class="mobile-project-name" id="mobileProjectName"></span>
+  <span class="mobile-project-location" id="mobileProjectLocation"></span>
+  <span class="mobile-project-user" id="mobileProjectUser"></span>
+</div>
+
 <nav class="mobile-tab-bar" id="mobileTabBar">
   <button class="mobile-tab active" onclick="mobileTabSwitch('map')" data-mob-tab="map">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
