@@ -2100,17 +2100,20 @@ body {
     .tooltip-shortlist-btn.added:hover {
       background: linear-gradient(135deg, #dc2626, #b91c1c);
     }
-    .tooltip-directions-btn {
+    .tooltip-directions-btn,
+    .tooltip-directions-btn:link,
+    .tooltip-directions-btn:visited,
+    .tooltip-directions-btn:active {
       display: flex; align-items: center; justify-content: center; gap: 5px;
       padding: 7px 4px;
       background: linear-gradient(135deg, #475569, #334155);
-      color: #fff; border: none; border-radius: 8px;
+      color: #fff !important; border: none; border-radius: 8px;
       font-family: var(--font-body); font-size: 11px;
       font-weight: 600; cursor: pointer;
       transition: all 0.2s ease; letter-spacing: 0.01em;
       text-decoration: none;
     }
-    .tooltip-directions-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 12px rgba(71,85,105,0.35); color: #fff; }
+    .tooltip-directions-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 12px rgba(71,85,105,0.35); color: #fff !important; }
 
     /* Overlay when panel is open (mobile) */
     .tour-overlay {
