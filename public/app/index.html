@@ -7042,9 +7042,9 @@ body {
   }
 
   /* --- Tab content fills viewport above bottom bar --- */
-  /* 80px = 28px project strip + 52px tab bar */
+  /* 160px = bottom bar (80px) + extra clearance for iOS Safari browser toolbar (~80px) */
   .tab-content.active {
-    height: calc(var(--app-height, 100vh) - 80px - env(safe-area-inset-bottom, 0px));
+    height: calc(var(--app-height, 100vh) - 160px);
     overflow-y: auto;
   }
 
