@@ -8757,7 +8757,7 @@ function buildPopup(b) {
   const badgeLabel = b.statusLabel;
   const niActive = isNotInterested('shortlist', b.id);
   const niBadgeHTML = `<span class="tooltip-badge not-interested-badge" id="ni-badge-shortlist-${b.id}" style="display:${niActive ? '' : 'none'};margin-left:4px"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#e8a0a0;"></span> Not Interested</span>`;
-  const niButtonHTML = `<button class="tooltip-ni-btn${niActive ? ' active' : ''}" onclick="toggleNotInterested('shortlist', ${b.id})" id="ni-btn-shortlist-${b.id}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg><span>${niActive ? 'Interested' : 'Not Interested'}</span></button>`;
+  const niButtonHTML = `<button class="tooltip-ni-btn${niActive ? ' active' : ''}" onclick="toggleNotInterested('shortlist', ${b.id})" id="ni-btn-shortlist-${b.id}"><span>${niActive ? 'Interested' : 'Not Interested'}</span></button>`;
 
   if (!isNegotiating) {
     // TBD buildings - compact popup
@@ -8783,15 +8783,12 @@ function buildPopup(b) {
           <div class="tooltip-photos-section" id="photo-section-shortlist-${b.id}"><div class="tooltip-photos-header"><span class="tooltip-photos-title">Photos</span></div><div class="tooltip-photo-grid" style="margin-top:6px"><div class="tooltip-photo-add-btn" onclick="openPhotoUpload('shortlist', ${b.id}, '${b.name}', '${b.address}')" title="Add Photo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div></div></div>
           <div class="tooltip-btn-row">
             <button class="tooltip-tour-btn" onclick="toggleTourItem('shortlist', ${b.id})" id="tour-btn-shortlist-${b.id}">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
               <span>Tour Book</span>
             </button>
             <button class="tooltip-shortlist-btn" onclick="toggleShortlistItem('shortlist', ${b.id})" id="shortlist-btn-shortlist-${b.id}">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 21 8"/></svg>
               <span>Shortlist</span>
             </button>
             <a class="tooltip-directions-btn" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(b.address)}" target="_blank" rel="noopener noreferrer" title="Get directions in Google Maps">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
               <span>Directions</span>
             </a>
             ${niButtonHTML}
@@ -8903,15 +8900,12 @@ function buildPopup(b) {
       </div>
       <div class="tooltip-btn-row" style="margin:0 var(--space-4) var(--space-4);">
         <button class="tooltip-tour-btn" onclick="toggleTourItem('shortlist', ${b.id})" id="tour-btn-shortlist-${b.id}">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
           <span>Tour Book</span>
         </button>
         <button class="tooltip-shortlist-btn" onclick="toggleShortlistItem('shortlist', ${b.id})" id="shortlist-btn-shortlist-${b.id}">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 21 8"/></svg>
           <span>Shortlist</span>
         </button>
         <a class="tooltip-directions-btn" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(b.address)}" target="_blank" rel="noopener noreferrer" title="Get directions in Google Maps">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
           <span>Directions</span>
         </a>
         ${niButtonHTML}
@@ -10103,8 +10097,15 @@ function buildSurveyPopup(b) {
         '<td><span class="survey-floor-type-badge ' + typeClass + '">' + (f.type || '') + '</span></td>' +
       '</tr>';
     }).join('');
+    var floorLabelHTML = 'Available Floors';
+    if (b.surveyPdfUrl) {
+      var floorPdfLink = b.surveyPdfUrl + (b.estimatedPage ? '#page=' + b.estimatedPage : '');
+      floorLabelHTML = '<a href="' + floorPdfLink + '" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;display:flex;align-items:center;gap:4px;">Available Floors <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.4"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>';
+    } else if (isSFProject && sfPdfPage) {
+      floorLabelHTML = '<a href="https://smoitoza.github.io/procore-sf-survey/survey-120dpi.pdf#page=' + sfPdfPage + '" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;display:flex;align-items:center;gap:4px;">Available Floors <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.4"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>';
+    }
     floorHTML = '<div class="survey-floor-section">' +
-      '<div class="survey-floor-label">Available Floors</div>' +
+      '<div class="survey-floor-label">' + floorLabelHTML + '</div>' +
       '<table class="survey-floor-table">' +
         '<thead><tr><th>Floor</th><th>Size</th><th>Rate</th><th>Avail</th><th>Type</th></tr></thead>' +
         '<tbody>' + rows + '</tbody>' +
@@ -10186,19 +10187,15 @@ function buildSurveyPopup(b) {
       '<div class="tooltip-photos-section" id="photo-section-survey-' + b.num + '"><div class="tooltip-photos-header"><span class="tooltip-photos-title">Photos</span></div><div class="tooltip-photo-grid" style="margin-top:6px"><div class="tooltip-photo-add-btn" onclick="openPhotoUpload(\'survey\', ' + b.num + ', \'' + (b.address || '').replace(/'/g, "\\'") + '\', \'' + (b.neighborhood || '').replace(/'/g, "\\'") + '\')" title="Add Photo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div></div></div>' +
       '<div class="tooltip-btn-row">' +
         '<button class="tooltip-tour-btn" onclick="toggleTourItem(\'survey\', ' + b.num + ')" id="tour-btn-survey-' + b.num + '">' +
-          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' +
           '<span>Tour Book</span>' +
         '</button>' +
         '<button class="tooltip-shortlist-btn" onclick="toggleShortlistItem(\'survey\', ' + b.num + ')" id="shortlist-btn-survey-' + b.num + '">' +
-          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 21 8"/></svg>' +
           '<span>Shortlist</span>' +
         '</button>' +
         '<a class="tooltip-directions-btn" href="https://www.google.com/maps/dir/?api=1&destination=' + (b.lat && b.lng ? b.lat + ',' + b.lng : encodeURIComponent((b.address || '') + ', San Francisco, CA')) + '" target="_blank" rel="noopener noreferrer" title="Get directions in Google Maps">' +
-          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>' +
           '<span>Directions</span>' +
         '</a>' +
         '<button class="tooltip-ni-btn' + (isNotInterested('survey', b.num) ? ' active' : '') + '" onclick="toggleNotInterested(\'survey\', ' + b.num + ')" id="ni-btn-survey-' + b.num + '">' +
-          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>' +
           '<span>' + (isNotInterested('survey', b.num) ? 'Interested' : 'Not Interested') + '</span>' +
         '</button>' +
       '</div>' +
