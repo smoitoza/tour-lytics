@@ -4551,6 +4551,7 @@ body {
     }
 
     /* === Standalone Commute Map Tab === */
+    #tab-commute-map { overflow: hidden; }
     .commute-map-page {
       display: flex; flex-direction: column; height: 100%; min-height: 0;
     }
@@ -4588,10 +4589,10 @@ body {
       width: 14px; height: 14px; accent-color: #2563eb; cursor: pointer;
     }
     .commute-map-page-body {
-      flex: 1; min-height: 0; position: relative;
+      flex: 1; min-height: 0; position: relative; overflow: hidden;
     }
     .commute-map-page-map {
-      width: 100%; height: 100%;
+      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
     }
     #cmapLegend {
       position: absolute; bottom: 16px; left: 16px; z-index: 1000;
@@ -18313,27 +18314,29 @@ function cmapInit() {
   cmapPopulateColorBy();
   cmapPopulateShowGroup();
 
-  // Create or re-init map
-  if (_cmapLeaflet) {
-    // Map already exists, just refresh markers
-    setTimeout(function() {
+  // Create or re-init map (delay to let tab become visible so Leaflet can measure container)
+  setTimeout(function() {
+    if (_cmapLeaflet) {
+      // Map already exists, just refresh markers
       _cmapLeaflet.invalidateSize();
       cmapRenderAll();
-    }, 100);
-  } else {
-    var container = document.getElementById('cmapContainer');
-    if (!container) return;
-    _cmapLeaflet = L.map(container, {
-      zoomControl: true,
-      scrollWheelZoom: true
-    });
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution: '\u00a9 OpenStreetMap contributors \u00a9 CARTO',
-      maxZoom: 19
-    }).addTo(_cmapLeaflet);
-    _cmapInited = true;
-    cmapRenderAll();
-  }
+    } else {
+      var container = document.getElementById('cmapContainer');
+      if (!container) return;
+      _cmapLeaflet = L.map(container, {
+        zoomControl: true,
+        scrollWheelZoom: true
+      });
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '\u00a9 OpenStreetMap contributors \u00a9 CARTO',
+        maxZoom: 19
+      }).addTo(_cmapLeaflet);
+      _cmapInited = true;
+      cmapRenderAll();
+      // Extra invalidateSize after tiles load to handle any remaining sizing quirks
+      setTimeout(function() { if (_cmapLeaflet) _cmapLeaflet.invalidateSize(); }, 300);
+    }
+  }, 150);
 }
 
 function cmapPopulateColorBy() {
