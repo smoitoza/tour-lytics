@@ -7029,16 +7029,20 @@ body {
     display: none !important;
   }
 
-  /* --- Body: full viewport, no scroll on map tab --- */
-  body {
-    height: 100dvh;
-    max-height: 100dvh;
+  /* --- Body: use svh (small viewport) so content fits even with browser chrome visible --- */
+  html, body {
+    height: 100svh;
+    height: -webkit-fill-available; /* iOS Safari fallback */
+    max-height: 100svh;
     overflow: hidden;
+  }
+  body {
+    min-height: 0 !important; /* override base min-height: 100dvh */
   }
 
   /* --- Tab content fills viewport above bottom bar --- */
   .tab-content.active {
-    height: calc(100dvh - 60px - env(safe-area-inset-bottom, 0px));
+    height: calc(100svh - 60px - env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
   }
 
