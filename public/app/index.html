@@ -2054,7 +2054,8 @@ body {
       display: flex; gap: 6px; margin-top: var(--space-3);
     }
     .tooltip-btn-row .tooltip-tour-btn,
-    .tooltip-btn-row .tooltip-shortlist-btn {
+    .tooltip-btn-row .tooltip-shortlist-btn,
+    .tooltip-btn-row .tooltip-directions-btn {
       width: auto; flex: 1; margin-top: 0; font-size: 11px; padding: 7px 4px;
     }
     .tooltip-shortlist-btn {
@@ -2073,6 +2074,17 @@ body {
     .tooltip-shortlist-btn.added:hover {
       background: linear-gradient(135deg, #dc2626, #b91c1c);
     }
+    .tooltip-directions-btn {
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+      padding: 7px 4px;
+      background: linear-gradient(135deg, #475569, #334155);
+      color: #fff; border: none; border-radius: 8px;
+      font-family: var(--font-body); font-size: 11px;
+      font-weight: 600; cursor: pointer;
+      transition: all 0.2s ease; letter-spacing: 0.01em;
+      text-decoration: none;
+    }
+    .tooltip-directions-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 12px rgba(71,85,105,0.35); color: #fff; }
 
     /* Overlay when panel is open (mobile) */
     .tour-overlay {
@@ -6615,7 +6627,8 @@ body {
     gap: 4px;
   }
   .tooltip-btn-row .tooltip-tour-btn,
-  .tooltip-btn-row .tooltip-shortlist-btn {
+  .tooltip-btn-row .tooltip-shortlist-btn,
+  .tooltip-btn-row .tooltip-directions-btn {
     width: 100%;
     padding: 10px 8px;
     font-size: 12px;
@@ -8162,6 +8175,10 @@ function buildPopup(b) {
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 21 8"/></svg>
               <span>Shortlist</span>
             </button>
+            <a class="tooltip-directions-btn" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(b.address)}" target="_blank" rel="noopener noreferrer" title="Get directions in Google Maps">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+              <span>Directions</span>
+            </a>
           </div>
         </div>
       </div>
@@ -8276,6 +8293,10 @@ function buildPopup(b) {
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 21 8"/></svg>
           <span>Shortlist</span>
         </button>
+        <a class="tooltip-directions-btn" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(b.address)}" target="_blank" rel="noopener noreferrer" title="Get directions in Google Maps">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+          <span>Directions</span>
+        </a>
       </div>
     </div>
   `;
@@ -9550,6 +9571,10 @@ function buildSurveyPopup(b) {
           '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 21 8"/></svg>' +
           '<span>Shortlist</span>' +
         '</button>' +
+        '<a class="tooltip-directions-btn" href="https://www.google.com/maps/dir/?api=1&destination=' + (b.lat && b.lng ? b.lat + ',' + b.lng : encodeURIComponent((b.address || '') + ', San Francisco, CA')) + '" target="_blank" rel="noopener noreferrer" title="Get directions in Google Maps">' +
+          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>' +
+          '<span>Directions</span>' +
+        '</a>' +
       '</div>' +
     '</div>' +
   '</div>';
