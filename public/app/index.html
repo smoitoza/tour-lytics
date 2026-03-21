@@ -7889,6 +7889,10 @@ body {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
     Upload Survey
   </button>
+  <button class="survey-upload-toggle" id="surveyClearBtn" style="display:none;" onclick="clearSurveyData()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+    Clear Survey
+  </button>
   <button class="tour-toggle" id="tourToggle" onclick="openTourPanel()">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
     Tour List
@@ -7900,9 +7904,11 @@ body {
 (function() {
   try {
     var p = new URLSearchParams(window.location.search);
-    if ((p.get('userEmail') || '').toLowerCase() === 'samoitoza@gmail.com') {
+    var email = (p.get('userEmail') || '').toLowerCase();
+    if (email) {
       var btn = document.getElementById('surveyUploadToggle');
       if (btn) btn.style.display = '';
+      // Clear Survey button shown later after buildings load (in loadSavedSurveyBuildings)
     }
   } catch(e) {}
 })();
@@ -10304,6 +10310,10 @@ if (allMarkers.length > 0) {
     // Update legend
     if (typeof refreshLegend === 'function') refreshLegend();
     console.log('Loaded', saved.length, 'saved survey buildings for project', pid);
+
+    // Show Clear Survey button if buildings exist and user has admin access
+    var clearBtn = document.getElementById('surveyClearBtn');
+    if (clearBtn && saved.length > 0 && hasAdminAccess()) clearBtn.style.display = '';
   } catch (err) {
     console.warn('Could not load saved survey buildings:', err);
   }
@@ -16503,6 +16513,51 @@ switchPageTab = function(tabId) {
 // ============================================================
 
 var _surveyUploadFile = null;
+
+async function clearSurveyData() {
+  var pid = getProjectId();
+  if (pid === 'sf-office-search') {
+    alert('Cannot clear the SF demo project survey data.');
+    return;
+  }
+  if (SURVEY_BUILDINGS.length === 0) {
+    alert('No survey data to clear.');
+    return;
+  }
+  if (!confirm('This will remove all ' + SURVEY_BUILDINGS.length + ' survey buildings from this project. You can re-upload afterwards. Continue?')) {
+    return;
+  }
+
+  var btn = document.getElementById('surveyClearBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Clearing...'; }
+
+  try {
+    var res = await fetch('/api/survey-buildings?projectId=' + encodeURIComponent(pid), { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to delete');
+
+    // Remove all survey markers from map
+    surveyMarkers.forEach(function(m) { map.removeLayer(m); });
+    surveyMarkers.length = 0;
+
+    // Clear the SURVEY_BUILDINGS array
+    SURVEY_BUILDINGS.length = 0;
+
+    // Reset city color map
+    buildCityColorMap();
+
+    // Refresh legend
+    if (typeof refreshLegend === 'function') refreshLegend();
+
+    // Hide clear button since no data
+    if (btn) btn.style.display = 'none';
+
+    alert('Survey data cleared. You can now upload a new survey.');
+  } catch(e) {
+    alert('Failed to clear survey data. Please try again.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Clear Survey'; }
+  }
+}
 
 function openSurveyUploadModal() {
   document.getElementById('surveyUploadOverlay').style.display = 'block';

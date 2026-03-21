@@ -49,6 +49,31 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(buildings)
 }
 
+// DELETE /api/survey-buildings?projectId=xxx - Delete all survey buildings for a project
+export async function DELETE(req: NextRequest) {
+  const projectId = req.nextUrl.searchParams.get('projectId')
+  if (!projectId) {
+    return NextResponse.json({ error: 'projectId required' }, { status: 400 })
+  }
+
+  const { error } = await supabase
+    .from('survey_buildings')
+    .delete()
+    .eq('project_id', projectId)
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // Reset project buildings count
+  await supabase
+    .from('projects')
+    .update({ buildings_count: 0 })
+    .eq('id', projectId)
+
+  return NextResponse.json({ success: true })
+}
+
 // POST /api/survey-buildings - Save parsed buildings for a project
 // Body: { projectId, buildings: [...] }
 export async function POST(req: NextRequest) {
