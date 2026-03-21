@@ -790,9 +790,14 @@ body {
 }
 
 @media (max-width: 500px) {
-  /* Map fills available space on mobile */
+  /* Constrain body to viewport so map doesn't overflow */
+  body {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
   #map {
-    min-height: calc(100dvh - 100px);
+    min-height: 0;
   }
 
   /* Compact header on mobile */
@@ -1800,7 +1805,7 @@ body {
     width: calc(100vw - 80px);
     left: 12px;
     right: auto;
-    bottom: 150px;
+    bottom: 100px;
   }
 
   .poi-search-bar {
@@ -5095,6 +5100,7 @@ body {
       top: 0;
       z-index: 600;
       overflow-x: auto;
+      flex-shrink: 0;
       -webkit-overflow-scrolling: touch;
       scrollbar-width: none;
       flex-wrap: nowrap;
@@ -6553,7 +6559,7 @@ body {
 /* --- MAP PAGE: better touch experience --- */
 @media (max-width: 600px) {
   #map {
-    min-height: calc(100dvh - 140px);
+    min-height: 0;
   }
   /* Tour toggle button: bigger touch target */
   .tour-toggle {
