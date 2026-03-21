@@ -1447,6 +1447,8 @@ body {
   right: 84px;
   z-index: 1000;
   width: 340px;
+  /* Hidden globally -- AI Scout handles search */
+  display: none !important;
 }
 
 /* Hide search bar when chat panel is open */
@@ -5999,9 +6001,12 @@ body {
   position: fixed;
   bottom: 20px;
   right: 20px;
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
+  /* Pill shape with label on desktop */
+  width: auto;
+  height: 48px;
+  border-radius: 50px;
+  padding: 0 18px 0 14px;
+  gap: 8px;
   background: var(--color-primary);
   color: white;
   border: none;
@@ -6012,11 +6017,40 @@ body {
   align-items: center;
   justify-content: center;
   transition: all var(--transition);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.chat-fab::after {
+  content: 'Scout';
+}
+
+.chat-fab.open::after {
+  content: '';
+}
+
+.chat-fab.open {
+  width: 48px;
+  padding: 0;
+  border-radius: 50%;
+}
+
+/* Pulse ring animation */
+@keyframes chat-fab-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(244, 121, 32, 0.5); }
+  70% { box-shadow: 0 0 0 14px rgba(244, 121, 32, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(244, 121, 32, 0); }
+}
+.chat-fab:not(.open) {
+  animation: chat-fab-pulse 2s ease-out 3;
+  animation-delay: 1s;
 }
 
 .chat-fab:hover {
   background: var(--color-primary-hover);
-  transform: scale(1.08);
+  transform: scale(1.04);
   box-shadow: 0 6px 24px rgba(244, 121, 32, 0.45);
 }
 
@@ -7202,7 +7236,7 @@ body {
     height: 44px !important;
   }
   .chat-fab::after {
-    content: 'Ask AI';
+    content: 'Scout';
     font-family: var(--font-body);
     font-size: 13px;
     font-weight: 700;
@@ -7217,7 +7251,7 @@ body {
     border-radius: 50% !important;
   }
 
-  /* Pulse ring animation on first load */
+  /* Pulse ring animation on first load (mobile) */
   @keyframes chat-fab-pulse {
     0% { box-shadow: 0 0 0 0 rgba(244, 121, 32, 0.5); }
     70% { box-shadow: 0 0 0 12px rgba(244, 121, 32, 0); }
@@ -15690,9 +15724,10 @@ function esc(s) {
      AI Chat Panel
      ============================================================ -->
 
-<button class="chat-fab" id="chatFab" aria-label="Open AI assistant">
+<button class="chat-fab" id="chatFab" aria-label="Open Scout AI assistant">
+  <!-- Sparkle / AI icon -->
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-    <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" />
+    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456Z" />
   </svg>
 </button>
 
@@ -15705,8 +15740,8 @@ function esc(s) {
         </svg>
       </div>
       <div>
-        <div class="chat-header-title">Tour Book AI</div>
-        <div class="chat-header-sub">Ask about any building</div>
+        <div class="chat-header-title">Scout</div>
+        <div class="chat-header-sub">Market intelligence at your fingertips</div>
       </div>
     </div>
     <div class="chat-header-actions">
@@ -15738,8 +15773,8 @@ function esc(s) {
           <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456Z" />
         </svg>
       </div>
-      <h3>Tour Book AI Assistant</h3>
-      <p>Ask me anything about the 33 buildings in the survey, lease terms, pricing, or comparisons.</p>
+      <h3>Scout</h3>
+      <p>Your AI-powered market intelligence assistant. Ask about buildings, lease terms, pricing, or comparisons.</p>
       <div class="chat-suggestions">
         <button class="chat-suggestion" data-q="Which buildings have the lowest rental rates?">Which buildings have the lowest rates?</button>
         <button class="chat-suggestion" data-q="Compare 250 Brannan vs 123 Townsend deal terms">Compare the two active deals</button>
