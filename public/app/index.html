@@ -10205,13 +10205,19 @@ function buildSurveyPopup(b) {
 
 const surveyMarkers = [];
 
+// Build city color mapping before rendering markers
+buildCityColorMap();
+
 SURVEY_BUILDINGS.forEach((b) => {
   var onTour = isOnTourList('survey', b.num);
   var niInit = isNotInterested('survey', b.num);
   var markerClass = onTour ? ' on-tour' : (niInit ? ' not-interested' : '');
+  var cityColor = getSurveyMarkerColor(b);
+  var displayNum = getCityBuildingNum(b);
+  var colorStyle = (!onTour && !niInit && cityColor !== MARKER_COLOR_SURVEY) ? 'background:' + cityColor + ';' : '';
   const icon = L.divIcon({
     className: 'survey-marker-wrapper',
-    html: '<div class="survey-marker' + markerClass + '">' + b.num + '</div>',
+    html: '<div class="survey-marker' + markerClass + '" style="' + colorStyle + '">' + displayNum + '</div>',
     iconSize: [22, 22],
     iconAnchor: [11, 11]
   });
@@ -10257,13 +10263,22 @@ if (allMarkers.length > 0) {
     saved.forEach(function(b) {
       if (!b.lat || !b.lng) return;
       SURVEY_BUILDINGS.push(b);
+    });
 
+    // Build city color map after all buildings are loaded
+    buildCityColorMap();
+
+    saved.forEach(function(b) {
+      if (!b.lat || !b.lng) return;
       var bOnTour = isOnTourList('survey', b.num);
       var bNI = isNotInterested('survey', b.num);
       var bMarkerClass = bOnTour ? ' on-tour' : (bNI ? ' not-interested' : '');
+      var cityColor = getSurveyMarkerColor(b);
+      var displayNum = getCityBuildingNum(b);
+      var colorStyle = (!bOnTour && !bNI && cityColor !== MARKER_COLOR_SURVEY) ? 'background:' + cityColor + ';' : '';
       var icon = L.divIcon({
         className: 'survey-marker-wrapper',
-        html: '<div class="survey-marker' + bMarkerClass + '">' + b.num + '</div>',
+        html: '<div class="survey-marker' + bMarkerClass + '" style="' + colorStyle + '">' + displayNum + '</div>',
         iconSize: [22, 22],
         iconAnchor: [11, 11]
       });
@@ -10301,7 +10316,64 @@ if (allMarkers.length > 0) {
 const legend = L.control({ position: 'topright' });
 
 // Standard colors for all projects
-var MARKER_COLOR_SURVEY = '#3b82f6';   // Blue - general survey building
+var MARKER_COLOR_SURVEY = '#3b82f6';   // Blue - general survey building (fallback)
+
+// City/Neighborhood color palette for survey buildings
+var CITY_GROUP_COLORS = [
+  '#1e3a5f', // dark navy (Redwood City-style)
+  '#dc2626', // red (Menlo Park-style)
+  '#2563eb', // blue (Palo Alto-style)
+  '#7c3aed', // purple (Mountain View-style)
+  '#059669', // green (Sunnyvale-style)
+  '#0891b2', // teal (Santa Clara-style)
+  '#d97706', // amber (San Jose-style)
+  '#db2777', // pink
+  '#4f46e5', // indigo
+  '#0d9488', // teal-dark
+  '#ea580c', // deep orange
+  '#6d28d9', // violet
+  '#0284c7', // sky
+  '#65a30d', // lime
+  '#be185d'  // rose
+];
+var _cityColorMap = {};    // { 'Menlo Park': '#dc2626', ... }
+var _cityBuildingNums = {}; // { 'Menlo Park': [1,2,...], 'Palo Alto': [3,4,5,...] }
+
+// Build the city-to-color mapping from current SURVEY_BUILDINGS
+function buildCityColorMap() {
+  _cityColorMap = {};
+  _cityBuildingNums = {};
+  var colorIdx = 0;
+  var seen = {}; // track order of first appearance
+  SURVEY_BUILDINGS.forEach(function(b) {
+    var city = (b.neighborhood || '').trim();
+    if (!city) return;
+    if (!seen[city]) {
+      seen[city] = true;
+      _cityColorMap[city] = CITY_GROUP_COLORS[colorIdx % CITY_GROUP_COLORS.length];
+      _cityBuildingNums[city] = [];
+      colorIdx++;
+    }
+    _cityBuildingNums[city].push(b.num);
+  });
+}
+
+// Get the color for a building based on its neighborhood
+function getSurveyMarkerColor(b) {
+  var city = (b.neighborhood || '').trim();
+  if (city && _cityColorMap[city]) return _cityColorMap[city];
+  return MARKER_COLOR_SURVEY; // fallback blue
+}
+
+// Get the per-city display number (e.g., Palo Alto building #3 out of 5)
+function getCityBuildingNum(b) {
+  var city = (b.neighborhood || '').trim();
+  if (city && _cityBuildingNums[city]) {
+    var idx = _cityBuildingNums[city].indexOf(b.num);
+    if (idx >= 0) return idx + 1;
+  }
+  return b.num; // fallback to global num
+}
 var MARKER_COLOR_TOUR = '#f47920';     // Orange - on tour book
 var MARKER_COLOR_SHORTLIST = '#10b981'; // Emerald - on shortlist
 var MARKER_COLOR_NOT_INTERESTED = '#e8a0a0'; // Soft red - not interested
@@ -10422,8 +10494,23 @@ function buildLegendHTML() {
     html += '</div>';
   }
 
-  // Survey buildings (blue)
-  if (surveyCount > 0) {
+  // Survey buildings - show by city group if we have neighborhoods, otherwise single blue
+  var cityKeys = Object.keys(_cityColorMap);
+  if (cityKeys.length >= 2 && surveyCount > 0) {
+    html += '<div class="legend-section">';
+    html += '<div class="legend-section-label">Survey by City</div>';
+    cityKeys.forEach(function(city) {
+      var nums = _cityBuildingNums[city] || [];
+      // Count how many are unclassified (not on tour, shortlist, or not-interested)
+      var cityCount = nums.filter(function(num) {
+        var key = 'survey-' + num;
+        return !onTourIds.has(key) && !onShortlistIds.has(key) && !isNotInterested('survey', num);
+      }).length;
+      var totalInCity = nums.length;
+      html += '<div class="legend-item"><div class="legend-dot" style="background:' + _cityColorMap[city] + '"></div><span class="legend-label">' + city + ' (' + totalInCity + ')</span></div>';
+    });
+    html += '</div>';
+  } else if (surveyCount > 0) {
     html += '<div class="legend-section">';
     html += '<div class="legend-item"><div class="legend-dot survey"></div><span class="legend-label">Survey (' + surveyCount + ')</span></div>';
     html += '</div>';
@@ -11495,16 +11582,27 @@ function refreshMarkerColors() {
     if (!el) return;
     var dot = el.querySelector('.survey-marker');
     if (dot) {
-      // Priority: shortlist > tour > not-interested > default
+      // Priority: shortlist > tour > not-interested > city color > default
       dot.classList.remove('on-tour', 'on-shortlist', 'not-interested');
       dot.style.opacity = '';
       if (onShortlist) {
         dot.classList.add('on-shortlist');
+        dot.style.background = '';
       } else if (onTour) {
         dot.classList.add('on-tour');
+        dot.style.background = '';
       } else if (ni) {
         dot.classList.add('not-interested');
+        dot.style.background = '';
+      } else {
+        // Restore city color
+        var bldg = SURVEY_BUILDINGS.find(function(b) { return b.num === marker._surveyNum; });
+        var cc = bldg ? getSurveyMarkerColor(bldg) : MARKER_COLOR_SURVEY;
+        dot.style.background = cc !== MARKER_COLOR_SURVEY ? cc : '';
       }
+      // Update display number to per-city number
+      var bldgForNum = SURVEY_BUILDINGS.find(function(b) { return b.num === marker._surveyNum; });
+      if (bldgForNum) dot.textContent = getCityBuildingNum(bldgForNum);
     }
   });
   // Also update BUILDINGS markers (shortlist buildings from _SF_BUILDINGS etc.)
@@ -16722,10 +16820,16 @@ function surveyMergeBuildings(newBuildings) {
     SURVEY_BUILDINGS.push(entry);
     existingAddrMap[normAddr] = SURVEY_BUILDINGS.length - 1;
 
+    // Rebuild city color map with newly added building
+    buildCityColorMap();
+    var cityColor = getSurveyMarkerColor(entry);
+    var displayNum = getCityBuildingNum(entry);
+    var colorStyle = cityColor !== MARKER_COLOR_SURVEY ? 'background:' + cityColor + ';' : '';
+
     // Add marker to map
     var icon = L.divIcon({
       className: 'survey-marker-wrapper',
-      html: '<div class="survey-marker">' + nextNum + '</div>',
+      html: '<div class="survey-marker" style="' + colorStyle + '">' + displayNum + '</div>',
       iconSize: [22, 22],
       iconAnchor: [11, 11]
     });
