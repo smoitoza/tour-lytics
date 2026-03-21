@@ -17716,9 +17716,8 @@ function commuteStartNew() {
 
 // Apply role-based access to commute UI
 function commuteApplyRoleAccess() {
-  var canUpload = hasAdminAccess(); // admin, broker, cre_team
-  // Actually: only admin and cre_team can upload. Brokers and tourees are view-only.
-  canUpload = ['admin', 'cre_team'].includes(_userRole);
+  // Admin email always has access; otherwise check persona
+  var canUpload = hasAdminAccess() || ['admin', 'cre_team', 'broker'].includes(_userRole);
 
   // Hide upload card for view-only users when there's saved data
   var uploadCard = document.getElementById('commuteUploadCard');
