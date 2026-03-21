@@ -17657,6 +17657,8 @@ async function commuteLoadSaved() {
     // Render results
     renderCommuteResults();
     commuteCheckStale();
+    // Re-apply role access now that data is loaded
+    commuteApplyRoleAccess();
   } catch(e) {
     console.warn('Failed to load saved commute study:', e);
   }
@@ -17725,16 +17727,20 @@ function commuteApplyRoleAccess() {
   var newBtn = document.getElementById('commuteNewStudyBtn');
 
   if (!canUpload) {
-    // Hide upload section entirely for brokers/tourees
+    // Hide upload section entirely for view-only users
     uploadCard.style.display = 'none';
     if (newBtn) newBtn.style.display = 'none';
-    // Hide clear buttons
     clearBtn.forEach(function(b) { b.style.display = 'none'; });
-    // Update subtitle
     var sub = document.querySelector('.commute-page-subtitle');
     if (sub && _commuteResults) {
       sub.textContent = 'View employee commute times to each building on the shortlist.';
     }
+  } else {
+    // Ensure upload controls are visible for authorized users
+    if (newBtn && (_commuteResults || _commuteEmployees.length > 0)) {
+      newBtn.style.display = '';
+    }
+    clearBtn.forEach(function(b) { b.style.display = ''; });
   }
 }
 
