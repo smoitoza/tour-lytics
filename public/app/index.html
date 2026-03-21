@@ -465,6 +465,11 @@ body {
   color: #6b7280;
 }
 
+.tooltip-badge.not-interested-badge {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
 .tooltip-section-label {
   font-size: 0.625rem;
   font-weight: 700;
@@ -992,6 +997,11 @@ body {
   background: #10b981;
 }
 
+.survey-marker.not-interested {
+  background: #e8a0a0;
+  opacity: 0.7;
+}
+
 .survey-marker:hover {
   transform: scale(1.3);
   box-shadow: 0 2px 10px rgba(0,0,0,0.3);
@@ -1253,6 +1263,12 @@ body {
   width: 11px;
   height: 11px;
   background: #10b981;
+}
+
+.legend-dot.not-interested {
+  width: 11px;
+  height: 11px;
+  background: #e8a0a0;
 }
 
 .legend-label {
@@ -2081,7 +2097,8 @@ body {
     }
     .tooltip-btn-row .tooltip-tour-btn,
     .tooltip-btn-row .tooltip-shortlist-btn,
-    .tooltip-btn-row .tooltip-directions-btn {
+    .tooltip-btn-row .tooltip-directions-btn,
+    .tooltip-btn-row .tooltip-ni-btn {
       width: auto; flex: 1; margin-top: 0; font-size: 11px; padding: 7px 4px;
     }
     .tooltip-shortlist-btn {
@@ -2114,6 +2131,24 @@ body {
       text-decoration: none;
     }
     .tooltip-directions-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 12px rgba(71,85,105,0.35); color: #fff !important; }
+
+    /* Not Interested button */
+    .tooltip-ni-btn {
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+      padding: 7px 4px;
+      background: linear-gradient(135deg, #94a3b8, #64748b);
+      color: #fff; border: none; border-radius: 8px;
+      font-family: var(--font-body); font-size: 11px;
+      font-weight: 600; cursor: pointer;
+      transition: all 0.2s ease; letter-spacing: 0.01em;
+    }
+    .tooltip-ni-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 12px rgba(148,163,184,0.35); }
+    .tooltip-ni-btn.active {
+      background: linear-gradient(135deg, #e8a0a0, #d48a8a);
+    }
+    .tooltip-ni-btn.active:hover {
+      background: linear-gradient(135deg, #94a3b8, #64748b);
+    }
 
     /* Overlay when panel is open (mobile) */
     .tour-overlay {
@@ -6930,7 +6965,8 @@ body {
   }
   .tooltip-btn-row .tooltip-tour-btn,
   .tooltip-btn-row .tooltip-shortlist-btn,
-  .tooltip-btn-row .tooltip-directions-btn {
+  .tooltip-btn-row .tooltip-directions-btn,
+  .tooltip-btn-row .tooltip-ni-btn {
     width: 100%;
     padding: 10px 8px;
     font-size: 12px;
@@ -8449,6 +8485,9 @@ function buildPopup(b) {
   const badgeClass = isNegotiating ? "negotiating" : "touring";
   const badgeDot = isNegotiating ? "#f59e0b" : "#6b7280";
   const badgeLabel = b.statusLabel;
+  const niActive = isNotInterested('shortlist', b.id);
+  const niBadgeHTML = `<span class="tooltip-badge not-interested-badge" id="ni-badge-shortlist-${b.id}" style="display:${niActive ? '' : 'none'};margin-left:4px"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#e8a0a0;"></span> Not Interested</span>`;
+  const niButtonHTML = `<button class="tooltip-ni-btn${niActive ? ' active' : ''}" onclick="toggleNotInterested('shortlist', ${b.id})" id="ni-btn-shortlist-${b.id}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg><span>${niActive ? 'Interested' : 'Not Interested'}</span></button>`;
 
   if (!isNegotiating) {
     // TBD buildings - compact popup
@@ -8465,6 +8504,7 @@ function buildPopup(b) {
               <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${badgeDot};"></span>
               ${badgeLabel}
             </span>
+            ${niBadgeHTML}
           </div>
           <div class="tooltip-tbd">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -8484,6 +8524,7 @@ function buildPopup(b) {
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
               <span>Directions</span>
             </a>
+            ${niButtonHTML}
           </div>
         </div>
       </div>
@@ -8504,6 +8545,7 @@ function buildPopup(b) {
             <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${badgeDot};"></span>
             ${badgeLabel}
           </span>
+          ${niBadgeHTML}
         </div>
 
         <div class="tooltip-section-label">Deal Structure</div>
@@ -8602,6 +8644,7 @@ function buildPopup(b) {
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
           <span>Directions</span>
         </a>
+        ${niButtonHTML}
       </div>
     </div>
   `;
@@ -8615,9 +8658,12 @@ const markers = [];
 
 var _buildingMarkers = [];
 BUILDINGS.forEach((b) => {
+  const niInitB = isNotInterested('shortlist', b.id);
+  const initBgColor = niInitB ? MARKER_COLOR_NOT_INTERESTED : MARKER_COLOR_SURVEY;
+  const initOpacity = niInitB ? 'opacity:0.7;' : '';
   const icon = L.divIcon({
     className: "custom-marker-wrapper",
-    html: `<div class="custom-marker" style="background:${MARKER_COLOR_SURVEY}" data-id="${b.id}">${b.id}</div>`,
+    html: `<div class="custom-marker" style="background:${initBgColor};${initOpacity}" data-id="${b.id}">${b.id}</div>`,
     iconSize: [36, 36],
     iconAnchor: [18, 18]
   });
@@ -9856,6 +9902,7 @@ function buildSurveyPopup(b) {
           '<div class="survey-tooltip-hood">' + esc(b.neighborhood || '') + '</div>' +
         '</div>' +
         '<span class="survey-badge-evaluated">Evaluated</span>' +
+        '<span class="tooltip-badge not-interested-badge" id="ni-badge-survey-' + b.num + '" style="display:' + (isNotInterested('survey', b.num) ? '' : 'none') + ';margin-left:4px"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#e8a0a0;"></span> Not Interested</span>' +
       '</div>' +
       '<div class="survey-tooltip-grid">' +
         '<div class="survey-tooltip-field"><span class="survey-tooltip-field-label">Owner</span><span class="survey-tooltip-field-value">' + esc(ownerVal) + '</span></div>' +
@@ -9880,6 +9927,10 @@ function buildSurveyPopup(b) {
           '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>' +
           '<span>Directions</span>' +
         '</a>' +
+        '<button class="tooltip-ni-btn' + (isNotInterested('survey', b.num) ? ' active' : '') + '" onclick="toggleNotInterested(\'survey\', ' + b.num + ')" id="ni-btn-survey-' + b.num + '">' +
+          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>' +
+          '<span>' + (isNotInterested('survey', b.num) ? 'Interested' : 'Not Interested') + '</span>' +
+        '</button>' +
       '</div>' +
     '</div>' +
   '</div>';
@@ -9889,9 +9940,11 @@ const surveyMarkers = [];
 
 SURVEY_BUILDINGS.forEach((b) => {
   var onTour = isOnTourList('survey', b.num);
+  var niInit = isNotInterested('survey', b.num);
+  var markerClass = onTour ? ' on-tour' : (niInit ? ' not-interested' : '');
   const icon = L.divIcon({
     className: 'survey-marker-wrapper',
-    html: '<div class="survey-marker' + (onTour ? ' on-tour' : '') + '">' + b.num + '</div>',
+    html: '<div class="survey-marker' + markerClass + '">' + b.num + '</div>',
     iconSize: [22, 22],
     iconAnchor: [11, 11]
   });
@@ -9939,9 +9992,11 @@ if (allMarkers.length > 0) {
       SURVEY_BUILDINGS.push(b);
 
       var bOnTour = isOnTourList('survey', b.num);
+      var bNI = isNotInterested('survey', b.num);
+      var bMarkerClass = bOnTour ? ' on-tour' : (bNI ? ' not-interested' : '');
       var icon = L.divIcon({
         className: 'survey-marker-wrapper',
-        html: '<div class="survey-marker' + (bOnTour ? ' on-tour' : '') + '">' + b.num + '</div>',
+        html: '<div class="survey-marker' + bMarkerClass + '">' + b.num + '</div>',
         iconSize: [22, 22],
         iconAnchor: [11, 11]
       });
@@ -9982,6 +10037,67 @@ const legend = L.control({ position: 'topright' });
 var MARKER_COLOR_SURVEY = '#3b82f6';   // Blue - general survey building
 var MARKER_COLOR_TOUR = '#f47920';     // Orange - on tour book
 var MARKER_COLOR_SHORTLIST = '#10b981'; // Emerald - on shortlist
+var MARKER_COLOR_NOT_INTERESTED = '#e8a0a0'; // Soft red - not interested
+
+// ============================================================
+// Not Interested State
+// ============================================================
+var _notInterestedItems = [];
+
+function getNotInterestedKey() {
+  return 'tourlytics-not-interested-' + (getProjectId() || 'default');
+}
+
+function getNotInterestedList() {
+  try {
+    return JSON.parse(_storeApi.getItem(getNotInterestedKey())) || [];
+  } catch(e) { return []; }
+}
+
+function saveNotInterestedList(list) {
+  _storeApi.setItem(getNotInterestedKey(), JSON.stringify(list));
+  _notInterestedItems = list;
+}
+
+function isNotInterested(type, id) {
+  return _notInterestedItems.some(function(item) {
+    return item.type === type && item.id === id;
+  });
+}
+
+function toggleNotInterested(type, id) {
+  var list = getNotInterestedList();
+  var idx = list.findIndex(function(item) { return item.type === type && item.id === id; });
+  if (idx >= 0) {
+    list.splice(idx, 1);
+  } else {
+    list.push({ type: type, id: id });
+  }
+  saveNotInterestedList(list);
+  refreshMarkerColors();
+  // Re-open the popup to update button state
+  refreshPopupNotInterested(type, id);
+}
+
+function refreshPopupNotInterested(type, id) {
+  var isNI = isNotInterested(type, id);
+  // Update the button text/style in the currently open popup
+  var btnId = 'ni-btn-' + type + '-' + id;
+  var btn = document.getElementById(btnId);
+  if (btn) {
+    btn.classList.toggle('active', isNI);
+    var sp = btn.querySelector('span');
+    if (sp) sp.textContent = isNI ? 'Interested' : 'Not Interested';
+  }
+  // Update badge in popup
+  var badge = document.getElementById('ni-badge-' + type + '-' + id);
+  if (badge) {
+    badge.style.display = isNI ? '' : 'none';
+  }
+}
+
+// Initialize not-interested list on load
+_notInterestedItems = getNotInterestedList();
 
 // Forward-declare shortlist state (populated by initShortlist in a later <script> block)
 var _shortlistItems = [];
@@ -9999,13 +10115,26 @@ function buildLegendHTML() {
   var onShortlistIds = new Set();
   (_shortlistItems || []).forEach(function(item) { onShortlistIds.add(item.building_type + '-' + item.building_id); });
   var onTourCount = onTourIds.size;
-  // Survey count = total minus those on tour or shortlist
+  // Count not-interested and classified buildings
   var classifiedCount = 0;
+  var niCount = 0;
   SURVEY_BUILDINGS.forEach(function(b) {
     var key = 'survey-' + b.num;
-    if (onTourIds.has(key) || onShortlistIds.has(key)) classifiedCount++;
+    if (onTourIds.has(key) || onShortlistIds.has(key)) {
+      classifiedCount++;
+    } else if (isNotInterested('survey', b.num)) {
+      niCount++;
+    }
   });
-  var surveyCount = totalBuildings - classifiedCount;
+  // Also count not-interested shortlist buildings
+  if (typeof BUILDINGS !== 'undefined') {
+    BUILDINGS.forEach(function(b) {
+      if (isNotInterested('shortlist', b.id) && !onTourIds.has('shortlist-' + b.id) && !onShortlistIds.has('shortlist-' + b.id)) {
+        niCount++;
+      }
+    });
+  }
+  var surveyCount = totalBuildings - classifiedCount - niCount;
 
   if (totalBuildings === 0 && onTourCount === 0 && shortlistCount === 0) {
     return '<div class="legend-title">Legend</div>' +
@@ -10037,6 +10166,13 @@ function buildLegendHTML() {
   if (surveyCount > 0) {
     html += '<div class="legend-section">';
     html += '<div class="legend-item"><div class="legend-dot survey"></div><span class="legend-label">Survey (' + surveyCount + ')</span></div>';
+    html += '</div>';
+  }
+
+  // Not Interested (soft red)
+  if (niCount > 0) {
+    html += '<div class="legend-section">';
+    html += '<div class="legend-item"><div class="legend-dot not-interested"></div><span class="legend-label">Not Interested (' + niCount + ')</span></div>';
     html += '</div>';
   }
 
@@ -11088,22 +11224,26 @@ function refreshAllTooltipButtons() {
   if (typeof refreshAllShortlistButtons === 'function') refreshAllShortlistButtons();
 }
 
-// Update survey marker colors: blue = survey, orange = tour book, emerald = shortlist
+// Update survey marker colors: blue = survey, orange = tour book, emerald = shortlist, soft red = not interested
 function refreshMarkerColors() {
   surveyMarkers.forEach(function(marker) {
     if (typeof marker._surveyNum === 'undefined') return;
     var onTour = isOnTourList('survey', marker._surveyNum);
     var onShortlist = isOnShortlist('survey', marker._surveyNum);
+    var ni = isNotInterested('survey', marker._surveyNum);
     var el = marker.getElement();
     if (!el) return;
     var dot = el.querySelector('.survey-marker');
     if (dot) {
-      // Shortlist takes priority over tour book
-      dot.classList.remove('on-tour', 'on-shortlist');
+      // Priority: shortlist > tour > not-interested > default
+      dot.classList.remove('on-tour', 'on-shortlist', 'not-interested');
+      dot.style.opacity = '';
       if (onShortlist) {
         dot.classList.add('on-shortlist');
       } else if (onTour) {
         dot.classList.add('on-tour');
+      } else if (ni) {
+        dot.classList.add('not-interested');
       }
     }
   });
@@ -11113,20 +11253,30 @@ function refreshMarkerColors() {
       if (!m._buildingId) return;
       var onTour = isOnTourList('shortlist', m._buildingId);
       var onShortlist = isOnShortlist('shortlist', m._buildingId);
+      var ni = isNotInterested('shortlist', m._buildingId);
       var el = m.getElement();
       if (!el) return;
       var dot = el.querySelector('.custom-marker');
       if (dot) {
+        // Priority: shortlist > tour > not-interested > default
         if (onShortlist) {
           dot.style.background = MARKER_COLOR_SHORTLIST;
+          dot.style.opacity = '';
         } else if (onTour) {
           dot.style.background = MARKER_COLOR_TOUR;
+          dot.style.opacity = '';
+        } else if (ni) {
+          dot.style.background = MARKER_COLOR_NOT_INTERESTED;
+          dot.style.opacity = '0.7';
         } else {
           dot.style.background = MARKER_COLOR_SURVEY;
+          dot.style.opacity = '';
         }
       }
     });
   }
+  // Refresh legend counts
+  if (typeof refreshLegend === 'function') refreshLegend();
 }
 
 function flyToTourItem(type, id) {
