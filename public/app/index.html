@@ -4618,12 +4618,6 @@ body {
     .commute-map-page-goto-btn:hover {
       background: var(--color-bg); border-color: var(--color-text-muted);
     }
-    /* Commute transportation lines */
-    .cmap-transport-line {
-      stroke-opacity: 0.25; stroke-width: 1.5;
-      fill: none;
-    }
-
     @media (max-width: 640px) {
       .commute-map-container { height: 350px; }
       .commute-map-page-map {
@@ -8267,9 +8261,9 @@ body {
           <span class="commute-map-ctrl-label">Show</span>
           <select class="commute-map-select" id="cmapShowSelect" onchange="cmapChangeShowGroup(this.value)"></select>
         </div>
-        <label class="commute-map-toggle-label" title="Draw lines from each visible employee to shortlist buildings">
-          <input type="checkbox" id="cmapLinesToggle" onchange="cmapToggleLines(this.checked)" />
-          <span>Lines</span>
+        <label class="commute-map-toggle-label" title="Show BART, Caltrain, Muni and other transit lines">
+          <input type="checkbox" id="cmapTransitToggle" onchange="cmapToggleTransit(this.checked)" />
+          <span>Transit</span>
         </label>
       </div>
     </div>
@@ -18046,7 +18040,8 @@ function renderCommuteResults() {
   if (_cmapInited) {
     _cmapInited = false;
     if (_cmapLeaflet) { _cmapLeaflet.remove(); _cmapLeaflet = null; }
-    _cmapMarkers = []; _cmapBldgMarkers = []; _cmapLines = [];
+    _cmapMarkers = []; _cmapBldgMarkers = [];
+    _cmapTransitLayer = null; _cmapTransitCache = {};
   }
 }
 
@@ -18289,10 +18284,16 @@ function commuteMapChangeSegment(val) {
 var _cmapLeaflet = null;
 var _cmapMarkers = [];     // employee markers
 var _cmapBldgMarkers = []; // building markers
-var _cmapLines = [];       // transportation polylines
 var _cmapColorBy = null;   // selected segment column
 var _cmapShowGroup = '__all__'; // selected group filter
-var _cmapShowLines = false;
+var _cmapTransitActive = false;
+var _cmapTransitLayer = null; // Leaflet layer group for transit
+var _cmapTransitCache = {};   // bbox -> { stations, routes }
+var _cmapTransitLoading = false;
+var CMAP_TRANSIT_COLORS = {
+  subway: '#0039a6', light_rail: '#e31837', tram: '#00a84f',
+  monorail: '#6b21a8', rail: '#e31837', default: '#6b7280'
+};
 var _cmapGroupColors = {}; // { groupVal: color }
 var _cmapGroupCounts = {}; // { groupVal: count }
 var _cmapInited = false;
@@ -18344,6 +18345,10 @@ function cmapInit() {
       }).addTo(_cmapLeaflet);
       _cmapInited = true;
       cmapRenderAll();
+      // Reload transit on pan/zoom
+      _cmapLeaflet.on('moveend', function() {
+        if (_cmapTransitActive) cmapLoadTransit();
+      });
       // Extra invalidateSize after tiles load to handle any remaining sizing quirks
       setTimeout(function() { if (_cmapLeaflet) _cmapLeaflet.invalidateSize(); }, 300);
     }
@@ -18429,21 +18434,165 @@ function cmapChangeShowGroup(val) {
   cmapRenderAll();
 }
 
-function cmapToggleLines(checked) {
-  _cmapShowLines = checked;
-  cmapRenderAll();
+function cmapToggleTransit(checked) {
+  _cmapTransitActive = checked;
+  if (checked) {
+    cmapLoadTransit();
+  } else {
+    if (_cmapTransitLayer) {
+      _cmapLeaflet.removeLayer(_cmapTransitLayer);
+      _cmapTransitLayer = null;
+    }
+  }
+}
+
+async function cmapLoadTransit() {
+  if (!_cmapLeaflet || _cmapTransitLoading) return;
+
+  var bounds = _cmapLeaflet.getBounds();
+  var bbox = bounds.getSouth().toFixed(4) + ',' + bounds.getWest().toFixed(4) + ',' +
+             bounds.getNorth().toFixed(4) + ',' + bounds.getEast().toFixed(4);
+
+  if (_cmapTransitCache[bbox]) {
+    cmapRenderTransit(_cmapTransitCache[bbox]);
+    return;
+  }
+
+  _cmapTransitLoading = true;
+  try {
+    var query = '[out:json][timeout:15];(' +
+      'node["railway"="station"]('+bbox+');' +
+      'node["railway"="halt"]('+bbox+');' +
+      'node["station"="subway"]('+bbox+');' +
+      'node["station"="light_rail"]('+bbox+');' +
+      'relation["route"="subway"]('+bbox+');' +
+      'relation["route"="light_rail"]('+bbox+');' +
+      'relation["route"="tram"]('+bbox+');' +
+      'relation["route"="monorail"]('+bbox+');' +
+    ');out body;>;out skel qt;';
+
+    var resp = await fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST',
+      body: 'data=' + encodeURIComponent(query)
+    });
+    if (!resp.ok) throw new Error('Overpass error: ' + resp.status);
+    var data = await resp.json();
+
+    var stations = [];
+    var routes = [];
+    var nodeMap = {};
+
+    (data.elements || []).forEach(function(el) {
+      if (el.type === 'node') {
+        nodeMap[el.id] = el;
+        if (el.tags && (el.tags.railway === 'station' || el.tags.railway === 'halt' || el.tags.station)) {
+          var stationType = el.tags.station || el.tags.railway || 'station';
+          var lines = [];
+          if (el.tags.line) lines.push(el.tags.line);
+          if (el.tags['network:short']) lines.push(el.tags['network:short']);
+          stations.push({
+            id: el.id, name: el.tags.name || 'Station',
+            lat: el.lat, lng: el.lon, type: stationType,
+            network: el.tags.network || el.tags.operator || '',
+            lines: lines
+          });
+        }
+      }
+    });
+
+    (data.elements || []).forEach(function(el) {
+      if (el.type === 'way' && el.nodes) {
+        var coords = [];
+        el.nodes.forEach(function(nid) {
+          if (nodeMap[nid]) coords.push([nodeMap[nid].lat, nodeMap[nid].lon]);
+        });
+        if (coords.length >= 2) routes.push({ coords: coords, id: el.id });
+      }
+      if (el.type === 'relation' && el.tags && el.tags.route) {
+        var routeName = el.tags.name || el.tags.ref || '';
+        var routeColor = el.tags.colour || el.tags.color || CMAP_TRANSIT_COLORS[el.tags.route] || CMAP_TRANSIT_COLORS.default;
+        if (el.members) {
+          el.members.forEach(function(m) {
+            if (m.type === 'node' && m.role === 'stop') {
+              var st = stations.find(function(s) { return s.id === m.ref; });
+              if (st && routeName) {
+                if (st.lines.indexOf(routeName) === -1) st.lines.push(routeName);
+                if (!st.routeColor) st.routeColor = routeColor;
+              }
+            }
+          });
+        }
+      }
+    });
+
+    var transitData = { stations: stations, routes: routes };
+    _cmapTransitCache[bbox] = transitData;
+    cmapRenderTransit(transitData);
+  } catch(err) {
+    console.error('Commute map transit load error:', err);
+  }
+  _cmapTransitLoading = false;
+}
+
+function cmapRenderTransit(transitData) {
+  if (_cmapTransitLayer) {
+    _cmapLeaflet.removeLayer(_cmapTransitLayer);
+    _cmapTransitLayer = null;
+  }
+  if (!_cmapTransitActive) return;
+
+  var group = L.layerGroup();
+
+  // Draw route lines
+  (transitData.routes || []).forEach(function(route) {
+    L.polyline(route.coords, {
+      color: '#0078d4', weight: 3, opacity: 0.5
+    }).addTo(group);
+  });
+
+  // Draw station markers
+  (transitData.stations || []).forEach(function(st) {
+    var cssClass = st.type === 'subway' ? 'subway' :
+                   (st.type === 'light_rail' || st.type === 'tram') ? 'tram' :
+                   st.type === 'rail' ? 'rail' : 'default-transit';
+    var icon = L.divIcon({
+      className: '',
+      html: '<div class="transit-station ' + cssClass + '"></div>',
+      iconSize: [12, 12], iconAnchor: [6, 6]
+    });
+    var marker = L.marker([st.lat, st.lng], { icon: icon });
+
+    var linesHtml = '';
+    if (st.lines && st.lines.length > 0) {
+      var lineColor = st.routeColor || CMAP_TRANSIT_COLORS[st.type] || CMAP_TRANSIT_COLORS.default;
+      linesHtml = '<div class="transit-popup-lines">' +
+        st.lines.map(function(line) {
+          return '<span class="transit-line-badge" style="background:' + lineColor + '">' + line + '</span>';
+        }).join('') + '</div>';
+    }
+    var typeLabel = st.type === 'subway' ? 'Subway Station' :
+                    st.type === 'light_rail' ? 'Light Rail' :
+                    st.type === 'tram' ? 'Tram Stop' :
+                    st.type === 'halt' ? 'Rail Stop' : 'Rail Station';
+    var popupHtml = '<div class="transit-popup-name">' + st.name + '</div>' +
+      '<div class="transit-popup-type">' + typeLabel + (st.network ? ' / ' + st.network : '') + '</div>' +
+      linesHtml;
+    marker.bindPopup(popupHtml, { className: 'transit-popup', maxWidth: 250, minWidth: 160, closeButton: true, offset: [0, -4] });
+    marker.addTo(group);
+  });
+
+  _cmapTransitLayer = group;
+  group.addTo(_cmapLeaflet);
 }
 
 function cmapRenderAll() {
   if (!_cmapLeaflet || !_commuteEmployees.length) return;
 
-  // Clear everything
+  // Clear employee + building markers (transit layer is managed separately)
   _cmapMarkers.forEach(function(m) { _cmapLeaflet.removeLayer(m); });
   _cmapMarkers = [];
   _cmapBldgMarkers.forEach(function(m) { _cmapLeaflet.removeLayer(m); });
   _cmapBldgMarkers = [];
-  _cmapLines.forEach(function(l) { _cmapLeaflet.removeLayer(l); });
-  _cmapLines = [];
 
   var segCol = _cmapColorBy;
   var useSegment = segCol && segCol !== '__none__';
@@ -18527,21 +18676,6 @@ function cmapRenderAll() {
         bounds.push([bCoords.lat, bCoords.lng]);
         buildingCoords.push({ lat: bCoords.lat, lng: bCoords.lng, name: s.building });
       }
-    });
-  }
-
-  // Draw transportation lines (employee -> each building)
-  if (_cmapShowLines && buildingCoords.length > 0) {
-    visibleEmps.forEach(function(emp) {
-      var groupVal = useSegment ? (emp.meta[segCol] || 'Unknown').trim() : '';
-      var color = useSegment ? (_cmapGroupColors[groupVal] || defaultColor) : defaultColor;
-      buildingCoords.forEach(function(bc) {
-        var line = L.polyline(
-          [[emp.lat, emp.lng], [bc.lat, bc.lng]],
-          { color: color, weight: 1.2, opacity: 0.18, interactive: false }
-        ).addTo(_cmapLeaflet);
-        _cmapLines.push(line);
-      });
     });
   }
 
