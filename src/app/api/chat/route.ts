@@ -537,6 +537,7 @@ async function searchNearbyPlaces(query: string, maxResults = 5): Promise<string
           'X-Goog-FieldMask': [
             'places.displayName',
             'places.formattedAddress',
+            'places.location',
             'places.rating',
             'places.userRatingCount',
             'places.priceLevel',
@@ -574,9 +575,12 @@ async function searchNearbyPlaces(query: string, maxResults = 5): Promise<string
         PRICE_LEVEL_VERY_EXPENSIVE: '$$$$',
       }
 
+      const location = place.location as { latitude?: number; longitude?: number } | undefined
       return {
         name: displayName?.text || 'Unknown',
         address: place.formattedAddress || '',
+        lat: location?.latitude || null,
+        lng: location?.longitude || null,
         rating: place.rating || null,
         reviewCount: place.userRatingCount || null,
         price: priceMap[place.priceLevel as string] || null,
@@ -906,6 +910,20 @@ export async function POST(request: NextRequest) {
                       toolInput.query,
                       toolInput.max_results || 5
                     )
+                    // Emit places with coordinates to frontend for map markers
+                    try {
+                      const parsed = JSON.parse(result)
+                      if (Array.isArray(parsed)) {
+                        const withCoords = parsed.filter((p: { lat?: number; lng?: number }) => p.lat && p.lng)
+                        if (withCoords.length > 0) {
+                          controller.enqueue(
+                            encoder.encode(
+                              `data: ${JSON.stringify({ map_places: withCoords })}\n\n`
+                            )
+                          )
+                        }
+                      }
+                    } catch (_) { /* non-JSON result, skip map plotting */ }
                     toolResults.push({
                       type: 'tool_result',
                       tool_use_id: id,

@@ -7183,15 +7183,43 @@ body {
   .chat-fab {
     bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
     right: 12px !important;
+    /* Expanded pill with label on mobile */
+    width: auto !important;
+    border-radius: 50px !important;
+    padding: 0 16px 0 14px !important;
+    gap: 6px;
+    height: 44px !important;
+  }
+  .chat-fab::after {
+    content: 'Ask AI';
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+  .chat-fab.open::after {
+    content: '';
+  }
+  .chat-fab.open {
+    width: 42px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+  }
+
+  /* Pulse ring animation on first load */
+  @keyframes chat-fab-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(244, 121, 32, 0.5); }
+    70% { box-shadow: 0 0 0 12px rgba(244, 121, 32, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(244, 121, 32, 0); }
+  }
+  .chat-fab:not(.open) {
+    animation: chat-fab-pulse 2s ease-out 3;
+    animation-delay: 1s;
   }
 
   .poi-search-container {
-    /* Float at top of map like Zillow search bar */
-    top: 12px !important;
-    bottom: auto !important;
-    left: 12px !important;
-    right: 12px !important;
-    width: auto !important;
+    /* Hide on mobile -- AI chat handles nearby search + plots markers on map */
+    display: none !important;
   }
 
   /* --- Chat panel above bottom bar --- */
@@ -10388,6 +10416,67 @@ legend.addTo(map);
   };
 
 })();
+
+// ============================================================
+// Chat-to-Map: Plot places returned by AI chatbot onto the map
+// ============================================================
+var _chatMapLayer = null;
+
+function plotChatPlacesOnMap(places) {
+  // Clear previous chat markers
+  if (_chatMapLayer && typeof map !== 'undefined') {
+    map.removeLayer(_chatMapLayer);
+  }
+
+  if (!places || places.length === 0 || typeof map === 'undefined' || typeof L === 'undefined') return;
+
+  _chatMapLayer = L.layerGroup();
+
+  places.forEach(function(p) {
+    if (!p.lat || !p.lng) return;
+
+    var ratingStr = p.rating ? ' (' + p.rating + '/5)' : '';
+    var priceStr = p.price ? ' - ' + p.price : '';
+    var websiteLink = p.website ? '<br><a href="' + p.website + '" target="_blank" style="color:#2563eb;font-size:11px;">Website</a>' : '';
+    var mapsLink = p.googleMapsUrl ? ' | <a href="' + p.googleMapsUrl + '" target="_blank" style="color:#2563eb;font-size:11px;">Directions</a>' : '';
+
+    var popupContent = '<div style="font-family:var(--font-body);min-width:160px;">' +
+      '<strong style="font-size:13px;">' + (p.name || 'Unknown') + '</strong>' + ratingStr + priceStr +
+      '<br><span style="font-size:11px;color:#64748b;">' + (p.address || '') + '</span>' +
+      websiteLink + mapsLink +
+      '</div>';
+
+    var icon = L.divIcon({
+      className: 'chat-poi-marker',
+      html: '<div style="width:28px;height:28px;border-radius:50%;background:#f47920;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>',
+      iconSize: [28, 28],
+      iconAnchor: [14, 28],
+      popupAnchor: [0, -30]
+    });
+
+    var marker = L.marker([p.lat, p.lng], { icon: icon });
+    marker.bindPopup(popupContent, { maxWidth: 260 });
+    _chatMapLayer.addLayer(marker);
+  });
+
+  _chatMapLayer.addTo(map);
+
+  // Fit map to show all chat markers plus existing buildings
+  if (places.length > 0) {
+    var bounds = L.latLngBounds(places.map(function(p) { return [p.lat, p.lng]; }));
+    // Include current map center so we don't zoom too far away from the buildings
+    bounds.extend(map.getCenter());
+    map.fitBounds(bounds.pad(0.15));
+  }
+}
+
+// Clear chat markers (called when chat is cleared)
+function clearChatMapMarkers() {
+  if (_chatMapLayer && typeof map !== 'undefined') {
+    map.removeLayer(_chatMapLayer);
+    _chatMapLayer = null;
+  }
+}
 
 
 // ============================================================
@@ -17148,6 +17237,8 @@ function commuteSetGroupMode(mode) {
     try {
       await fetch(API + '/api/chat/clear', { method: 'POST' });
     } catch(e) { /* ignore */ }
+    // Clear any markers the AI placed on the map
+    if (typeof clearChatMapMarkers === 'function') clearChatMapMarkers();
   });
 
   // Markdown-lite parser
@@ -17312,6 +17403,10 @@ function commuteSetGroupMode(mode) {
               fullText += data.text;
               bubble.innerHTML = parseMd(fullText);
               scrollToBottom();
+            }
+            if (data.map_places && Array.isArray(data.map_places)) {
+              // Plot places from AI chat onto the map
+              plotChatPlacesOnMap(data.map_places);
             }
             if (data.error) {
               bubble.innerHTML = '<p style="color:#dc2626;">Error: ' + data.error + '</p>';
