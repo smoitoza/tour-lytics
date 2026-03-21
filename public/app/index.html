@@ -8496,6 +8496,17 @@ var _storeApi = {
   setItem: function(k, v) { try { window['local'+'Storage'].setItem(k, v); } catch(e) { _storeMem[k] = String(v); } },
   removeItem: function(k) { try { window['local'+'Storage'].removeItem(k); } catch(e) { delete _storeMem[k]; } }
 };
+
+// Not-interested state: must be initialized before BUILDINGS.forEach
+// which calls isNotInterested(). Full init happens later once getProjectId() is available.
+var _notInterestedItems = [];
+function isNotInterested(type, id) {
+  if (!_notInterestedItems || !_notInterestedItems.some) return false;
+  return _notInterestedItems.some(function(item) {
+    return item.type === type && item.id === id;
+  });
+}
+
 // ============================================================
 // Building Data - Material Terms
 // ============================================================
@@ -10299,9 +10310,8 @@ var MARKER_COLOR_SHORTLIST = '#10b981'; // Emerald - on shortlist
 var MARKER_COLOR_NOT_INTERESTED = '#e8a0a0'; // Soft red - not interested
 
 // ============================================================
-// Not Interested State
+// Not Interested State (continued - var + isNotInterested declared earlier)
 // ============================================================
-var _notInterestedItems = [];
 
 function getNotInterestedKey() {
   return 'tourlytics-not-interested-' + (getProjectId() || 'default');
@@ -10316,12 +10326,6 @@ function getNotInterestedList() {
 function saveNotInterestedList(list) {
   _storeApi.setItem(getNotInterestedKey(), JSON.stringify(list));
   _notInterestedItems = list;
-}
-
-function isNotInterested(type, id) {
-  return _notInterestedItems.some(function(item) {
-    return item.type === type && item.id === id;
-  });
 }
 
 function toggleNotInterested(type, id) {
