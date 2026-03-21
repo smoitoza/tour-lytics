@@ -3806,9 +3806,77 @@ body {
       color: var(--color-text-muted);
       margin-top: 2px;
     }
+    /* Shortlist Compare */
+    .shortlist-compare-cb {
+      position: absolute; top: 12px; right: 12px;
+      width: 18px; height: 18px; accent-color: var(--color-primary, #2563eb);
+      cursor: pointer; z-index: 2;
+    }
+    .shortlist-card { position: relative; }
+    .shortlist-card.compare-selected { outline: 2px solid var(--color-primary, #2563eb); outline-offset: -2px; }
+    .shortlist-compare-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: var(--space-3) var(--space-4); margin-bottom: var(--space-4);
+      background: var(--color-surface); border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg); gap: var(--space-3);
+    }
+    .shortlist-compare-bar-text {
+      font-size: var(--text-sm); color: var(--color-text-muted); font-weight: 500;
+    }
+    .shortlist-compare-bar-text strong { color: var(--color-text); }
+    .shortlist-compare-btn {
+      padding: 8px 20px; font-size: var(--text-sm); font-weight: 600;
+      border-radius: var(--radius-md); border: none; cursor: pointer;
+      background: var(--color-primary, #2563eb); color: #fff;
+      transition: opacity 0.15s;
+    }
+    .shortlist-compare-btn:hover { opacity: 0.85; }
+    .shortlist-compare-btn:disabled { opacity: 0.4; cursor: default; }
+    .shortlist-compare-btn-outline {
+      padding: 8px 20px; font-size: var(--text-sm); font-weight: 600;
+      border-radius: var(--radius-md); border: 1px solid var(--color-border);
+      background: var(--color-surface); color: var(--color-text); cursor: pointer;
+      transition: all 0.15s;
+    }
+    .shortlist-compare-btn-outline:hover { border-color: var(--color-text-muted); }
+    .compare-view-wrapper {
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+      border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+      background: var(--color-surface);
+    }
+    .compare-table {
+      width: 100%; border-collapse: collapse; font-size: var(--text-sm);
+      min-width: 600px;
+    }
+    .compare-table th, .compare-table td {
+      padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--color-border);
+      white-space: nowrap;
+    }
+    .compare-table thead th {
+      background: var(--color-bg); font-weight: 700; font-size: var(--text-xs);
+      text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted);
+      position: sticky; top: 0; z-index: 1;
+    }
+    .compare-table thead th:first-child { min-width: 160px; }
+    .compare-table .compare-section-row td {
+      background: var(--color-bg); font-weight: 700; font-size: var(--text-xs);
+      text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted);
+      padding: 8px 16px; border-bottom: 2px solid var(--color-border);
+    }
+    .compare-table .compare-label {
+      color: var(--color-text-muted); font-weight: 500;
+    }
+    .compare-table .compare-value {
+      font-weight: 600; color: var(--color-text);
+    }
+    .compare-table .compare-best {
+      color: #16a34a; font-weight: 700;
+    }
+
     @media (max-width: 768px) {
       .shortlist-page { padding: var(--space-3); }
       .shortlist-card-grid { grid-template-columns: 1fr; }
+      .shortlist-compare-bar { flex-direction: column; align-items: stretch; text-align: center; }
     }
 
     /* ============================================================
@@ -8174,8 +8242,20 @@ body {
         <h2 class="shortlist-page-title">Shortlist</h2>
         <p class="shortlist-page-subtitle">Buildings under serious consideration. Add buildings from the map to build your shortlist for RFPs, commute studies, and deeper analysis.</p>
       </div>
+      <button class="shortlist-compare-btn-outline" id="shortlistStartCompareBtn" onclick="shortlistStartCompare()" style="display:none;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Compare
+      </button>
     </div>
     <div id="shortlistContent">
+      <div class="shortlist-compare-bar" id="shortlistCompareBar" style="display:none;">
+        <div class="shortlist-compare-bar-text" id="shortlistCompareText">Select buildings to compare</div>
+        <div style="display:flex;gap:var(--space-2);">
+          <button class="shortlist-compare-btn" id="shortlistCompareBtn" onclick="shortlistShowCompare()" disabled>Compare</button>
+          <button class="shortlist-compare-btn-outline" onclick="shortlistCancelCompare()">Cancel</button>
+        </div>
+      </div>
+      <div id="shortlistCompareView" style="display:none;"></div>
       <div class="shortlist-loading" style="display:none;">Loading shortlist...</div>
       <div class="shortlist-empty" id="shortlistEmpty">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.3"><path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8z"/><polyline points="14 3 14 8 21 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
@@ -11986,6 +12066,10 @@ function renderTourBook() {
           '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' +
           'Export Tour Book' +
         '</button>' +
+        '<button class="tourbook-sort-btn" onclick="openBrandingModal()" title="Download branding settings">' +
+          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>' +
+          'Branding' +
+        '</button>' +
       '</div>' +
     '</div>';
   
@@ -13008,13 +13092,40 @@ async function exportTourBook() {
     var today = new Date();
     var dateStr = today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-    // Dark header band
-    coverPage.drawRectangle({ x: 0, y: 592, width: 612, height: 200, color: rgb(0.059, 0.090, 0.165) });
+    // Load branding settings
+    var brand = getBranding() || {};
+    var brandName = brand.companyName || 'TourLytics';
+    var brandColor = brand.primaryColor ? hexToRgb(brand.primaryColor) : { r: 0.059, g: 0.090, b: 0.165 };
+    var brandAccent = brand.primaryColor ? hexToRgb(brand.primaryColor) : { r: 0.145, g: 0.388, b: 0.922 };
+    var brandFooter = brand.companyName ? ('Prepared by ' + brand.companyName) : 'Generated by TourLytics  |  tourlytics.ai';
 
-    // Logo text
-    coverPage.drawText('TourLytics', {
-      x: 50, y: 740, size: 28, font: helveticaBold, color: rgb(1, 1, 1)
-    });
+    // If branding has a logo URL, try to embed it
+    var logoImage = null;
+    if (brand.logoUrl) {
+      try {
+        var logoBytes = await fetch(brand.logoUrl).then(function(r) { return r.arrayBuffer(); });
+        if (brand.logoUrl.toLowerCase().indexOf('.png') >= 0) {
+          logoImage = await newPdf.embedPng(logoBytes);
+        } else {
+          logoImage = await newPdf.embedJpg(logoBytes);
+        }
+      } catch(logoErr) { console.warn('Could not load branding logo:', logoErr); }
+    }
+
+    // Dark header band
+    coverPage.drawRectangle({ x: 0, y: 592, width: 612, height: 200, color: rgb(brandColor.r, brandColor.g, brandColor.b) });
+
+    // Logo: image or text
+    if (logoImage) {
+      var logoDims = logoImage.scale(1);
+      var logoH = 40;
+      var logoW = (logoDims.width / logoDims.height) * logoH;
+      coverPage.drawImage(logoImage, { x: 50, y: 730, width: logoW, height: logoH });
+    } else {
+      coverPage.drawText(brandName, {
+        x: 50, y: 740, size: 28, font: helveticaBold, color: rgb(1, 1, 1)
+      });
+    }
 
     // Project name (dynamic)
     var _pdfProjectName = document.getElementById('projectTitle') ? document.getElementById('projectTitle').textContent : 'TourLytics Project';
@@ -13058,7 +13169,7 @@ async function exportTourBook() {
       }
 
       // Building number circle
-      coverPage.drawCircle({ x: 66, y: yPos + 4, size: 10, color: rgb(0.145, 0.388, 0.922) });
+      coverPage.drawCircle({ x: 66, y: yPos + 4, size: 10, color: rgb(brandAccent.r, brandAccent.g, brandAccent.b) });
       coverPage.drawText(String(idx + 1), {
         x: idx + 1 >= 10 ? 61 : 63, y: yPos, size: 10, font: helveticaBold, color: rgb(1, 1, 1)
       });
@@ -13088,7 +13199,7 @@ async function exportTourBook() {
 
     // Footer on cover
     coverPage.drawRectangle({ x: 50, y: 44, width: 512, height: 1, color: rgb(0.886, 0.910, 0.937) });
-    coverPage.drawText('Generated by TourLytics  |  tourlytics.ai', {
+    coverPage.drawText(brandFooter, {
       x: 50, y: 28, size: 9, font: helvetica, color: rgb(0.58, 0.64, 0.72)
     });
 
@@ -13107,7 +13218,7 @@ async function exportTourBook() {
 
       // Add a separator page before each building's survey pages
       var sepPage = newPdf.addPage([612, 792]);
-      sepPage.drawRectangle({ x: 0, y: 692, width: 612, height: 100, color: rgb(0.059, 0.090, 0.165) });
+      sepPage.drawRectangle({ x: 0, y: 692, width: 612, height: 100, color: rgb(brandColor.r, brandColor.g, brandColor.b) });
       sepPage.drawText('Building ' + (i + 1) + ' of ' + enrichedList.length, {
         x: 50, y: 740, size: 11, font: helvetica, color: rgb(0.58, 0.64, 0.72)
       });
@@ -13121,7 +13232,7 @@ async function exportTourBook() {
       }
       if (item.tags && item.tags.length) {
         sepPage.drawText(item.tags.join('  |  '), {
-          x: 50, y: 665, size: 11, font: helvetica, color: rgb(0.145, 0.388, 0.922)
+          x: 50, y: 665, size: 11, font: helvetica, color: rgb(brandAccent.r, brandAccent.g, brandAccent.b)
         });
       }
 
@@ -13147,7 +13258,7 @@ async function exportTourBook() {
 
       // Footer
       sepPage.drawRectangle({ x: 50, y: 44, width: 512, height: 1, color: rgb(0.886, 0.910, 0.937) });
-      sepPage.drawText('Generated by TourLytics  |  tourlytics.ai', {
+      sepPage.drawText(brandFooter, {
         x: 50, y: 28, size: 9, font: helvetica, color: rgb(0.58, 0.64, 0.72)
       });
 
@@ -14614,10 +14725,16 @@ function rfpExportExcel() {
   var terms = selected.deal_terms || selected.terms || {};
   var wb = XLSX.utils.book_new();
 
-  // ===== STYLE CONSTANTS =====
-  var BRAND = '1B4D6E';  // dark navy
-  var BRAND_LT = 'E8F0F6'; // light blue tint
-  var ACCENT = 'F47920';   // TourLytics orange
+  // ===== STYLE CONSTANTS (branding-aware) =====
+  var _xlBrand = getBranding();
+  var BRAND = _xlBrand && _xlBrand.primaryColor ? hexToExcelRgb(_xlBrand.primaryColor) : '1B4D6E';
+  // Generate a light tint from brand color
+  var _br = parseInt(BRAND.substring(0,2),16), _bg = parseInt(BRAND.substring(2,4),16), _bb = parseInt(BRAND.substring(4,6),16);
+  var BRAND_LT = (Math.min(255, Math.round(_br + (255 - _br) * 0.85))).toString(16).padStart(2,'0') +
+                 (Math.min(255, Math.round(_bg + (255 - _bg) * 0.85))).toString(16).padStart(2,'0') +
+                 (Math.min(255, Math.round(_bb + (255 - _bb) * 0.85))).toString(16).padStart(2,'0');
+  BRAND_LT = BRAND_LT.toUpperCase();
+  var ACCENT = _xlBrand && _xlBrand.primaryColor ? hexToExcelRgb(_xlBrand.primaryColor) : 'F47920';
   var GREEN = '16A34A';
   var GREEN_LT = 'F0FDF4';
   var GRAY_LT = 'F8F9FA';
@@ -19445,6 +19562,7 @@ function renderShortlist() {
     var financialsInfo = getShortlistFinancialsData(item.building_type, item.building_id, buildingName);
 
     html += '<div class="shortlist-card" data-type="' + item.building_type + '" data-id="' + item.building_id + '">';
+    html += '<input type="checkbox" class="shortlist-compare-cb" data-cmp-type="' + item.building_type + '" data-cmp-id="' + item.building_id + '" onchange="shortlistCompareToggle(this)" style="display:none;" />';
     html += '<div class="shortlist-card-header">';
     html += '<div class="shortlist-card-dot" style="background:' + buildingColor + '"></div>';
     html += '<div class="shortlist-card-info">';
@@ -19549,6 +19667,200 @@ function renderShortlist() {
   });
 
   container.innerHTML = html;
+
+  // Show Compare button when 2+ buildings
+  var startBtn = document.getElementById('shortlistStartCompareBtn');
+  if (startBtn) startBtn.style.display = _shortlistItems.length >= 2 ? '' : 'none';
+}
+
+// ===== SHORTLIST COMPARE MODE =====
+var _compareMode = false;
+var _compareSelected = new Set(); // 'type-id' keys
+
+function shortlistStartCompare() {
+  _compareMode = true;
+  _compareSelected.clear();
+  // Show compare bar, show checkboxes
+  document.getElementById('shortlistCompareBar').style.display = '';
+  document.getElementById('shortlistStartCompareBtn').style.display = 'none';
+  document.querySelectorAll('.shortlist-compare-cb').forEach(function(cb) { cb.style.display = ''; cb.checked = false; });
+  document.querySelectorAll('.shortlist-card').forEach(function(c) { c.classList.remove('compare-selected'); });
+  shortlistUpdateCompareBar();
+  // Hide compare view if showing
+  document.getElementById('shortlistCompareView').style.display = 'none';
+  document.getElementById('shortlistCards').style.display = '';
+}
+
+function shortlistCancelCompare() {
+  _compareMode = false;
+  _compareSelected.clear();
+  document.getElementById('shortlistCompareBar').style.display = 'none';
+  document.getElementById('shortlistStartCompareBtn').style.display = _shortlistItems.length >= 2 ? '' : 'none';
+  document.querySelectorAll('.shortlist-compare-cb').forEach(function(cb) { cb.style.display = 'none'; cb.checked = false; });
+  document.querySelectorAll('.shortlist-card').forEach(function(c) { c.classList.remove('compare-selected'); });
+  // Ensure cards visible, compare view hidden
+  document.getElementById('shortlistCompareView').style.display = 'none';
+  document.getElementById('shortlistCards').style.display = '';
+}
+
+function shortlistCompareToggle(cb) {
+  var key = cb.dataset.cmpType + '-' + cb.dataset.cmpId;
+  var card = cb.closest('.shortlist-card');
+  if (cb.checked) {
+    if (_compareSelected.size >= 5) { cb.checked = false; return; } // max 5
+    _compareSelected.add(key);
+    if (card) card.classList.add('compare-selected');
+  } else {
+    _compareSelected.delete(key);
+    if (card) card.classList.remove('compare-selected');
+  }
+  shortlistUpdateCompareBar();
+}
+
+function shortlistUpdateCompareBar() {
+  var count = _compareSelected.size;
+  var text = document.getElementById('shortlistCompareText');
+  var btn = document.getElementById('shortlistCompareBtn');
+  if (text) text.innerHTML = count === 0 ? 'Select 2-5 buildings to compare' : '<strong>' + count + '</strong> building' + (count > 1 ? 's' : '') + ' selected';
+  if (btn) btn.disabled = count < 2;
+}
+
+function shortlistShowCompare() {
+  if (_compareSelected.size < 2) return;
+
+  // Gather data for selected buildings
+  var selectedItems = [];
+  _compareSelected.forEach(function(key) {
+    var parts = key.split('-');
+    var type = parts[0];
+    var id = parseInt(parts.slice(1).join('-'), 10) || parts.slice(1).join('-');
+    var item = _shortlistItems.find(function(si) {
+      return si.building_type === type && String(si.building_id) === String(id);
+    });
+    if (item) selectedItems.push(item);
+  });
+
+  if (selectedItems.length < 2) return;
+
+  // Build comparison data for each building
+  var buildings = selectedItems.map(function(item) {
+    var name = item.building_name || 'Unknown';
+    var extra = getShortlistBuildingDetails(item.building_type, item.building_id);
+    var commute = getShortlistCommuteData(name);
+    var fin = getShortlistFinancialsData(item.building_type, item.building_id, name);
+    return {
+      name: name,
+      address: item.building_address || '',
+      owner: extra.owner || '--',
+      buildingClass: extra.buildingClass || '--',
+      size: extra.size || '--',
+      available: extra.available || '--',
+      rentalRate: extra.rentalRate || '--',
+      neighborhood: extra.neighborhood || '--',
+      avgDrive: commute ? commute.avgDrive : '--',
+      avgTransit: commute ? commute.avgTransit : '--',
+      allInMonthly: fin && fin.hasAllIn ? shortlistFmtCurrency(fin.allInMonthly) : '--',
+      allInAnnual: fin && fin.hasAllIn ? shortlistFmtCurrency(fin.allInAnnual) : '--',
+      allInPerRSF: fin && fin.hasAllIn ? shortlistFmtCurrencyDecimals(fin.allInPerRSF) : '--',
+      slMonthly: fin && fin.hasAllIn ? shortlistFmtCurrency(fin.slMonthly) : '--',
+      totalMonthlyOpex: fin && fin.hasAssumptions ? shortlistFmtCurrency(fin.totalMonthlyOpex) : '--',
+      headcount: fin && fin.headcount > 0 ? String(fin.headcount) : '--',
+      costPerEmployee: fin && fin.costPerEmployee > 0 ? shortlistFmtCurrency(fin.costPerEmployee) : '--',
+      densityFit: fin && fin.densityFit > 0 ? fin.densityFit + ' RSF' : '--',
+      _fin: fin, _commute: commute
+    };
+  });
+
+  // Define comparison rows
+  var sections = [
+    { label: 'Building Details', rows: [
+      { label: 'Address', key: 'address' },
+      { label: 'Owner', key: 'owner' },
+      { label: 'Class', key: 'buildingClass' },
+      { label: 'Building Size', key: 'size' },
+      { label: 'Available', key: 'available' },
+      { label: 'Rental Rate', key: 'rentalRate' },
+      { label: 'Neighborhood', key: 'neighborhood' }
+    ]},
+    { label: 'Commute Analysis', rows: [
+      { label: 'Avg. Drive Time', key: 'avgDrive', best: 'lowest' },
+      { label: 'Avg. Transit Time', key: 'avgTransit', best: 'lowest' }
+    ]},
+    { label: 'Financials', rows: [
+      { label: 'All-In Monthly', key: 'allInMonthly', best: 'lowest' },
+      { label: 'All-In Annual', key: 'allInAnnual', best: 'lowest' },
+      { label: 'All-In $/RSF/yr', key: 'allInPerRSF', best: 'lowest' },
+      { label: 'Straight-Line Monthly', key: 'slMonthly', best: 'lowest' },
+      { label: 'Internal OpEx/mo', key: 'totalMonthlyOpex' },
+      { label: 'Headcount', key: 'headcount' },
+      { label: 'Cost/Employee/yr', key: 'costPerEmployee', best: 'lowest' },
+      { label: 'Density (RSF/Person)', key: 'densityFit' }
+    ]}
+  ];
+
+  // Find best values for highlighting
+  function findBest(key, buildings) {
+    var nums = buildings.map(function(b) {
+      var v = b[key];
+      if (!v || v === '--') return Infinity;
+      var n = parseFloat(String(v).replace(/[^0-9.-]/g, ''));
+      return isNaN(n) ? Infinity : n;
+    });
+    var min = Math.min.apply(null, nums);
+    if (min === Infinity) return -1;
+    return nums.indexOf(min);
+  }
+
+  // Build HTML table
+  var html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3);">';
+  html += '<button class="shortlist-compare-btn-outline" onclick="shortlistBackToCards()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>Back to Shortlist</button>';
+  html += '<span style="font-size:var(--text-xs);color:var(--color-text-muted);">' + buildings.length + ' buildings compared</span>';
+  html += '</div>';
+
+  html += '<div class="compare-view-wrapper"><table class="compare-table">';
+  html += '<thead><tr><th></th>';
+  buildings.forEach(function(b) {
+    html += '<th>' + escHtml(b.name) + '</th>';
+  });
+  html += '</tr></thead><tbody>';
+
+  sections.forEach(function(sec) {
+    // Check if section has any data at all
+    var hasData = sec.rows.some(function(row) {
+      return buildings.some(function(b) { return b[row.key] && b[row.key] !== '--'; });
+    });
+    if (!hasData) return;
+
+    html += '<tr class="compare-section-row"><td colspan="' + (buildings.length + 1) + '">' + sec.label + '</td></tr>';
+    sec.rows.forEach(function(row) {
+      // Skip row if all values are empty
+      var allEmpty = buildings.every(function(b) { return !b[row.key] || b[row.key] === '--'; });
+      if (allEmpty) return;
+
+      var bestIdx = row.best === 'lowest' ? findBest(row.key, buildings) : -1;
+      html += '<tr><td class="compare-label">' + row.label + '</td>';
+      buildings.forEach(function(b, idx) {
+        var val = b[row.key] || '--';
+        var cls = 'compare-value' + (idx === bestIdx && val !== '--' ? ' compare-best' : '');
+        html += '<td class="' + cls + '">' + escHtml(val) + '</td>';
+      });
+      html += '</tr>';
+    });
+  });
+
+  html += '</tbody></table></div>';
+
+  // Show compare view, hide cards
+  document.getElementById('shortlistCompareView').innerHTML = html;
+  document.getElementById('shortlistCompareView').style.display = '';
+  document.getElementById('shortlistCards').style.display = 'none';
+  document.getElementById('shortlistCompareBar').style.display = 'none';
+}
+
+function shortlistBackToCards() {
+  document.getElementById('shortlistCompareView').style.display = 'none';
+  document.getElementById('shortlistCards').style.display = '';
+  shortlistCancelCompare();
 }
 
 // Get extra building details from SURVEY_BUILDINGS or BUILDINGS arrays
@@ -19796,6 +20108,38 @@ function refreshAllShortlistButtons() {
   <span class="mobile-project-user" id="mobileProjectUser"></span>
 </div>
 
+<!-- Branding Settings Modal -->
+<div id="brandingOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9000;" onclick="closeBrandingModal()"></div>
+<div id="brandingModal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9001;background:var(--color-surface);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,0.2);padding:var(--space-6);width:420px;max-width:92vw;max-height:85vh;overflow-y:auto;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-4);">
+    <h3 style="font-size:var(--text-base);font-weight:700;color:var(--color-text);margin:0;">Download Branding</h3>
+    <button onclick="closeBrandingModal()" style="background:none;border:none;cursor:pointer;color:var(--color-text-muted);font-size:18px;">&times;</button>
+  </div>
+  <p style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-4);">Customize how your Tour Book PDFs and financial Excel exports look. Your broker brand will replace TourLytics branding on all downloads.</p>
+  <div style="display:flex;flex-direction:column;gap:var(--space-4);">
+    <div>
+      <label style="font-size:var(--text-xs);font-weight:600;color:var(--color-text-muted);display:block;margin-bottom:4px;">Company Name</label>
+      <input type="text" id="brandCompanyName" placeholder="e.g. Savills, CBRE, JLL" style="width:100%;padding:8px 12px;font-size:var(--text-sm);border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;background:var(--color-bg);color:var(--color-text);" />
+    </div>
+    <div>
+      <label style="font-size:var(--text-xs);font-weight:600;color:var(--color-text-muted);display:block;margin-bottom:4px;">Logo URL <span style="font-weight:400;">(optional, paste image URL)</span></label>
+      <input type="text" id="brandLogoUrl" placeholder="https://example.com/logo.png" style="width:100%;padding:8px 12px;font-size:var(--text-sm);border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;background:var(--color-bg);color:var(--color-text);" />
+    </div>
+    <div>
+      <label style="font-size:var(--text-xs);font-weight:600;color:var(--color-text-muted);display:block;margin-bottom:4px;">Primary Brand Color</label>
+      <div style="display:flex;align-items:center;gap:var(--space-3);">
+        <input type="color" id="brandPrimaryColor" value="#0f172a" style="width:48px;height:36px;border:1px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;padding:2px;" />
+        <input type="text" id="brandPrimaryColorHex" value="#0f172a" placeholder="#0f172a" style="width:100px;padding:8px 12px;font-size:var(--text-sm);border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;background:var(--color-bg);color:var(--color-text);" />
+        <span style="font-size:var(--text-xs);color:var(--color-text-muted);">Used on PDF headers & Excel styling</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:var(--space-2);margin-top:var(--space-2);">
+      <button onclick="saveBranding()" style="flex:1;padding:10px;font-size:var(--text-sm);font-weight:600;border-radius:var(--radius-md);border:none;background:var(--color-primary,#2563eb);color:#fff;cursor:pointer;">Save Branding</button>
+      <button onclick="clearBranding()" style="padding:10px 16px;font-size:var(--text-sm);font-weight:500;border-radius:var(--radius-md);border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-muted);cursor:pointer;">Reset</button>
+    </div>
+  </div>
+</div>
+
 <nav class="mobile-tab-bar" id="mobileTabBar">
   <button class="mobile-tab active" onclick="mobileTabSwitch('map')" data-mob-tab="map">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -19868,6 +20212,72 @@ function refreshAllShortlistButtons() {
     setTimeout(set, 150); // slight delay for iOS to settle after rotation
   });
 })();
+</script>
+
+<script>
+// ===== BRANDING SETTINGS =====
+function getBrandingKey() { return 'tourlytics-brand-' + getProjectId(); }
+
+function getBranding() {
+  try {
+    var stored = localStorage.getItem(getBrandingKey());
+    return stored ? JSON.parse(stored) : null;
+  } catch(e) { return null; }
+}
+
+function openBrandingModal() {
+  var brand = getBranding() || {};
+  document.getElementById('brandCompanyName').value = brand.companyName || '';
+  document.getElementById('brandLogoUrl').value = brand.logoUrl || '';
+  document.getElementById('brandPrimaryColor').value = brand.primaryColor || '#0f172a';
+  document.getElementById('brandPrimaryColorHex').value = brand.primaryColor || '#0f172a';
+  document.getElementById('brandingOverlay').style.display = '';
+  document.getElementById('brandingModal').style.display = '';
+  // Sync color picker and hex input
+  document.getElementById('brandPrimaryColor').onchange = function() {
+    document.getElementById('brandPrimaryColorHex').value = this.value;
+  };
+  document.getElementById('brandPrimaryColorHex').onchange = function() {
+    var v = this.value.trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(v)) document.getElementById('brandPrimaryColor').value = v;
+  };
+}
+
+function closeBrandingModal() {
+  document.getElementById('brandingOverlay').style.display = 'none';
+  document.getElementById('brandingModal').style.display = 'none';
+}
+
+function saveBranding() {
+  var brand = {
+    companyName: document.getElementById('brandCompanyName').value.trim(),
+    logoUrl: document.getElementById('brandLogoUrl').value.trim(),
+    primaryColor: document.getElementById('brandPrimaryColorHex').value.trim() || '#0f172a'
+  };
+  localStorage.setItem(getBrandingKey(), JSON.stringify(brand));
+  closeBrandingModal();
+}
+
+function clearBranding() {
+  localStorage.removeItem(getBrandingKey());
+  document.getElementById('brandCompanyName').value = '';
+  document.getElementById('brandLogoUrl').value = '';
+  document.getElementById('brandPrimaryColor').value = '#0f172a';
+  document.getElementById('brandPrimaryColorHex').value = '#0f172a';
+  closeBrandingModal();
+}
+
+// Helper: hex color string to pdf-lib rgb
+function hexToRgb(hex) {
+  hex = hex.replace('#', '');
+  var r = parseInt(hex.substring(0, 2), 16) / 255;
+  var g = parseInt(hex.substring(2, 4), 16) / 255;
+  var b = parseInt(hex.substring(4, 6), 16) / 255;
+  return { r: r, g: g, b: b };
+}
+
+// Helper: hex to Excel RGB string (no #)
+function hexToExcelRgb(hex) { return hex.replace('#', '').toUpperCase(); }
 </script>
 
 <script>
