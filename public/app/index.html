@@ -1796,9 +1796,11 @@ body {
   }
 
   .poi-search-container {
-    width: calc(100vw - 96px);
-    right: 76px;
-    bottom: 90px;
+    /* Sit above the map-action-buttons; leave room for chat FAB on right */
+    width: calc(100vw - 80px);
+    left: 12px;
+    right: auto;
+    bottom: 150px;
   }
 
   .poi-search-bar {
@@ -2092,7 +2094,7 @@ body {
     @media (max-width: 600px) {
       .tour-panel { width: 100%; }
       .map-action-buttons {
-        bottom: 100px;
+        bottom: 20px;
         left: 12px;
         gap: 6px;
       }
@@ -6428,8 +6430,8 @@ body {
   .chat-panel {
     width: calc(100vw - 24px);
     right: 12px; left: auto;
-    bottom: 128px; top: auto;
-    max-height: calc(100dvh - 160px);
+    bottom: 74px; top: auto;
+    max-height: calc(100dvh - 100px);
   }
 
   .chat-panel.expanded {
@@ -6445,7 +6447,7 @@ body {
   }
   
   .chat-fab {
-    top: auto; bottom: 100px;
+    top: auto; bottom: 20px;
     left: auto; right: 12px;
     width: 42px;
     height: 42px;
@@ -7003,10 +7005,10 @@ body {
     padding-bottom: calc(var(--space-2) + env(safe-area-inset-bottom));
   }
   .chat-fab {
-    bottom: calc(100px + env(safe-area-inset-bottom));
+    bottom: calc(20px + env(safe-area-inset-bottom));
   }
   .map-action-buttons {
-    bottom: calc(24px + env(safe-area-inset-bottom));
+    bottom: calc(20px + env(safe-area-inset-bottom));
   }
 }
 
@@ -9523,6 +9525,11 @@ legend.addTo(map);
     L.DomEvent.disableScrollPropagation(div);
 
     div.innerHTML = buildLayerControlHTML();
+
+    // Auto-collapse on mobile to save screen space
+    if (window.innerWidth <= 768) {
+      div.classList.add('collapsed');
+    }
 
     // Toggle collapse
     div.querySelector('.layer-control-header').addEventListener('click', function() {
@@ -16796,6 +16803,11 @@ function commuteSetGroupMode(mode) {
     // Hide POI search bar when chat is open to avoid overlap
     var poiSearch = document.getElementById('poi-search-container');
     if (poiSearch) poiSearch.classList.toggle('hidden', isOpen);
+    // Hide map action buttons when chat panel is open on mobile
+    var mapBtns = document.getElementById('mapActionButtons');
+    if (mapBtns && window.innerWidth <= 768) {
+      mapBtns.style.display = isOpen ? 'none' : '';
+    }
     if (isOpen) {
       setTimeout(() => input.focus(), 250);
     }
