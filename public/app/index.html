@@ -2002,8 +2002,18 @@ body {
     .tour-btn-secondary:hover { background: var(--color-bg); color: var(--color-text); }
 
     /* ===== TOUR LIST TOGGLE BUTTON (on map) ===== */
+    /* Container for bottom-left map action buttons */
+    .map-action-buttons {
+      position: fixed;
+      bottom: 24px;
+      left: 24px;
+      z-index: 9000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
     .tour-toggle {
-      position: fixed; bottom: 24px; left: 24px; z-index: 9000;
       display: flex; align-items: center; gap: var(--space-2);
       padding: 10px 18px; background: var(--color-surface);
       border: 1px solid var(--color-border); border-radius: 50px;
@@ -2081,17 +2091,21 @@ body {
 
     @media (max-width: 600px) {
       .tour-panel { width: 100%; }
+      .map-action-buttons {
+        bottom: 100px;
+        left: 12px;
+        gap: 6px;
+      }
       .tour-toggle {
-        position: fixed; top: auto;
-        /* Anchor to bottom-left so it doesn't block map popups */
-        bottom: 100px; left: 12px; transform: none;
         padding: 8px 14px; font-size: 0.72rem;
         border-radius: 50px;
         box-shadow: 0 3px 12px rgba(0,0,0,0.15);
-        z-index: 9000;
       }
       .tour-toggle svg { width: 14px; height: 14px; }
       .tour-toggle-count { min-width: 16px; height: 16px; font-size: 0.55rem; padding: 0 4px; }
+      .survey-upload-toggle {
+        padding: 8px 14px; font-size: 0.72rem;
+      }
     }
 
 
@@ -4881,10 +4895,6 @@ body {
 
     /* ===== SURVEY UPLOAD ===== */
     .survey-upload-toggle {
-      position: fixed;
-      bottom: 84px;
-      left: 24px;
-      z-index: 990;
       display: flex;
       align-items: center;
       gap: 6px;
@@ -4898,7 +4908,7 @@ body {
       border-radius: 999px;
       box-shadow: var(--shadow-md);
       cursor: pointer;
-      transition: all var(--transition);
+      transition: all 0.2s ease;
       white-space: nowrap;
     }
     .survey-upload-toggle:hover {
@@ -4907,15 +4917,6 @@ body {
       transform: translateY(-1px);
     }
     .survey-upload-toggle svg { flex-shrink: 0; color: var(--color-accent-blue); }
-
-    @media (max-width: 768px) {
-      .survey-upload-toggle {
-        bottom: 152px;
-        left: 12px;
-        padding: 8px 14px;
-        font-size: 0.72rem;
-      }
-    }
 
     /* Survey upload modal */
     .survey-upload-overlay {
@@ -7004,8 +7005,8 @@ body {
   .chat-fab {
     bottom: calc(100px + env(safe-area-inset-bottom));
   }
-  .tour-toggle {
-    bottom: calc(100px + env(safe-area-inset-bottom));
+  .map-action-buttons {
+    bottom: calc(24px + env(safe-area-inset-bottom));
   }
 }
 
@@ -7043,17 +7044,17 @@ body {
 </div>
 
 <!-- Floating Tour List Toggle (visible on all tabs) -->
-<button class="tour-toggle" id="tourToggle" onclick="openTourPanel()">
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-  Tour List
-  <span class="tour-toggle-count" id="tourToggleCount" data-count="0"></span>
-</button>
-
-<!-- Upload Survey Button (admin/broker/cre_team only, map tab) -->
-<button class="survey-upload-toggle" id="surveyUploadToggle" style="display:none;" onclick="openSurveyUploadModal()">
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-  Upload Survey
-</button>
+<div class="map-action-buttons" id="mapActionButtons">
+  <button class="survey-upload-toggle" id="surveyUploadToggle" style="display:none;" onclick="openSurveyUploadModal()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    Upload Survey
+  </button>
+  <button class="tour-toggle" id="tourToggle" onclick="openTourPanel()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+    Tour List
+    <span class="tour-toggle-count" id="tourToggleCount" data-count="0"></span>
+  </button>
+</div>
 <script>
 // Immediately show Upload Survey button for admin (inline, runs as soon as button exists)
 (function() {
@@ -10476,13 +10477,13 @@ function openTourPanel() {
   refreshTourUI();
   document.getElementById('tourPanel').classList.add('open');
   document.getElementById('tourOverlay').classList.add('visible');
-  document.getElementById('tourToggle').style.display = 'none';
+  document.getElementById('mapActionButtons').style.display = 'none';
 }
 
 function closeTourPanel() {
   document.getElementById('tourPanel').classList.remove('open');
   document.getElementById('tourOverlay').classList.remove('visible');
-  document.getElementById('tourToggle').style.display = 'flex';
+  document.getElementById('mapActionButtons').style.display = '';
 }
 
 function clearTourList() {
@@ -10598,14 +10599,10 @@ function switchPageTab(tabId) {
   document.querySelector(`.page-tab[data-page-tab="${tabId}"]`).classList.add('active');
   document.getElementById(`tab-${tabId}`).classList.add('active');
 
-  // On mobile, hide Tour List and Upload Survey buttons on non-map tabs to avoid overlap
-  var tourToggle = document.getElementById('tourToggle');
-  if (tourToggle && window.innerWidth <= 768) {
-    tourToggle.style.display = (tabId === 'map') ? 'flex' : 'none';
-  }
-  var surveyToggle = document.getElementById('surveyUploadToggle');
-  if (surveyToggle && hasAdminAccess()) {
-    surveyToggle.style.display = (tabId === 'map') ? '' : 'none';
+  // Hide map action buttons on non-map tabs
+  var mapActionBtns = document.getElementById('mapActionButtons');
+  if (mapActionBtns) {
+    mapActionBtns.style.display = (tabId === 'map') ? '' : 'none';
   }
 
   // Show/hide POI search bar based on tab
