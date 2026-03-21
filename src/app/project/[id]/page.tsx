@@ -79,6 +79,14 @@ export default function ProjectPage() {
         .project-header { background: #ffffff; border-bottom: 1px solid #e2e8f0; flex-shrink: 0; }
         .project-iframe-wrap { flex: 1; position: relative; min-height: 0; }
         .project-iframe-wrap iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
+        @media (max-width: 768px) {
+          .project-header {
+            order: 2;
+            border-bottom: none;
+            border-top: 1px solid #e2e8f0;
+          }
+          .project-iframe-wrap { order: 1; }
+        }
       `}</style>
       <script dangerouslySetInnerHTML={{ __html: `
         (function() {

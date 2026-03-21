@@ -6426,15 +6426,15 @@ body {
   .chat-panel {
     width: calc(100vw - 24px);
     right: 12px; left: auto;
-    bottom: 94px; top: auto;
+    bottom: 60px; top: auto;
     max-height: calc(var(--app-height, 100vh) - 120px);
   }
 
   .chat-panel.expanded {
     width: calc(100vw - 12px);
     left: 6px; right: auto;
-    top: 6px; bottom: auto;
-    max-height: calc(var(--app-height, 100vh) - 12px);
+    top: 58px; bottom: 6px;
+    max-height: none;
     border-radius: var(--radius-lg);
   }
 
@@ -6904,15 +6904,15 @@ body {
   .chat-panel {
     width: calc(100vw - 16px);
     right: 8px; left: auto;
-    bottom: 94px; top: auto;
+    bottom: 60px; top: auto;
     max-height: calc(var(--app-height, 100vh) - 120px);
     border-radius: var(--radius-lg);
   }
   .chat-panel.expanded {
     width: calc(100vw - 8px);
     right: 4px; left: auto;
-    top: 4px; bottom: 4px;
-    max-height: calc(var(--app-height, 100vh) - 8px);
+    top: 58px; bottom: 4px;
+    max-height: none;
   }
   .chat-fab {
     width: 40px;
@@ -7041,10 +7041,11 @@ body {
     min-height: 0 !important; /* override base min-height: 100dvh */
   }
 
-  /* --- Tab content fills viewport above bottom bar --- */
-  /* 160px = bottom bar (80px) + extra clearance for iOS Safari browser toolbar (~80px) */
+  /* --- Tab content fills viewport below top tab bar --- */
+  /* 52px = top tab bar height */
   .tab-content.active {
-    height: calc(var(--app-height, 100vh) - 160px);
+    height: calc(var(--app-height, 100vh) - 52px);
+    margin-top: 52px;
     overflow-y: auto;
   }
 
@@ -7054,59 +7055,21 @@ body {
     height: 100%;
   }
 
-  /* --- MOBILE PROJECT INFO STRIP (above tab bar) --- */
+  /* --- MOBILE PROJECT INFO STRIP (hidden -- parent page header handles this now) --- */
   .mobile-project-strip {
-    display: flex !important;
-    position: fixed;
-    bottom: calc(52px + env(safe-area-inset-bottom, 0px));
-    left: 0;
-    right: 0;
-    height: 28px;
-    background: var(--color-surface);
-    border-top: 1px solid var(--color-border);
-    z-index: 10000;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 0 12px;
-  }
-  .mobile-project-name {
-    font-family: var(--font-display);
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--color-text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 60%;
-  }
-  .mobile-project-location {
-    font-size: 10px;
-    color: var(--color-text-muted);
-    font-weight: 500;
-    white-space: nowrap;
-  }
-  .mobile-project-user {
-    font-size: 10px;
-    color: var(--color-text-muted);
-    margin-left: auto;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 30%;
+    display: none !important;
   }
 
-  /* --- MOBILE BOTTOM TAB BAR --- */
+  /* --- MOBILE TOP TAB BAR (moved to top so Safari bottom toolbar can't block it) --- */
   .mobile-tab-bar {
     display: flex !important;
     position: fixed;
-    bottom: 0;
+    top: 0;
     left: 0;
     right: 0;
-    height: calc(52px + env(safe-area-inset-bottom, 0px));
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    height: 52px;
     background: var(--color-surface);
-    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
     z-index: 10000;
     align-items: flex-start;
     justify-content: space-around;
@@ -7222,14 +7185,14 @@ body {
     margin: 4px 24px;
   }
 
-  /* --- Floating controls repositioned above bottom bar --- */
+  /* --- Floating controls -- no bottom bar to clear anymore --- */
   .map-action-buttons {
-    bottom: calc(88px + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: 12px !important;
     left: 12px !important;
   }
 
   .chat-fab {
-    bottom: calc(88px + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: 12px !important;
     right: 12px !important;
     /* Expanded pill with label on mobile */
     width: auto !important;
@@ -7270,9 +7233,9 @@ body {
     display: none !important;
   }
 
-  /* --- Chat panel above bottom bar --- */
+  /* --- Chat panel positioning (tab bar is now at top) --- */
   .chat-panel {
-    bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: 60px !important;
   }
 
   /* --- Layer control: compact for mobile --- */
