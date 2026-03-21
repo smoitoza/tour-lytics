@@ -12905,7 +12905,7 @@ async function planTourDayRoute(mode) {
     var resp = await fetch('/api/route-optimize', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ stops: stops, mode: mode, optimize: true })
+      body: JSON.stringify({ stops: stops, mode: mode, optimize: true, projectId: getProjectId(), userEmail: getCurrentUserEmail() })
     });
 
     if (!resp.ok) {

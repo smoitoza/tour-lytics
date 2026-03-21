@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { debitTokens } from '@/lib/tokens'
 
 interface RouteStop {
   lat: number
@@ -30,10 +31,12 @@ interface RouteResult {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { stops, mode = 'driving', optimize = true } = body as {
+    const { stops, mode = 'driving', optimize = true, projectId, userEmail } = body as {
       stops: RouteStop[]
       mode?: 'driving' | 'walking'
       optimize?: boolean
+      projectId?: string
+      userEmail?: string
     }
 
     if (!stops || stops.length < 2) {
@@ -167,7 +170,23 @@ export async function POST(req: NextRequest) {
       bounds: route.bounds,
     }
 
-    return NextResponse.json(result)
+    // Debit tokens for route optimization
+    let tokenResult = null
+    if (projectId) {
+      try {
+        tokenResult = await debitTokens({
+          projectId,
+          action: 'route_optimization',
+          userEmail: userEmail || undefined,
+          note: `Tour Day route: ${stops.length} stops (${mode})`,
+          metadata: { stopCount: stops.length, mode },
+        })
+      } catch (tokenErr) {
+        console.warn('Token debit failed (non-blocking):', tokenErr)
+      }
+    }
+
+    return NextResponse.json({ ...result, tokenDebit: tokenResult })
   } catch (err) {
     console.error('Route optimization error:', err)
     return NextResponse.json(
