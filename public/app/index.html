@@ -2464,10 +2464,10 @@ body {
     /* Floating route panel on the map */
     .route-panel-float {
       position: fixed;
-      top: 80px;
+      top: 140px;
       left: 16px;
       width: 360px;
-      max-height: calc(100vh - 120px);
+      max-height: calc(100vh - 160px);
       background: var(--color-surface);
       border: 1px solid var(--color-border);
       border-radius: var(--radius-lg);
@@ -12891,13 +12891,13 @@ async function planTourDayRoute(mode) {
   var panel = document.getElementById('routePanel');
   if (panel) {
     panel.classList.add('visible');
-    panel.innerHTML = '<div class="route-loading"><div class="spinner"></div>Optimizing your tour route...</div>';
+    panel.innerHTML = '<div class="route-loading"><div class="spinner"></div>Planning your tour route...</div>';
   }
   // Also show loading on the floating map panel
   var floatPanel = document.getElementById('routePanelFloat');
   if (floatPanel) {
     floatPanel.classList.add('visible');
-    floatPanel.innerHTML = '<div class="route-loading"><div class="spinner"></div>Optimizing your tour route...</div>';
+    floatPanel.innerHTML = '<div class="route-loading"><div class="spinner"></div>Planning your tour route...</div>';
   }
   // Switch to Map tab so user sees the route
   switchPageTab('map');
@@ -12909,22 +12909,43 @@ async function planTourDayRoute(mode) {
     btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>Clear Route';
   }
 
-  // Build stops array from tour list
-  var stops = list.map(function(item) {
+  // Build stops array from tour list, sorted by scheduled time
+  var schedule = getTourSchedule();
+  var stopsWithTime = list.map(function(item) {
+    var key = getBuildingKey(item);
+    var sched = schedule[key] || {};
+    var sortKey = (sched.date || '9999-99-99') + 'T' + (sched.time || '99:99');
     return {
       lat: item.lat,
       lng: item.lng,
       name: item.name,
       id: item.id,
-      type: item.type
+      type: item.type,
+      _sortKey: sortKey,
+      _hasTime: !!(sched.date || sched.time)
     };
   });
+
+  // Sort by scheduled date/time so the route follows the tour schedule
+  var anyScheduled = stopsWithTime.some(function(s) { return s._hasTime; });
+  if (anyScheduled) {
+    stopsWithTime.sort(function(a, b) {
+      return a._sortKey < b._sortKey ? -1 : a._sortKey > b._sortKey ? 1 : 0;
+    });
+  }
+
+  var stops = stopsWithTime.map(function(s) {
+    return { lat: s.lat, lng: s.lng, name: s.name, id: s.id, type: s.type };
+  });
+
+  // If stops have scheduled times, don't let Google reorder them
+  var shouldOptimize = !anyScheduled;
 
   try {
     var resp = await fetch('/api/route-optimize', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ stops: stops, mode: mode, optimize: true, projectId: getProjectId(), userEmail: getCurrentUserEmail() })
+      body: JSON.stringify({ stops: stops, mode: mode, optimize: shouldOptimize, projectId: getProjectId(), userEmail: getCurrentUserEmail() })
     });
 
     if (!resp.ok) {
