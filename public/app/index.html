@@ -4553,7 +4553,7 @@ body {
     /* === Standalone Commute Map Tab === */
     #tab-commute-map { overflow: hidden; }
     .commute-map-page {
-      display: flex; flex-direction: column; height: 100%; min-height: 0;
+      display: flex; flex-direction: column;
     }
     .commute-map-page-toolbar {
       display: flex; align-items: center; justify-content: space-between;
@@ -4589,13 +4589,12 @@ body {
       width: 14px; height: 14px; accent-color: #2563eb; cursor: pointer;
     }
     .commute-map-page-body {
-      flex: 1; min-height: 0; position: relative; overflow: hidden;
-      /* Fallback: explicit height so Leaflet always gets real dimensions.
-         Header ~72px + page-tabs ~44px + toolbar ~48px = ~164px */
-      height: calc(100vh - 164px);
+      position: relative; overflow: hidden;
     }
     .commute-map-page-map {
-      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      width: 100%;
+      /* Explicit height: 100vh minus header(72) + tabs(44) + toolbar(48) */
+      height: calc(100vh - 164px);
     }
     #cmapLegend {
       position: absolute; bottom: 16px; left: 16px; z-index: 1000;
@@ -4627,7 +4626,7 @@ body {
 
     @media (max-width: 640px) {
       .commute-map-container { height: 350px; }
-      .commute-map-page-body {
+      .commute-map-page-map {
         /* Mobile: 52px mobile strip + ~44px toolbar = ~96px */
         height: calc(var(--app-height, 100vh) - 96px);
       }
@@ -11694,7 +11693,12 @@ function switchPageTab(tabId) {
   }
   // Initialize standalone commute map tab
   if (tabId === 'commute-map') {
-    cmapInit();
+    // Ensure commute data is loaded before initializing map
+    if (!_commuteSavedLoaded) {
+      commuteLoadSaved().then(function() { cmapInit(); });
+    } else {
+      cmapInit();
+    }
   }
 }
 
