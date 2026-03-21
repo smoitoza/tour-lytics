@@ -6427,19 +6427,19 @@ body {
     width: calc(100vw - 24px);
     right: 12px; left: auto;
     bottom: 74px; top: auto;
-    max-height: calc(100dvh - 100px);
+    max-height: calc(var(--app-height, 100vh) - 100px);
   }
 
   .chat-panel.expanded {
     width: calc(100vw - 12px);
     left: 6px; right: auto;
     top: 6px; bottom: auto;
-    max-height: calc(100dvh - 12px);
+    max-height: calc(var(--app-height, 100vh) - 12px);
     border-radius: var(--radius-lg);
   }
 
   .chat-panel.expanded .chat-messages {
-    max-height: calc(100dvh - 160px);
+    max-height: calc(var(--app-height, 100vh) - 160px);
   }
   
   .chat-fab {
@@ -6905,14 +6905,14 @@ body {
     width: calc(100vw - 16px);
     right: 8px; left: auto;
     bottom: 124px; top: auto;
-    max-height: calc(100dvh - 160px);
+    max-height: calc(var(--app-height, 100vh) - 160px);
     border-radius: var(--radius-lg);
   }
   .chat-panel.expanded {
     width: calc(100vw - 8px);
     right: 4px; left: auto;
     top: 4px; bottom: 4px;
-    max-height: calc(100dvh - 8px);
+    max-height: calc(var(--app-height, 100vh) - 8px);
   }
   .chat-fab {
     width: 40px;
@@ -7029,11 +7029,11 @@ body {
     display: none !important;
   }
 
-  /* --- Body: use svh (small viewport) so content fits even with browser chrome visible --- */
+  /* --- Body: use JS-driven --app-height (window.innerHeight) which
+       correctly excludes iOS Safari bottom toolbar + URL bar --- */
   html, body {
-    height: 100svh;
-    height: -webkit-fill-available; /* iOS Safari fallback */
-    max-height: 100svh;
+    height: var(--app-height, 100vh);
+    max-height: var(--app-height, 100vh);
     overflow: hidden;
   }
   body {
@@ -7042,7 +7042,7 @@ body {
 
   /* --- Tab content fills viewport above bottom bar --- */
   .tab-content.active {
-    height: calc(100svh - 60px - env(safe-area-inset-bottom, 0px));
+    height: calc(var(--app-height, 100vh) - 60px - env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
   }
 
@@ -17970,6 +17970,22 @@ function refreshAllShortlistButtons() {
     Account
   </button>
 </div>
+
+<script>
+// iOS Safari viewport fix: window.innerHeight correctly excludes
+// the browser toolbar, URL bar, and bottom navigation bar.
+// CSS vh/svh/dvh units do NOT reliably do this on iOS Safari.
+(function setAppHeight() {
+  var set = function() {
+    document.documentElement.style.setProperty('--app-height', window.innerHeight + 'px');
+  };
+  set();
+  window.addEventListener('resize', set);
+  window.addEventListener('orientationchange', function() {
+    setTimeout(set, 150); // slight delay for iOS to settle after rotation
+  });
+})();
+</script>
 
 <script>
 // Mobile tab bar logic
