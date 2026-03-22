@@ -14379,6 +14379,7 @@ function rfpExtractTerms(text, address) {
       freeRent: raw.free_rent_months || raw.freeRent || '',
       tiAllowancePerRSF: raw.ti_allowance_rsf || raw.tiAllowancePerRSF || '',
       tiAllowanceTotal: raw.ti_allowance_total || raw.tiAllowanceTotal || '',
+      opexRSF: raw.opex_rsf_yr || raw.opexRSF || '',
       opex: raw.opex_monthly || raw.opex || '',
       parkingSpots: raw.parking_spots || raw.parkingSpots || '',
       parkingRate: raw.parking_rate_monthly || raw.parkingRate || '',
@@ -14405,7 +14406,8 @@ function rfpShowReviewForm(terms, meta) {
     { key: 'freeRent', label: 'Free Rent (months)', type: 'number' },
     { key: 'tiAllowancePerRSF', label: 'TI Allowance ($/RSF)', type: 'number', step: '0.01' },
     { key: 'tiAllowanceTotal', label: 'TI Allowance (total $)', type: 'number' },
-    { key: 'opex', label: 'OpEx (monthly $)', type: 'number' },
+    { key: 'opexRSF', label: 'OpEx/Tax/CAM ($/RSF/yr)', type: 'number', step: '0.01', placeholder: 'e.g. 18.00' },
+    { key: 'opex', label: 'OpEx (monthly $ override)', type: 'number', placeholder: 'Auto-calculated if $/RSF entered' },
     { key: 'parkingSpots', label: 'Parking Spots', type: 'number' },
     { key: 'parkingRate', label: 'Parking Rate ($/spot/mo)', type: 'number', step: '0.01' },
     { key: 'parkingEscalation', label: 'Parking Escalation %', type: 'number', step: '0.01' },
@@ -14477,6 +14479,16 @@ function rfpConfirmFromForm() {
     }
     terms[f.key] = val;
   });
+
+  // If opexRSF is set, auto-calculate monthly opex from it: (opexRSF * RSF) / 12
+  if (terms.opexRSF && terms.rsf && !terms.opex) {
+    terms.opex = Math.round((terms.opexRSF * terms.rsf) / 12);
+  }
+  // Store opexRSF for reference in the saved terms
+  if (terms.opexRSF) {
+    terms.opex_rsf_yr = terms.opexRSF;
+  }
+
   rfpConfirmAndSave(meta, terms);
 }
 
@@ -15032,6 +15044,7 @@ function rfpExportExcel() {
     ['Free Rent (months)', n(terms.free_rent_months), 'num'],
     ['TI Allowance ($/RSF)', n(terms.ti_allowance_rsf), 'curr_dec'],
     ['TI Allowance (Total)', n(terms.ti_allowance_total), 'curr'],
+    ['OpEx/Tax/CAM ($/RSF/yr)', n(terms.opex_rsf_yr), 'curr_dec'],
     ['OpEx (Monthly)', n(terms.opex_monthly), 'curr'],
     ['Parking Spots', n(terms.parking_spots), 'num'],
     ['Parking Rate ($/mo)', n(terms.parking_rate_monthly), 'curr'],

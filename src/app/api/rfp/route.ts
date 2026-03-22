@@ -70,6 +70,7 @@ export async function POST(req: Request) {
     free_rent_months: rawTerms.free_rent_months ?? rawTerms.freeRent ?? 0,
     ti_allowance_rsf: rawTerms.ti_allowance_rsf ?? rawTerms.tiAllowancePerRSF ?? 0,
     ti_allowance_total: rawTerms.ti_allowance_total ?? rawTerms.tiAllowanceTotal ?? 0,
+    opex_rsf_yr: rawTerms.opex_rsf_yr ?? rawTerms.opexRSF ?? 0,
     opex_monthly: rawTerms.opex_monthly ?? rawTerms.opex ?? 0,
     parking_spots: rawTerms.parking_spots ?? rawTerms.parkingSpots ?? 0,
     parking_rate_monthly: rawTerms.parking_rate_monthly ?? rawTerms.parkingRate ?? 0,
@@ -175,6 +176,7 @@ interface DealTerms {
   free_rent_months?: number
   ti_allowance_rsf?: number
   ti_allowance_total?: number
+  opex_rsf_yr?: number
   opex_monthly?: number
   parking_spots?: number
   parking_rate_monthly?: number
