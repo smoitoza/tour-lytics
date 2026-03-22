@@ -311,7 +311,7 @@ export default function LandingPage() {
             Interactive Survey Map
           </h2>
           <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', marginBottom: '2.5rem', maxWidth: '600px', lineHeight: 1.6 }}>
-            A real output from a 129-page broker survey. Every building geocoded, categorized, and linked back to the source document. Hover to explore. Click &quot;Tour List&quot; to start building your shortlist right from the map.
+            A live project with 33 buildings across San Francisco. Every building geocoded by neighborhood, color-coded by submarket, and linked to the source survey. Hover to explore deal terms. Build your tour list and shortlist directly from the map.
           </p>
 
           {/* Browser frame */}
@@ -342,7 +342,7 @@ export default function LandingPage() {
                 color: isFullscreen ? '#cbd5e1' : '#94a3b8',
                 border: isFullscreen ? '1px solid rgba(255,255,255,0.15)' : '1px solid #e2e8f0',
               }}>
-                tourlytics.ai/projects/sf-office-search/map
+                tourlytics.ai/projects/sf-2026/map
               </span>
               <button
                 onClick={() => setIsFullscreen(!isFullscreen)}
@@ -371,7 +371,7 @@ export default function LandingPage() {
             </div>
             {/* iframe */}
             <iframe
-              src="/app/index.html"
+              src="/app/index.html?projectId=procore-sf-2026"
               loading="lazy"
               title="SF Office Search Map Demo"
               style={{
@@ -411,7 +411,7 @@ export default function LandingPage() {
               <span className="rounded-full" style={{ width: '10px', height: '10px', background: '#f59e0b' }} />
               <span className="rounded-full" style={{ width: '10px', height: '10px', background: '#22c55e' }} />
               <span className="flex-1 text-xs" style={{ marginLeft: '1rem', background: '#fff', borderRadius: '0.5rem', padding: '0.25rem 0.75rem', color: '#94a3b8', border: '1px solid #e2e8f0' }}>
-                tourlytics.ai/projects/sf-office-search/tourbook
+                tourlytics.ai/projects/sf-2026/tourbook
               </span>
             </div>
 
@@ -550,7 +550,7 @@ export default function LandingPage() {
               <span className="rounded-full" style={{ width: '10px', height: '10px', background: '#f59e0b' }} />
               <span className="rounded-full" style={{ width: '10px', height: '10px', background: '#22c55e' }} />
               <span className="flex-1 text-xs" style={{ marginLeft: '1rem', background: '#fff', borderRadius: '0.5rem', padding: '0.25rem 0.75rem', color: '#94a3b8', border: '1px solid #e2e8f0' }}>
-                tourlytics.ai/projects/sf-office-search/chat
+                tourlytics.ai/projects/sf-2026/scout
               </span>
             </div>
 
