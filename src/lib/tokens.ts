@@ -34,6 +34,7 @@ export type TokenAction =
   | 'commute_study'
   | 'assumptions_update'
   | 'route_optimization'
+  | 'executive_summary'
 
 // ============================================================
 // Debit tokens for an AI action

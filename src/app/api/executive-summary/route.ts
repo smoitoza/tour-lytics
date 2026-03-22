@@ -30,11 +30,11 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabase()
 
-    // Debit tokens (use chat_message cost x 5 for executive summary)
+    // Debit tokens for executive summary generation
     try {
       const tokenResult = await debitTokens({
         projectId,
-        action: 'chat_message',
+        action: 'executive_summary',
         userEmail: userEmail || undefined,
         note: 'Executive Summary generation',
       })

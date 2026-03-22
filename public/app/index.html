@@ -5371,25 +5371,31 @@ body {
     .exec-summary-generate-btn {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      padding: 10px 20px;
-      background: var(--accent);
+      gap: 10px;
+      padding: 14px 32px;
+      background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 80%, #6366f1));
       color: #fff;
       border: none;
-      border-radius: 8px;
-      font-size: 0.875rem;
-      font-weight: 600;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
       cursor: pointer;
-      transition: background 0.2s, transform 0.15s;
+      transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.15), 0 0 0 0 var(--accent);
+      letter-spacing: 0.01em;
     }
     .exec-summary-generate-btn:hover {
-      background: var(--accent-hover, var(--accent));
-      transform: translateY(-1px);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2), 0 0 20px color-mix(in srgb, var(--accent) 30%, transparent);
+    }
+    .exec-summary-generate-btn:active {
+      transform: translateY(0);
     }
     .exec-summary-generate-btn:disabled {
       opacity: 0.6;
       cursor: not-allowed;
       transform: none;
+      box-shadow: none;
     }
     .exec-summary-export-btn {
       display: inline-flex;
@@ -5438,16 +5444,7 @@ body {
       line-height: 1.5;
       margin: 0 0 var(--space-3);
     }
-    .exec-summary-cost-note {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.75rem;
-      color: var(--text-tertiary, #94a3b8);
-      padding: 4px 10px;
-      background: var(--surface-2, #f8fafc);
-      border-radius: 6px;
-    }
+
     .exec-summary-loading {
       display: flex;
       flex-direction: column;
@@ -5588,6 +5585,8 @@ body {
       .exec-summary-generate-btn {
         width: 100%;
         justify-content: center;
+        padding: 14px 24px;
+        font-size: 0.95rem;
       }
       .exec-summary-export-btn {
         flex: 1;
@@ -9047,10 +9046,6 @@ body {
       </div>
       <h3>No Summary Generated Yet</h3>
       <p>Click "Generate Summary" to create a comprehensive executive overview of this project, including location analysis, financial reviews, commute studies, and recommendations.</p>
-      <div class="exec-summary-cost-note">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-        Uses 1 token per generation
-      </div>
     </div>
 
     <!-- Loading state -->
