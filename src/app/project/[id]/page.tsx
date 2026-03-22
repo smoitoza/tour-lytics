@@ -29,6 +29,8 @@ export default function ProjectPage() {
   const searchParams = useSearchParams()
   const projectId = params.id as string
   const tabParam = searchParams.get('tab')
+  const paymentParam = searchParams.get('payment')
+  const tokensParam = searchParams.get('tokens')
 
   useEffect(() => {
     const supabase = createClient()
@@ -145,7 +147,7 @@ export default function ProjectPage() {
         {/* Full app iframe - pass user email for survey submission */}
         <div className="project-iframe-wrap">
           <iframe
-            src={`/app/index.html?userEmail=${encodeURIComponent(user?.email || '')}&projectId=${encodeURIComponent(projectId)}&v=${Date.now()}${tabParam ? '#' + tabParam : ''}`}
+            src={`/app/index.html?userEmail=${encodeURIComponent(user?.email || '')}&projectId=${encodeURIComponent(projectId)}${paymentParam ? '&payment=' + paymentParam : ''}${tokensParam ? '&tokens=' + tokensParam : ''}&v=${Date.now()}${tabParam ? '#' + tabParam : ''}`}
             title={project?.name || 'Project Application'}
           />
         </div>

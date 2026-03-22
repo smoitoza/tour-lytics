@@ -18,9 +18,9 @@ function getSupabase() {
 // Note: No specific dollar pricing exposed to user per instructions
 // These are internal Stripe amounts
 const TOKEN_PACKS: Record<string, { tokens: number; priceCents: number; label: string }> = {
-  starter: { tokens: 100, priceCents: 9900, label: 'Starter Pack' },
-  professional: { tokens: 500, priceCents: 39900, label: 'Professional Pack' },
-  enterprise: { tokens: 2000, priceCents: 129900, label: 'Enterprise Pack' },
+  starter: { tokens: 100, priceCents: 9000, label: 'Starter Pack' },         // $90  (10% off $1/token)
+  professional: { tokens: 500, priceCents: 42500, label: 'Professional Pack' }, // $425 (15% off $1/token)
+  enterprise: { tokens: 2000, priceCents: 160000, label: 'Enterprise Pack' },  // $1,600 (20% off $1/token)
 }
 
 export async function POST(request: NextRequest) {
@@ -77,8 +77,8 @@ export async function POST(request: NextRequest) {
         packId,
         tokenAmount: pack.tokens.toString(),
       },
-      success_url: `${origin}/app/?payment=success&tokens=${pack.tokens}`,
-      cancel_url: `${origin}/app/?payment=cancelled`,
+      success_url: `${origin}/project/${encodeURIComponent(projectId)}?tab=ai-usage&payment=success&tokens=${pack.tokens}`,
+      cancel_url: `${origin}/project/${encodeURIComponent(projectId)}?tab=ai-usage`,
     })
 
     // Record pending payment

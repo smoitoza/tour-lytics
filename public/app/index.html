@@ -17778,6 +17778,9 @@ function checkPaymentReturn() {
   var tokens = params.get('tokens');
 
   if (payment === 'success' && tokens) {
+    // Switch to AI Usage tab to show the success
+    try { switchPageTab('ai-usage'); } catch(e) {}
+
     var banner = document.getElementById('paymentSuccessBanner');
     if (banner) {
       banner.className = 'payment-success-banner';
@@ -17791,8 +17794,11 @@ function checkPaymentReturn() {
       }, 8000);
     }
 
-    // Clean up URL params
-    var cleanUrl = window.location.pathname + window.location.hash;
+    // Clean up URL params but keep projectId and userEmail
+    var keepParams = new URLSearchParams();
+    if (params.get('projectId')) keepParams.set('projectId', params.get('projectId'));
+    if (params.get('userEmail')) keepParams.set('userEmail', params.get('userEmail'));
+    var cleanUrl = window.location.pathname + '?' + keepParams.toString() + window.location.hash;
     window.history.replaceState({}, '', cleanUrl);
 
     // Refresh token data
