@@ -15598,6 +15598,105 @@ function rfpExportExcel() {
     XLSX.utils.book_append_sheet(wb, gWS, 'GAAP Analysis');
   }
 
+  // ===== VERSION COMPARISON TAB (if multiple submissions for this building) =====
+  var allSubs = (window._rfpState.submissions || []).filter(function(s) {
+    return (s.building_address || s.buildingAddress) === address;
+  }).sort(function(a, b) {
+    return new Date(a.created_at || a.createdAt || 0) - new Date(b.created_at || b.createdAt || 0);
+  });
+
+  if (allSubs.length > 1) {
+    var vcFields = [
+      { key: 'rsf', label: 'RSF', type: 'num', src: 'terms' },
+      { key: 'lease_term_months', label: 'Lease Term (months)', type: 'num', src: 'terms' },
+      { key: 'commencement_date', label: 'Commencement', type: 'text', src: 'terms' },
+      { key: 'base_rent_rsf', label: 'Base Rent ($/RSF/yr)', type: 'curr_dec', src: 'terms' },
+      { key: 'annual_escalation_pct', label: 'Annual Escalation (%)', type: 'pct_plain', src: 'terms' },
+      { key: 'free_rent_months', label: 'Free Rent (months)', type: 'num', src: 'terms' },
+      { key: 'ti_allowance_rsf', label: 'TI Allowance ($/RSF)', type: 'curr_dec', src: 'terms' },
+      { key: 'ti_allowance_total', label: 'TI Total', type: 'curr', src: 'terms' },
+      { key: 'opex_rsf_yr', label: 'OpEx/Tax/CAM ($/RSF/yr)', type: 'curr_dec', src: 'terms' },
+      { key: 'opex_monthly', label: 'OpEx (Monthly)', type: 'curr', src: 'terms' },
+      { key: 'parking_spots', label: 'Parking Spots', type: 'num', src: 'terms' },
+      { key: 'parking_rate_monthly', label: 'Parking Rate ($/mo)', type: 'curr', src: 'terms' },
+      { key: 'effectiveRentRSF', label: 'Effective Rent/RSF', type: 'curr_dec', src: 'summary' },
+      { key: 'straightLineAnnualExpense', label: 'SL Annual Expense', type: 'curr', src: 'summary' },
+      { key: 'totalAllInCost', label: 'Total All-in Cost', type: 'curr', src: 'summary' },
+      { key: 'totalConcessions', label: 'Total Concessions', type: 'curr', src: 'summary' },
+    ];
+
+    var vcCols = 1 + allSubs.length + 1; // label + versions + change
+    var vcData = [['Version Comparison - ' + address]];
+    vcData.push([]); // blank row
+    // Header row
+    var hdr = ['Deal Term'];
+    allSubs.forEach(function(s, i) {
+      var dt = s.doc_type || s.docType || 'RFP';
+      var submitted = s.submitted_at ? new Date(s.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+      hdr.push(dt.toUpperCase() + ' #' + (i + 1) + (submitted ? ' (' + submitted + ')' : ''));
+    });
+    hdr.push('Change (First to Last)');
+    vcData.push(hdr);
+
+    // Data rows
+    vcFields.forEach(function(f) {
+      var row = [f.label];
+      var vals = [];
+      allSubs.forEach(function(s) {
+        var val;
+        if (f.src === 'summary') {
+          var sm = (s.analysis && s.analysis.summary) || {};
+          val = sm[f.key] || 0;
+        } else {
+          var t = s.deal_terms || s.dealTerms || {};
+          val = t[f.key] || 0;
+        }
+        vals.push(val);
+        row.push(f.type === 'text' ? (val || '') : n(val));
+      });
+      // Change column
+      var first = n(vals[0]);
+      var last = n(vals[vals.length - 1]);
+      var diff = last - first;
+      if (f.type !== 'text' && first > 0 && diff !== 0) {
+        var pctChg = ((diff / first) * 100).toFixed(1);
+        row.push((diff > 0 ? '+' : '') + (f.type === 'curr' || f.type === 'curr_dec' ? '$' : '') + Math.round(Math.abs(diff)).toLocaleString() + ' (' + (diff > 0 ? '+' : '') + pctChg + '%)');
+      } else {
+        row.push('');
+      }
+      vcData.push(row);
+    });
+
+    var vcWS = XLSX.utils.aoa_to_sheet(vcData);
+    // Set column widths
+    var vcColWidths = [{ wch: 28 }];
+    allSubs.forEach(function() { vcColWidths.push({ wch: 22 }); });
+    vcColWidths.push({ wch: 24 });
+    vcWS['!cols'] = vcColWidths;
+    vcWS['!rows'] = [{ hpt: 32 }];
+    // Merge title row
+    vcWS['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: vcCols - 1 } }];
+    // Style title
+    setCell(vcWS, 0, 0, 'Version Comparison - ' + address, titleStyle);
+    for (var tc = 1; tc < vcCols; tc++) setCell(vcWS, 0, tc, '', titleStyle);
+    // Style header row
+    for (var hc = 0; hc < vcCols; hc++) {
+      var hRef = cellRef(2, hc);
+      if (vcWS[hRef]) vcWS[hRef].s = hc === 0 ? headerLeftStyle : headerStyle;
+    }
+    // Style data rows with alternating colors
+    for (var dr = 0; dr < vcFields.length; dr++) {
+      var dataRow = 3 + dr;
+      for (var dc = 0; dc < vcCols; dc++) {
+        var dRef = cellRef(dataRow, dc);
+        if (!vcWS[dRef]) vcWS[dRef] = { v: '', t: 's' };
+        var baseS = dc === 0 ? labelStyle : (dc === vcCols - 1 ? valStyle : currBoldStyle);
+        vcWS[dRef].s = dr % 2 === 0 ? Object.assign({}, baseS, { fill: altRowFill }) : baseS;
+      }
+    }
+    XLSX.utils.book_append_sheet(wb, vcWS, 'Version Comparison');
+  }
+
   // Generate filename and download
   var safeAddr = address.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-').substring(0, 40);
   var dateStr = new Date().toISOString().split('T')[0];
