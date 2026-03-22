@@ -1015,6 +1015,46 @@ body {
   border: none !important;
 }
 
+/* Tour Book pulsing ring */
+@keyframes pulseRing {
+  0% { box-shadow: 0 0 0 0 rgba(244, 121, 32, 0.6); }
+  70% { box-shadow: 0 0 0 8px rgba(244, 121, 32, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(244, 121, 32, 0); }
+}
+.marker-tour-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2.5px solid #f47920;
+  animation: pulseRing 2s ease-out infinite;
+  pointer-events: none;
+}
+/* Shortlist green diamond badge */
+.marker-shortlist-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 14px;
+  height: 14px;
+  background: #10b981;
+  border: 1.5px solid white;
+  border-radius: 2px;
+  transform: rotate(45deg);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  pointer-events: none;
+  z-index: 3;
+}
+.marker-shortlist-badge::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 6px;
+  height: 6px;
+  background: white;
+  border-radius: 1px;
+}
+
 .survey-marker {
   display: flex;
   align-items: center;
@@ -10179,16 +10219,14 @@ buildCityColorMap();
 
 SURVEY_BUILDINGS.forEach((b) => {
   var onTour = isOnTourList('survey', b.num);
+  var onShortlist = isOnShortlist('survey', b.num);
   var niInit = isNotInterested('survey', b.num);
-  var markerClass = onTour ? ' on-tour' : (niInit ? ' not-interested' : '');
   var cityColor = getSurveyMarkerColor(b);
   var displayNum = getCityBuildingNum(b);
-  var colorStyle = (!onTour && !niInit && cityColor !== MARKER_COLOR_SURVEY) ? 'background:' + cityColor + ';' : '';
-  var bgColor = onTour ? '#f47920' : (niInit ? '#e8a0a0' : (cityColor || MARKER_COLOR_SURVEY));
-  var opacity = niInit ? 'opacity:0.7;' : '';
+  var bgColor = niInit ? '#e8a0a0' : (cityColor || MARKER_COLOR_SURVEY);
   const icon = L.divIcon({
     className: '',
-    html: '<div style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:' + bgColor + ';color:white;font-size:9px;font-weight:700;font-family:system-ui,sans-serif;box-shadow:0 1px 4px rgba(0,0,0,0.2);border:2px solid white;cursor:pointer;' + opacity + '">' + displayNum + '</div>',
+    html: buildMarkerHTML(displayNum, bgColor, { onTour: onTour, onShortlist: onShortlist, notInterested: niInit }),
     iconSize: [22, 22],
     iconAnchor: [11, 11]
   });
@@ -10241,15 +10279,14 @@ if (allMarkers.length > 0) {
     saved.forEach(function(b) {
       if (!b.lat || !b.lng) return;
       var bOnTour = isOnTourList('survey', b.num);
+      var bOnShortlist = isOnShortlist('survey', b.num);
       var bNI = isNotInterested('survey', b.num);
-      var bMarkerClass = bOnTour ? ' on-tour' : (bNI ? ' not-interested' : '');
       var cityColor = getSurveyMarkerColor(b);
       var displayNum = getCityBuildingNum(b);
-      var bBgColor = bOnTour ? '#f47920' : (bNI ? '#e8a0a0' : (cityColor || MARKER_COLOR_SURVEY));
-      var bOpacity = bNI ? 'opacity:0.7;' : '';
+      var bBgColor = bNI ? '#e8a0a0' : (cityColor || MARKER_COLOR_SURVEY);
       var icon = L.divIcon({
         className: '',
-        html: '<div style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:' + bBgColor + ';color:white;font-size:9px;font-weight:700;font-family:system-ui,sans-serif;box-shadow:0 1px 4px rgba(0,0,0,0.2);border:2px solid white;cursor:pointer;' + bOpacity + '">' + displayNum + '</div>',
+        html: buildMarkerHTML(displayNum, bBgColor, { onTour: bOnTour, onShortlist: bOnShortlist, notInterested: bNI }),
         iconSize: [22, 22],
         iconAnchor: [11, 11]
       });
@@ -10304,6 +10341,18 @@ const legend = L.control({ position: 'topright' });
 
 // Standard colors for all projects
 var MARKER_COLOR_SURVEY = '#3b82f6';   // Blue - general survey building (fallback)
+
+// Build marker HTML with optional tour ring and shortlist badge
+function buildMarkerHTML(displayNum, bgColor, opts) {
+  opts = opts || {};
+  var opacity = opts.notInterested ? 'opacity:0.7;' : '';
+  var ring = opts.onTour ? '<div class="marker-tour-ring"></div>' : '';
+  var badge = opts.onShortlist ? '<div class="marker-shortlist-badge"></div>' : '';
+  return '<div style="position:relative;width:22px;height:22px;">' +
+    ring + badge +
+    '<div class="survey-marker-dot" style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:' + bgColor + ';color:white;font-size:9px;font-weight:700;font-family:system-ui,sans-serif;box-shadow:0 1px 4px rgba(0,0,0,0.2);border:2px solid white;cursor:pointer;' + opacity + '">' + displayNum + '</div>' +
+  '</div>';
+}
 
 // City/Neighborhood color palette for survey buildings
 var CITY_GROUP_COLORS = [
@@ -10478,14 +10527,14 @@ function buildLegendHTML() {
   // Shortlist (emerald)
   if (shortlistCount > 0) {
     html += '<div class="legend-section">';
-    html += '<div class="legend-item"><div class="legend-dot on-shortlist"></div><span class="legend-label">Shortlist (' + shortlistCount + ')</span></div>';
+    html += '<div class="legend-item"><div style="position:relative;width:12px;height:12px;"><div style="width:10px;height:10px;background:#10b981;border:1.5px solid white;border-radius:2px;transform:rotate(45deg);box-shadow:0 1px 2px rgba(0,0,0,0.2);"></div></div><span class="legend-label">Shortlist (' + shortlistCount + ')</span></div>';
     html += '</div>';
   }
 
   // Tour Book (orange)
   if (onTourCount > 0) {
     html += '<div class="legend-section">';
-    html += '<div class="legend-item"><div class="legend-dot on-tour"></div><span class="legend-label">Tour Book (' + onTourCount + ')</span></div>';
+    html += '<div class="legend-item"><div style="position:relative;width:14px;height:14px;"><div style="width:10px;height:10px;border-radius:50%;border:2px solid #f47920;margin:2px;"></div></div><span class="legend-label">Tour Book (' + onTourCount + ')</span></div>';
     html += '</div>';
   }
 
@@ -11792,39 +11841,24 @@ function refreshAllTooltipButtons() {
   if (typeof refreshAllShortlistButtons === 'function') refreshAllShortlistButtons();
 }
 
-// Update survey marker colors: blue = survey, orange = tour book, emerald = shortlist, soft red = not interested
+// Update survey marker icons: rebuild HTML with ring/badge based on current state
 function refreshMarkerColors() {
   surveyMarkers.forEach(function(marker) {
     if (typeof marker._surveyNum === 'undefined') return;
     var onTour = isOnTourList('survey', marker._surveyNum);
     var onShortlist = isOnShortlist('survey', marker._surveyNum);
     var ni = isNotInterested('survey', marker._surveyNum);
-    var el = marker.getElement();
-    if (!el) return;
-    var dot = el.querySelector('.survey-marker');
-    if (dot) {
-      // Priority: shortlist > tour > not-interested > city color > default
-      dot.classList.remove('on-tour', 'on-shortlist', 'not-interested');
-      dot.style.opacity = '';
-      if (onShortlist) {
-        dot.classList.add('on-shortlist');
-        dot.style.background = '';
-      } else if (onTour) {
-        dot.classList.add('on-tour');
-        dot.style.background = '';
-      } else if (ni) {
-        dot.classList.add('not-interested');
-        dot.style.background = '';
-      } else {
-        // Restore city color
-        var bldg = SURVEY_BUILDINGS.find(function(b) { return b.num === marker._surveyNum; });
-        var cc = bldg ? getSurveyMarkerColor(bldg) : MARKER_COLOR_SURVEY;
-        dot.style.background = cc !== MARKER_COLOR_SURVEY ? cc : '';
-      }
-      // Update display number to per-city number
-      var bldgForNum = SURVEY_BUILDINGS.find(function(b) { return b.num === marker._surveyNum; });
-      if (bldgForNum) dot.textContent = getCityBuildingNum(bldgForNum);
-    }
+    var bldg = SURVEY_BUILDINGS.find(function(b) { return b.num === marker._surveyNum; });
+    var cityColor = bldg ? getSurveyMarkerColor(bldg) : MARKER_COLOR_SURVEY;
+    var displayNum = bldg ? getCityBuildingNum(bldg) : marker._surveyNum;
+    var bgColor = ni ? '#e8a0a0' : (cityColor || MARKER_COLOR_SURVEY);
+    var newIcon = L.divIcon({
+      className: '',
+      html: buildMarkerHTML(displayNum, bgColor, { onTour: onTour, onShortlist: onShortlist, notInterested: ni }),
+      iconSize: [22, 22],
+      iconAnchor: [11, 11]
+    });
+    marker.setIcon(newIcon);
   });
   // Also update BUILDINGS markers (shortlist buildings from _SF_BUILDINGS etc.)
   if (typeof _buildingMarkers !== 'undefined') {
@@ -17483,7 +17517,7 @@ function surveyMergeBuildings(newBuildings) {
     var sBgColor = cityColor || MARKER_COLOR_SURVEY;
     var icon = L.divIcon({
       className: '',
-      html: '<div style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:' + sBgColor + ';color:white;font-size:9px;font-weight:700;font-family:system-ui,sans-serif;box-shadow:0 1px 4px rgba(0,0,0,0.2);border:2px solid white;cursor:pointer;">' + displayNum + '</div>',
+      html: buildMarkerHTML(displayNum, sBgColor, {}),
       iconSize: [22, 22],
       iconAnchor: [11, 11]
     });
