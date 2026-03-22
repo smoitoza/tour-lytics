@@ -23,32 +23,31 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ buildings: 0, sqft: 0, shortlisted: 0, leaseValue: 0, projects: 0 })
     }
 
-    // Count survey buildings across all projects
-    const { count: buildingCount } = await supabase
+    // Fetch survey buildings (id + space_available) for count and sqft sum
+    const { data: surveyData } = await supabase
       .from('survey_buildings')
-      .select('*', { count: 'exact', head: true })
+      .select('id, space_available')
       .in('project_id', projectIds)
+      .limit(1000)
 
-    // Count shortlisted buildings
-    const { count: shortlistedCount } = await supabase
-      .from('shortlist')
-      .select('*', { count: 'exact', head: true })
-      .in('project_id', projectIds)
-
-    // Sum total available SF from survey buildings
-    const { data: sqftData } = await supabase
-      .from('survey_buildings')
-      .select('space_available')
-      .in('project_id', projectIds)
+    const buildingCount = (surveyData || []).length
 
     let totalSqft = 0
-    ;(sqftData || []).forEach((b: any) => {
+    ;(surveyData || []).forEach((b: any) => {
       const val = String(b.space_available || '').replace(/[^0-9]/g, '')
       const num = parseInt(val)
       if (!isNaN(num)) totalSqft += num
     })
 
-    // Sum total lease value from RFP submissions (all-in cost or total rent)
+    // Count shortlisted buildings
+    const { data: shortlistData } = await supabase
+      .from('shortlist')
+      .select('id')
+      .in('project_id', projectIds)
+
+    const shortlistedCount = (shortlistData || []).length
+
+    // Sum total lease value from RFP submissions
     const { data: rfpData } = await supabase
       .from('rfp_submissions')
       .select('analysis')
@@ -58,16 +57,23 @@ export async function GET(req: NextRequest) {
     ;(rfpData || []).forEach((r: any) => {
       if (r.analysis?.summary) {
         const s = r.analysis.summary
-        // Use total_all_in_cost or total_base_rent_all_years
         const val = s.total_all_in_cost || s.total_base_rent_all_years || s.total_rent_all_years || 0
         if (typeof val === 'number') totalLeaseValue += val
       }
     })
 
+    // Also sum from projects table as fallback for buildings_count
+    const { data: projData } = await supabase
+      .from('projects')
+      .select('buildings_count')
+      .in('id', projectIds)
+
+    const projBuildingCount = (projData || []).reduce((sum: number, p: any) => sum + (p.buildings_count || 0), 0)
+
     return NextResponse.json({
-      buildings: buildingCount || 0,
+      buildings: buildingCount || projBuildingCount || 0,
       sqft: totalSqft,
-      shortlisted: shortlistedCount || 0,
+      shortlisted: shortlistedCount,
       leaseValue: Math.round(totalLeaseValue),
       projects: projectIds.length,
     })
