@@ -22,29 +22,23 @@ function Logo({ size = 28 }: { size?: number }) {
 function Counter({ end, suffix = '' }: { end: number; suffix?: string }) {
   const [count, setCount] = useState(0)
   const ref = useRef<HTMLSpanElement>(null)
-  const started = useRef(false)
+  const prevEnd = useRef(0)
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !started.current) {
-          started.current = true
-          const duration = 1000
-          const start = performance.now()
-          const animate = (now: number) => {
-            const progress = Math.min((now - start) / duration, 1)
-            const eased = 1 - Math.pow(1 - progress, 3)
-            setCount(Math.floor(eased * end))
-            if (progress < 1) requestAnimationFrame(animate)
-          }
-          requestAnimationFrame(animate)
-        }
-      },
-      { threshold: 0.3 }
-    )
-    if (ref.current) observer.observe(ref.current)
-    return () => observer.disconnect()
-  }, [end])
+    // Animate whenever end value changes
+    if (end === prevEnd.current && end === 0) return
+    prevEnd.current = end
+    const duration = 800
+    const startVal = count
+    const startTime = performance.now()
+    const animate = (now: number) => {
+      const progress = Math.min((now - startTime) / duration, 1)
+      const eased = 1 - Math.pow(1 - progress, 3)
+      setCount(Math.floor(startVal + (end - startVal) * eased))
+      if (progress < 1) requestAnimationFrame(animate)
+    }
+    requestAnimationFrame(animate)
+  }, [end]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return <span ref={ref}>{count.toLocaleString()}{suffix}</span>
 }
@@ -719,12 +713,20 @@ export default function DashboardPage() {
           gap: '1rem',
           marginBottom: '2rem',
         }}>
-          {[
-            { value: dashStats?.buildings || projects.reduce((sum, p) => sum + (p.buildings_count || 0), 0), suffix: '', label: 'Buildings Surveyed', color: '#0f172a' },
-            { value: dashStats?.sqft || 0, suffix: '', label: 'Total Sq Ft', color: '#0f172a', display: dashStats?.sqft ? (dashStats.sqft >= 1000000 ? (dashStats.sqft / 1000000).toFixed(1) + 'M' : dashStats.sqft >= 1000 ? Math.round(dashStats.sqft / 1000) + 'K' : String(dashStats.sqft)) : '0' },
-            { value: dashStats?.shortlisted || projects.reduce((sum, p) => sum + (p.shortlisted_count || 0), 0), suffix: '', label: 'Shortlisted', color: '#2563eb' },
-            { value: dashStats?.leaseValue || 0, suffix: '', label: 'Lease Value Analyzed', color: '#0f172a', display: dashStats?.leaseValue ? '$' + (dashStats.leaseValue >= 1000000 ? (dashStats.leaseValue / 1000000).toFixed(1) + 'M' : dashStats.leaseValue >= 1000 ? Math.round(dashStats.leaseValue / 1000) + 'K' : String(dashStats.leaseValue)) : '$0' },
-          ].map((stat, i) => (
+          {(() => {
+            const b = dashStats?.buildings ?? projects.reduce((sum, p) => sum + (p.buildings_count || 0), 0)
+            const sq = dashStats?.sqft ?? 0
+            const sl = dashStats?.shortlisted ?? projects.reduce((sum, p) => sum + (p.shortlisted_count || 0), 0)
+            const lv = dashStats?.leaseValue ?? 0
+            const fmtSqft = sq >= 1000000 ? (sq / 1000000).toFixed(1) + 'M' : sq >= 1000 ? Math.round(sq / 1000).toLocaleString() + 'K' : String(sq)
+            const fmtLease = lv >= 1000000 ? '$' + (lv / 1000000).toFixed(1) + 'M' : lv >= 1000 ? '$' + Math.round(lv / 1000).toLocaleString() + 'K' : '$' + lv.toLocaleString()
+            return [
+              { value: b, suffix: '', label: 'Buildings Surveyed', color: '#0f172a' },
+              { value: sq, suffix: '', label: 'Total Sq Ft', color: '#0f172a', display: fmtSqft },
+              { value: sl, suffix: '', label: 'Shortlisted', color: '#2563eb' },
+              { value: lv, suffix: '', label: 'Lease Value Analyzed', color: '#0f172a', display: fmtLease },
+            ]
+          })().map((stat, i) => (
             <div key={i} style={{
               background: '#ffffff',
               borderRadius: '0.75rem',
