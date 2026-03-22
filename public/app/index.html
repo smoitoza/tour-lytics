@@ -17755,7 +17755,8 @@ async function purchaseTokenPack(packId, btnEl) {
 
     var data = await res.json();
     if (data.url) {
-      window.location.href = data.url;
+      // App runs in iframe; Stripe blocks iframe embedding, so redirect the top window
+      (window.top || window).location.href = data.url;
     } else {
       alert('No checkout URL returned. Please try again.');
       btnEl.disabled = false;
