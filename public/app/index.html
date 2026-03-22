@@ -8811,9 +8811,9 @@ var _mapCenter = (function() {
 })();
 
 const map = L.map("map", {
+  zoomControl: false,
   center: _mapCenter.center,
   zoom: _mapCenter.zoom,
-  zoomControl: true,
   scrollWheelZoom: true
 });
 
@@ -18644,7 +18644,7 @@ function initCommuteMap() {
 
   // Create Leaflet map
   _commuteMap = L.map(container, {
-    zoomControl: true,
+    zoomControl: false,
     scrollWheelZoom: true
   });
 
@@ -18846,7 +18846,7 @@ function cmapInit() {
       var container = document.getElementById('cmapContainer');
       if (!container) return;
       _cmapLeaflet = L.map(container, {
-        zoomControl: true,
+        zoomControl: false,
         scrollWheelZoom: true
       });
       L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
