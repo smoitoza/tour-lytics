@@ -16592,22 +16592,23 @@ async function setCurrentOffice() {
     return;
   }
 
-  // Geocode the address
+  // Send to server (geocoding happens server-side)
   try {
-    var geoRes = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address=' + encodeURIComponent(addr) + '&key=AIzaSyD4YUbpP2dUpm0LG-SMjxHqnPKCQaaDmKE');
-    var geoData = await geoRes.json();
-    if (geoData.status !== 'OK' || !geoData.results[0]) {
-      alert('Could not find that address. Please try a more specific address.');
-      return;
-    }
-    var loc = geoData.results[0].geometry.location;
-
-    // Save to server
-    await fetch('/api/projects', {
+    var res = await fetch('/api/projects', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ projectId: getProjectId(), hq_address: addr, hq_lat: loc.lat, hq_lng: loc.lng })
+      body: JSON.stringify({ projectId: getProjectId(), hq_address: addr })
     });
+    var result = await res.json();
+    if (!res.ok) {
+      alert(result.error || 'Could not find that address. Please try again.');
+      return;
+    }
+
+    if (!result.hq_lat || !result.hq_lng) {
+      alert('Address saved but could not be placed on the map.');
+      return;
+    }
 
     // Remove old marker if exists
     if (window._hqMarker) { map.removeLayer(window._hqMarker); window._hqMarker = null; }
@@ -16619,7 +16620,7 @@ async function setCurrentOffice() {
       iconSize: [36, 36],
       iconAnchor: [18, 18]
     });
-    var hqMarker = L.marker([loc.lat, loc.lng], { icon: hqIcon, zIndexOffset: 3000 }).addTo(map);
+    var hqMarker = L.marker([result.hq_lat, result.hq_lng], { icon: hqIcon, zIndexOffset: 3000 }).addTo(map);
     hqMarker.bindTooltip(
       '<div style="font-family:var(--font-body);padding:4px 0;">' +
       '<div style="font-weight:800;font-size:13px;color:#0f172a;margin-bottom:2px;">Current Office</div>' +

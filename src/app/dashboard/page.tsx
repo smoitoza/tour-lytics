@@ -284,20 +284,7 @@ export default function DashboardPage() {
     setCreatingProject(true)
     setCreateError(null)
     try {
-      // Geocode HQ address if provided
-      let hqLat: number | undefined
-      let hqLng: number | undefined
       const hqAddr = newProjectHQ.trim()
-      if (hqAddr) {
-        try {
-          const geoRes = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(hqAddr)}&key=AIzaSyD4YUbpP2dUpm0LG-SMjxHqnPKCQaaDmKE`)
-          const geoData = await geoRes.json()
-          if (geoData.status === 'OK' && geoData.results?.[0]?.geometry?.location) {
-            hqLat = geoData.results[0].geometry.location.lat
-            hqLng = geoData.results[0].geometry.location.lng
-          }
-        } catch { /* geocode failed, skip */ }
-      }
 
       const res = await fetch('/api/projects', {
         method: 'POST',
@@ -308,8 +295,6 @@ export default function DashboardPage() {
           client_name: newProjectClient.trim(),
           createdBy: user?.email,
           hq_address: hqAddr || undefined,
-          hq_lat: hqLat,
-          hq_lng: hqLng,
         }),
       })
       if (!res.ok) {

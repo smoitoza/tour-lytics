@@ -124,14 +124,42 @@ export async function PATCH(req: NextRequest) {
   const supabase = createClient(supabaseUrl, supabaseKey)
   try {
     const body = await req.json()
-    const { projectId, hq_address, hq_lat, hq_lng } = body
+    const { projectId, hq_address } = body
     if (!projectId) {
       return NextResponse.json({ error: 'projectId required' }, { status: 400 })
     }
+
     const updates: Record<string, any> = {}
-    if (hq_address !== undefined) updates.hq_address = (hq_address || '').trim()
-    if (hq_lat !== undefined) updates.hq_lat = hq_lat
-    if (hq_lng !== undefined) updates.hq_lng = hq_lng
+
+    if (hq_address !== undefined) {
+      const addr = (hq_address || '').trim()
+      updates.hq_address = addr
+
+      if (addr) {
+        // Geocode server-side using the unrestricted API key
+        const mapsKey = process.env.GOOGLE_MAPS_API_KEY
+        if (mapsKey) {
+          try {
+            const geoRes = await fetch(
+              `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(addr)}&key=${mapsKey}`
+            )
+            const geoData = await geoRes.json()
+            if (geoData.status === 'OK' && geoData.results?.[0]?.geometry?.location) {
+              updates.hq_lat = geoData.results[0].geometry.location.lat
+              updates.hq_lng = geoData.results[0].geometry.location.lng
+            } else {
+              return NextResponse.json({ error: 'Could not geocode that address. Please check and try again.' }, { status: 400 })
+            }
+          } catch {
+            return NextResponse.json({ error: 'Geocoding service unavailable.' }, { status: 500 })
+          }
+        }
+      } else {
+        // Clearing HQ
+        updates.hq_lat = null
+        updates.hq_lng = null
+      }
+    }
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
@@ -143,7 +171,7 @@ export async function PATCH(req: NextRequest) {
       .eq('id', projectId)
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, hq_lat: updates.hq_lat, hq_lng: updates.hq_lng })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
@@ -155,7 +183,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { name, market, description, createdBy, client_name, hq_address, hq_lat, hq_lng } = body
+    const { name, market, description, createdBy, client_name, hq_address } = body
 
     if (!name || !name.trim()) {
       return NextResponse.json({ error: 'Project name is required.' }, { status: 400 })
@@ -193,10 +221,23 @@ export async function POST(req: NextRequest) {
       owner_id: createdBy, // Project creator is the owner
     }
 
-    // Add HQ fields if provided
-    if (hq_address) project.hq_address = hq_address.trim()
-    if (hq_lat != null) project.hq_lat = hq_lat
-    if (hq_lng != null) project.hq_lng = hq_lng
+    // Geocode HQ address server-side if provided
+    if (hq_address && hq_address.trim()) {
+      project.hq_address = hq_address.trim()
+      const mapsKey = process.env.GOOGLE_MAPS_API_KEY
+      if (mapsKey) {
+        try {
+          const geoRes = await fetch(
+            `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(hq_address.trim())}&key=${mapsKey}`
+          )
+          const geoData = await geoRes.json()
+          if (geoData.status === 'OK' && geoData.results?.[0]?.geometry?.location) {
+            project.hq_lat = geoData.results[0].geometry.location.lat
+            project.hq_lng = geoData.results[0].geometry.location.lng
+          }
+        } catch { /* geocode failed, skip */ }
+      }
+    }
 
     const { data, error } = await supabase
       .from('projects')
