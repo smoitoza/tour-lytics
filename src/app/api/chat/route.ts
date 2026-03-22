@@ -634,14 +634,14 @@ function getTools(market: string): Anthropic.Tool[] {
     {
       name: 'search_nearby_places',
       description:
-        `Search for nearby places (restaurants, coffee shops, parking, bars, gyms, etc.) near a specific address or building location. Use this whenever a user asks about places to eat, drink, park, or visit near any of the tour buildings. Always include "${locationHint}" in the query for accurate results.`,
+        `Search for places, businesses, or company locations using Google Places. Use this for: (1) nearby places like restaurants, coffee shops, parking near tour buildings, (2) company office locations like "Tesla offices in Silicon Valley" or "Amazon headquarters", (3) any business or brand the user asks about. Always include "${locationHint}" in the query when searching near project buildings. This is a LIVE Google search - you can find any business, not just project data.`,
       input_schema: {
         type: 'object' as const,
         properties: {
           query: {
             type: 'string',
             description:
-              `A natural language search query including the place type and location, e.g. "coffee shops near 250 Main Street, ${locationHint}"`,
+              `A natural language search query. Examples: "coffee shops near 250 Main Street, ${locationHint}", "Tesla offices Silicon Valley", "WeWork locations San Francisco"`,
           },
           max_results: {
             type: 'number',
@@ -746,11 +746,21 @@ Each message may include [LIVE TOUR LIST], [LIVE SCORES], and [LIVE TOUR SCHEDUL
 - The Tour Book is the user's shortlist. It is NOT the full survey.
 - CRITICAL: When matching schedule dates to words like "today" or "tomorrow", use the CURRENT DATE AND TIME provided at the top of this prompt.
 
-NEARBY PLACES CAPABILITY:
-You have access to search_nearby_places (Google Places). When a user asks about places near a building:
-1. Identify the building address from your data
-2. Call search_nearby_places with the query including "${marketLabel}"
-3. Present results with name, rating, distance context, and Google Maps link
+NEARBY PLACES & COMPANY SEARCH CAPABILITY:
+You have access to search_nearby_places (Google Places). Use this tool for TWO purposes:
+
+1. NEARBY PLACES: When a user asks about places near a building (restaurants, coffee, parking, gyms, etc.):
+   - Identify the building address from your data
+   - Call search_nearby_places with the query including "${marketLabel}"
+   - Present results with name, rating, distance context, and Google Maps link
+
+2. COMPANY/BUSINESS LOCATIONS: When a user asks about office locations, headquarters, or branches of ANY company (e.g. "where are Tesla's offices?", "show me Google locations", "find Amazon offices near here"):
+   - Call search_nearby_places with a query like "Tesla offices" or "Google headquarters ${marketLabel}"
+   - You CAN search for any company, brand, or business. You are NOT limited to survey buildings.
+   - Present results with name, address, and Google Maps link
+   - If the user asks about locations in a specific area, include the area in the query
+
+IMPORTANT: Do NOT say you don't have access to company location data. You can always search for any business or company using search_nearby_places. This is a live Google Places search, not limited to your project data.
 
 DIRECTIONS & TRAVEL TIME CAPABILITY:
 You have access to get_directions (Google Maps). Use for travel time, directions, and route comparisons between buildings or locations. Always include the city/state in addresses.
@@ -778,7 +788,7 @@ GUIDELINES:
 - If comparing buildings, use a structured format.
 - When a building detail is "TBD" or "Negotiable", say so honestly.
 - Reference building numbers and addresses together for clarity.
-- If asked about something not in the data, say you don't have that information.
+- If asked about something not in the project data, try using your tools first (search_nearby_places for locations/businesses, get_directions for travel). Only say you don't have the information if your tools also cannot help.
 - Do not use em dashes in your responses. Use commas, periods, or semicolons instead.
 - Be conversational and professional, like a sharp real estate analyst.
 - Keep responses focused. Don't dump all data unless asked for a full comparison.
