@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '')
+// Lazy-initialize Stripe to avoid build-time errors when env vars aren't set
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!)
+}
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 // Token pack definitions
 // Note: No specific dollar pricing exposed to user per instructions
@@ -48,6 +53,7 @@ export async function POST(request: NextRequest) {
     const origin = request.headers.get('origin') || 'https://tourlytics.ai'
 
     // Create Stripe Checkout Session
+    const stripe = getStripe()
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       mode: 'payment',
@@ -76,6 +82,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Record pending payment
+    const supabase = getSupabase()
     await supabase.from('stripe_payments').insert({
       project_id: projectId,
       stripe_session_id: session.id,

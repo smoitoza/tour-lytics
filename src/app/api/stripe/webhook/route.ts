@@ -6,12 +6,17 @@ import { creditTokens } from '@/lib/tokens'
 // Disable Next.js body parsing so we can verify the raw Stripe signature
 export const runtime = 'nodejs'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '')
+// Lazy-initialize to avoid build-time errors
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!)
+}
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,6 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     let event: Stripe.Event
+    const stripe = getStripe()
 
     try {
       event = stripe.webhooks.constructEvent(
@@ -54,6 +60,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Check if already processed (idempotency)
+      const supabase = getSupabase()
       const { data: existing } = await supabase
         .from('stripe_payments')
         .select('status')
