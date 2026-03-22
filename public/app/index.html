@@ -10454,9 +10454,11 @@ SURVEY_BUILDINGS.forEach((b) => {
   var cityColor = getSurveyMarkerColor(b);
   var displayNum = getCityBuildingNum(b);
   var colorStyle = (!onTour && !niInit && cityColor !== MARKER_COLOR_SURVEY) ? 'background:' + cityColor + ';' : '';
+  var bgColor = onTour ? '#f47920' : (niInit ? '#e8a0a0' : (cityColor || MARKER_COLOR_SURVEY));
+  var opacity = niInit ? 'opacity:0.7;' : '';
   const icon = L.divIcon({
-    className: 'survey-marker-wrapper',
-    html: '<div class="survey-marker' + markerClass + '" style="' + colorStyle + '">' + displayNum + '</div>',
+    className: '',
+    html: '<div style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:' + bgColor + ';color:white;font-size:9px;font-weight:700;font-family:system-ui,sans-serif;box-shadow:0 1px 4px rgba(0,0,0,0.2);border:2px solid white;cursor:pointer;' + opacity + '">' + displayNum + '</div>',
     iconSize: [22, 22],
     iconAnchor: [11, 11]
   });
@@ -10514,10 +10516,11 @@ if (allMarkers.length > 0) {
       var bMarkerClass = bOnTour ? ' on-tour' : (bNI ? ' not-interested' : '');
       var cityColor = getSurveyMarkerColor(b);
       var displayNum = getCityBuildingNum(b);
-      var colorStyle = (!bOnTour && !bNI && cityColor !== MARKER_COLOR_SURVEY) ? 'background:' + cityColor + ';' : '';
+      var bBgColor = bOnTour ? '#f47920' : (bNI ? '#e8a0a0' : (cityColor || MARKER_COLOR_SURVEY));
+      var bOpacity = bNI ? 'opacity:0.7;' : '';
       var icon = L.divIcon({
-        className: 'survey-marker-wrapper',
-        html: '<div class="survey-marker' + bMarkerClass + '" style="' + colorStyle + '">' + displayNum + '</div>',
+        className: '',
+        html: '<div style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:' + bBgColor + ';color:white;font-size:9px;font-weight:700;font-family:system-ui,sans-serif;box-shadow:0 1px 4px rgba(0,0,0,0.2);border:2px solid white;cursor:pointer;' + bOpacity + '">' + displayNum + '</div>',
         iconSize: [22, 22],
         iconAnchor: [11, 11]
       });
@@ -17496,9 +17499,10 @@ function surveyMergeBuildings(newBuildings) {
     var colorStyle = cityColor !== MARKER_COLOR_SURVEY ? 'background:' + cityColor + ';' : '';
 
     // Add marker to map
+    var sBgColor = cityColor || MARKER_COLOR_SURVEY;
     var icon = L.divIcon({
-      className: 'survey-marker-wrapper',
-      html: '<div class="survey-marker" style="' + colorStyle + '">' + displayNum + '</div>',
+      className: '',
+      html: '<div style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:' + sBgColor + ';color:white;font-size:9px;font-weight:700;font-family:system-ui,sans-serif;box-shadow:0 1px 4px rgba(0,0,0,0.2);border:2px solid white;cursor:pointer;">' + displayNum + '</div>',
       iconSize: [22, 22],
       iconAnchor: [11, 11]
     });
