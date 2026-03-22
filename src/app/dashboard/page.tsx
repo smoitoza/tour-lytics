@@ -1009,58 +1009,7 @@ export default function DashboardPage() {
         </div>
 
 
-        {/* -- Quick actions -- */}
-        {projects.length > 0 && (
-        <div className="dash-fade dash-fade-5">
-          <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
-            Quick Access{projects.length > 0 ? ` - ${projects[0].name}` : ''}
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.75rem' }}>
-            {quickActions.map((action, i) => (
-              <Link
-                key={i}
-                href={`/project/${projects[0].id}${action.tab ? `?tab=${action.tab}` : ''}`}
-                className="no-underline"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.875rem',
-                  background: hoveredAction === i
-                    ? 'linear-gradient(135deg, #ffffff 0%, #f8faff 100%)'
-                    : '#ffffff',
-                  borderRadius: '0.75rem',
-                  border: hoveredAction === i ? '1px solid rgba(37,99,235,0.2)' : '1px solid #e2e8f0',
-                  padding: '1rem 1.125rem',
-                  textDecoration: 'none',
-                  transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)',
-                  boxShadow: hoveredAction === i ? '0 4px 16px rgba(37,99,235,0.06)' : 'none',
-                }}
-                onMouseEnter={() => setHoveredAction(i)}
-                onMouseLeave={() => setHoveredAction(null)}
-              >
-                <div style={{
-                  width: '2.5rem',
-                  height: '2.5rem',
-                  borderRadius: '0.625rem',
-                  background: hoveredAction === i ? 'rgba(37,99,235,0.08)' : '#f8fafc',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: hoveredAction === i ? '#2563eb' : '#64748b',
-                  transition: 'all 0.2s',
-                  flexShrink: 0,
-                }}>
-                  {action.icon}
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#0f172a', marginBottom: '0.125rem' }}>{action.label}</div>
-                  <div style={{ fontSize: '0.6875rem', color: '#94a3b8' }}>{action.desc}</div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-        )}
+
       </main>
 
       {/* -- Create Project Modal -- */}
