@@ -55,11 +55,18 @@ export async function GET(req: NextRequest) {
 
     let totalLeaseValue = 0
     ;(rfpData || []).forEach((r: any) => {
-      if (r.analysis?.summary) {
-        const s = r.analysis.summary
-        const val = s.total_all_in_cost || s.total_base_rent_all_years || s.total_rent_all_years || 0
-        if (typeof val === 'number') totalLeaseValue += val
-      }
+      const a = r.analysis
+      if (!a) return
+      // Check multiple possible locations for total lease cost
+      const val =
+        a.summary?.totalAllInCost ||
+        a.summary?.total_all_in_cost ||
+        a.cash_flow?.totals?.totalAllInCost ||
+        a.cash_flow?.totals?.total_all_in_cost ||
+        a.straight_line_pl?.totals?.straightLineAnnualRent ||
+        a.summary?.straightLineAnnualExpense ||
+        0
+      if (typeof val === 'number' && val > 0) totalLeaseValue += val
     })
 
     // Also sum from projects table as fallback for buildings_count
