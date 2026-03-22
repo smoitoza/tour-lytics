@@ -150,7 +150,7 @@ export default function LandingPage() {
           <div className="hidden md:flex items-center" style={{ gap: '2rem' }}>
             <a href="#demo" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Map Demo</a>
             <a href="#tourbook-demo" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Tour Book</a>
-            <a href="#ai-chat" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>AI Chat</a>
+            <a href="#ai-chat" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Scout</a>
             <a href="#commute-demo" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Commute</a>
             <a href="#problem" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>The Problem</a>
             <a href="#analysis" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Analysis</a>
@@ -200,7 +200,7 @@ export default function LandingPage() {
             <div className="flex flex-col" style={{ gap: '1rem' }}>
               <a href="#demo" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Map Demo</a>
               <a href="#tourbook-demo" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Tour Book</a>
-              <a href="#ai-chat" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>AI Chat</a>
+              <a href="#ai-chat" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Scout</a>
               <a href="#commute-demo" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Commute</a>
               <a href="#problem" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>The Problem</a>
               <a href="#analysis" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Analysis</a>
@@ -236,18 +236,18 @@ export default function LandingPage() {
           {/* Badge */}
           <div className="inline-flex items-center" style={{ gap: '0.5rem', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', padding: '0.25rem 1rem', borderRadius: '1.25rem', fontSize: 'clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem)', color: '#cbd5e1', marginBottom: '2rem', letterSpacing: '0.04em', textTransform: 'uppercase' as const, fontWeight: 500 }}>
             <span className="rounded-full bg-green-500" style={{ width: '6px', height: '6px', animation: 'pulse 2s infinite' }} />
-            Now in private beta
+            Now in Private Beta
           </div>
 
           <h1 className="font-extrabold text-white" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2.5rem, 1rem + 4vw, 4.5rem)', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '1.5rem', maxWidth: '900px', marginLeft: 'auto', marginRight: 'auto' }}>
-            AI-powered intelligence for every{' '}
+            The operating system for{' '}
             <span style={{ color: '#2563eb' }}>
-              commercial real estate tour
+              closing commercial real estate deals
             </span>
           </h1>
 
           <p style={{ fontSize: 'clamp(1.125rem, 1rem + 0.75vw, 1.5rem)', color: '#94a3b8', maxWidth: '640px', margin: '0 auto 2.5rem auto', lineHeight: 1.5 }}>
-            Upload a broker survey PDF. Get an interactive map, GAAP-compliant financials, commute studies, and an AI assistant that knows every building, deal term, and dollar amount in your project.
+            Upload a broker survey. In seconds, your entire project is mapped, modeled, and ready for decisions. Every building, deal term, and dollar amount, organized so your team moves faster and your clients close with confidence.
           </p>
 
           {/* CTAs */}
@@ -284,7 +284,7 @@ export default function LandingPage() {
               { end: 33, label: 'Buildings Mapped' },
               { end: 4, label: 'Shortlisted' },
               { display: '$3.8M', label: 'Total Lease Value Analyzed' },
-              { end: 7, label: 'AI-Powered Features' },
+              { end: 7, label: 'Integrated Tools' },
             ].map((s) => (
               <div key={s.label} className="text-center">
                 {'end' in s && s.end !== undefined ? (
@@ -529,17 +529,17 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* == AI CHAT ASSISTANT DEMO == */}
+      {/* == SCOUT - MARKET INTELLIGENCE == */}
       <section id="ai-chat" style={{ padding: '5rem 0', background: '#ffffff' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
           <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
-            AI-Powered
+            Meet Scout
           </span>
           <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3.5rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.75rem' }}>
-            Ask your data anything
+            Your deal intelligence at your fingertips
           </h2>
           <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', marginBottom: '2.5rem', maxWidth: '600px', lineHeight: 1.6 }}>
-            Every project comes with an AI assistant that has deep knowledge of all your buildings, deal terms, financials, and tour schedule. Ask it to compare buildings, find nearby restaurants, calculate walking times between tours, or break down your lease costs.
+            Every project comes with a built-in intelligence layer with deep knowledge of all your buildings, deal terms, financials, and tour schedule. Ask it to compare buildings, find nearby restaurants, calculate walking times between tours, or break down your lease costs.
           </p>
 
           {/* Chat mockup */}
@@ -610,7 +610,7 @@ export default function LandingPage() {
 
           {/* Capability chips */}
           <div className="flex flex-wrap" style={{ gap: '0.5rem', marginTop: '1.5rem' }}>
-            {['Financial comparisons', 'Nearby places (Google Places)', 'Walking & driving times', 'Tour schedule awareness', 'Lease term breakdowns', 'Building specifications', 'Commute analysis', 'Photo AI tagging'].map((cap) => (
+            {['Financial comparisons', 'Nearby places (Google Places)', 'Walking & driving times', 'Tour schedule awareness', 'Lease term breakdowns', 'Building specifications', 'Commute analysis', 'Smart photo tagging'].map((cap) => (
               <span key={cap} className="text-xs font-medium" style={{ padding: '0.375rem 0.75rem', background: '#f1f5f9', color: '#475569', borderRadius: '1.25rem', border: '1px solid #e2e8f0' }}>
                 {cap}
               </span>
@@ -619,7 +619,7 @@ export default function LandingPage() {
 
           <div className="flex items-center" style={{ gap: '0.5rem', marginTop: '1rem', fontSize: 'clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem)', color: '#94a3b8' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
-            Powered by Claude AI with real-time Google Maps and Places integration. Every answer is grounded in your actual project data.
+            Powered by real-time Google Maps and Places integration. Every answer is grounded in your actual project data.
           </div>
         </div>
       </section>
@@ -756,7 +756,7 @@ export default function LandingPage() {
                   </svg>
                 ),
                 title: 'Tour Management',
-                desc: 'Score, rank, and coordinate building tours with your entire team. Upload photos from your phone and let AI tag and organize them automatically.',
+                desc: 'Score, rank, and coordinate building tours with your entire team. Upload photos from your phone and let the platform tag and organize them automatically.',
                 accent: '#fef3c7',
               },
               {
@@ -766,8 +766,8 @@ export default function LandingPage() {
                     <path d="M8.5 14.5A9 9 0 003 21h18a9 9 0 00-5.5-6.5" />
                   </svg>
                 ),
-                title: 'AI-Powered Analysis',
-                desc: 'An AI assistant built into every project. Ask it to compare buildings on cost, find coffee shops near your next tour, calculate walking times between buildings, or break down your lease terms. Connected to Google Maps and Google Places for real-time local intelligence.',
+                title: 'Smart Analysis',
+                desc: 'A market intelligence assistant built into every project. Ask it to compare buildings on cost, find coffee shops near your next tour, calculate walking times between buildings, or break down your lease terms. Connected to Google Maps and Google Places for real-time local intelligence.',
                 accent: '#ede9fe',
               },
               {
@@ -791,7 +791,7 @@ export default function LandingPage() {
                   </svg>
                 ),
                 title: 'Survey Upload & Merge',
-                desc: 'Upload new broker surveys directly into the platform. AI extracts every building and merges it with your existing map automatically.',
+                desc: 'Upload new broker surveys directly into the platform. the platform extracts every building and merges it with your existing map automatically.',
                 accent: '#f0fdf4',
               },
             ].map((card) => (
@@ -838,9 +838,9 @@ export default function LandingPage() {
             {/* Connecting line (desktop only) */}
             <div className="hidden md:block absolute" style={{ top: '40px', left: '16.67%', right: '16.67%', height: '2px', background: '#e2e8f0', zIndex: 0 }} />
             {[
-              { num: '1', title: 'Upload Your Survey', desc: 'Drop in any broker survey or tour book PDF - Savills, CBRE, JLL, Cushman, or custom formats. Our AI reads every page.' },
+              { num: '1', title: 'Upload Your Survey', desc: 'Drop in any broker survey or tour book PDF - Savills, CBRE, JLL, Cushman, or custom formats. The platform reads every page.' },
               { num: '2', title: 'Auto-Extract & Map', desc: 'Buildings are identified, addresses geocoded, and deal terms pulled automatically. Your interactive map generates in minutes.' },
-              { num: '3', title: 'Analyze & Share', desc: 'Build your tour list right from the map. Upload RFPs or LOIs for instant financial analysis. Ask the AI assistant anything about your buildings, costs, or tours. Share everything with stakeholders via a single link.' },
+              { num: '3', title: 'Analyze & Share', desc: 'Build your tour list right from the map. Upload RFPs or LOIs for instant financial analysis. Ask your assistant anything about your buildings, costs, or tours. Share everything with stakeholders via a single link.' },
             ].map((step) => (
               <div key={step.num} className="relative z-10 text-center" style={{ padding: '1.5rem' }}>
                 <div className="flex items-center justify-center rounded-full text-white font-bold" style={{ width: '56px', height: '56px', background: '#2563eb', fontFamily: 'var(--font-display)', fontSize: 'clamp(1.125rem, 1rem + 0.75vw, 1.5rem)', margin: '0 auto 1.5rem auto', boxShadow: '0 4px 12px rgba(37,99,235,0.25)' }}>
@@ -872,7 +872,7 @@ export default function LandingPage() {
               There is no map, no sorting, no filtering. Commute studies require outside consultants. Financial models get rebuilt from scratch every time. Tour notes are handwritten on paper folders. And at the end of it all, the final decision often comes down to gut feel instead of structured intelligence.
             </p>
             <p style={{ color: '#64748b', lineHeight: 1.7, marginTop: '1rem' }}>
-              Tour-Lytics replaces this entire workflow. Upload a broker survey PDF and get an interactive map with every building. Generate GAAP-compliant financials the moment a deal lands. Run commute studies in seconds instead of weeks. Score buildings during the tour from your phone. And ask an AI assistant anything about your buildings, costs, or schedule. From broker survey to signed lease, every step lives in one place.
+              Tour-Lytics replaces this entire workflow. Upload a broker survey PDF and get an interactive map with every building. Generate GAAP-compliant financials the moment a deal lands. Run commute studies in seconds instead of weeks. Score buildings during the tour from your phone. And ask your built-in assistant anything about your buildings, costs, or schedule. From broker survey to signed lease, every step lives in one place.
             </p>
           </div>
 
@@ -910,7 +910,7 @@ export default function LandingPage() {
                   'Tour Book with scores, photos, and notes',
                   'Commute analysis in seconds, not weeks',
                   'Monthly cash flow & GAAP P&L',
-                  'AI assistant that answers questions about any building or deal',
+                  'Built-in assistant that answers questions about any building or deal',
                   'Upload new surveys directly to the map',
                 ].map((item) => (
                   <li key={item} className="text-sm relative" style={{ color: '#64748b', paddingLeft: '1.25rem' }}>
@@ -1248,7 +1248,7 @@ export default function LandingPage() {
                 icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>,
                 title: 'Any Survey Format',
                 desc: 'Handles PDFs from Savills, CBRE, JLL, Cushman & Wakefield, Newmark, and custom broker formats.',
-                tag: 'AI-Powered Parsing',
+                tag: 'Smart Parsing',
               },
               {
                 icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" /><line x1="8" y1="2" x2="8" y2="18" /><line x1="16" y1="6" x2="16" y2="22" /></svg>,
@@ -1268,7 +1268,7 @@ export default function LandingPage() {
               },
               {
                 icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" /></svg>,
-                title: 'AI Chat Assistant',
+                title: 'Scout - Market Intelligence',
                 desc: 'Ask your project anything. Compare buildings, break down lease costs, find nearby restaurants, calculate walking times between tours. Connected to Google Maps and Places for real-time local data.',
               },
               {
@@ -1294,14 +1294,14 @@ export default function LandingPage() {
               },
               {
                 icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>,
-                title: 'AI Photo Analysis',
-                desc: 'Upload tour photos and get AI-powered tagging and organization. Photos are linked to buildings and rooms, searchable by the entire team.',
+                title: 'Smart Photo Analysis',
+                desc: 'Upload tour photos and get automated tagging and organization. Photos are linked to buildings and rooms, searchable by the entire team.',
                 tag: 'New',
               },
               {
                 icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>,
                 title: 'Survey Upload',
-                desc: 'Upload a new broker survey PDF directly into the platform. AI extracts every building, geocodes addresses, and merges them with your existing map.',
+                desc: 'Upload a new broker survey PDF directly into the platform. the platform extracts every building, geocodes addresses, and merges them with your existing map.',
                 tag: 'New',
               },
             ].map((f) => (
