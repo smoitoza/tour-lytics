@@ -20,7 +20,7 @@ function getSupabase() {
 const TOKEN_PACKS: Record<string, { tokens: number; priceCents: number; label: string }> = {
   starter: { tokens: 100, priceCents: 10000, label: 'Starter Pack' },          // $100 (1:1)
   professional: { tokens: 500, priceCents: 45000, label: 'Professional Pack' }, // $450 (10% off)
-  enterprise: { tokens: 2000, priceCents: 160000, label: 'Enterprise Pack' },  // $1,600 (20% off)
+  enterprise: { tokens: 2000, priceCents: 170000, label: 'Enterprise Pack' },  // $1,700 (15% off)
 }
 
 export async function POST(request: NextRequest) {
