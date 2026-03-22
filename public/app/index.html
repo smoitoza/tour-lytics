@@ -2206,20 +2206,20 @@ body {
     @media (max-width: 600px) {
       .tour-panel { width: 100%; }
       .map-action-buttons {
-        bottom: 20px;
-        left: 12px;
-        gap: 6px;
+        bottom: 12px;
+        left: 8px;
+        right: 8px;
+        gap: 4px;
+        flex-direction: row;
+        flex-wrap: wrap;
       }
-      .tour-toggle {
-        padding: 8px 14px; font-size: 0.72rem;
-        border-radius: 50px;
-        box-shadow: 0 3px 12px rgba(0,0,0,0.15);
+      .tour-toggle, .survey-upload-toggle {
+        padding: 6px 10px; font-size: 0.65rem;
+        border-radius: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
       }
-      .tour-toggle svg { width: 14px; height: 14px; }
-      .tour-toggle-count { min-width: 16px; height: 16px; font-size: 0.55rem; padding: 0 4px; }
-      .survey-upload-toggle {
-        padding: 8px 14px; font-size: 0.72rem;
-      }
+      .tour-toggle svg, .survey-upload-toggle svg { width: 12px; height: 12px; }
+      .tour-toggle-count { min-width: 14px; height: 14px; font-size: 0.5rem; padding: 0 3px; }
     }
 
 
@@ -7655,12 +7655,34 @@ body {
 }
 
 @media (max-width: 768px) {
-  /* --- Hide desktop header and top tab bar on mobile --- */
+  /* --- Hide desktop header on mobile, KEEP page-tabs visible --- */
   .header {
     display: none !important;
   }
   .page-tabs {
-    display: none !important;
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10000;
+    display: flex !important;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    padding: var(--space-1) var(--space-2) !important;
+    gap: 2px !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .page-tab {
+    font-size: 0.6rem !important;
+    padding: 6px 8px !important;
+    gap: 3px !important;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .page-tab svg {
+    width: 12px !important;
+    height: 12px !important;
   }
 
   /* --- Body: use JS-driven --app-height (window.innerHeight) which
@@ -7674,11 +7696,11 @@ body {
     min-height: 0 !important; /* override base min-height: 100dvh */
   }
 
-  /* --- Tab content fills viewport below top tab bar --- */
-  /* 52px = top tab bar height */
+  /* --- Tab content fills viewport below top page-tabs bar --- */
+  /* 40px = compact page-tabs height on mobile */
   .tab-content.active {
-    height: calc(var(--app-height, 100vh) - 52px);
-    margin-top: 52px;
+    height: calc(var(--app-height, 100vh) - 40px);
+    margin-top: 40px;
     overflow-y: auto;
   }
 
@@ -7693,19 +7715,9 @@ body {
     display: none !important;
   }
 
-  /* --- MOBILE TOP TAB BAR (moved to top so Safari bottom toolbar can't block it) --- */
+  /* --- MOBILE BOTTOM TAB BAR: hidden, page-tabs at top handles navigation --- */
   .mobile-tab-bar {
-    display: flex !important;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 52px;
-    background: var(--color-surface);
-    border-bottom: 1px solid var(--color-border);
-    z-index: 10000;
-    align-items: flex-start;
-    justify-content: space-around;
+    display: none !important;
   }
 
   .mobile-tab {
