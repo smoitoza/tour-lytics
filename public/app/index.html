@@ -5333,6 +5333,115 @@ body {
     }
     .ai-usage-reseed-cancel:hover { background: var(--color-surface-2); }
 
+    /* Token purchase packs */
+    .token-packs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-4);
+      margin-bottom: var(--space-6);
+    }
+    .token-pack {
+      background: var(--color-surface);
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-5) var(--space-4);
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .token-pack:hover {
+      border-color: var(--color-accent-purple);
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.15);
+      transform: translateY(-2px);
+    }
+    .token-pack.popular {
+      border-color: var(--color-accent-purple);
+    }
+    .token-pack-badge {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--color-accent-purple);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 3px 12px;
+      border-radius: 999px;
+    }
+    .token-pack-tokens {
+      font-family: var(--font-display);
+      font-size: clamp(1.5rem, 1.2rem + 1vw, 2rem);
+      font-weight: 700;
+      color: var(--color-text);
+      margin-bottom: var(--space-1);
+    }
+    .token-pack-label {
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-3);
+    }
+    .token-pack-desc {
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-4);
+      line-height: 1.4;
+    }
+    .token-pack-btn {
+      display: inline-block;
+      padding: 10px 24px;
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: #fff;
+      background: var(--color-accent-purple);
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      width: 100%;
+    }
+    .token-pack-btn:hover { background: #6d28d9; }
+    .token-pack-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .token-pack-btn.loading::after {
+      content: '';
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    .token-purchase-note {
+      text-align: center;
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+      margin-top: var(--space-2);
+    }
+    .payment-success-banner {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      color: #fff;
+      padding: var(--space-4);
+      border-radius: var(--radius-lg);
+      margin-bottom: var(--space-4);
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      font-weight: 500;
+      animation: fadeIn 0.3s ease;
+    }
+    .payment-success-banner svg { flex-shrink: 0; }
+
     /* Sections */
     .ai-usage-section {
       margin-bottom: var(--space-6);
@@ -5444,6 +5553,7 @@ body {
     /* Mobile responsive */
     @media (max-width: 900px) {
       .ai-usage-cards { grid-template-columns: repeat(2, 1fr); }
+      .token-packs { grid-template-columns: 1fr; }
     }
     @media (max-width: 600px) {
       .ai-usage-page {
@@ -8462,6 +8572,9 @@ body {
       <button class="ai-usage-reseed-btn" id="aiUsageReseedBtn" onclick="aiUsageReseed()">+ Add Tokens</button>
     </div>
 
+    <!-- Payment success banner (shown after Stripe redirect) -->
+    <div id="paymentSuccessBanner" style="display:none;"></div>
+
     <!-- Balance cards -->
     <div class="ai-usage-cards" id="aiUsageCards">
       <div class="ai-usage-card ai-usage-card-balance">
@@ -8501,6 +8614,33 @@ body {
         <button class="ai-usage-reseed-submit" onclick="aiUsageSubmitReseed()">Confirm</button>
         <button class="ai-usage-reseed-cancel" onclick="document.getElementById('aiUsageReseedForm').style.display='none'">Cancel</button>
       </div>
+    </div>
+
+    <!-- Token Purchase Packs -->
+    <div class="ai-usage-section">
+      <h3 class="ai-usage-section-title">Purchase Tokens</h3>
+      <div class="token-packs" id="tokenPacks">
+        <div class="token-pack" data-pack="starter">
+          <div class="token-pack-tokens">100</div>
+          <div class="token-pack-label">Starter Pack</div>
+          <div class="token-pack-desc">Great for getting started. Covers AI chat, photo analysis, and basic usage.</div>
+          <button class="token-pack-btn" onclick="purchaseTokenPack('starter', this)">Buy Tokens</button>
+        </div>
+        <div class="token-pack popular" data-pack="professional">
+          <div class="token-pack-badge">Most Popular</div>
+          <div class="token-pack-tokens">500</div>
+          <div class="token-pack-label">Professional Pack</div>
+          <div class="token-pack-desc">Best for active projects. Full financial analysis, survey uploads, and AI features.</div>
+          <button class="token-pack-btn" onclick="purchaseTokenPack('professional', this)">Buy Tokens</button>
+        </div>
+        <div class="token-pack" data-pack="enterprise">
+          <div class="token-pack-tokens">2,000</div>
+          <div class="token-pack-label">Enterprise Pack</div>
+          <div class="token-pack-desc">For teams managing multiple projects with heavy AI usage and analytics.</div>
+          <button class="token-pack-btn" onclick="purchaseTokenPack('enterprise', this)">Buy Tokens</button>
+        </div>
+      </div>
+      <div class="token-purchase-note">Secure checkout powered by Stripe. Tokens are added instantly after purchase.</div>
     </div>
 
     <!-- Usage by action -->
@@ -17581,6 +17721,90 @@ async function aiUsageSubmitReseed() {
   }
 }
 
+// ---- Stripe Token Purchase ----
+async function purchaseTokenPack(packId, btnEl) {
+  if (!getCurrentUserEmail()) {
+    alert('Please sign in to purchase tokens.');
+    return;
+  }
+
+  var origText = btnEl.textContent;
+  btnEl.disabled = true;
+  btnEl.textContent = 'Redirecting...';
+  btnEl.classList.add('loading');
+
+  try {
+    var res = await fetch('/api/stripe/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        packId: packId,
+        projectId: getProjectId(),
+        userEmail: getCurrentUserEmail()
+      })
+    });
+
+    if (!res.ok) {
+      var err = await res.json();
+      alert('Unable to start checkout: ' + (err.error || 'Please try again'));
+      btnEl.disabled = false;
+      btnEl.textContent = origText;
+      btnEl.classList.remove('loading');
+      return;
+    }
+
+    var data = await res.json();
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      alert('No checkout URL returned. Please try again.');
+      btnEl.disabled = false;
+      btnEl.textContent = origText;
+      btnEl.classList.remove('loading');
+    }
+  } catch (err) {
+    alert('Checkout failed: ' + err.message);
+    btnEl.disabled = false;
+    btnEl.textContent = origText;
+    btnEl.classList.remove('loading');
+  }
+}
+
+// Check for payment return from Stripe
+function checkPaymentReturn() {
+  var params = new URLSearchParams(window.location.search);
+  var payment = params.get('payment');
+  var tokens = params.get('tokens');
+
+  if (payment === 'success' && tokens) {
+    var banner = document.getElementById('paymentSuccessBanner');
+    if (banner) {
+      banner.className = 'payment-success-banner';
+      banner.style.display = 'flex';
+      banner.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' +
+        '<span>Payment successful! ' + tokens + ' tokens have been added to your project.</span>';
+
+      // Auto-dismiss after 8 seconds
+      setTimeout(function() {
+        banner.style.display = 'none';
+      }, 8000);
+    }
+
+    // Clean up URL params
+    var cleanUrl = window.location.pathname + window.location.hash;
+    window.history.replaceState({}, '', cleanUrl);
+
+    // Refresh token data
+    setTimeout(function() { aiUsageLoad(); }, 500);
+  }
+
+  if (payment === 'cancelled') {
+    // Clean up URL params silently
+    var cleanUrl = window.location.pathname + window.location.hash;
+    window.history.replaceState({}, '', cleanUrl);
+  }
+}
+
 // Helper: escape HTML (reuse if not already defined)
 function esc(s) {
   if (!s) return '';
@@ -20979,6 +21203,9 @@ function closeMobileMore() {
     }
   } catch(e) {}
 })();
+
+// Check for Stripe payment return (runs on every page load)
+checkPaymentReturn();
 </script>
 
 </body>
