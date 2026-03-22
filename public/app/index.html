@@ -3279,6 +3279,61 @@ body {
       border-radius: 6px;
       cursor: pointer;
     }
+
+    /* Photo delete mode */
+    .photos-page.delete-mode .photos-card { cursor: pointer; position: relative; }
+    .photos-page.delete-mode .photos-card::after {
+      content: '';
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      border: 2px solid rgba(255,255,255,0.8);
+      background: rgba(0,0,0,0.3);
+      z-index: 2;
+    }
+    .photos-page.delete-mode .photos-card.selected-for-delete {
+      outline: 3px solid #ef4444;
+      outline-offset: -3px;
+    }
+    .photos-page.delete-mode .photos-card.selected-for-delete::after {
+      background: #ef4444;
+      border-color: #ef4444;
+      content: '\2713';
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .photos-delete-bar {
+      display: none;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 10px 16px;
+      margin-bottom: 12px;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      color: #991b1b;
+    }
+    .photos-delete-bar.visible { display: flex; }
+    .photos-delete-bar button {
+      padding: 6px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .photos-delete-confirm { background: #ef4444; color: #fff; }
+    .photos-delete-confirm:hover { background: #dc2626; }
+    .photos-delete-cancel-bar { background: #e5e7eb; color: #374151; }
+    .photos-delete-cancel-bar:hover { background: #d1d5db; }
     @media (max-width: 768px) {
       .photo-lightbox-nav { width: 36px; height: 36px; font-size: 18px; }
       .photo-lightbox-nav.prev { left: 8px; }
@@ -8400,6 +8455,10 @@ body {
         <input type="text" class="photos-filter-input" id="photoFilterSearch" placeholder="Search descriptions or tags..." oninput="applyPhotoFilters()" />
       </div>
       <div class="photos-stats" id="photosStats"></div>
+      <button class="photos-upload-btn" style="background:#ef4444;" id="photosDeleteBtn" onclick="togglePhotoDeleteMode()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        Delete Photos
+      </button>
       <button class="photos-upload-btn" style="background:#f59e0b;" id="photosReanalyzeBtn" onclick="reanalyzeAllPhotos()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M21 21v-5h-5"/></svg>
         Re-analyze AI
@@ -8411,6 +8470,13 @@ body {
     </div>
 
     <!-- Photo grid -->
+    <!-- Delete selection bar -->
+    <div class="photos-delete-bar" id="photosDeleteBar">
+      <span id="photosDeleteCount">0 photos selected</span>
+      <span style="flex:1"></span>
+      <button class="photos-delete-cancel-bar" onclick="togglePhotoDeleteMode()">Cancel</button>
+      <button class="photos-delete-confirm" onclick="deleteSelectedPhotos()">Delete Selected</button>
+    </div>
     <div class="photos-grid" id="photosGrid">
       <div class="photos-loading">Loading photos...</div>
     </div>
@@ -16504,6 +16570,71 @@ async function savePhotoCorrection(photoId) {
   }
 }
 
+// ---- Photo Delete Mode (multi-select) ----
+var _photoDeleteMode = false;
+var _photosSelectedForDelete = new Set();
+
+function togglePhotoDeleteMode() {
+  _photoDeleteMode = !_photoDeleteMode;
+  _photosSelectedForDelete.clear();
+
+  var page = document.querySelector('.photos-page');
+  var bar = document.getElementById('photosDeleteBar');
+  var btn = document.getElementById('photosDeleteBtn');
+
+  if (_photoDeleteMode) {
+    page.classList.add('delete-mode');
+    bar.classList.add('visible');
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Cancel Delete';
+    updateDeleteCount();
+  } else {
+    page.classList.remove('delete-mode');
+    bar.classList.remove('visible');
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Delete Photos';
+    // Remove selection styles
+    document.querySelectorAll('.photos-card.selected-for-delete').forEach(function(c) {
+      c.classList.remove('selected-for-delete');
+    });
+  }
+}
+
+function togglePhotoSelection(card, photoId) {
+  if (!_photoDeleteMode) return;
+  if (_photosSelectedForDelete.has(photoId)) {
+    _photosSelectedForDelete.delete(photoId);
+    card.classList.remove('selected-for-delete');
+  } else {
+    _photosSelectedForDelete.add(photoId);
+    card.classList.add('selected-for-delete');
+  }
+  updateDeleteCount();
+}
+
+function updateDeleteCount() {
+  var el = document.getElementById('photosDeleteCount');
+  if (el) el.textContent = _photosSelectedForDelete.size + ' photo' + (_photosSelectedForDelete.size !== 1 ? 's' : '') + ' selected';
+}
+
+async function deleteSelectedPhotos() {
+  var count = _photosSelectedForDelete.size;
+  if (count === 0) { alert('No photos selected.'); return; }
+  if (!confirm('Delete ' + count + ' photo' + (count !== 1 ? 's' : '') + '? This cannot be undone.')) return;
+
+  var ids = Array.from(_photosSelectedForDelete);
+  var deleted = 0;
+  for (var i = 0; i < ids.length; i++) {
+    try {
+      var res = await fetch('/api/photos?photoId=' + ids[i] + '&uploadedBy=' + encodeURIComponent(getCurrentUserEmail()), { method: 'DELETE' });
+      if (res.ok) deleted++;
+    } catch(e) {}
+  }
+
+  alert('Deleted ' + deleted + ' of ' + count + ' photos.');
+  togglePhotoDeleteMode();
+  _photoCache = {};
+  if (typeof loadPhotosPage === 'function') loadPhotosPage();
+}
+
 async function deletePhotoFromLightbox(photoId) {
   if (!confirm('Delete this photo? This cannot be undone.')) return;
 
@@ -16762,7 +16893,7 @@ function renderPhotosGrid(photos) {
         var tags = p.ai_tags || [];
         var areaLabel = AREA_LABELS[p.ai_area_suggestion || p.area_tag || 'general'] || area;
 
-        html += '<div class="photos-card" onclick="openGalleryLightbox(' + _galleryFlatIndex + ')">'; 
+        html += '<div class="photos-card" data-photo-id="' + p.id + '" onclick="if(_photoDeleteMode){togglePhotoSelection(this,\'' + p.id + '\');return;} openGalleryLightbox(' + _galleryFlatIndex + ')">'; 
         if (!window._galleryFlatPhotos) window._galleryFlatPhotos = [];
         window._galleryFlatPhotos.push({ url: p.file_url, desc: desc, tags: tags, area: areaLabel, building: p.building_name });
         _galleryFlatIndex++;
