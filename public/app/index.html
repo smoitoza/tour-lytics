@@ -8048,11 +8048,11 @@ body {
   </button>
 </nav>
 <script>
-// Show AI Usage tab for admin (must be after nav element exists)
+// Show AI Usage tab for any logged-in user (project owners see their token usage)
 (function() {
   try {
     var p = new URLSearchParams(window.location.search);
-    if ((p.get('userEmail') || '').toLowerCase() === 'samoitoza@gmail.com') {
+    if (p.get('userEmail')) {
       var aiTab = document.getElementById('tabBtnAiUsage');
       if (aiTab) aiTab.style.display = '';
     }
@@ -11769,8 +11769,8 @@ async function fetchUserRole() {
     if (!hasAdminAccess()) {
       document.body.classList.add('touree-mode');
     }
-    // Show AI Usage tab for admins only
-    if (isAdmin()) {
+    // Show AI Usage tab for all authenticated users (project owners see token usage)
+    if (getCurrentUserEmail()) {
       var aiTab = document.getElementById('tabBtnAiUsage');
       if (aiTab) aiTab.style.display = '';
     }
@@ -20500,11 +20500,11 @@ function closeMobileMore() {
   document.getElementById('mobileMoreOverlay').classList.remove('visible');
 }
 
-// Show AI Usage in mobile more menu for admin
+// Show AI Usage in mobile more menu for any logged-in user
 (function() {
   try {
     var p = new URLSearchParams(window.location.search);
-    if ((p.get('userEmail') || '').toLowerCase() === 'samoitoza@gmail.com') {
+    if (p.get('userEmail')) {
       var btn = document.getElementById('mobileAiUsageBtn');
       if (btn) btn.style.display = '';
     }
