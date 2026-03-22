@@ -394,6 +394,31 @@ async function getAssumptionsContext(projectId: string): Promise<string> {
   }
 }
 
+// Fetch current office locations for this project
+async function getOfficeContext(projectId: string): Promise<string> {
+  try {
+    const { data, error } = await supabase
+      .from('project_offices')
+      .select('label, address, lat, lng')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: true })
+
+    if (error || !data || data.length === 0) return ''
+
+    let ctx = '\n\n[CURRENT OFFICE LOCATIONS]\n'
+    ctx += 'The company\'s current office locations are:\n'
+    data.forEach((o, i) => {
+      ctx += `${i + 1}. ${o.label || 'Office'}: ${o.address}`
+      if (o.lat && o.lng) ctx += ` (${o.lat.toFixed(4)}, ${o.lng.toFixed(4)})`
+      ctx += '\n'
+    })
+    ctx += 'These are shown as gold star markers on the map. Use these locations when the user asks about their current office, HQ, or wants directions/comparisons from their current location.\n'
+    return ctx
+  } catch {
+    return ''
+  }
+}
+
 // Fetch photo descriptions for this project
 async function getPhotoContext(projectId: string): Promise<string> {
   try {
@@ -742,6 +767,9 @@ Live team data is injected below. Group by persona: Admin, Broker, CRE Team, Tou
 COMMUTE STUDY CAPABILITY:
 Full commute study data (employee commute analysis) is available with per-building averages and per-department breakdowns.
 
+CURRENT OFFICE LOCATIONS:
+The company's current office locations (HQ, labs, warehouses, etc.) may be listed at the end of this prompt. Use these when the user asks "where is my current office?", "how far is X from our HQ?", or wants to compare proposed buildings to their current location. You can use the get_directions tool to calculate travel time from a current office to any survey building.
+
 DISPLAYING PHOTOS:
 Show photos using markdown image syntax: ![description](url). Show up to 3-4 at a time.
 
@@ -839,7 +867,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch all project-scoped data in parallel
-    const [projectMeta, buildingCtx, photoContext, rfpContext, teamContext, commuteContext, assumptionsContext] = await Promise.all([
+    const [projectMeta, buildingCtx, photoContext, rfpContext, teamContext, commuteContext, assumptionsContext, officeContext] = await Promise.all([
       getProjectMeta(projectId),
       getBuildingContext(projectId),
       getPhotoContext(projectId),
@@ -847,10 +875,11 @@ export async function POST(request: NextRequest) {
       getTeamContext(projectId),
       getCommuteContext(projectId),
       getAssumptionsContext(projectId),
+      getOfficeContext(projectId),
     ])
 
     const dynamicSystemPrompt = buildSystemPrompt(projectMeta.name, projectMeta.market, 0)
-    const SYSTEM_PROMPT = getCurrentDateContext() + '\n\n' + dynamicSystemPrompt + '\n' + buildingCtx + rfpContext + assumptionsContext + teamContext + commuteContext + photoContext
+    const SYSTEM_PROMPT = getCurrentDateContext() + '\n\n' + dynamicSystemPrompt + '\n' + buildingCtx + rfpContext + assumptionsContext + teamContext + commuteContext + photoContext + officeContext
 
     const tools = getTools(projectMeta.market)
 
