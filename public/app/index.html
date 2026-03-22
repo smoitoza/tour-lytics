@@ -10314,6 +10314,18 @@ if (allMarkers.length > 0) {
     // Show Clear Survey button if buildings exist and user has admin access
     var clearBtn = document.getElementById('surveyClearBtn');
     if (clearBtn && saved.length > 0 && hasAdminAccess()) clearBtn.style.display = '';
+
+    // Update header subtitle with actual building count
+    var headerSub = document.querySelector('.header-subtitle');
+    if (headerSub) {
+      var tourCount = (typeof getTourList === 'function') ? getTourList().length : 0;
+      var slCount = (_shortlistItems || []).length;
+      var parts = [];
+      parts.push(SURVEY_BUILDINGS.length + ' Buildings Evaluated');
+      if (slCount > 0) parts.push(slCount + ' Shortlisted');
+      if (tourCount > 0) parts.push(tourCount + ' on Tour List');
+      headerSub.textContent = parts.join(' · ');
+    }
   } catch (err) {
     console.warn('Could not load saved survey buildings:', err);
   }
