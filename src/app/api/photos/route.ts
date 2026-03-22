@@ -180,3 +180,40 @@ export async function DELETE(req: Request) {
 
   return NextResponse.json({ success: true })
 }
+
+// PATCH - Update photo area tag and/or description (correct AI analysis)
+export async function PATCH(req: Request) {
+  try {
+    const body = await req.json()
+    const { photoId, area_tag, ai_description } = body
+
+    if (!photoId) {
+      return NextResponse.json({ error: 'photoId required' }, { status: 400 })
+    }
+
+    const updates: Record<string, any> = {}
+    if (area_tag !== undefined) updates.area_tag = area_tag
+    if (ai_description !== undefined) updates.ai_description = ai_description
+    // Also update ai_area_suggestion to match the corrected area_tag
+    if (area_tag !== undefined) updates.ai_area_suggestion = area_tag
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
+    }
+
+    const { data, error } = await supabase
+      .from('building_photos')
+      .update(updates)
+      .eq('id', photoId)
+      .select()
+      .single()
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json(data)
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 500 })
+  }
+}

@@ -3212,6 +3212,73 @@ body {
     .photo-lightbox-nav:hover { background: #fff; transform: translateY(-50%) scale(1.08); }
     .photo-lightbox-nav.prev { left: -52px; }
     .photo-lightbox-nav.next { right: -52px; }
+
+    .photo-edit-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #f59e0b;
+      background: rgba(245,158,11,0.1);
+      border: 1px solid rgba(245,158,11,0.3);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s;
+      margin-left: 8px;
+    }
+    .photo-edit-btn:hover { background: rgba(245,158,11,0.2); }
+    .photo-edit-form {
+      margin-top: 8px;
+      padding: 10px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: flex-end;
+    }
+    .photo-edit-form label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: rgba(255,255,255,0.6);
+      display: block;
+      margin-bottom: 3px;
+    }
+    .photo-edit-form select, .photo-edit-form textarea {
+      font-size: 12px;
+      padding: 6px 8px;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 6px;
+      background: rgba(0,0,0,0.4);
+      color: #fff;
+      font-family: inherit;
+    }
+    .photo-edit-form select { width: 180px; }
+    .photo-edit-form textarea { width: 100%; min-height: 50px; resize: vertical; }
+    .photo-edit-save {
+      padding: 6px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+      background: #f59e0b;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .photo-edit-save:hover { background: #d97706; }
+    .photo-edit-cancel {
+      padding: 6px 12px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.6);
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 6px;
+      cursor: pointer;
+    }
     @media (max-width: 768px) {
       .photo-lightbox-nav { width: 36px; height: 36px; font-size: 18px; }
       .photo-lightbox-nav.prev { left: 8px; }
@@ -16305,7 +16372,12 @@ function openPhotoLightbox(cacheKey, photoId) {
         p.ai_tags.forEach(function(t) { aiInfo += '<span class="ai-tag">' + t.replace(/_/g, ' ') + '</span>'; });
         aiInfo += '</div>';
       }
-      aiInfo += '<div style="margin-top:6px;opacity:0.6;font-size:0.55rem">Area: ' + (AREA_LABELS[p.ai_area_suggestion || p.area_tag] || p.area_tag) + ' | By: ' + p.uploaded_by + '</div>';
+      var currentArea = p.ai_area_suggestion || p.area_tag || 'general';
+      aiInfo += '<div style="margin-top:6px;opacity:0.6;font-size:0.55rem">Area: ' + (AREA_LABELS[currentArea] || currentArea) + ' | By: ' + p.uploaded_by +
+        ' <button class="photo-edit-btn" onclick="event.stopPropagation(); togglePhotoEdit(\'' + p.id + '\', \'' + currentArea + '\')">' +
+        '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg> Correct</button>' +
+      '</div>';
+      aiInfo += '<div id="photo-edit-form-' + p.id + '" style="display:none"></div>';
       aiInfo += '</div>';
     }
 
@@ -16342,6 +16414,86 @@ function navPhotoLightbox(dir) {
   var cacheKey = Object.keys(_photoCache).find(function(k) { return _photoCache[k] === photos; });
   closePhotoLightbox();
   openPhotoLightbox(cacheKey, photos[newIdx].id);
+}
+
+function togglePhotoEdit(photoId, currentArea) {
+  var container = document.getElementById('photo-edit-form-' + photoId);
+  if (!container) return;
+
+  if (container.style.display !== 'none') {
+    container.style.display = 'none';
+    return;
+  }
+
+  // Build area options
+  var areaKeys = Object.keys(AREA_LABELS);
+  var opts = areaKeys.map(function(k) {
+    return '<option value="' + k + '"' + (k === currentArea ? ' selected' : '') + '>' + AREA_LABELS[k] + '</option>';
+  }).join('');
+
+  container.innerHTML = '<div class="photo-edit-form">' +
+    '<div>' +
+      '<label>Area Tag</label>' +
+      '<select id="photo-edit-area-' + photoId + '">' + opts + '</select>' +
+    '</div>' +
+    '<div style="flex:1;min-width:200px;">' +
+      '<label>Description (optional)</label>' +
+      '<textarea id="photo-edit-desc-' + photoId + '" placeholder="Leave blank to keep current description"></textarea>' +
+    '</div>' +
+    '<button class="photo-edit-save" onclick="event.stopPropagation(); savePhotoCorrection(\'' + photoId + '\')">Save</button>' +
+    '<button class="photo-edit-cancel" onclick="event.stopPropagation(); document.getElementById(\'photo-edit-form-' + photoId + '\').style.display=\'none\'">Cancel</button>' +
+  '</div>';
+  container.style.display = 'block';
+}
+
+async function savePhotoCorrection(photoId) {
+  var areaSelect = document.getElementById('photo-edit-area-' + photoId);
+  var descInput = document.getElementById('photo-edit-desc-' + photoId);
+  if (!areaSelect) return;
+
+  var newArea = areaSelect.value;
+  var newDesc = descInput ? descInput.value.trim() : '';
+
+  var body = { photoId: photoId, area_tag: newArea };
+  if (newDesc) body.ai_description = newDesc;
+
+  try {
+    var res = await fetch('/api/photos', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+      var err = await res.json();
+      alert('Failed to save: ' + (err.error || 'Unknown error'));
+      return;
+    }
+
+    // Update the cached photo data
+    Object.keys(_photoCache).forEach(function(key) {
+      var photos = _photoCache[key];
+      if (!Array.isArray(photos)) return;
+      photos.forEach(function(p) {
+        if (p.id === photoId) {
+          p.area_tag = newArea;
+          p.ai_area_suggestion = newArea;
+          if (newDesc) p.ai_description = newDesc;
+        }
+      });
+    });
+
+    // Re-render the lightbox to show updated info
+    if (_photoLightbox) {
+      var photos = _photoLightbox._photos;
+      var currentIdx = _photoLightbox._currentIndex;
+      var cacheKey = Object.keys(_photoCache).find(function(k) { return _photoCache[k] === photos; });
+      closePhotoLightbox();
+      openPhotoLightbox(cacheKey, photos[currentIdx].id);
+    }
+  } catch (err) {
+    alert('Failed to save correction: ' + err.message);
+  }
 }
 
 function closePhotoLightbox() {
