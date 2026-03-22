@@ -16422,7 +16422,16 @@ async function submitPhotoUpload() {
   cancelBtn.onclick = function() {
     _photoUploadModal.remove();
     _photoUploadModal = null;
+    // Refresh photos page and caches
+    _photoCache = {};
+    if (typeof loadPhotosPage === 'function') loadPhotosPage();
   };
+
+  // Auto-refresh photos grid after a delay to pick up AI analysis results
+  setTimeout(function() {
+    _photoCache = {};
+    if (typeof loadPhotosPage === 'function') loadPhotosPage();
+  }, 15000); // 15s delay for AI analysis to complete
 }
 
 // --- Photo Lightbox ---
