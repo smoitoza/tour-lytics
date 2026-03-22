@@ -1231,6 +1231,68 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* == MARKET INTELLIGENCE & MAP OVERLAYS == */}
+      <section id="market-intelligence" style={{ padding: '6rem 0', background: '#f8fafc' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
+          <div className="text-center" style={{ marginBottom: '3rem' }}>
+            <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
+              Market Intelligence
+            </span>
+            <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3.5rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.75rem' }}>
+              Data layers that drive smarter decisions
+            </h2>
+            <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', maxWidth: '640px', margin: '0 auto', lineHeight: 1.6 }}>
+              Every map comes with toggleable intelligence layers. See the full picture around each building before you ever step inside.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4" style={{ gap: '1.5rem' }}>
+            {[
+              {
+                icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
+                title: 'Talent Analytics',
+                desc: 'Toggle heatmaps showing employment density by industry: tech, finance, professional services, healthcare, and manufacturing. Powered by Bureau of Labor Statistics county-level data.',
+                color: '#8b5cf6',
+              },
+              {
+                icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#009bda" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M2 12h20" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>,
+                title: 'Public Transit',
+                desc: 'Overlay BART, Muni, Caltrain, and bus stations with transit lines. See which buildings sit on major transit corridors and what connections your employees have.',
+                color: '#009bda',
+              },
+              {
+                icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8" /><path d="M12 17v4" /></svg>,
+                title: 'Nearby Companies',
+                desc: 'See technology, manufacturing, and energy companies near each building. Understand the business ecosystem around every potential office location.',
+                color: '#7c3aed',
+              },
+              {
+                icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f47920" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" /><line x1="8" y1="2" x2="8" y2="18" /><line x1="16" y1="6" x2="16" y2="22" /></svg>,
+                title: 'Submarket Filtering',
+                desc: 'Buildings are automatically color-coded by neighborhood and submarket. The legend breaks down building counts per area so you can compare coverage at a glance.',
+                color: '#f47920',
+              },
+            ].map((f) => (
+              <div
+                key={f.title}
+                className="text-center"
+                style={{ padding: '2rem 1.5rem', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '1rem', transition: 'all 0.2s' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = f.color; (e.currentTarget as HTMLElement).style.boxShadow = `0 4px 16px ${f.color}20` }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#e2e8f0'; (e.currentTarget as HTMLElement).style.boxShadow = 'none' }}
+              >
+                <div className="flex justify-center" style={{ marginBottom: '1rem' }}>{f.icon}</div>
+                <h3 className="font-bold" style={{ fontSize: '1.1rem', color: '#0f172a', marginBottom: '0.5rem' }}>{f.title}</h3>
+                <p style={{ fontSize: '0.875rem', color: '#64748b', lineHeight: 1.6 }}>{f.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-center" style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '1.5rem' }}>
+            All data layers are toggleable from the Map Layers panel. Available on every project, every market.
+          </p>
+        </div>
+      </section>
+
       {/* == PLATFORM FEATURES == */}
       <section id="features" style={{ padding: '6rem 0', background: '#ffffff' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
