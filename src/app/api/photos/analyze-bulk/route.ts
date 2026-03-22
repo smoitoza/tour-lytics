@@ -25,6 +25,8 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}))
     const limit = Math.min(body.limit || 10, 20) // max 20 per call
     const adminKey = body.adminKey
+    const projectId = body.projectId // optional: analyze specific project
+    const forceReanalyze = body.reanalyze === true // re-analyze already analyzed photos
 
     // Simple auth check
     if (adminKey !== 'sre-tour-2026') {
@@ -36,14 +38,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'GOOGLE_AI_API_KEY not configured' }, { status: 500 })
     }
 
-    // Get un-analyzed photos
-    const { data: photos, error } = await supabase
+    // Get photos to analyze
+    let query = supabase
       .from('building_photos')
       .select('*')
-      .eq('project_id', 'sf-office-search')
-      .is('ai_analyzed_at', null)
-      .order('created_at', { ascending: true })
-      .limit(limit)
+    if (projectId) query = query.eq('project_id', projectId)
+    if (!forceReanalyze) query = query.is('ai_analyzed_at', null)
+    query = query.order('created_at', { ascending: true }).limit(limit)
+    const { data: photos, error } = await query
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
@@ -59,7 +61,7 @@ export async function POST(req: Request) {
     try {
       for (let i = 0; i < batchCount; i++) {
         const tokenResult = await debitTokens({
-          projectId: 'sf-office-search',
+          projectId: projectId || photos[0]?.project_id || 'unknown',
           action: 'photo_bulk_analysis',
           metadata: { photo_count: photos.length, batch: i + 1, total_batches: batchCount },
           note: `Bulk photo analysis: batch ${i + 1}/${batchCount} (${photos.length} photos total)`,
@@ -128,7 +130,7 @@ Respond in this exact JSON format:
 }`
 
         const result = await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
+          model: 'gemini-2.0-pro',
           contents: [{
             role: 'user',
             parts: [
@@ -191,11 +193,12 @@ Respond in this exact JSON format:
     }
 
     // Check how many remain
-    const { count } = await supabase
+    let countQuery = supabase
       .from('building_photos')
       .select('id', { count: 'exact', head: true })
-      .eq('project_id', 'sf-office-search')
-      .is('ai_analyzed_at', null)
+    if (projectId) countQuery = countQuery.eq('project_id', projectId)
+    if (!forceReanalyze) countQuery = countQuery.is('ai_analyzed_at', null)
+    const { count } = await countQuery
 
     return NextResponse.json({
       analyzed: results.filter(r => r.status === 'analyzed').length,

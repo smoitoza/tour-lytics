@@ -107,7 +107,7 @@ Respond in this exact JSON format:
 }`
 
     const result = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.0-pro',
       contents: [{
         role: 'user',
         parts: [
