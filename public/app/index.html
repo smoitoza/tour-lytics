@@ -16368,22 +16368,24 @@ function openPhotoLightbox(cacheKey, photoId) {
   function renderLightbox(i) {
     var p = photos[i];
     var aiInfo = '';
+    var currentArea = p.ai_area_suggestion || p.area_tag || 'general';
+    aiInfo += '<div class="photo-lightbox-info">';
     if (p.ai_description) {
-      aiInfo += '<div class="photo-lightbox-info">';
       aiInfo += '<p class="ai-desc">' + p.ai_description + '</p>';
       if (p.ai_tags && p.ai_tags.length > 0) {
         aiInfo += '<div class="ai-tags">';
         p.ai_tags.forEach(function(t) { aiInfo += '<span class="ai-tag">' + t.replace(/_/g, ' ') + '</span>'; });
         aiInfo += '</div>';
       }
-      var currentArea = p.ai_area_suggestion || p.area_tag || 'general';
-      aiInfo += '<div style="margin-top:6px;opacity:0.6;font-size:0.55rem">Area: ' + (AREA_LABELS[currentArea] || currentArea) + ' | By: ' + p.uploaded_by +
-        ' <button class="photo-edit-btn" onclick="event.stopPropagation(); togglePhotoEdit(\'' + p.id + '\', \'' + currentArea + '\')">' +
-        '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg> Correct</button>' +
-      '</div>';
-      aiInfo += '<div id="photo-edit-form-' + p.id + '" style="display:none"></div>';
-      aiInfo += '</div>';
+    } else {
+      aiInfo += '<p class="ai-desc" style="opacity:0.5">Photo not yet analyzed. Click "Re-analyze AI" on the Photos tab to run analysis.</p>';
     }
+    aiInfo += '<div style="margin-top:6px;opacity:0.6;font-size:0.55rem">Area: ' + (AREA_LABELS[currentArea] || currentArea) + ' | By: ' + (p.uploaded_by || 'unknown') +
+      ' <button class="photo-edit-btn" onclick="event.stopPropagation(); togglePhotoEdit(\'' + p.id + '\', \'' + currentArea + '\')">' +
+      '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg> Correct</button>' +
+    '</div>';
+    aiInfo += '<div id="photo-edit-form-' + p.id + '" style="display:none"></div>';
+    aiInfo += '</div>';
 
     var lb = document.createElement('div');
     lb.className = 'photo-lightbox';
