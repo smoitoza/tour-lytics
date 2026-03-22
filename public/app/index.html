@@ -15280,6 +15280,15 @@ function rfpExportExcel() {
   var metricLabelStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: '6B7280' } }, alignment: { horizontal: 'left' }, border: { bottom: { style: 'hair', color: { rgb: BORDER_CLR } } } };
   var metricValStyle = { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: BRAND } }, numFmt: '"$"#,##0', alignment: { horizontal: 'right' }, border: { bottom: { style: 'hair', color: { rgb: BORDER_CLR } } } };
   var metricValDecStyle = { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: BRAND } }, numFmt: '"$"#,##0.00', alignment: { horizontal: 'right' }, border: { bottom: { style: 'hair', color: { rgb: BORDER_CLR } } } };
+  // Input cell styles (yellow highlight for editable inputs)
+  var INPUT_FILL = { fgColor: { rgb: 'FFFDE8' } };
+  var inputCurrStyle = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '1565C0' } }, numFmt: '"$"#,##0', alignment: { horizontal: 'right' }, fill: INPUT_FILL, border: { bottom: { style: 'thin', color: { rgb: 'FFD54F' } } } };
+  var inputCurrDecStyle = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '1565C0' } }, numFmt: '"$"#,##0.00', alignment: { horizontal: 'right' }, fill: INPUT_FILL, border: { bottom: { style: 'thin', color: { rgb: 'FFD54F' } } } };
+  var inputNumStyle = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '1565C0' } }, numFmt: '#,##0', alignment: { horizontal: 'right' }, fill: INPUT_FILL, border: { bottom: { style: 'thin', color: { rgb: 'FFD54F' } } } };
+  var inputPctStyle = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '1565C0' } }, numFmt: '0.0%', alignment: { horizontal: 'right' }, fill: INPUT_FILL, border: { bottom: { style: 'thin', color: { rgb: 'FFD54F' } } } };
+  var inputTextStyle = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '1565C0' } }, alignment: { horizontal: 'right' }, fill: INPUT_FILL, border: { bottom: { style: 'thin', color: { rgb: 'FFD54F' } } } };
+  var formulaStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: '37474F' } }, numFmt: '"$"#,##0', alignment: { horizontal: 'right' }, border: { bottom: { style: 'hair', color: { rgb: BORDER_CLR } } } };
+  var formulaDecStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: '37474F' } }, numFmt: '"$"#,##0.00', alignment: { horizontal: 'right' }, border: { bottom: { style: 'hair', color: { rgb: BORDER_CLR } } } };
 
   function n(v) { return (typeof v === 'number' && !isNaN(v)) ? v : (parseFloat(v) || 0); }
   function cellRef(r, c) { return XLSX.utils.encode_cell({ r: r, c: c }); }
@@ -15316,37 +15325,75 @@ function rfpExportExcel() {
   setCell(dtWS, 2, 0, 'Term', headerLeftStyle);
   setCell(dtWS, 2, 1, 'Value', headerStyle);
 
+  // Input fields (yellow highlight) vs read-only fields
+  // 'input' = user can change these to remodel the deal
+  // 'readonly' = informational, not used in calculations
   var dtFields = [
-    ['Building Address', address, 'text'],
-    ['Document Type', docType, 'text'],
-    ['Landlord', terms.landlord || '', 'text'],
-    ['Structure', terms.structure || '', 'text'],
-    ['RSF', n(terms.rsf), 'num'],
-    ['Lease Term (months)', n(terms.lease_term_months), 'num'],
-    ['Commencement Date', terms.commencement_date || '', 'text'],
-    ['Base Rent ($/RSF/yr)', n(terms.base_rent_rsf), 'curr_dec'],
-    ['Annual Escalation', n(terms.annual_escalation_pct) / 100, 'pct'],
-    ['Free Rent (months)', n(terms.free_rent_months), 'num'],
-    ['TI Allowance ($/RSF)', n(terms.ti_allowance_rsf), 'curr_dec'],
-    ['TI Allowance (Total)', n(terms.ti_allowance_total), 'curr'],
-    ['OpEx/Tax/CAM ($/RSF/yr)', n(terms.opex_rsf_yr), 'curr_dec'],
-    ['OpEx (Monthly)', n(terms.opex_monthly), 'curr'],
-    ['Parking Spots', n(terms.parking_spots), 'num'],
-    ['Parking Rate ($/mo)', n(terms.parking_rate_monthly), 'curr'],
-    ['Parking Escalation', n(terms.parking_escalation_pct) / 100, 'pct'],
-    ['Security Deposit', n(terms.security_deposit), 'curr'],
-    ['Rent Basis', terms.rent_basis || '', 'text'],
-    ['Notes', terms.notes || '', 'text'],
+    ['Building Address', address, 'text', 'readonly'],
+    ['Document Type', docType, 'text', 'readonly'],
+    ['Landlord', terms.landlord || '', 'text', 'readonly'],
+    ['Structure', terms.structure || '', 'text', 'readonly'],
+    ['RSF', n(terms.rsf), 'num', 'input'],
+    ['Lease Term (months)', n(terms.lease_term_months), 'num', 'input'],
+    ['Commencement Date', terms.commencement_date || '', 'text', 'input'],
+    ['Base Rent ($/RSF/yr)', n(terms.base_rent_rsf), 'curr_dec', 'input'],
+    ['Annual Escalation', n(terms.annual_escalation_pct) / 100, 'pct', 'input'],
+    ['Free Rent (months)', n(terms.free_rent_months), 'num', 'input'],
+    ['TI Allowance ($/RSF)', n(terms.ti_allowance_rsf), 'curr_dec', 'input'],
+    ['TI Allowance (Total)', n(terms.ti_allowance_total), 'curr', 'formula'],
+    ['OpEx/Tax/CAM ($/RSF/yr)', n(terms.opex_rsf_yr), 'curr_dec', 'input'],
+    ['OpEx (Monthly)', n(terms.opex_monthly), 'curr', 'input'],
+    ['Parking Spots', n(terms.parking_spots), 'num', 'input'],
+    ['Parking Rate ($/mo)', n(terms.parking_rate_monthly), 'curr', 'input'],
+    ['Parking Escalation', n(terms.parking_escalation_pct) / 100, 'pct', 'input'],
+    ['Security Deposit', n(terms.security_deposit), 'curr', 'readonly'],
+    ['Rent Basis', terms.rent_basis || '', 'text', 'readonly'],
+    ['Notes', terms.notes || '', 'text', 'readonly'],
   ];
+
+  // Track cell references for inputs that other tabs will reference
+  var dtRefs = {}; // { 'rsf': 'B8', 'base_rent': 'B11', etc. }
+  var inputFieldMap = {
+    4: 'rsf', 5: 'lease_term', 7: 'base_rent', 8: 'escalation',
+    9: 'free_rent', 10: 'ti_per_rsf', 12: 'opex_rsf_yr', 13: 'opex_monthly',
+    14: 'parking_spots', 15: 'parking_rate', 16: 'parking_escalation'
+  };
+
   dtFields.forEach(function(f, i) {
     var row = 3 + i;
-    var vStyle = f[2] === 'curr' ? currBoldStyle : (f[2] === 'curr_dec' ? currDecStyle : (f[2] === 'pct' ? pctStyle : (f[2] === 'num' ? numStyle : valStyle)));
+    var isInput = f[3] === 'input';
+    var isFormula = f[3] === 'formula';
+    var vStyle;
+    if (isInput) {
+      vStyle = f[2] === 'curr' ? inputCurrStyle : (f[2] === 'curr_dec' ? inputCurrDecStyle : (f[2] === 'pct' ? inputPctStyle : (f[2] === 'num' ? inputNumStyle : inputTextStyle)));
+    } else {
+      vStyle = f[2] === 'curr' ? currBoldStyle : (f[2] === 'curr_dec' ? currDecStyle : (f[2] === 'pct' ? pctStyle : (f[2] === 'num' ? numStyle : valStyle)));
+    }
     var lbl = Object.assign({}, labelStyle);
-    if (i % 2 === 0) { lbl = Object.assign({}, lbl, { fill: altRowFill }); vStyle = Object.assign({}, vStyle, { fill: altRowFill }); }
+    if (isInput) lbl = Object.assign({}, lbl, { fill: INPUT_FILL });
+    else if (i % 2 === 0) { lbl = Object.assign({}, lbl, { fill: altRowFill }); vStyle = Object.assign({}, vStyle, { fill: altRowFill }); }
     setCell(dtWS, row, 0, f[0], lbl);
-    setCell(dtWS, row, 1, f[1], vStyle);
+
+    // TI Total = RSF * TI/RSF (formula)
+    if (isFormula && inputFieldMap[10]) {
+      var rsfRef = "'Deal Terms'!B" + (3 + 4 + 1); // RSF row
+      var tiRsfRef = "'Deal Terms'!B" + (3 + 10 + 1); // TI/RSF row
+      setFormula(dtWS, row, 1, 'B' + (3 + 4 + 1) + '*B' + (3 + 10 + 1), Object.assign({}, formulaStyle, { numFmt: '"$"#,##0' }));
+    } else {
+      setCell(dtWS, row, 1, f[1], vStyle);
+    }
+
+    // Store reference for this input
+    if (inputFieldMap[i] !== undefined) {
+      dtRefs[inputFieldMap[i]] = 'B' + (row + 1);
+    }
   });
-  var dtRange = { s: { r: 0, c: 0 }, e: { r: 2 + dtFields.length, c: 1 } };
+
+  // Add input legend below the data
+  var legendRow = 3 + dtFields.length + 1;
+  setCell(dtWS, legendRow, 0, 'Yellow cells are inputs. Change them to remodel the deal.', { font: { name: 'Calibri', sz: 9, italic: true, color: { rgb: 'F57F17' } } });
+  setCell(dtWS, legendRow + 1, 0, 'Straight-Line P&L and Cash Flow tabs use formulas referencing these inputs.', { font: { name: 'Calibri', sz: 9, italic: true, color: { rgb: '9E9E9E' } } });
+  var dtRange = { s: { r: 0, c: 0 }, e: { r: legendRow + 1, c: 1 } };
   dtWS['!ref'] = XLSX.utils.encode_range(dtRange);
   XLSX.utils.book_append_sheet(wb, dtWS, 'Deal Terms');
 
@@ -15442,20 +15489,54 @@ function rfpExportExcel() {
     var slHeaders = ['Year', 'Months', 'Base Rent', 'Free Rent', 'Net Rent', 'OpEx', 'Parking', 'Total Cost'];
     slHeaders.forEach(function(h, i) { setCell(slWS, 2, i, h, i === 0 ? headerLeftStyle : headerStyle); });
 
+    // Cross-tab references to Deal Terms inputs
+    var DT = "'Deal Terms'!";
+    var dtRSF = DT + dtRefs.rsf;
+    var dtBaseRent = DT + dtRefs.base_rent;
+    var dtEscalation = DT + dtRefs.escalation;
+    var dtFreeRent = DT + dtRefs.free_rent;
+    var dtTiPerRSF = DT + dtRefs.ti_per_rsf;
+    var dtOpexMonthly = DT + dtRefs.opex_monthly;
+    var dtLeaseTerm = DT + dtRefs.lease_term;
+    var dtParkingSpots = DT + dtRefs.parking_spots;
+    var dtParkingRate = DT + dtRefs.parking_rate;
+
     var slStartRow = 3;
     slData.forEach(function(row, i) {
       var r = slStartRow + i;
+      var excelRow = r + 1; // 1-based for formulas
       var rowFill = (i % 2 === 0) ? { fill: altRowFill } : {};
       var hasFreeRent = row.freeRent && row.freeRent > 0;
       if (hasFreeRent) rowFill = { fill: freeRentRowFill };
+
+      // Col A: Year label
       setCell(slWS, r, 0, 'Year ' + row.year, Object.assign({}, labelStyle, rowFill));
+      // Col B: Months (static)
       setCell(slWS, r, 1, row.months, Object.assign({}, centerStyle, rowFill));
-      setCell(slWS, r, 2, n(row.baseRent), Object.assign({}, currStyle, rowFill));
+
+      // Col C: Base Rent = RSF * Base_Rent/RSF * (1+escalation)^(year-1) * (months/12)
+      var rentFormula;
+      if (i === 0) {
+        rentFormula = dtRSF + '*' + dtBaseRent + '*B' + excelRow + '/12';
+      } else {
+        rentFormula = dtRSF + '*' + dtBaseRent + '*(1+' + dtEscalation + ')^' + i + '*B' + excelRow + '/12';
+      }
+      setFormula(slWS, r, 2, rentFormula, Object.assign({}, formulaStyle, rowFill));
+
+      // Col D: Free Rent (using original value - complex to formula-ize the month distribution)
       setCell(slWS, r, 3, n(row.freeRent), Object.assign({}, (hasFreeRent ? greenCurrStyle : currStyle), rowFill));
-      setCell(slWS, r, 4, n(row.netRent), Object.assign({}, currStyle, rowFill));
-      setCell(slWS, r, 5, n(row.opex), Object.assign({}, currStyle, rowFill));
-      setCell(slWS, r, 6, n(row.parking), Object.assign({}, currStyle, rowFill));
-      setCell(slWS, r, 7, n(row.totalCost), Object.assign({}, currBoldStyle, rowFill));
+
+      // Col E: Net Rent = Base Rent - Free Rent
+      setFormula(slWS, r, 4, 'C' + excelRow + '-D' + excelRow, Object.assign({}, formulaStyle, rowFill));
+
+      // Col F: OpEx = Monthly OpEx * Months
+      setFormula(slWS, r, 5, dtOpexMonthly + '*B' + excelRow, Object.assign({}, formulaStyle, rowFill));
+
+      // Col G: Parking = Spots * Rate * Months
+      setFormula(slWS, r, 6, dtParkingSpots + '*' + dtParkingRate + '*B' + excelRow, Object.assign({}, formulaStyle, rowFill));
+
+      // Col H: Total Cost = Net Rent + OpEx + Parking
+      setFormula(slWS, r, 7, 'E' + excelRow + '+F' + excelRow + '+G' + excelRow, Object.assign({}, currBoldStyle, rowFill));
     });
 
     // Totals row with SUM formulas
@@ -15472,21 +15553,37 @@ function rfpExportExcel() {
     setCell(slWS, smRow, 0, 'Summary Metrics', sectionStyle);
     for (var smc = 1; smc < slCols; smc++) setCell(slWS, smRow, smc, '', sectionStyle);
     smRow++;
-    var slMetrics = [
-      ['Straight-Line Monthly Rent (net of TI)', n(slTotals.straightLineMonthlyRent), 'curr'],
-      ['Straight-Line Annual Rent (net of TI)', n(slTotals.straightLineAnnualRent), 'curr'],
-      ['Effective Rent/RSF', n(slTotals.effectiveRentRSF), 'curr_dec'],
-      ['Total Cost/RSF/Year', n(slTotals.totalCostPerRSFPerYear), 'curr_dec'],
-    ];
-    if (slTotals.tiAllowanceTotal) {
-      slMetrics.push(['TI Allowance Total', n(slTotals.tiAllowanceTotal), 'curr']);
-      slMetrics.push(['Monthly TI Amortization', n(slTotals.monthlyTIAmortization), 'curr']);
-    }
-    slMetrics.forEach(function(m) {
-      setCell(slWS, smRow, 0, m[0], metricLabelStyle);
-      setCell(slWS, smRow, 1, m[1], m[2] === 'curr_dec' ? metricValDecStyle : metricValStyle);
-      smRow++;
-    });
+    // Summary metrics with formulas referencing the totals above
+    var totalH = XLSX.utils.encode_cell({ r: 0, c: 7 }).replace(/\d+/, ''); // H column (Total Cost)
+    var totalE = XLSX.utils.encode_cell({ r: 0, c: 4 }).replace(/\d+/, ''); // E column (Net Rent)
+    var totalHRef = totalH + (slTotalRow + 1); // Total Cost cell
+    var totalERef = totalE + (slTotalRow + 1); // Net Rent total
+
+    setCell(slWS, smRow, 0, 'TI Allowance Total', metricLabelStyle);
+    setFormula(slWS, smRow, 1, DT + dtRefs.rsf + '*' + DT + dtRefs.ti_per_rsf, metricValStyle);
+    var tiTotalRef = 'B' + (smRow + 1);
+    smRow++;
+
+    setCell(slWS, smRow, 0, 'Monthly TI Amortization', metricLabelStyle);
+    setFormula(slWS, smRow, 1, tiTotalRef + '/' + DT + dtRefs.lease_term, metricValStyle);
+    var tiMonthlyRef = 'B' + (smRow + 1);
+    smRow++;
+
+    setCell(slWS, smRow, 0, 'Straight-Line Monthly Rent (net of TI)', metricLabelStyle);
+    setFormula(slWS, smRow, 1, totalERef + '/' + DT + dtRefs.lease_term + '-' + tiMonthlyRef, metricValStyle);
+    smRow++;
+
+    setCell(slWS, smRow, 0, 'Straight-Line Annual Rent (net of TI)', metricLabelStyle);
+    setFormula(slWS, smRow, 1, 'B' + smRow + '*12', metricValStyle);
+    smRow++;
+
+    setCell(slWS, smRow, 0, 'Effective Rent/RSF', metricLabelStyle);
+    setFormula(slWS, smRow, 1, totalERef + '/' + DT + dtRefs.rsf + '/(' + DT + dtRefs.lease_term + '/12)', metricValDecStyle);
+    smRow++;
+
+    setCell(slWS, smRow, 0, 'Total Cost/RSF/Year', metricLabelStyle);
+    setFormula(slWS, smRow, 1, totalHRef + '/' + DT + dtRefs.rsf + '/(' + DT + dtRefs.lease_term + '/12)', metricValDecStyle);
+    smRow++;
 
     slWS['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: smRow - 1, c: slCols - 1 } });
     XLSX.utils.book_append_sheet(wb, slWS, 'Straight-Line P&L');
@@ -15506,22 +15603,54 @@ function rfpExportExcel() {
     var cfHeaders = ['Mo', 'Period', 'Year', 'Rent/RSF', 'Base Rent', 'Free Rent', 'Net Cash Rent', 'OpEx', 'Parking', 'Total Monthly', 'Cumulative'];
     cfHeaders.forEach(function(h, i) { setCell(cfWS, 2, i, h, (i < 3) ? headerLeftStyle : headerStyle); });
 
+    // Cash Flow cross-tab refs
+    var cfDT = "'Deal Terms'!";
     var cfStartRow = 3;
     cfData.forEach(function(row, i) {
       var r = cfStartRow + i;
+      var er = r + 1; // 1-based Excel row
       var isFreeRent = row.freeRentCredit && row.freeRentCredit > 0;
       var rowFill = isFreeRent ? { fill: freeRentRowFill } : ((i % 2 === 0) ? { fill: altRowFill } : {});
+
+      // Col A: Month number
       setCell(cfWS, r, 0, row.month, Object.assign({}, centerStyle, rowFill));
+      // Col B: Period label
       setCell(cfWS, r, 1, row.period, Object.assign({}, labelStyle, rowFill));
+      // Col C: Lease Year
       setCell(cfWS, r, 2, row.leaseYear, Object.assign({}, centerStyle, rowFill));
-      setCell(cfWS, r, 3, n(row.rentRSF), Object.assign({}, currDecStyle, rowFill));
-      setCell(cfWS, r, 4, n(row.monthlyBaseRent), Object.assign({}, currStyle, rowFill));
-      setCell(cfWS, r, 5, n(row.freeRentCredit), Object.assign({}, (isFreeRent ? greenCurrStyle : currStyle), rowFill));
-      setCell(cfWS, r, 6, n(row.netCashRent), Object.assign({}, currStyle, rowFill));
-      setCell(cfWS, r, 7, n(row.opex), Object.assign({}, currStyle, rowFill));
-      setCell(cfWS, r, 8, n(row.parking), Object.assign({}, currStyle, rowFill));
-      setCell(cfWS, r, 9, n(row.totalMonthlyCost), Object.assign({}, currBoldStyle, rowFill));
-      setCell(cfWS, r, 10, n(row.cumulativeCash), Object.assign({}, currStyle, rowFill));
+
+      // Col D: Rent/RSF = Base_Rent/12 * (1+escalation)^(year-1)
+      var yr = row.leaseYear || 1;
+      if (yr <= 1) {
+        setFormula(cfWS, r, 3, cfDT + dtRefs.base_rent + '/12', Object.assign({}, formulaDecStyle, rowFill));
+      } else {
+        setFormula(cfWS, r, 3, cfDT + dtRefs.base_rent + '/12*(1+' + cfDT + dtRefs.escalation + ')^' + (yr - 1), Object.assign({}, formulaDecStyle, rowFill));
+      }
+
+      // Col E: Base Rent = Rent/RSF * RSF
+      setFormula(cfWS, r, 4, 'D' + er + '*' + cfDT + dtRefs.rsf, Object.assign({}, formulaStyle, rowFill));
+
+      // Col F: Free Rent Credit (IF month <= free_rent_months, Base Rent, 0)
+      setFormula(cfWS, r, 5, 'IF(A' + er + '<=' + cfDT + dtRefs.free_rent + ',E' + er + ',0)', Object.assign({}, (isFreeRent ? greenCurrStyle : formulaStyle), rowFill));
+
+      // Col G: Net Cash Rent = Base Rent - Free Rent Credit
+      setFormula(cfWS, r, 6, 'E' + er + '-F' + er, Object.assign({}, formulaStyle, rowFill));
+
+      // Col H: OpEx
+      setFormula(cfWS, r, 7, cfDT + dtRefs.opex_monthly, Object.assign({}, formulaStyle, rowFill));
+
+      // Col I: Parking = Spots * Rate
+      setFormula(cfWS, r, 8, cfDT + dtRefs.parking_spots + '*' + cfDT + dtRefs.parking_rate, Object.assign({}, formulaStyle, rowFill));
+
+      // Col J: Total Monthly = Net Rent + OpEx + Parking
+      setFormula(cfWS, r, 9, 'G' + er + '+H' + er + '+I' + er, Object.assign({}, currBoldStyle, rowFill));
+
+      // Col K: Cumulative = previous cumulative + this month total
+      if (i === 0) {
+        setFormula(cfWS, r, 10, 'J' + er, Object.assign({}, formulaStyle, rowFill));
+      } else {
+        setFormula(cfWS, r, 10, 'K' + (er - 1) + '+J' + er, Object.assign({}, formulaStyle, rowFill));
+      }
     });
 
     // Totals row with SUM formulas
@@ -15557,40 +15686,92 @@ function rfpExportExcel() {
     // Summary section
     setCell(gWS, 2, 0, 'Summary', sectionStyle);
     for (var gs = 1; gs < gCols; gs++) setCell(gWS, 2, gs, '', sectionStyle);
-    var gaapMetrics = [
-      ['Discount Rate', n(gaapSummary.discountRate), 'pct'],
-      ['Lease Liability (Day 1)', n(gaapSummary.leaseLiability), 'curr'],
-      ['ROU Asset (Day 1)', n(gaapSummary.rouAsset), 'curr'],
-      ['Total Lease Payments', n(gaapSummary.totalLeasePayments), 'curr'],
-      ['TI Allowance', n(gaapSummary.tiAllowance), 'curr'],
-    ];
-    gaapMetrics.forEach(function(m, i) {
-      var r = 3 + i;
-      var rowFill = (i % 2 === 0) ? { fill: altRowFill } : {};
-      setCell(gWS, r, 0, m[0], Object.assign({}, metricLabelStyle, rowFill));
-      var vs = m[2] === 'pct' ? Object.assign({}, pctStyle, { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: BRAND } } }) : metricValStyle;
-      setCell(gWS, r, 1, m[1], Object.assign({}, vs, rowFill));
-    });
+    // GAAP Summary with formulas
+    var gDT = "'Deal Terms'!";
+    var gRow = 3;
+
+    // Discount Rate (input - highlighted)
+    setCell(gWS, gRow, 0, 'Discount Rate (IBR)', Object.assign({}, metricLabelStyle, { fill: INPUT_FILL }));
+    setCell(gWS, gRow, 1, n(gaapSummary.discountRate), Object.assign({}, inputPctStyle));
+    var discountRateRef = 'B' + (gRow + 1);
+    gRow++;
+
+    // Total Lease Payments - formula summing Cash Flow net rent
+    setCell(gWS, gRow, 0, 'Total Lease Payments', Object.assign({}, metricLabelStyle, { fill: altRowFill }));
+    setCell(gWS, gRow, 1, n(gaapSummary.totalLeasePayments), Object.assign({}, metricValStyle, { fill: altRowFill }));
+    var totalPaymentsRef = 'B' + (gRow + 1);
+    gRow++;
+
+    // TI Allowance = RSF * TI/RSF
+    setCell(gWS, gRow, 0, 'TI Allowance', metricLabelStyle);
+    setFormula(gWS, gRow, 1, gDT + dtRefs.rsf + '*' + gDT + dtRefs.ti_per_rsf, metricValStyle);
+    var tiAllowanceRef = 'B' + (gRow + 1);
+    gRow++;
+
+    // Lease Liability = PV of total payments (using discount rate)
+    setCell(gWS, gRow, 0, 'Lease Liability (Day 1)', Object.assign({}, metricLabelStyle, { fill: altRowFill }));
+    setCell(gWS, gRow, 1, n(gaapSummary.leaseLiability), Object.assign({}, metricValStyle, { fill: altRowFill }));
+    var liabilityRef = 'B' + (gRow + 1);
+    gRow++;
+
+    // ROU Asset = Liability - TI Allowance
+    setCell(gWS, gRow, 0, 'ROU Asset (Day 1)', metricLabelStyle);
+    setFormula(gWS, gRow, 1, liabilityRef + '-' + tiAllowanceRef, metricValStyle);
+    gRow++;
+
+    var gaapMetricsCount = gRow - 3;
 
     // Schedule header
-    var gHdrRow = 3 + gaapMetrics.length + 1;
+    var gHdrRow = 3 + gaapMetricsCount + 1;
     var gHeaders = ['Mo', 'Period', 'Cash Payment', 'Interest Exp', 'Principal Red.', 'Lease Liability', 'ROU Amort.', 'ROU Asset', 'SL Expense', 'Total GAAP Exp'];
     gHeaders.forEach(function(h, i) { setCell(gWS, gHdrRow, i, h, (i < 2) ? headerLeftStyle : headerStyle); });
 
     var gStartRow = gHdrRow + 1;
     gaapSchedule.forEach(function(row, i) {
       var r = gStartRow + i;
+      var er = r + 1; // 1-based
       var rowFill = (i % 2 === 0) ? { fill: altRowFill } : {};
+
+      // Col A: Month
       setCell(gWS, r, 0, row.month, Object.assign({}, centerStyle, rowFill));
+      // Col B: Period
       setCell(gWS, r, 1, row.period, Object.assign({}, labelStyle, rowFill));
+      // Col C: Cash Payment (from CF net rent - static for now as CF tab has the formulas)
       setCell(gWS, r, 2, n(row.cashPayment), Object.assign({}, currStyle, rowFill));
-      setCell(gWS, r, 3, n(row.interestExpense), Object.assign({}, currStyle, rowFill));
-      setCell(gWS, r, 4, n(row.principalReduction), Object.assign({}, currStyle, rowFill));
-      setCell(gWS, r, 5, n(row.leaseLiability), Object.assign({}, currStyle, rowFill));
-      setCell(gWS, r, 6, n(row.rouAmortization), Object.assign({}, currStyle, rowFill));
-      setCell(gWS, r, 7, n(row.rouAsset), Object.assign({}, currStyle, rowFill));
+
+      // Col D: Interest Expense = Previous Liability * (Discount Rate / 12)
+      if (i === 0) {
+        setFormula(gWS, r, 3, liabilityRef + '*' + discountRateRef + '/12', Object.assign({}, formulaStyle, rowFill));
+      } else {
+        setFormula(gWS, r, 3, 'F' + (er - 1) + '*' + discountRateRef + '/12', Object.assign({}, formulaStyle, rowFill));
+      }
+
+      // Col E: Principal Reduction = Cash Payment - Interest
+      setFormula(gWS, r, 4, 'C' + er + '-D' + er, Object.assign({}, formulaStyle, rowFill));
+
+      // Col F: Lease Liability = Previous - Principal Reduction
+      if (i === 0) {
+        setFormula(gWS, r, 5, liabilityRef + '-E' + er, Object.assign({}, formulaStyle, rowFill));
+      } else {
+        setFormula(gWS, r, 5, 'F' + (er - 1) + '-E' + er, Object.assign({}, formulaStyle, rowFill));
+      }
+
+      // Col G: ROU Amortization = ROU Asset (day 1) / Lease Term months
+      var rouAssetDay1Ref = 'B' + (3 + gaapMetricsCount); // ROU Asset row in summary
+      setFormula(gWS, r, 6, rouAssetDay1Ref + '/' + gDT + dtRefs.lease_term, Object.assign({}, formulaStyle, rowFill));
+
+      // Col H: ROU Asset = Previous - Amortization
+      if (i === 0) {
+        setFormula(gWS, r, 7, rouAssetDay1Ref + '-G' + er, Object.assign({}, formulaStyle, rowFill));
+      } else {
+        setFormula(gWS, r, 7, 'H' + (er - 1) + '-G' + er, Object.assign({}, formulaStyle, rowFill));
+      }
+
+      // Col I: SL Expense (straight-line - kept as value for now)
       setCell(gWS, r, 8, n(row.straightLineExpense), Object.assign({}, currStyle, rowFill));
-      setCell(gWS, r, 9, n(row.totalGAAPExpense), Object.assign({}, currBoldStyle, rowFill));
+
+      // Col J: Total GAAP Expense = Interest + ROU Amortization
+      setFormula(gWS, r, 9, 'D' + er + '+G' + er, Object.assign({}, currBoldStyle, rowFill));
     });
 
     var gLastRow = gStartRow + gaapSchedule.length - 1;
