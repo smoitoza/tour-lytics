@@ -14833,7 +14833,11 @@ function rfpBuildDetailHtml(subs) {
       if (s.source) label += ' - ' + s.source;
       html += '<button class="rfp-version-chip' + (isActive ? ' active' : '') + '" onclick="rfpSelectSubmission(\'' + s.id + '\')">' + label + '</button>';
     });
+    html += '<button class="rfp-version-chip" style="margin-left:auto;background:#2563eb;color:#fff;border-color:#2563eb;font-weight:600;" onclick="rfpShowVersionComparison(\'' + address.replace(/'/g, "\\\'" ) + '\')">' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>' +
+      'Compare Versions</button>';
     html += '</div>';
+    html += '<div id="rfpVersionCompare" style="display:none;"></div>';
   }
 
   // Summary metrics
@@ -14881,6 +14885,133 @@ function rfpBuildDetailHtml(subs) {
 function rfpSelectSubmission(id) {
   window._rfpState.selectedSubmission = id;
   rfpRenderDashboard(window._rfpState.submissions);
+}
+
+// ===== VERSION COMPARISON =====
+function rfpShowVersionComparison(buildingAddress) {
+  var container = document.getElementById('rfpVersionCompare');
+  if (!container) return;
+
+  // Toggle visibility
+  if (container.style.display !== 'none') {
+    container.style.display = 'none';
+    return;
+  }
+
+  // Get all submissions for this building, sorted oldest first
+  var subs = (window._rfpState.submissions || []).filter(function(s) {
+    return (s.building_address || s.buildingAddress) === buildingAddress;
+  }).sort(function(a, b) {
+    return new Date(a.created_at || a.createdAt || 0) - new Date(b.created_at || b.createdAt || 0);
+  });
+
+  if (subs.length < 2) {
+    container.innerHTML = '<div style="padding:var(--space-4);color:var(--color-text-muted);text-align:center;">Need at least 2 versions to compare.</div>';
+    container.style.display = 'block';
+    return;
+  }
+
+  // Build comparison table
+  var fields = [
+    { key: 'rsf', label: 'RSF', fmt: 'num' },
+    { key: 'leaseTerm', label: 'Lease Term (mo)', fmt: 'plain' },
+    { key: 'baseRent', label: 'Base Rent/RSF/yr', fmt: 'currency' },
+    { key: 'annualEscalation', label: 'Annual Escalation', fmt: 'pct' },
+    { key: 'freeRent', label: 'Free Rent (mo)', fmt: 'plain' },
+    { key: 'tiAllowancePerRSF', label: 'TI Allowance/RSF', fmt: 'currency' },
+    { key: 'tiAllowanceTotal', label: 'TI Total', fmt: 'currency' },
+    { key: 'opex', label: 'OpEx (monthly)', fmt: 'currency' },
+    { key: 'parkingSpots', label: 'Parking Spots', fmt: 'plain' },
+    { key: 'parkingRate', label: 'Parking Rate', fmt: 'currency' },
+    { key: 'effectiveRentRSF', label: 'Effective Rent/RSF', fmt: 'currency', fromSummary: true },
+    { key: 'straightLineAnnualExpense', label: 'SL Annual Expense', fmt: 'currency', fromSummary: true },
+    { key: 'totalAllInCost', label: 'Total All-in Cost', fmt: 'currency', fromSummary: true },
+    { key: 'totalConcessions', label: 'Total Concessions', fmt: 'currency', fromSummary: true },
+  ];
+
+  function getTermVal(sub, field) {
+    if (field.fromSummary) {
+      var summary = (sub.analysis && sub.analysis.summary) || {};
+      return summary[field.key] || 0;
+    }
+    var t = sub.deal_terms || sub.dealTerms || {};
+    var map = {
+      rsf: t.rsf || 0,
+      leaseTerm: t.lease_term_months || t.leaseTerm || 0,
+      baseRent: t.base_rent_rsf || t.baseRent || 0,
+      annualEscalation: t.annual_escalation_pct || t.annualEscalation || 0,
+      freeRent: t.free_rent_months || t.freeRent || 0,
+      tiAllowancePerRSF: t.ti_allowance_rsf || t.tiAllowancePerRSF || 0,
+      tiAllowanceTotal: t.ti_allowance_total || t.tiAllowanceTotal || 0,
+      opex: t.opex_monthly || t.opex || 0,
+      parkingSpots: t.parking_spots || t.parkingSpots || 0,
+      parkingRate: t.parking_rate_monthly || t.parkingRate || 0,
+    };
+    return map[field.key] || 0;
+  }
+
+  function fmtVal(val, fmt) {
+    if (!val && val !== 0) return '--';
+    if (fmt === 'currency') return '$' + Number(val).toLocaleString(undefined, { maximumFractionDigits: 0 });
+    if (fmt === 'num') return Number(val).toLocaleString();
+    if (fmt === 'pct') return val + '%';
+    return val || '--';
+  }
+
+  var html = '<div style="margin:var(--space-4) 0;border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow-x:auto;">';
+  html += '<table style="width:100%;border-collapse:collapse;font-size:var(--text-sm);">';
+
+  // Header row
+  html += '<thead><tr style="background:#f8fafc;">';
+  html += '<th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--color-text-muted);font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--color-border);min-width:160px;">Deal Term</th>';
+  subs.forEach(function(s, idx) {
+    var label = (s.doc_type || s.docType || 'RFP') + ' #' + (idx + 1);
+    var date = s.submitted_at ? new Date(s.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+    html += '<th style="padding:10px 14px;text-align:right;font-weight:600;border-bottom:1px solid var(--color-border);min-width:120px;">';
+    html += '<div>' + label + '</div>';
+    if (date) html += '<div style="font-weight:400;font-size:var(--text-xs);color:var(--color-text-muted);">' + date + '</div>';
+    html += '</th>';
+  });
+  html += '<th style="padding:10px 14px;text-align:right;font-weight:600;border-bottom:1px solid var(--color-border);min-width:100px;color:#2563eb;">Change</th>';
+  html += '</tr></thead><tbody>';
+
+  // Data rows
+  fields.forEach(function(f) {
+    html += '<tr style="border-bottom:1px solid #f1f5f9;">';
+    html += '<td style="padding:8px 14px;font-weight:500;color:var(--color-text);">' + f.label + '</td>';
+    var vals = [];
+    subs.forEach(function(s) {
+      var v = getTermVal(s, f);
+      vals.push(v);
+      html += '<td style="padding:8px 14px;text-align:right;">' + fmtVal(v, f.fmt) + '</td>';
+    });
+    // Change column (first vs last)
+    var first = Number(vals[0]) || 0;
+    var last = Number(vals[vals.length - 1]) || 0;
+    var diff = last - first;
+    var changeHTML = '--';
+    if (first > 0 && diff !== 0) {
+      var pct = ((diff / first) * 100).toFixed(1);
+      var color = '';
+      // For costs: lower is better (green). For concessions/TI: higher is better (green).
+      var lowerIsBetter = ['baseRent', 'opex', 'parkingRate', 'effectiveRentRSF', 'straightLineAnnualExpense', 'totalAllInCost'].includes(f.key);
+      if (lowerIsBetter) {
+        color = diff < 0 ? '#16a34a' : '#dc2626';
+      } else {
+        color = diff > 0 ? '#16a34a' : '#dc2626';
+      }
+      var arrow = diff > 0 ? '&uarr;' : '&darr;';
+      changeHTML = '<span style="color:' + color + ';font-weight:600;">' + arrow + ' ' + fmtVal(Math.abs(diff), f.fmt) + ' (' + (diff > 0 ? '+' : '') + pct + '%)</span>';
+    }
+    html += '<td style="padding:8px 14px;text-align:right;">' + changeHTML + '</td>';
+    html += '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  html += '<div style="text-align:right;margin-top:var(--space-2);"><button class="rfp-version-chip" onclick="document.getElementById(\'rfpVersionCompare\').style.display=\'none\'">Close Comparison</button></div>';
+
+  container.innerHTML = html;
+  container.style.display = 'block';
 }
 
 // ===== DEAL TERMS TABLE =====
