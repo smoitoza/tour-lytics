@@ -16932,8 +16932,8 @@ function surveyUpdateLegendCount() {
 var _aiUsageLoaded = false;
 
 async function aiUsageLoad() {
-  // Only admins should see this
-  if (!isAdmin()) return;
+  // Any authenticated user can view their project's token usage
+  if (!getCurrentUserEmail()) return;
 
   try {
     // Fetch all data in parallel
