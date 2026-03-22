@@ -119,13 +119,43 @@ export async function DELETE(req: NextRequest) {
   return NextResponse.json({ success: true })
 }
 
+/* PATCH /api/projects -- update project fields (owner only) */
+export async function PATCH(req: NextRequest) {
+  const supabase = createClient(supabaseUrl, supabaseKey)
+  try {
+    const body = await req.json()
+    const { projectId, hq_address, hq_lat, hq_lng } = body
+    if (!projectId) {
+      return NextResponse.json({ error: 'projectId required' }, { status: 400 })
+    }
+    const updates: Record<string, any> = {}
+    if (hq_address !== undefined) updates.hq_address = (hq_address || '').trim()
+    if (hq_lat !== undefined) updates.hq_lat = hq_lat
+    if (hq_lng !== undefined) updates.hq_lng = hq_lng
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
+    }
+
+    const { error } = await supabase
+      .from('projects')
+      .update(updates)
+      .eq('id', projectId)
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ success: true })
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 500 })
+  }
+}
+
 /* POST /api/projects -- create a new project (any authenticated user) */
 export async function POST(req: NextRequest) {
   const supabase = createClient(supabaseUrl, supabaseKey)
 
   try {
     const body = await req.json()
-    const { name, market, description, createdBy, client_name } = body
+    const { name, market, description, createdBy, client_name, hq_address, hq_lat, hq_lng } = body
 
     if (!name || !name.trim()) {
       return NextResponse.json({ error: 'Project name is required.' }, { status: 400 })
@@ -149,7 +179,7 @@ export async function POST(req: NextRequest) {
       slug = `${slug}-${Date.now().toString(36).slice(-4)}`
     }
 
-    const project = {
+    const project: Record<string, any> = {
       id: slug,
       name: name.trim(),
       market: (market || '').trim(),
@@ -162,6 +192,11 @@ export async function POST(req: NextRequest) {
       created_by: createdBy,
       owner_id: createdBy, // Project creator is the owner
     }
+
+    // Add HQ fields if provided
+    if (hq_address) project.hq_address = hq_address.trim()
+    if (hq_lat != null) project.hq_lat = hq_lat
+    if (hq_lng != null) project.hq_lng = hq_lng
 
     const { data, error } = await supabase
       .from('projects')

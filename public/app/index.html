@@ -971,6 +971,20 @@ body {
    Survey Markers (blue dots for evaluated buildings)
    ============================================================ */
 
+/* HQ / Current Office Marker */
+.hq-marker {
+  display: flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px;
+  background: #0f172a; color: #fbbf24;
+  border-radius: 50%; border: 3px solid #fbbf24;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+  font-size: 16px; cursor: pointer;
+  transition: transform 0.15s;
+  z-index: 1500;
+}
+.hq-marker:hover { transform: scale(1.15); box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+.hq-marker svg { width: 18px; height: 18px; fill: #fbbf24; stroke: none; }
+
 .survey-marker {
   display: flex;
   align-items: center;
@@ -7889,6 +7903,10 @@ body {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
     Upload Survey
   </button>
+  <button class="survey-upload-toggle" id="setHQBtn" style="display:none;" onclick="setCurrentOffice()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill="#fbbf24" stroke="#fbbf24"/></svg>
+    Set HQ
+  </button>
   <button class="survey-upload-toggle" id="surveyClearBtn" style="display:none;" onclick="clearSurveyData()">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
     Clear Survey
@@ -7908,6 +7926,8 @@ body {
     if (email) {
       var btn = document.getElementById('surveyUploadToggle');
       if (btn) btn.style.display = '';
+      var hqBtn = document.getElementById('setHQBtn');
+      if (hqBtn) hqBtn.style.display = '';
       // Clear Survey button shown later after buildings load (in loadSavedSurveyBuildings)
     }
   } catch(e) {}
@@ -10502,6 +10522,13 @@ function buildLegendHTML() {
 
   var html = '<div class="legend-title">Legend</div><div class="legend-body">';
 
+  // Current Office (star)
+  if (window._hqMarker) {
+    html += '<div class="legend-section">';
+    html += '<div class="legend-item"><div class="legend-dot" style="background:#0f172a;border:2px solid #fbbf24;box-sizing:border-box;"></div><span class="legend-label">Current Office</span></div>';
+    html += '</div>';
+  }
+
   // Shortlist (emerald)
   if (shortlistCount > 0) {
     html += '<div class="legend-section">';
@@ -12430,6 +12457,23 @@ function getProjectId() {
           if (subtitleEl && parts.length) subtitleEl.innerHTML = parts.join(' &middot; ');
           if (footerEl && proj.market) footerEl.textContent = proj.market;
           if (mobLoc && proj.market) mobLoc.textContent = proj.market;
+
+          // Render HQ marker if project has a current office
+          if (proj.hq_lat && proj.hq_lng && typeof map !== 'undefined') {
+            var hqIcon = L.divIcon({
+              className: 'hq-marker-wrapper',
+              html: '<div class="hq-marker"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>',
+              iconSize: [36, 36],
+              iconAnchor: [18, 18]
+            });
+            var hqMarker = L.marker([proj.hq_lat, proj.hq_lng], { icon: hqIcon, zIndexOffset: 3000 }).addTo(map);
+            var hqTooltipHtml = '<div style="font-family:var(--font-body);padding:4px 0;">' +
+              '<div style="font-weight:800;font-size:13px;color:#0f172a;margin-bottom:2px;">Current Office</div>' +
+              '<div style="font-size:12px;color:#475569;">' + (proj.hq_address || 'HQ Location') + '</div>' +
+              '</div>';
+            hqMarker.bindTooltip(hqTooltipHtml, { direction: 'top', offset: [0, -20], className: 'building-tooltip' });
+            window._hqMarker = hqMarker;
+          }
         }
       }
     })
@@ -16525,6 +16569,70 @@ switchPageTab = function(tabId) {
 // ============================================================
 
 var _surveyUploadFile = null;
+
+async function setCurrentOffice() {
+  var current = window._hqAddress || '';
+  var addr = prompt('Enter the current office / HQ address:', current);
+  if (addr === null) return; // cancelled
+  addr = addr.trim();
+
+  if (!addr) {
+    // Clear HQ
+    try {
+      await fetch('/api/projects', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: getProjectId(), hq_address: '', hq_lat: null, hq_lng: null })
+      });
+      if (window._hqMarker) { map.removeLayer(window._hqMarker); window._hqMarker = null; }
+      window._hqAddress = '';
+      refreshLegend();
+      alert('Current office removed.');
+    } catch(e) { alert('Failed to update. Please try again.'); }
+    return;
+  }
+
+  // Geocode the address
+  try {
+    var geoRes = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address=' + encodeURIComponent(addr) + '&key=AIzaSyD4YUbpP2dUpm0LG-SMjxHqnPKCQaaDmKE');
+    var geoData = await geoRes.json();
+    if (geoData.status !== 'OK' || !geoData.results[0]) {
+      alert('Could not find that address. Please try a more specific address.');
+      return;
+    }
+    var loc = geoData.results[0].geometry.location;
+
+    // Save to server
+    await fetch('/api/projects', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectId: getProjectId(), hq_address: addr, hq_lat: loc.lat, hq_lng: loc.lng })
+    });
+
+    // Remove old marker if exists
+    if (window._hqMarker) { map.removeLayer(window._hqMarker); window._hqMarker = null; }
+
+    // Add new marker
+    var hqIcon = L.divIcon({
+      className: 'hq-marker-wrapper',
+      html: '<div class="hq-marker"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>',
+      iconSize: [36, 36],
+      iconAnchor: [18, 18]
+    });
+    var hqMarker = L.marker([loc.lat, loc.lng], { icon: hqIcon, zIndexOffset: 3000 }).addTo(map);
+    hqMarker.bindTooltip(
+      '<div style="font-family:var(--font-body);padding:4px 0;">' +
+      '<div style="font-weight:800;font-size:13px;color:#0f172a;margin-bottom:2px;">Current Office</div>' +
+      '<div style="font-size:12px;color:#475569;">' + addr + '</div></div>',
+      { direction: 'top', offset: [0, -20], className: 'building-tooltip' }
+    );
+    window._hqMarker = hqMarker;
+    window._hqAddress = addr;
+    refreshLegend();
+  } catch(e) {
+    alert('Failed to set current office. Please try again.');
+  }
+}
 
 async function clearSurveyData() {
   var pid = getProjectId();

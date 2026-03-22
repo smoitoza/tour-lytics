@@ -170,6 +170,7 @@ export default function DashboardPage() {
   const [newProjectName, setNewProjectName] = useState('')
   const [newProjectMarket, setNewProjectMarket] = useState('')
   const [newProjectClient, setNewProjectClient] = useState('')
+  const [newProjectHQ, setNewProjectHQ] = useState('')
   const [creatingProject, setCreatingProject] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
 
@@ -283,6 +284,21 @@ export default function DashboardPage() {
     setCreatingProject(true)
     setCreateError(null)
     try {
+      // Geocode HQ address if provided
+      let hqLat: number | undefined
+      let hqLng: number | undefined
+      const hqAddr = newProjectHQ.trim()
+      if (hqAddr) {
+        try {
+          const geoRes = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(hqAddr)}&key=AIzaSyD4YUbpP2dUpm0LG-SMjxHqnPKCQaaDmKE`)
+          const geoData = await geoRes.json()
+          if (geoData.status === 'OK' && geoData.results?.[0]?.geometry?.location) {
+            hqLat = geoData.results[0].geometry.location.lat
+            hqLng = geoData.results[0].geometry.location.lng
+          }
+        } catch { /* geocode failed, skip */ }
+      }
+
       const res = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -291,6 +307,9 @@ export default function DashboardPage() {
           market: newProjectMarket.trim(),
           client_name: newProjectClient.trim(),
           createdBy: user?.email,
+          hq_address: hqAddr || undefined,
+          hq_lat: hqLat,
+          hq_lng: hqLng,
         }),
       })
       if (!res.ok) {
@@ -793,7 +812,7 @@ export default function DashboardPage() {
             {/* Add new project button - any authenticated user */}
             {isAdmin && (
               <button
-                onClick={() => { setShowCreateModal(true); setCreateError(null); setNewProjectName(''); setNewProjectMarket(''); setNewProjectClient('') }}
+                onClick={() => { setShowCreateModal(true); setCreateError(null); setNewProjectName(''); setNewProjectMarket(''); setNewProjectClient(''); setNewProjectHQ('') }}
                 className="create-project-btn"
                 style={{
                   borderRadius: '1rem',
@@ -1145,6 +1164,32 @@ export default function DashboardPage() {
                     transition: 'border-color 0.15s, box-shadow 0.15s',
                   }}
                 />
+              </div>
+
+              {/* Current Office / HQ */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#334155', marginBottom: '0.375rem' }}>Current Office Address <span style={{ fontWeight: 400, color: '#94a3b8' }}>(optional)</span></label>
+                <input
+                  type="text"
+                  className="team-input"
+                  placeholder="e.g. 190 W Tasman Drive, San Jose, CA 95134"
+                  value={newProjectHQ}
+                  onChange={(e) => setNewProjectHQ(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleCreateProject() }}
+                  style={{
+                    width: '100%',
+                    padding: '0.625rem 0.875rem',
+                    fontSize: '0.875rem',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '0.625rem',
+                    background: '#f8fafc',
+                    color: '#0f172a',
+                    fontFamily: 'inherit',
+                    boxSizing: 'border-box',
+                    transition: 'border-color 0.15s, box-shadow 0.15s',
+                  }}
+                />
+                <p style={{ fontSize: '0.6875rem', color: '#94a3b8', marginTop: '0.25rem' }}>Shown as a star pin on the map so everyone can see where the company is today</p>
               </div>
 
               {/* Market */}
