@@ -18,9 +18,9 @@ function getSupabase() {
 // Note: No specific dollar pricing exposed to user per instructions
 // These are internal Stripe amounts
 const TOKEN_PACKS: Record<string, { tokens: number; priceCents: number; label: string }> = {
-  starter: { tokens: 100, priceCents: 9000, label: 'Starter Pack' },         // $90  (10% off $1/token)
-  professional: { tokens: 500, priceCents: 42500, label: 'Professional Pack' }, // $425 (15% off $1/token)
-  enterprise: { tokens: 2000, priceCents: 160000, label: 'Enterprise Pack' },  // $1,600 (20% off $1/token)
+  starter: { tokens: 100, priceCents: 10000, label: 'Starter Pack' },          // $100 (1:1)
+  professional: { tokens: 500, priceCents: 45000, label: 'Professional Pack' }, // $450 (10% off)
+  enterprise: { tokens: 2000, priceCents: 160000, label: 'Enterprise Pack' },  // $1,600 (20% off)
 }
 
 export async function POST(request: NextRequest) {
