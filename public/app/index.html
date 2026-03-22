@@ -5373,7 +5373,7 @@ body {
       align-items: center;
       gap: 10px;
       padding: 14px 32px;
-      background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 80%, #6366f1));
+      background: var(--color-primary, #f47920);
       color: #fff;
       border: none;
       border-radius: 10px;
@@ -5381,12 +5381,13 @@ body {
       font-weight: 700;
       cursor: pointer;
       transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.15), 0 0 0 0 var(--accent);
+      box-shadow: 0 2px 12px rgba(244,121,32,0.3);
       letter-spacing: 0.01em;
     }
     .exec-summary-generate-btn:hover {
+      background: var(--color-primary-hover, #e06810);
       transform: translateY(-2px);
-      box-shadow: 0 4px 20px rgba(0,0,0,0.2), 0 0 20px color-mix(in srgb, var(--accent) 30%, transparent);
+      box-shadow: 0 4px 20px rgba(244,121,32,0.4);
     }
     .exec-summary-generate-btn:active {
       transform: translateY(0);
@@ -5457,7 +5458,7 @@ body {
       width: 40px;
       height: 40px;
       border: 3px solid var(--border, #e2e8f0);
-      border-top-color: var(--accent);
+      border-top-color: var(--color-primary, #f47920);
       border-radius: 50%;
       animation: execSpinnerSpin 0.8s linear infinite;
       margin-bottom: var(--space-4);
@@ -5518,10 +5519,10 @@ body {
     .exec-summary-body h2 {
       font-size: 1.05rem;
       font-weight: 700;
-      color: var(--accent);
+      color: var(--color-primary, #f47920);
       margin: var(--space-5) 0 var(--space-2) 0;
       padding-bottom: 6px;
-      border-bottom: 2px solid var(--accent);
+      border-bottom: 2px solid var(--color-primary, #f47920);
       text-transform: uppercase;
       letter-spacing: 0.04em;
     }
