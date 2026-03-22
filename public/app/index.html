@@ -5336,6 +5336,275 @@ body {
       }
     }
 
+    /* ===== EXECUTIVE SUMMARY ===== */
+    .exec-summary-page {
+      padding: var(--space-4) var(--space-6);
+      max-width: 1000px;
+      margin: 0 auto;
+      overflow-y: auto;
+      height: 100%;
+    }
+    .exec-summary-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: var(--space-5);
+      gap: var(--space-4);
+      flex-wrap: wrap;
+    }
+    .exec-summary-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0 0 4px;
+    }
+    .exec-summary-subtitle {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin: 0;
+    }
+    .exec-summary-actions {
+      display: flex;
+      gap: var(--space-2);
+      flex-wrap: wrap;
+    }
+    .exec-summary-generate-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .exec-summary-generate-btn:hover {
+      background: var(--accent-hover, var(--accent));
+      transform: translateY(-1px);
+    }
+    .exec-summary-generate-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .exec-summary-export-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: var(--surface-2, #f1f5f9);
+      color: var(--text-primary);
+      border: 1px solid var(--border, #e2e8f0);
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .exec-summary-export-btn:hover {
+      background: var(--surface-3, #e2e8f0);
+    }
+    .exec-summary-export-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .exec-summary-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: var(--space-8) var(--space-4);
+      min-height: 300px;
+    }
+    .exec-summary-empty-icon {
+      color: var(--text-tertiary, #94a3b8);
+      margin-bottom: var(--space-4);
+    }
+    .exec-summary-empty h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 0 0 8px;
+    }
+    .exec-summary-empty p {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      max-width: 480px;
+      line-height: 1.5;
+      margin: 0 0 var(--space-3);
+    }
+    .exec-summary-cost-note {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      color: var(--text-tertiary, #94a3b8);
+      padding: 4px 10px;
+      background: var(--surface-2, #f8fafc);
+      border-radius: 6px;
+    }
+    .exec-summary-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-8);
+      min-height: 300px;
+    }
+    .exec-summary-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border, #e2e8f0);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: execSpinnerSpin 0.8s linear infinite;
+      margin-bottom: var(--space-4);
+    }
+    @keyframes execSpinnerSpin {
+      to { transform: rotate(360deg); }
+    }
+    .exec-summary-loading p {
+      font-size: 0.9rem;
+      color: var(--text-primary);
+      margin: 0 0 4px;
+      font-weight: 500;
+    }
+    .exec-summary-loading-sub {
+      font-size: 0.8rem !important;
+      color: var(--text-secondary) !important;
+      font-weight: 400 !important;
+    }
+    .exec-summary-content {
+      animation: execFadeIn 0.4s ease;
+    }
+    @keyframes execFadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .exec-summary-meta {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: 10px 16px;
+      background: var(--surface-2, #f8fafc);
+      border-radius: 8px;
+      margin-bottom: var(--space-4);
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      flex-wrap: wrap;
+    }
+    .exec-summary-meta span {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .exec-summary-meta .exec-meta-dot {
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: var(--text-tertiary, #94a3b8);
+      display: inline-block;
+    }
+    .exec-summary-body {
+      background: var(--surface-1, #fff);
+      border: 1px solid var(--border, #e2e8f0);
+      border-radius: 10px;
+      padding: var(--space-5) var(--space-6);
+      line-height: 1.65;
+      color: var(--text-primary);
+    }
+    .exec-summary-body h2 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin: var(--space-5) 0 var(--space-2) 0;
+      padding-bottom: 6px;
+      border-bottom: 2px solid var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .exec-summary-body h2:first-child {
+      margin-top: 0;
+    }
+    .exec-summary-body h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: var(--space-3) 0 var(--space-1) 0;
+    }
+    .exec-summary-body p {
+      font-size: 0.875rem;
+      margin: 0 0 var(--space-2);
+    }
+    .exec-summary-body ul, .exec-summary-body ol {
+      font-size: 0.875rem;
+      padding-left: 20px;
+      margin: 0 0 var(--space-2);
+    }
+    .exec-summary-body li {
+      margin-bottom: 4px;
+    }
+    .exec-summary-body table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      margin: var(--space-3) 0;
+    }
+    .exec-summary-body table th {
+      background: var(--surface-2, #f1f5f9);
+      padding: 8px 12px;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 2px solid var(--border, #e2e8f0);
+    }
+    .exec-summary-body table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border, #e2e8f0);
+    }
+    .exec-summary-body table tr:last-child td {
+      border-bottom: none;
+    }
+    .exec-summary-body strong {
+      font-weight: 600;
+    }
+
+    /* Mobile overrides */
+    @media (max-width: 768px) {
+      .exec-summary-page {
+        padding: var(--space-3) var(--space-3);
+      }
+      .exec-summary-header {
+        flex-direction: column;
+        gap: var(--space-2);
+      }
+      .exec-summary-actions {
+        width: 100%;
+      }
+      .exec-summary-generate-btn {
+        width: 100%;
+        justify-content: center;
+      }
+      .exec-summary-export-btn {
+        flex: 1;
+        justify-content: center;
+      }
+      .exec-summary-body {
+        padding: var(--space-3) var(--space-4);
+      }
+      .exec-summary-body table {
+        font-size: 0.72rem;
+      }
+      .exec-summary-body table th,
+      .exec-summary-body table td {
+        padding: 6px 8px;
+      }
+    }
+
     /* ===== AI USAGE DASHBOARD ===== */
     .ai-usage-page {
       padding: var(--space-4) var(--space-6);
@@ -8392,6 +8661,10 @@ body {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     Team
   </button>
+  <button class="page-tab" onclick="switchPageTab('exec-summary')" data-page-tab="exec-summary">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    Summary
+  </button>
   <button class="page-tab admin-only" onclick="switchPageTab('ai-usage')" data-page-tab="ai-usage" id="tabBtnAiUsage" style="display:none;">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4z"/><circle cx="9" cy="15" r="1"/><circle cx="15" cy="15" r="1"/><path d="M9 18h6"/></svg>
     AI Usage
@@ -8740,6 +9013,57 @@ body {
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       <p>Run a Commute Study first to see employees on the map.</p>
       <button class="commute-map-page-goto-btn" onclick="switchPageTab('commute')">Go to Commute Study</button>
+    </div>
+  </div>
+</div>
+
+<div class="tab-content" id="tab-exec-summary">
+  <div class="exec-summary-page">
+    <div class="exec-summary-header">
+      <div>
+        <h2 class="exec-summary-title">Executive Summary</h2>
+        <p class="exec-summary-subtitle">Generate a comprehensive project summary powered by smart analysis of all project data.</p>
+      </div>
+      <div class="exec-summary-actions">
+        <button class="exec-summary-generate-btn" id="execSummaryGenerateBtn" onclick="execSummaryGenerate()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Generate Summary
+        </button>
+        <button class="exec-summary-export-btn" id="execSummaryExportDocx" onclick="execSummaryExportDocx()" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export to Word
+        </button>
+        <button class="exec-summary-export-btn" id="execSummaryExportDrive" onclick="execSummaryExportDrive()" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Save to Google Drive
+        </button>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div class="exec-summary-empty" id="execSummaryEmpty">
+      <div class="exec-summary-empty-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="48" height="48"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      </div>
+      <h3>No Summary Generated Yet</h3>
+      <p>Click "Generate Summary" to create a comprehensive executive overview of this project, including location analysis, financial reviews, commute studies, and recommendations.</p>
+      <div class="exec-summary-cost-note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        Uses 1 token per generation
+      </div>
+    </div>
+
+    <!-- Loading state -->
+    <div class="exec-summary-loading" id="execSummaryLoading" style="display:none;">
+      <div class="exec-summary-spinner"></div>
+      <p>Analyzing project data and generating executive summary...</p>
+      <p class="exec-summary-loading-sub">This may take 15-30 seconds</p>
+    </div>
+
+    <!-- Rendered summary -->
+    <div class="exec-summary-content" id="execSummaryContent" style="display:none;">
+      <div class="exec-summary-meta" id="execSummaryMeta"></div>
+      <div class="exec-summary-body" id="execSummaryBody"></div>
     </div>
   </div>
 </div>
@@ -12116,6 +12440,10 @@ function switchPageTab(tabId) {
   // Load AI usage dashboard when switching to it
   if (tabId === 'ai-usage') {
     aiUsageLoad();
+  }
+  // Load executive summary when switching to it
+  if (tabId === 'exec-summary') {
+    execSummaryInit();
   }
   // Load shortlist when switching to it
   if (tabId === 'shortlist') {
@@ -17970,6 +18298,281 @@ function surveyUpdateLegendCount() {
 }
 
 // ============================================================
+// Executive Summary
+// ============================================================
+
+var _execSummaryData = null;
+var _execSummaryGenerating = false;
+
+function execSummaryInit() {
+  // Nothing special on init - just show the current state
+}
+
+async function execSummaryGenerate() {
+  if (_execSummaryGenerating) return;
+  var projectId = getProjectId();
+  if (!projectId) { alert('No project selected'); return; }
+
+  var btn = document.getElementById('execSummaryGenerateBtn');
+  var emptyEl = document.getElementById('execSummaryEmpty');
+  var loadingEl = document.getElementById('execSummaryLoading');
+  var contentEl = document.getElementById('execSummaryContent');
+
+  // Switch to loading state
+  _execSummaryGenerating = true;
+  btn.disabled = true;
+  btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" class="exec-summary-spinner" style="width:18px;height:18px;border:none;animation:execSpinnerSpin 0.8s linear infinite;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Generating...';
+  emptyEl.style.display = 'none';
+  contentEl.style.display = 'none';
+  loadingEl.style.display = 'flex';
+
+  try {
+    var resp = await fetch('/api/executive-summary', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        projectId: projectId,
+        userEmail: getCurrentUserEmail()
+      })
+    });
+
+    if (!resp.ok) {
+      var errData = await resp.json().catch(function() { return { error: 'Request failed' }; });
+      throw new Error(errData.error || 'Failed to generate summary');
+    }
+
+    var data = await resp.json();
+    _execSummaryData = data;
+
+    // Render the summary
+    var metaEl = document.getElementById('execSummaryMeta');
+    var bodyEl = document.getElementById('execSummaryBody');
+
+    var genDate = new Date(data.generatedAt);
+    var dateStr = genDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    var timeStr = genDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+    metaEl.innerHTML = '<span><strong>Project:</strong> ' + (data.projectName || 'N/A') + '</span>' +
+      '<span class="exec-meta-dot"></span>' +
+      '<span><strong>Market:</strong> ' + (data.market || 'N/A') + '</span>' +
+      '<span class="exec-meta-dot"></span>' +
+      '<span><strong>Buildings:</strong> ' + (data.buildingCount || 0) + '</span>' +
+      '<span class="exec-meta-dot"></span>' +
+      '<span>Generated ' + dateStr + ' at ' + timeStr + '</span>';
+
+    // Clean the HTML - strip any markdown code fences Claude might add
+    var html = data.html || '';
+    html = html.replace(/^```html?\n?/i, '').replace(/\n?```$/i, '');
+    bodyEl.innerHTML = html;
+
+    // Show content, hide loading
+    loadingEl.style.display = 'none';
+    contentEl.style.display = 'block';
+
+    // Show export buttons
+    document.getElementById('execSummaryExportDocx').style.display = '';
+    document.getElementById('execSummaryExportDrive').style.display = '';
+
+  } catch (err) {
+    console.error('Executive summary error:', err);
+    loadingEl.style.display = 'none';
+    emptyEl.style.display = 'flex';
+    alert('Error generating summary: ' + err.message);
+  } finally {
+    _execSummaryGenerating = false;
+    btn.disabled = false;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Generate Summary';
+  }
+}
+
+async function execSummaryExportDocx() {
+  if (!_execSummaryData || !_execSummaryData.html) {
+    alert('Generate a summary first');
+    return;
+  }
+
+  var btn = document.getElementById('execSummaryExportDocx');
+  btn.disabled = true;
+  btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Exporting...';
+
+  try {
+    // Build a standalone HTML document for conversion
+    var html = _execSummaryData.html || '';
+    html = html.replace(/^```html?\n?/i, '').replace(/\n?```$/i, '');
+
+    var projectName = _execSummaryData.projectName || 'Project';
+    var fileName = projectName.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-') + '-Executive-Summary';
+
+    // Use html-docx-js approach: build full HTML then convert via Blob
+    var fullHTML = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + projectName + ' - Executive Summary</title>' +
+      '<style>' +
+      'body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; line-height: 1.6; color: #1a1a1a; max-width: 700px; margin: 0 auto; padding: 40px; }' +
+      'h1 { font-size: 18pt; color: #1e3a5f; border-bottom: 3px solid #1e3a5f; padding-bottom: 8px; margin-top: 0; }' +
+      'h2 { font-size: 14pt; color: #1e3a5f; border-bottom: 2px solid #1e3a5f; padding-bottom: 4px; margin-top: 24px; text-transform: uppercase; letter-spacing: 0.5px; }' +
+      'h3 { font-size: 12pt; color: #333; margin-top: 16px; }' +
+      'p { margin: 0 0 8px; }' +
+      'ul, ol { padding-left: 24px; margin: 0 0 8px; }' +
+      'li { margin-bottom: 4px; }' +
+      'table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 10pt; }' +
+      'th { background: #f0f4f8; padding: 8px 10px; text-align: left; font-weight: 600; border: 1px solid #d0d5dd; }' +
+      'td { padding: 8px 10px; border: 1px solid #d0d5dd; }' +
+      'strong { font-weight: 600; }' +
+      '.doc-header { text-align: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #e0e0e0; }' +
+      '.doc-header h1 { border-bottom: none; margin-bottom: 4px; }' +
+      '.doc-header p { color: #666; font-size: 10pt; margin: 2px 0; }' +
+      '.doc-footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #e0e0e0; font-size: 9pt; color: #888; text-align: center; }' +
+      '</style></head><body>' +
+      '<div class="doc-header">' +
+      '<h1>' + projectName + '</h1>' +
+      '<p>Executive Summary</p>' +
+      '<p>' + (_execSummaryData.market || '') + ' | ' + new Date(_execSummaryData.generatedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) + '</p>' +
+      '</div>' +
+      html +
+      '<div class="doc-footer">Generated by TourLytics | ' + new Date(_execSummaryData.generatedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) + '</div>' +
+      '</body></html>';
+
+    // Convert to .doc blob (Word can open HTML files saved as .doc)
+    var blob = new Blob(['\ufeff' + fullHTML], { type: 'application/msword' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = fileName + '.doc';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+  } catch (err) {
+    console.error('Export error:', err);
+    alert('Export failed: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export to Word';
+  }
+}
+
+function execSummaryExportDrive() {
+  if (!_execSummaryData || !_execSummaryData.html) {
+    alert('Generate a summary first');
+    return;
+  }
+
+  var btn = document.getElementById('execSummaryExportDrive');
+  btn.disabled = true;
+  btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> Saving...';
+
+  function restoreDriveBtn(msg) {
+    btn.disabled = false;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> Save to Google Drive';
+    if (msg) alert(msg);
+  }
+
+  function doUploadSummaryToDrive(accessToken) {
+    var html = _execSummaryData.html || '';
+    html = html.replace(/^```html?\n?/i, '').replace(/\n?```$/i, '');
+
+    var projectName = _execSummaryData.projectName || 'Project';
+    var fileName = projectName + ' - Executive Summary';
+    var genDate = new Date(_execSummaryData.generatedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+    var fullHTML = '<html><head><meta charset="utf-8"><style>' +
+      'body { font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.6; }' +
+      'h1 { font-size: 18pt; color: #1e3a5f; }' +
+      'h2 { font-size: 14pt; color: #1e3a5f; border-bottom: 2px solid #1e3a5f; padding-bottom: 4px; text-transform: uppercase; }' +
+      'h3 { font-size: 12pt; }' +
+      'table { width: 100%; border-collapse: collapse; }' +
+      'th { background: #f0f4f8; padding: 8px; border: 1px solid #d0d5dd; font-weight: bold; }' +
+      'td { padding: 8px; border: 1px solid #d0d5dd; }' +
+      '</style></head><body>' +
+      '<h1 style="text-align:center;">' + projectName + '</h1>' +
+      '<p style="text-align:center; color:#666;">Executive Summary | ' + (_execSummaryData.market || '') + ' | ' + genDate + '</p><hr>' +
+      html +
+      '<hr><p style="font-size:9pt; color:#888; text-align:center;">Generated by TourLytics | ' + genDate + '</p>' +
+      '</body></html>';
+
+    var metadata = {
+      name: fileName,
+      mimeType: 'application/vnd.google-apps.document'
+    };
+
+    var boundary = '----TourLyticsBoundary' + Date.now();
+    var body = '--' + boundary + '\r\n' +
+      'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+      JSON.stringify(metadata) + '\r\n' +
+      '--' + boundary + '\r\n' +
+      'Content-Type: text/html\r\n\r\n' +
+      fullHTML + '\r\n' +
+      '--' + boundary + '--';
+
+    fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + accessToken,
+        'Content-Type': 'multipart/related; boundary=' + boundary
+      },
+      body: body
+    })
+    .then(function(resp) {
+      if (!resp.ok) throw new Error('Google Drive upload failed (HTTP ' + resp.status + ')');
+      return resp.json();
+    })
+    .then(function(fileData) {
+      var fileUrl = 'https://docs.google.com/document/d/' + fileData.id + '/edit';
+      restoreDriveBtn();
+      alert('Saved to Google Drive!');
+      window.open(fileUrl, '_blank');
+    })
+    .catch(function(err) {
+      console.error('Drive upload error:', err);
+      restoreDriveBtn('Save to Drive failed: ' + err.message);
+    });
+  }
+
+  // Use the same GIS token flow as RFP Drive export
+  function initAndRequestDriveToken() {
+    if (!window.google || !window.google.accounts || !window.google.accounts.oauth2) {
+      restoreDriveBtn('Google Identity Services not loaded. Please refresh and try again.');
+      return;
+    }
+
+    var tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: _gDriveClientId,
+      scope: 'https://www.googleapis.com/auth/drive.file',
+      callback: function(tokenResponse) {
+        if (tokenResponse.error) {
+          console.error('OAuth error:', tokenResponse);
+          restoreDriveBtn('Google authorization failed. Please try again.');
+          return;
+        }
+        doUploadSummaryToDrive(tokenResponse.access_token);
+      },
+    });
+
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> Authorizing...';
+    tokenClient.requestAccessToken();
+  }
+
+  if (_gDriveClientId) {
+    initAndRequestDriveToken();
+  } else {
+    fetch('/api/config')
+      .then(function(res) { return res.json(); })
+      .then(function(cfg) {
+        if (!cfg.googleClientId) {
+          restoreDriveBtn('Google Drive export is not configured yet.');
+          return;
+        }
+        _gDriveClientId = cfg.googleClientId;
+        initAndRequestDriveToken();
+      })
+      .catch(function(err) {
+        console.error('Config fetch error:', err);
+        restoreDriveBtn('Could not load configuration. Please try again.');
+      });
+  }
+}
+
+// ============================================================
 // AI Usage Dashboard
 // ============================================================
 
@@ -21496,6 +22099,10 @@ function refreshAllShortlistButtons() {
   <button class="mobile-more-item" onclick="mobileTabSwitch('team'); closeMobileMore();">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
     Team
+  </button>
+  <button class="mobile-more-item" onclick="mobileTabSwitch('exec-summary'); closeMobileMore();">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    Summary
   </button>
   <button class="mobile-more-item admin-only" id="mobileAiUsageBtn" style="display:none;" onclick="mobileTabSwitch('ai-usage'); closeMobileMore();">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4z"/><circle cx="9" cy="15" r="1"/><circle cx="15" cy="15" r="1"/></svg>
