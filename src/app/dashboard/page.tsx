@@ -172,6 +172,7 @@ export default function DashboardPage() {
   const [newProjectClient, setNewProjectClient] = useState('')
   const [newProjectHQ, setNewProjectHQ] = useState('')
   const [creatingProject, setCreatingProject] = useState(false)
+  const [dashStats, setDashStats] = useState<{ buildings: number; sqft: number; shortlisted: number; leaseValue: number; projects: number } | null>(null)
   const [createError, setCreateError] = useState<string | null>(null)
 
   /* ---- Delete project state ---- */
@@ -251,6 +252,15 @@ export default function DashboardPage() {
         }])
         setProjectsLoading(false)
       })
+  }, [user])
+
+  /* Fetch aggregate dashboard stats */
+  useEffect(() => {
+    if (!user?.email) return
+    fetch(`/api/dashboard-stats?email=${encodeURIComponent(user.email)}`)
+      .then(r => r.json())
+      .then(data => { if (data && !data.error) setDashStats(data) })
+      .catch(() => {})
   }, [user])
 
   /* Fetch team members once user is known */
@@ -710,10 +720,10 @@ export default function DashboardPage() {
           marginBottom: '2rem',
         }}>
           {[
-            { value: projects.reduce((sum, p) => sum + (p.buildings_count || 0), 0), suffix: '', label: 'Buildings Surveyed', color: '#0f172a' },
-            { value: 0, suffix: '', label: 'Total Sq Ft', color: '#0f172a', display: projects.map(p => p.sqft).filter(Boolean).join(', ') || '0' },
-            { value: projects.reduce((sum, p) => sum + (p.shortlisted_count || 0), 0), suffix: '', label: 'Shortlisted', color: '#2563eb' },
-            { value: projects.filter(p => p.status === 'active').length, suffix: '', label: 'Active Projects', color: '#0f172a' },
+            { value: dashStats?.buildings || projects.reduce((sum, p) => sum + (p.buildings_count || 0), 0), suffix: '', label: 'Buildings Surveyed', color: '#0f172a' },
+            { value: dashStats?.sqft || 0, suffix: '', label: 'Total Sq Ft', color: '#0f172a', display: dashStats?.sqft ? (dashStats.sqft >= 1000000 ? (dashStats.sqft / 1000000).toFixed(1) + 'M' : dashStats.sqft >= 1000 ? Math.round(dashStats.sqft / 1000) + 'K' : String(dashStats.sqft)) : '0' },
+            { value: dashStats?.shortlisted || projects.reduce((sum, p) => sum + (p.shortlisted_count || 0), 0), suffix: '', label: 'Shortlisted', color: '#2563eb' },
+            { value: dashStats?.leaseValue || 0, suffix: '', label: 'Lease Value Analyzed', color: '#0f172a', display: dashStats?.leaseValue ? '$' + (dashStats.leaseValue >= 1000000 ? (dashStats.leaseValue / 1000000).toFixed(1) + 'M' : dashStats.leaseValue >= 1000 ? Math.round(dashStats.leaseValue / 1000) + 'K' : String(dashStats.leaseValue)) : '$0' },
           ].map((stat, i) => (
             <div key={i} style={{
               background: '#ffffff',
