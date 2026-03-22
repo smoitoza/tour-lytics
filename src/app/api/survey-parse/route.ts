@@ -105,16 +105,26 @@ function mapLinksToBuildings(
 ): void {
   if (pageData.length === 0) return
 
-  // Group buildings by their estimated page (and adjacent pages for tolerance)
+  // Group buildings by their estimated page
+  // First pass: exact page match only
   const buildingsByPage: Record<number, any[]> = {}
   for (const b of buildings) {
     const pg = b.estimatedPage
     if (!pg) continue
-    // Map to exact page and +/- 1 page for tolerance
-    for (const p of [pg - 1, pg, pg + 1]) {
-      if (p < 1) continue
-      if (!buildingsByPage[p]) buildingsByPage[p] = []
-      if (!buildingsByPage[p].includes(b)) buildingsByPage[p].push(b)
+    if (!buildingsByPage[pg]) buildingsByPage[pg] = []
+    buildingsByPage[pg].push(b)
+  }
+  // Second pass: for pages with links but no exact buildings, try +/-1 tolerance
+  for (const pd of pageData) {
+    if (!buildingsByPage[pd.page] || buildingsByPage[pd.page].length === 0) {
+      for (const b of buildings) {
+        const pg = b.estimatedPage
+        if (!pg) continue
+        if (Math.abs(pg - pd.page) === 1) {
+          if (!buildingsByPage[pd.page]) buildingsByPage[pd.page] = []
+          if (!buildingsByPage[pd.page].includes(b)) buildingsByPage[pd.page].push(b)
+        }
+      }
     }
   }
 
@@ -154,7 +164,7 @@ function mapLinksToBuildings(
         if (foundY >= 0) break
       }
 
-      // Fallback: just match the street number if unique enough (4+ digits)
+      // Fallback: just match the street number if unique enough (3+ digits)
       if (foundY < 0) {
         const streetNum = addrWords[0]
         if (streetNum && streetNum.length >= 3 && /^\d+$/.test(streetNum)) {
@@ -164,6 +174,20 @@ function mapLinksToBuildings(
               break
             }
           }
+        }
+      }
+
+      // Fallback: try matching building/project name if one was parsed
+      if (foundY < 0 && b.projectName) {
+        const projWords = b.projectName.toLowerCase().split(/\s+/).filter((w: string) => w.length > 3)
+        for (const word of projWords) {
+          for (const item of pd.textItems) {
+            if (item.str.toLowerCase().includes(word)) {
+              foundY = item.y
+              break
+            }
+          }
+          if (foundY >= 0) break
         }
       }
 
@@ -196,6 +220,37 @@ function mapLinksToBuildings(
           return { type, label, url: l.url }
         })
         console.log(`  Links mapped: ${building.address} -> ${building.links.length} links`)
+      }
+    }
+
+    // Handle unmatched buildings on this page: if there are buildings that weren't
+    // found in text but we have unassigned links, distribute them in order
+    if (pageBldgs.length > bldgPositions.length && pd.links.length > 0) {
+      const assignedUrls = new Set<string>()
+      for (const bp of bldgPositions) {
+        for (const l of (bp.building.links || [])) assignedUrls.add(l.url)
+      }
+      const unassignedLinks = pd.links.filter(l => !assignedUrls.has(l.url))
+      const unmatchedBldgs = pageBldgs.filter(b => !bldgPositions.some(bp => bp.building === b))
+
+      if (unassignedLinks.length > 0 && unmatchedBldgs.length > 0) {
+        // Sort unassigned links by Y position and distribute in order
+        unassignedLinks.sort((a, b) => a.y - b.y)
+        const linksPerBldg = Math.max(1, Math.ceil(unassignedLinks.length / unmatchedBldgs.length))
+        for (let j = 0; j < unmatchedBldgs.length; j++) {
+          const chunk = unassignedLinks.slice(j * linksPerBldg, (j + 1) * linksPerBldg)
+          if (chunk.length > 0) {
+            unmatchedBldgs[j].links = chunk.map(l => {
+              const nearbyText = pd.textItems
+                .filter(t => Math.abs(t.y - l.y) < 20)
+                .map(t => t.str)
+                .join(' ')
+              const { type, label } = classifyLink(l.url, nearbyText)
+              return { type, label, url: l.url }
+            })
+            console.log(`  Links (fallback): ${unmatchedBldgs[j].address} -> ${unmatchedBldgs[j].links.length} links`)
+          }
+        }
       }
     }
   }
