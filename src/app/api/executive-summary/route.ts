@@ -334,7 +334,6 @@ ${customPrompt}` : ''}`
       generatedAt,
       generatedBy: userEmail || null,
       status: 'draft',
-      _dbError: dbError,
     })
   } catch (err) {
     console.error('Executive summary error:', err)
