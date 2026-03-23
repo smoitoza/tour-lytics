@@ -7,11 +7,12 @@ export const maxDuration = 90
 
 function getSupabase() {
   // Use service role key for DB operations to bypass RLS
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    serviceKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    serviceKey ? { auth: { autoRefreshToken: false, persistSession: false } } : undefined
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: { autoRefreshToken: false, persistSession: false },
+    }
   )
 }
 
@@ -300,7 +301,8 @@ ${customPrompt}` : ''}`
     // Save as draft to database
     let summaryId: string | null = null
     try {
-      const { data: inserted, error: insertErr } = await supabase.from('executive_summaries').insert({
+      // First just insert (don't chain .select which can cause issues)
+      const { error: insertErr } = await supabase.from('executive_summaries').insert({
         project_id: projectId,
         html: summaryHTML,
         custom_prompt: customPrompt || null,
@@ -310,11 +312,21 @@ ${customPrompt}` : ''}`
         building_count: buildings.length,
         generated_at: generatedAt,
         status: 'draft',
-      }).select('id').single()
+      })
       if (insertErr) {
-        console.error('Executive summary DB insert error:', insertErr)
+        console.error('Executive summary DB insert error:', JSON.stringify(insertErr))
       } else {
-        summaryId = inserted?.id || null
+        // Fetch the ID of what we just inserted
+        const { data: latest } = await supabase
+          .from('executive_summaries')
+          .select('id')
+          .eq('project_id', projectId)
+          .eq('generated_by', userEmail || '')
+          .eq('status', 'draft')
+          .order('generated_at', { ascending: false })
+          .limit(1)
+          .single()
+        summaryId = latest?.id || null
       }
     } catch (saveErr) {
       console.error('Failed to save executive summary to DB:', saveErr)
