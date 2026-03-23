@@ -18348,8 +18348,70 @@ function surveyUpdateLegendCount() {
 var _execSummaryData = null;
 var _execSummaryGenerating = false;
 
+var _execSummaryLoadedForProject = null;
+
 function execSummaryInit() {
-  // Nothing special on init - just show the current state
+  var projectId = getProjectId();
+  if (!projectId) return;
+
+  // If we already have data for this project (just generated or already loaded), skip fetch
+  if (_execSummaryData && _execSummaryLoadedForProject === projectId) return;
+
+  // Try to load a saved summary from the database
+  fetch('/api/executive-summary?projectId=' + encodeURIComponent(projectId))
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (!data.found) return;
+
+      _execSummaryData = data;
+      _execSummaryLoadedForProject = projectId;
+      execSummaryRenderSaved(data);
+    })
+    .catch(function(err) {
+      console.warn('Failed to load saved executive summary:', err);
+    });
+}
+
+function execSummaryRenderSaved(data) {
+  var emptyEl = document.getElementById('execSummaryEmpty');
+  var contentEl = document.getElementById('execSummaryContent');
+  var metaEl = document.getElementById('execSummaryMeta');
+  var bodyEl = document.getElementById('execSummaryBody');
+
+  var genDate = new Date(data.generatedAt);
+  var dateStr = genDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  var timeStr = genDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+  var byLine = data.generatedBy ? '<span class="exec-meta-dot"></span><span>By ' + esc(data.generatedBy) + '</span>' : '';
+
+  metaEl.innerHTML = '<span><strong>Project:</strong> ' + esc(data.projectName || 'N/A') + '</span>' +
+    '<span class="exec-meta-dot"></span>' +
+    '<span><strong>Market:</strong> ' + esc(data.market || 'N/A') + '</span>' +
+    '<span class="exec-meta-dot"></span>' +
+    '<span><strong>Buildings:</strong> ' + (data.buildingCount || 0) + '</span>' +
+    '<span class="exec-meta-dot"></span>' +
+    '<span>Generated ' + dateStr + ' at ' + timeStr + '</span>' +
+    byLine;
+
+  var html = data.html || '';
+  html = html.replace(/^```html?\n?/i, '').replace(/\n?```$/i, '').trim();
+  if (!html.match(/^</) && html.match(/^#/m)) {
+    html = execSummaryMarkdownToHTML(html);
+  }
+  bodyEl.innerHTML = html;
+
+  emptyEl.style.display = 'none';
+  contentEl.style.display = 'block';
+
+  // Show export buttons
+  document.getElementById('execSummaryExportDocx').style.display = '';
+  document.getElementById('execSummaryExportDrive').style.display = '';
+
+  // If there was a custom prompt, show it in the textarea
+  if (data.customPrompt) {
+    var promptEl = document.getElementById('execSummaryPrompt');
+    if (promptEl && !promptEl.value) promptEl.value = data.customPrompt;
+  }
 }
 
 // Convert markdown to HTML as fallback if Claude returns markdown instead of HTML
@@ -18457,13 +18519,19 @@ async function execSummaryGenerate() {
     var dateStr = genDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     var timeStr = genDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
-    metaEl.innerHTML = '<span><strong>Project:</strong> ' + (data.projectName || 'N/A') + '</span>' +
+    var byLine = data.generatedBy ? '<span class="exec-meta-dot"></span><span>By ' + esc(data.generatedBy) + '</span>' : '';
+
+    metaEl.innerHTML = '<span><strong>Project:</strong> ' + esc(data.projectName || 'N/A') + '</span>' +
       '<span class="exec-meta-dot"></span>' +
-      '<span><strong>Market:</strong> ' + (data.market || 'N/A') + '</span>' +
+      '<span><strong>Market:</strong> ' + esc(data.market || 'N/A') + '</span>' +
       '<span class="exec-meta-dot"></span>' +
       '<span><strong>Buildings:</strong> ' + (data.buildingCount || 0) + '</span>' +
       '<span class="exec-meta-dot"></span>' +
-      '<span>Generated ' + dateStr + ' at ' + timeStr + '</span>';
+      '<span>Generated ' + dateStr + ' at ' + timeStr + '</span>' +
+      byLine;
+
+    // Track that we loaded this project
+    _execSummaryLoadedForProject = getProjectId();
 
     // Clean the response - strip code fences, convert markdown if needed
     var html = data.html || '';

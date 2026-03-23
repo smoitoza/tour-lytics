@@ -292,15 +292,74 @@ ${customPrompt}` : ''}`
       .map(block => block.type === 'text' ? block.text : '')
       .join('')
 
+    const generatedAt = new Date().toISOString()
+
+    // Save to database so it persists across devices and users
+    try {
+      await supabase.from('executive_summaries').insert({
+        project_id: projectId,
+        html: summaryHTML,
+        custom_prompt: customPrompt || null,
+        generated_by: userEmail || null,
+        project_name: project.name,
+        market: project.market,
+        building_count: buildings.length,
+        generated_at: generatedAt,
+      })
+    } catch (saveErr) {
+      console.warn('Failed to save executive summary to DB:', saveErr)
+    }
+
     return NextResponse.json({
       html: summaryHTML,
       projectName: project.name,
       market: project.market,
       buildingCount: buildings.length,
-      generatedAt: new Date().toISOString(),
+      generatedAt,
+      generatedBy: userEmail || null,
     })
   } catch (err) {
     console.error('Executive summary error:', err)
+    return NextResponse.json({ error: String(err) }, { status: 500 })
+  }
+}
+
+// GET endpoint to load the most recent saved summary
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const projectId = searchParams.get('projectId')
+
+    if (!projectId) {
+      return NextResponse.json({ error: 'projectId required' }, { status: 400 })
+    }
+
+    const supabase = getSupabase()
+
+    const { data, error } = await supabase
+      .from('executive_summaries')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('generated_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (error || !data) {
+      return NextResponse.json({ found: false })
+    }
+
+    return NextResponse.json({
+      found: true,
+      html: data.html,
+      projectName: data.project_name,
+      market: data.market,
+      buildingCount: data.building_count,
+      generatedAt: data.generated_at,
+      generatedBy: data.generated_by,
+      customPrompt: data.custom_prompt,
+    })
+  } catch (err) {
+    console.error('Executive summary load error:', err)
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 }
