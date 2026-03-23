@@ -18,7 +18,7 @@ function getAnthropic() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { projectId, userEmail } = await request.json()
+    const { projectId, userEmail, customPrompt } = await request.json()
 
     if (!projectId) {
       return NextResponse.json({ error: 'projectId required' }, { status: 400 })
@@ -276,7 +276,10 @@ IMPORTANT GUIDELINES:
 - If data is missing for a section, note it briefly and move on
 - Include comparison tables for buildings with financial data (separate tables for cash and straight-line)
 - Keep it concise but thorough, aim for 1000-1500 words
-- Format monetary values with dollar signs and commas`
+- Format monetary values with dollar signs and commas${customPrompt ? `
+
+ADDITIONAL USER INSTRUCTIONS (incorporate these into the summary):
+${customPrompt}` : ''}`
         }
       ]
     })
