@@ -18403,6 +18403,14 @@ function execSummaryInit() {
   // If we already have data for this project (just generated or already loaded), skip fetch
   if (_execSummaryData && _execSummaryLoadedForProject === projectId) return;
 
+  // Reset state when loading a new project or first visit
+  _execSummaryData = null;
+  document.getElementById('execSummaryPublishBtn').style.display = 'none';
+  document.getElementById('execSummaryExportDocx').style.display = 'none';
+  document.getElementById('execSummaryExportDrive').style.display = 'none';
+  document.getElementById('execSummaryContent').style.display = 'none';
+  document.getElementById('execSummaryEmpty').style.display = 'flex';
+
   // Try to load a saved summary from the database (pass userEmail to get drafts for current user)
   var email = getCurrentUserEmail() || '';
   fetch('/api/executive-summary?projectId=' + encodeURIComponent(projectId) + '&userEmail=' + encodeURIComponent(email))
@@ -18816,8 +18824,8 @@ function execSummaryExportDrive() {
 }
 
 async function execSummaryPublish() {
-  if (!_execSummaryData || !_execSummaryData.id) {
-    alert('No summary to publish. Generate one first.');
+  if (!_execSummaryData || !_execSummaryData.id || !_execSummaryData.html) {
+    alert('Generate a summary first, then publish it to your team.');
     return;
   }
 
