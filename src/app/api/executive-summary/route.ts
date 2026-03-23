@@ -6,9 +6,12 @@ import { debitTokens } from '@/lib/tokens'
 export const maxDuration = 90
 
 function getSupabase() {
+  // Use service role key for DB operations to bypass RLS
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    serviceKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    serviceKey ? { auth: { autoRefreshToken: false, persistSession: false } } : undefined
   )
 }
 
@@ -297,7 +300,7 @@ ${customPrompt}` : ''}`
     // Save as draft to database
     let summaryId: string | null = null
     try {
-      const { data: inserted } = await supabase.from('executive_summaries').insert({
+      const { data: inserted, error: insertErr } = await supabase.from('executive_summaries').insert({
         project_id: projectId,
         html: summaryHTML,
         custom_prompt: customPrompt || null,
@@ -308,9 +311,13 @@ ${customPrompt}` : ''}`
         generated_at: generatedAt,
         status: 'draft',
       }).select('id').single()
-      summaryId = inserted?.id || null
+      if (insertErr) {
+        console.error('Executive summary DB insert error:', insertErr)
+      } else {
+        summaryId = inserted?.id || null
+      }
     } catch (saveErr) {
-      console.warn('Failed to save executive summary to DB:', saveErr)
+      console.error('Failed to save executive summary to DB:', saveErr)
     }
 
     return NextResponse.json({
