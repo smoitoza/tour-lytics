@@ -293,36 +293,36 @@ ${customPrompt}` : ''}`
 
     // Save as draft to database
     let summaryId: string | null = null
-    try {
-      // First just insert (don't chain .select which can cause issues)
-      const { error: insertErr } = await supabase.from('executive_summaries').insert({
-        project_id: projectId,
-        html: summaryHTML,
-        custom_prompt: customPrompt || null,
-        generated_by: userEmail || null,
-        project_name: project.name,
-        market: project.market,
-        building_count: buildings.length,
-        generated_at: generatedAt,
-        status: 'draft',
-      })
-      if (insertErr) {
-        console.error('Executive summary DB insert error:', JSON.stringify(insertErr))
-      } else {
-        // Fetch the ID of what we just inserted
-        const { data: latest } = await supabase
-          .from('executive_summaries')
-          .select('id')
-          .eq('project_id', projectId)
-          .eq('generated_by', userEmail || '')
-          .eq('status', 'draft')
-          .order('generated_at', { ascending: false })
-          .limit(1)
-          .single()
-        summaryId = latest?.id || null
+    let dbError: string | null = null
+
+    const { error: insertErr } = await supabase.from('executive_summaries').insert({
+      project_id: projectId,
+      html: summaryHTML,
+      custom_prompt: customPrompt || null,
+      generated_by: userEmail || null,
+      project_name: project.name,
+      market: project.market,
+      building_count: buildings.length,
+      generated_at: generatedAt,
+      status: 'draft',
+    })
+
+    if (insertErr) {
+      dbError = insertErr.message || JSON.stringify(insertErr)
+    } else {
+      // Fetch the ID of what we just inserted
+      const { data: latest, error: fetchErr } = await supabase
+        .from('executive_summaries')
+        .select('id')
+        .eq('project_id', projectId)
+        .eq('status', 'draft')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+      summaryId = latest?.id || null
+      if (fetchErr) {
+        dbError = 'Insert OK but fetch failed: ' + (fetchErr.message || JSON.stringify(fetchErr))
       }
-    } catch (saveErr) {
-      console.error('Failed to save executive summary to DB:', saveErr)
     }
 
     return NextResponse.json({
@@ -334,6 +334,7 @@ ${customPrompt}` : ''}`
       generatedAt,
       generatedBy: userEmail || null,
       status: 'draft',
+      _dbError: dbError,
     })
   } catch (err) {
     console.error('Executive summary error:', err)
