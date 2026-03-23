@@ -294,9 +294,10 @@ ${customPrompt}` : ''}`
 
     const generatedAt = new Date().toISOString()
 
-    // Save to database so it persists across devices and users
+    // Save as draft to database
+    let summaryId: string | null = null
     try {
-      await supabase.from('executive_summaries').insert({
+      const { data: inserted } = await supabase.from('executive_summaries').insert({
         project_id: projectId,
         html: summaryHTML,
         custom_prompt: customPrompt || null,
@@ -305,18 +306,22 @@ ${customPrompt}` : ''}`
         market: project.market,
         building_count: buildings.length,
         generated_at: generatedAt,
-      })
+        status: 'draft',
+      }).select('id').single()
+      summaryId = inserted?.id || null
     } catch (saveErr) {
       console.warn('Failed to save executive summary to DB:', saveErr)
     }
 
     return NextResponse.json({
+      id: summaryId,
       html: summaryHTML,
       projectName: project.name,
       market: project.market,
       buildingCount: buildings.length,
       generatedAt,
       generatedBy: userEmail || null,
+      status: 'draft',
     })
   } catch (err) {
     console.error('Executive summary error:', err)
@@ -324,11 +329,14 @@ ${customPrompt}` : ''}`
   }
 }
 
-// GET endpoint to load the most recent saved summary
+// GET endpoint to load summaries
+// - If userEmail is provided: returns the user's latest draft OR the published version (draft takes priority for the author)
+// - If no userEmail: returns only the published version
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const projectId = searchParams.get('projectId')
+    const userEmail = searchParams.get('userEmail')
 
     if (!projectId) {
       return NextResponse.json({ error: 'projectId required' }, { status: 400 })
@@ -336,30 +344,118 @@ export async function GET(request: NextRequest) {
 
     const supabase = getSupabase()
 
-    const { data, error } = await supabase
+    // First, check if the current user has a draft
+    if (userEmail) {
+      const { data: draft } = await supabase
+        .from('executive_summaries')
+        .select('*')
+        .eq('project_id', projectId)
+        .eq('generated_by', userEmail)
+        .eq('status', 'draft')
+        .order('generated_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (draft) {
+        return NextResponse.json({
+          found: true,
+          id: draft.id,
+          html: draft.html,
+          projectName: draft.project_name,
+          market: draft.market,
+          buildingCount: draft.building_count,
+          generatedAt: draft.generated_at,
+          generatedBy: draft.generated_by,
+          customPrompt: draft.custom_prompt,
+          status: 'draft',
+        })
+      }
+    }
+
+    // No draft for this user, look for the latest published version
+    const { data: published } = await supabase
       .from('executive_summaries')
       .select('*')
       .eq('project_id', projectId)
-      .order('generated_at', { ascending: false })
+      .eq('status', 'published')
+      .order('published_at', { ascending: false })
       .limit(1)
       .single()
 
-    if (error || !data) {
+    if (!published) {
       return NextResponse.json({ found: false })
     }
 
     return NextResponse.json({
       found: true,
-      html: data.html,
-      projectName: data.project_name,
-      market: data.market,
-      buildingCount: data.building_count,
-      generatedAt: data.generated_at,
-      generatedBy: data.generated_by,
-      customPrompt: data.custom_prompt,
+      id: published.id,
+      html: published.html,
+      projectName: published.project_name,
+      market: published.market,
+      buildingCount: published.building_count,
+      generatedAt: published.generated_at,
+      generatedBy: published.generated_by,
+      publishedBy: published.published_by,
+      publishedAt: published.published_at,
+      customPrompt: published.custom_prompt,
+      status: 'published',
     })
   } catch (err) {
     console.error('Executive summary load error:', err)
+    return NextResponse.json({ error: String(err) }, { status: 500 })
+  }
+}
+
+// PATCH endpoint to publish a draft
+export async function PATCH(request: NextRequest) {
+  try {
+    const { summaryId, userEmail } = await request.json()
+
+    if (!summaryId) {
+      return NextResponse.json({ error: 'summaryId required' }, { status: 400 })
+    }
+
+    const supabase = getSupabase()
+
+    // Unpublish any previously published summaries for this project
+    const { data: current } = await supabase
+      .from('executive_summaries')
+      .select('project_id')
+      .eq('id', summaryId)
+      .single()
+
+    if (current) {
+      await supabase
+        .from('executive_summaries')
+        .update({ status: 'draft' })
+        .eq('project_id', current.project_id)
+        .eq('status', 'published')
+    }
+
+    // Publish this one
+    const { data, error } = await supabase
+      .from('executive_summaries')
+      .update({
+        status: 'published',
+        published_by: userEmail || null,
+        published_at: new Date().toISOString(),
+      })
+      .eq('id', summaryId)
+      .select('*')
+      .single()
+
+    if (error) {
+      return NextResponse.json({ error: 'Failed to publish' }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      success: true,
+      status: 'published',
+      publishedBy: userEmail,
+      publishedAt: data.published_at,
+    })
+  } catch (err) {
+    console.error('Executive summary publish error:', err)
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 }

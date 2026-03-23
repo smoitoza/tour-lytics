@@ -5419,6 +5419,48 @@ body {
       opacity: 0.5;
       cursor: not-allowed;
     }
+    .exec-summary-publish-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 20px;
+      background: #16a34a;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .exec-summary-publish-btn:hover {
+      background: #15803d;
+      transform: translateY(-1px);
+    }
+    .exec-summary-publish-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .exec-summary-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .exec-summary-status-badge.draft {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .exec-summary-status-badge.published {
+      background: #dcfce7;
+      color: #166534;
+    }
     .exec-summary-prompt {
       margin-bottom: var(--space-4);
     }
@@ -9067,6 +9109,10 @@ body {
         <button class="exec-summary-generate-btn" id="execSummaryGenerateBtn" onclick="execSummaryGenerate()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           Generate Summary
+        </button>
+        <button class="exec-summary-publish-btn" id="execSummaryPublishBtn" onclick="execSummaryPublish()" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M22 2L11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          Publish to Team
         </button>
         <button class="exec-summary-export-btn" id="execSummaryExportDocx" onclick="execSummaryExportDocx()" style="display:none;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -18357,8 +18403,9 @@ function execSummaryInit() {
   // If we already have data for this project (just generated or already loaded), skip fetch
   if (_execSummaryData && _execSummaryLoadedForProject === projectId) return;
 
-  // Try to load a saved summary from the database
-  fetch('/api/executive-summary?projectId=' + encodeURIComponent(projectId))
+  // Try to load a saved summary from the database (pass userEmail to get drafts for current user)
+  var email = getCurrentUserEmail() || '';
+  fetch('/api/executive-summary?projectId=' + encodeURIComponent(projectId) + '&userEmail=' + encodeURIComponent(email))
     .then(function(res) { return res.json(); })
     .then(function(data) {
       if (!data.found) return;
@@ -18382,16 +18429,28 @@ function execSummaryRenderSaved(data) {
   var dateStr = genDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   var timeStr = genDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
+  var isDraft = data.status === 'draft';
+  var statusBadge = isDraft
+    ? '<span class="exec-summary-status-badge draft">Draft</span>'
+    : '<span class="exec-summary-status-badge published">Published</span>';
+
   var byLine = data.generatedBy ? '<span class="exec-meta-dot"></span><span>By ' + esc(data.generatedBy) + '</span>' : '';
 
-  metaEl.innerHTML = '<span><strong>Project:</strong> ' + esc(data.projectName || 'N/A') + '</span>' +
+  var publishLine = '';
+  if (!isDraft && data.publishedBy) {
+    var pubDate = data.publishedAt ? new Date(data.publishedAt) : null;
+    var pubStr = pubDate ? ' on ' + pubDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+    publishLine = '<span class="exec-meta-dot"></span><span>Published by ' + esc(data.publishedBy) + pubStr + '</span>';
+  }
+
+  metaEl.innerHTML = statusBadge +
     '<span class="exec-meta-dot"></span>' +
-    '<span><strong>Market:</strong> ' + esc(data.market || 'N/A') + '</span>' +
+    '<span><strong>Project:</strong> ' + esc(data.projectName || 'N/A') + '</span>' +
     '<span class="exec-meta-dot"></span>' +
     '<span><strong>Buildings:</strong> ' + (data.buildingCount || 0) + '</span>' +
     '<span class="exec-meta-dot"></span>' +
     '<span>Generated ' + dateStr + ' at ' + timeStr + '</span>' +
-    byLine;
+    byLine + publishLine;
 
   var html = data.html || '';
   html = html.replace(/^```html?\n?/i, '').replace(/\n?```$/i, '').trim();
@@ -18406,6 +18465,10 @@ function execSummaryRenderSaved(data) {
   // Show export buttons
   document.getElementById('execSummaryExportDocx').style.display = '';
   document.getElementById('execSummaryExportDrive').style.display = '';
+
+  // Show Publish button only for drafts
+  var publishBtn = document.getElementById('execSummaryPublishBtn');
+  publishBtn.style.display = isDraft ? '' : 'none';
 
   // If there was a custom prompt, show it in the textarea
   if (data.customPrompt) {
@@ -18521,9 +18584,9 @@ async function execSummaryGenerate() {
 
     var byLine = data.generatedBy ? '<span class="exec-meta-dot"></span><span>By ' + esc(data.generatedBy) + '</span>' : '';
 
-    metaEl.innerHTML = '<span><strong>Project:</strong> ' + esc(data.projectName || 'N/A') + '</span>' +
+    metaEl.innerHTML = '<span class="exec-summary-status-badge draft">Draft</span>' +
       '<span class="exec-meta-dot"></span>' +
-      '<span><strong>Market:</strong> ' + esc(data.market || 'N/A') + '</span>' +
+      '<span><strong>Project:</strong> ' + esc(data.projectName || 'N/A') + '</span>' +
       '<span class="exec-meta-dot"></span>' +
       '<span><strong>Buildings:</strong> ' + (data.buildingCount || 0) + '</span>' +
       '<span class="exec-meta-dot"></span>' +
@@ -18548,9 +18611,10 @@ async function execSummaryGenerate() {
     loadingEl.style.display = 'none';
     contentEl.style.display = 'block';
 
-    // Show export buttons
+    // Show export buttons and Publish button (newly generated = draft)
     document.getElementById('execSummaryExportDocx').style.display = '';
     document.getElementById('execSummaryExportDrive').style.display = '';
+    document.getElementById('execSummaryPublishBtn').style.display = '';
 
   } catch (err) {
     console.error('Executive summary error:', err);
@@ -18748,6 +18812,48 @@ function execSummaryExportDrive() {
         console.error('Config fetch error:', err);
         restoreDriveBtn('Could not load configuration. Please try again.');
       });
+  }
+}
+
+async function execSummaryPublish() {
+  if (!_execSummaryData || !_execSummaryData.id) {
+    alert('No summary to publish. Generate one first.');
+    return;
+  }
+
+  var btn = document.getElementById('execSummaryPublishBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M22 2L11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Publishing...';
+
+  try {
+    var resp = await fetch('/api/executive-summary', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        summaryId: _execSummaryData.id,
+        userEmail: getCurrentUserEmail()
+      })
+    });
+
+    if (!resp.ok) {
+      throw new Error('Failed to publish');
+    }
+
+    var result = await resp.json();
+
+    // Update local state
+    _execSummaryData.status = 'published';
+    _execSummaryData.publishedBy = result.publishedBy;
+    _execSummaryData.publishedAt = result.publishedAt;
+
+    // Re-render with published status
+    execSummaryRenderSaved(_execSummaryData);
+
+  } catch (err) {
+    console.error('Publish error:', err);
+    alert('Failed to publish: ' + err.message);
+    btn.disabled = false;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M22 2L11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Publish to Team';
   }
 }
 
