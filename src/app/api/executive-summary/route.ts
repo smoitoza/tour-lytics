@@ -139,15 +139,46 @@ export async function POST(request: NextRequest) {
         subs.forEach((sub: any, idx: number) => {
           const terms = sub.deal_terms || {}
           const summary = sub.analysis?.summary || {}
+          const slPL = sub.analysis?.straight_line_pl || {}
+          const slTotals = slPL.totals || {}
+          const gaap = sub.analysis?.gaap || {}
+          const gaapSummary = gaap.summary || {}
+
           context += `    Version ${idx + 1} (${new Date(sub.submitted_at || sub.created_at).toLocaleDateString()}):\n`
           if (terms.rsf) context += `      RSF: ${terms.rsf.toLocaleString()}\n`
           if (terms.base_rent_rsf) context += `      Base Rent: $${terms.base_rent_rsf}/RSF/yr\n`
           if (terms.lease_term_months) context += `      Term: ${terms.lease_term_months} months\n`
           if (terms.free_rent_months) context += `      Free Rent: ${terms.free_rent_months} months\n`
           if (terms.ti_allowance_rsf) context += `      TI: $${terms.ti_allowance_rsf}/RSF\n`
+          if (terms.annual_escalation) context += `      Annual Escalation: ${terms.annual_escalation}%\n`
+          if (terms.opex_rsf) context += `      OpEx: $${terms.opex_rsf}/RSF/yr\n`
+
+          // Cash basis metrics
+          context += `      --- CASH BASIS ---\n`
           if (summary.effectiveRentRSF) context += `      Effective Rent: $${summary.effectiveRentRSF}/RSF\n`
-          if (summary.totalAllInCost) context += `      Total All-in: $${summary.totalAllInCost.toLocaleString()}\n`
+          if (summary.totalAllInCost) context += `      Total All-in Cost: $${summary.totalAllInCost.toLocaleString()}\n`
           if (summary.totalConcessions) context += `      Total Concessions: $${summary.totalConcessions.toLocaleString()}\n`
+          if (summary.straightLineAnnualExpense) context += `      Cash Annual Expense: $${summary.straightLineAnnualExpense.toLocaleString()}\n`
+
+          // Straight-Line P&L metrics
+          if (slTotals.straightLineMonthlyRent || slTotals.straightLineAnnualRent) {
+            context += `      --- STRAIGHT-LINE (ASC 842 / GAAP) ---\n`
+            if (slTotals.straightLineMonthlyRent) context += `      SL Monthly Rent: $${slTotals.straightLineMonthlyRent.toLocaleString()}\n`
+            if (slTotals.straightLineAnnualRent) context += `      SL Annual Rent: $${slTotals.straightLineAnnualRent.toLocaleString()}\n`
+            if (slTotals.tiAllowanceTotal) context += `      TI Allowance Total: $${slTotals.tiAllowanceTotal.toLocaleString()}\n`
+            if (slTotals.monthlyTIAmortization) context += `      Monthly TI Amortization: $${slTotals.monthlyTIAmortization.toLocaleString()}\n`
+            if (slTotals.effectiveRentRSF) context += `      SL Effective Rent/RSF: $${slTotals.effectiveRentRSF}\n`
+            if (slTotals.totalCostPerRSFPerYear) context += `      SL Total Cost/RSF/Year: $${slTotals.totalCostPerRSFPerYear}\n`
+          }
+
+          // GAAP / ASC 842 lease accounting
+          if (gaapSummary.leaseLiability || gaapSummary.rouAsset) {
+            context += `      --- GAAP LEASE ACCOUNTING (ASC 842) ---\n`
+            if (gaapSummary.discountRate) context += `      Discount Rate: ${gaapSummary.discountRate}%\n`
+            if (gaapSummary.leaseLiability) context += `      Lease Liability (Day 1): $${gaapSummary.leaseLiability.toLocaleString()}\n`
+            if (gaapSummary.rouAsset) context += `      ROU Asset (Day 1): $${gaapSummary.rouAsset.toLocaleString()}\n`
+            if (gaapSummary.totalLeasePayments) context += `      Total Lease Payments: $${gaapSummary.totalLeasePayments.toLocaleString()}\n`
+          }
         })
 
         // Show deal progression if multiple versions
@@ -215,22 +246,36 @@ Write the executive summary in HTML format with these sections. Use proper HTML 
 
 3. TOUR LIST & SHORTLIST RATIONALE - Which buildings made the tour list and shortlist, and why (based on the data available: price, size, class, location)
 
-4. FINANCIAL ANALYSIS SUMMARY - For each building with RFP data:
-   - Current deal terms
-   - If multiple versions exist, how the deal improved over negotiation rounds
-   - Key financial metrics (effective rent, total cost, concessions)
+4. FINANCIAL ANALYSIS: CASH BASIS - For each building with RFP data, present the cash flow analysis:
+   - Current deal terms (base rent, free rent, TI, escalation, OpEx)
+   - Effective rent per RSF
+   - Total all-in cost over the lease term
+   - Total concessions secured
+   - If multiple versions exist, how the deal improved across negotiation rounds
+   - Include a comparison table across buildings showing cash basis metrics side by side
 
-5. COMMUTE & ACCESSIBILITY (if commute data exists) - Summary of employee commute impact by building
+5. FINANCIAL ANALYSIS: STRAIGHT-LINE (GAAP/ASC 842) - This section is CRITICAL for CFO review. For each building with straight-line data:
+   - Straight-line monthly and annual rent (net of TI amortization)
+   - SL effective rent per RSF and total cost per RSF per year
+   - TI allowance total and monthly TI amortization
+   - Day 1 Lease Liability and ROU Asset (if GAAP data exists)
+   - Discount rate used
+   - Total lease payments over the term
+   - Include a comparison table showing straight-line metrics side by side across buildings
+   - Clearly note the difference between cash basis and straight-line figures, explaining why they differ (front-loaded concessions like free rent and TI are spread evenly in straight-line)
 
-6. RECOMMENDATION & NEXT STEPS - Based on ALL the data, provide a structured recommendation on which buildings represent the strongest options and what next steps should be taken
+6. COMMUTE & ACCESSIBILITY (if commute data exists) - Summary of employee commute impact by building
+
+7. RECOMMENDATION & NEXT STEPS - Based on ALL the data (cash, straight-line, commute, location), provide a structured recommendation on which buildings represent the strongest options from both an operational AND financial reporting perspective. Call out which building looks best on a cash basis vs. which looks best on a GAAP/straight-line basis if they differ.
 
 IMPORTANT GUIDELINES:
 - Do not use em dashes
 - Write in a professional, direct tone appropriate for a CEO or CFO
 - Use specific numbers from the data, not generalities
+- ALWAYS present both cash basis AND straight-line analysis when the data exists. The CFO needs both perspectives.
 - If data is missing for a section, note it briefly and move on
-- Include a summary comparison table for buildings with financial data
-- Keep it concise but thorough, aim for 800-1200 words
+- Include comparison tables for buildings with financial data (separate tables for cash and straight-line)
+- Keep it concise but thorough, aim for 1000-1500 words
 - Format monetary values with dollar signs and commas`
         }
       ]
