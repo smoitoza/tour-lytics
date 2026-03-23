@@ -148,6 +148,24 @@ export async function POST(req: Request) {
   return NextResponse.json(data)
 }
 
+// PATCH - update version label on an RFP submission
+export async function PATCH(req: Request) {
+  const body = await req.json()
+  const { id, versionLabel } = body
+
+  if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
+
+  const { data, error } = await supabase
+    .from('rfp_submissions')
+    .update({ version_label: versionLabel || null, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select('id, version_label')
+    .single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json(data)
+}
+
 // DELETE - archive an RFP submission
 export async function DELETE(req: Request) {
   const { searchParams } = new URL(req.url)

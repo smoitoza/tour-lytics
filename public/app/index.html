@@ -15230,7 +15230,7 @@ function rfpBuildDetailHtml(subs) {
     '<div class="rfp-detail-header">' +
       '<div>' +
         '<div class="rfp-detail-title">' + address + '</div>' +
-        '<div class="rfp-detail-subtitle">' + docType +
+        '<div class="rfp-detail-subtitle">' + (selected.version_label ? '<strong>' + esc(selected.version_label) + '</strong> | ' : '') + docType +
           (selected.source ? ' | ' + selected.source : '') +
           ' | Submitted ' + (selected.created_at || selected.createdAt ? new Date(selected.created_at || selected.createdAt).toLocaleDateString() : '') +
         '</div>' +
@@ -15247,9 +15247,9 @@ function rfpBuildDetailHtml(subs) {
     html += '<div class="rfp-version-bar"><span class="rfp-version-bar-label">Versions</span>';
     sorted.forEach(function(s, idx) {
       var isActive = s.id === selected.id;
-      var label = (s.doc_type || s.docType || 'RFP') + ' #' + (sorted.length - idx);
-      if (s.source) label += ' - ' + s.source;
-      html += '<button class="rfp-version-chip' + (isActive ? ' active' : '') + '" onclick="rfpSelectSubmission(\'' + s.id + '\')">' + label + '</button>';
+      var defaultLabel = (s.doc_type || s.docType || 'RFP') + ' #' + (sorted.length - idx);
+      var label = s.version_label || defaultLabel;
+      html += '<button class="rfp-version-chip' + (isActive ? ' active' : '') + '" onclick="rfpSelectSubmission(\'' + s.id + '\')" ondblclick="event.stopPropagation(); rfpRenameVersion(\'' + s.id + '\', this, \'' + defaultLabel.replace(/'/g, '') + '\')" title="Double-click to rename">' + esc(label) + '</button>';
     });
     html += '<button class="rfp-version-chip" style="margin-left:auto;background:#2563eb;color:#fff;border-color:#2563eb;font-weight:600;" onclick="rfpShowVersionComparison(\'' + address.replace(/'/g, "\\\'" ) + '\')">' +
       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>' +
@@ -15303,6 +15303,51 @@ function rfpBuildDetailHtml(subs) {
 function rfpSelectSubmission(id) {
   window._rfpState.selectedSubmission = id;
   rfpRenderDashboard(window._rfpState.submissions);
+}
+
+// ===== VERSION RENAME =====
+function rfpRenameVersion(submissionId, chipEl, defaultLabel) {
+  var currentLabel = chipEl.textContent.trim();
+  var input = document.createElement('input');
+  input.type = 'text';
+  input.value = currentLabel;
+  input.placeholder = defaultLabel;
+  input.style.cssText = 'width:140px;padding:4px 8px;border:2px solid var(--color-primary,#f47920);border-radius:6px;font-size:0.8rem;font-weight:600;outline:none;background:#fff;';
+  chipEl.textContent = '';
+  chipEl.appendChild(input);
+  input.focus();
+  input.select();
+
+  function save() {
+    var newLabel = input.value.trim();
+    // If empty or same as default, clear the custom label
+    var labelToSave = (newLabel === '' || newLabel === defaultLabel) ? null : newLabel;
+    chipEl.textContent = labelToSave || defaultLabel;
+
+    // Save to DB
+    fetch('/api/rfp', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: submissionId, versionLabel: labelToSave })
+    }).then(function() {
+      // Update local state
+      var subs = window._rfpState.submissions || [];
+      subs.forEach(function(s) {
+        if (s.id === submissionId) s.version_label = labelToSave;
+      });
+      // Re-render to pick up the change everywhere
+      rfpRenderDashboard(subs);
+    }).catch(function(err) {
+      console.error('Failed to rename version:', err);
+      chipEl.textContent = currentLabel;
+    });
+  }
+
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { chipEl.textContent = currentLabel; }
+  });
 }
 
 // ===== VERSION COMPARISON =====
@@ -15383,10 +15428,11 @@ function rfpShowVersionComparison(buildingAddress) {
   html += '<thead><tr style="background:#f8fafc;">';
   html += '<th style="padding:10px 14px;text-align:left;font-weight:600;color:var(--color-text-muted);font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--color-border);min-width:160px;">Deal Term</th>';
   subs.forEach(function(s, idx) {
-    var label = (s.doc_type || s.docType || 'RFP') + ' #' + (idx + 1);
+    var defaultLabel = (s.doc_type || s.docType || 'RFP') + ' #' + (idx + 1);
+    var label = s.version_label || defaultLabel;
     var date = s.submitted_at ? new Date(s.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
     html += '<th style="padding:10px 14px;text-align:right;font-weight:600;border-bottom:1px solid var(--color-border);min-width:120px;">';
-    html += '<div>' + label + '</div>';
+    html += '<div>' + esc(label) + '</div>';
     if (date) html += '<div style="font-weight:400;font-size:var(--text-xs);color:var(--color-text-muted);">' + date + '</div>';
     html += '</th>';
   });
@@ -16232,7 +16278,8 @@ function rfpExportExcel() {
     allSubs.forEach(function(s, i) {
       var dt = s.doc_type || s.docType || 'RFP';
       var submitted = s.submitted_at ? new Date(s.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-      hdr.push(dt.toUpperCase() + ' #' + (i + 1) + (submitted ? ' (' + submitted + ')' : ''));
+      var vLabel = s.version_label || (dt.toUpperCase() + ' #' + (i + 1));
+      hdr.push(vLabel + (submitted ? ' (' + submitted + ')' : ''));
     });
     hdr.push('Change (First to Last)');
     vcData.push(hdr);
