@@ -148,11 +148,26 @@ export async function POST(req: Request) {
   return NextResponse.json(data)
 }
 
-// PATCH - update version label on an RFP submission
+// PATCH - update version label or sort order on RFP submissions
 export async function PATCH(req: Request) {
   const body = await req.json()
-  const { id, versionLabel } = body
+  const { id, versionLabel, reorder } = body
 
+  // Batch reorder: [{ id, sort_order }, ...]
+  if (reorder && Array.isArray(reorder)) {
+    const results = []
+    for (const item of reorder) {
+      const { error } = await supabase
+        .from('rfp_submissions')
+        .update({ sort_order: item.sort_order, updated_at: new Date().toISOString() })
+        .eq('id', item.id)
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      results.push({ id: item.id, sort_order: item.sort_order })
+    }
+    return NextResponse.json({ success: true, updated: results })
+  }
+
+  // Single update: version label
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
 
   const { data, error } = await supabase

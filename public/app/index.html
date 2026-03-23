@@ -7028,6 +7028,33 @@ body {
       background: var(--color-surface-hover, #f1f5f9);
       color: var(--color-primary, #f47920);
     }
+    .rfp-version-arrow {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 22px;
+      border-radius: 4px;
+      border: none;
+      background: transparent;
+      color: var(--color-text-faint, #94a3b8);
+      cursor: pointer;
+      padding: 0;
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1;
+      transition: all 0.15s;
+    }
+    .rfp-version-arrow:hover {
+      background: var(--color-surface-hover, #f1f5f9);
+      color: var(--color-primary, #f47920);
+    }
+    .rfp-version-wrap[draggable="true"] {
+      cursor: grab;
+    }
+    .rfp-version-wrap[draggable="true"]:active {
+      cursor: grabbing;
+    }
 
     /* Comparison table enhancements */
     .rfp-comparison-table { width: 100%; }
@@ -15227,10 +15254,8 @@ function rfpSelectBuilding(bNum) {
 
 // ===== DETAIL VIEW =====
 function rfpBuildDetailHtml(subs) {
-  // Sort by created_at descending
-  var sorted = subs.slice().sort(function(a, b) {
-    return new Date(b.created_at || b.createdAt || 0) - new Date(a.created_at || a.createdAt || 0);
-  });
+  // Sort by custom sort_order, then by created_at
+  var sorted = rfpSortVersions(subs);
 
   var selectedId = window._rfpState.selectedSubmission;
   var selected = null;
@@ -15270,12 +15295,20 @@ function rfpBuildDetailHtml(subs) {
     html += '<div class="rfp-version-bar"><span class="rfp-version-bar-label">Versions</span>';
     sorted.forEach(function(s, idx) {
       var isActive = s.id === selected.id;
-      var defaultLabel = (s.doc_type || s.docType || 'RFP') + ' #' + (sorted.length - idx);
+      var defaultLabel = (s.doc_type || s.docType || 'RFP') + ' #' + (idx + 1);
       var label = s.version_label || defaultLabel;
-      html += '<span class="rfp-version-wrap">' +
-        '<button class="rfp-version-chip' + (isActive ? ' active' : '') + '" onclick="rfpSelectSubmission(\'' + s.id + '\')">' + esc(label) + '</button>' +
-        '<button class="rfp-version-edit" onclick="event.stopPropagation(); rfpRenameVersion(\'' + s.id + '\', this.previousElementSibling, \'' + defaultLabel.replace(/'/g, '') + '\')" title="Rename version"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>' +
-      '</span>';
+      html += '<span class="rfp-version-wrap" draggable="true" ondragstart="rfpStartDrag(event, \'' + s.id + '\')" ondragover="rfpDragOver(event)" ondrop="rfpDrop(event, \'' + s.id + '\')" ondragend="rfpDragEnd(event)">';
+      // Left arrow (move earlier in sequence)
+      if (sorted.length > 1 && idx > 0) {
+        html += '<button class="rfp-version-arrow" onclick="event.stopPropagation(); rfpMoveVersion(\'' + s.id + '\', -1)" title="Move left">&lsaquo;</button>';
+      }
+      html += '<button class="rfp-version-chip' + (isActive ? ' active' : '') + '" onclick="rfpSelectSubmission(\'' + s.id + '\')">' + esc(label) + '</button>';
+      html += '<button class="rfp-version-edit" onclick="event.stopPropagation(); rfpRenameVersion(\'' + s.id + '\', this.previousElementSibling, \'' + defaultLabel.replace(/'/g, '') + '\')" title="Rename"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>';
+      // Right arrow (move later in sequence)
+      if (sorted.length > 1 && idx < sorted.length - 1) {
+        html += '<button class="rfp-version-arrow" onclick="event.stopPropagation(); rfpMoveVersion(\'' + s.id + '\', 1)" title="Move right">&rsaquo;</button>';
+      }
+      html += '</span>';
     });
     html += '<button class="rfp-version-chip" style="margin-left:auto;background:#2563eb;color:#fff;border-color:#2563eb;font-weight:600;" onclick="rfpShowVersionComparison(\'' + address.replace(/'/g, "\\\'" ) + '\')">' +
       '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>' +
@@ -15329,6 +15362,125 @@ function rfpBuildDetailHtml(subs) {
 function rfpSelectSubmission(id) {
   window._rfpState.selectedSubmission = id;
   rfpRenderDashboard(window._rfpState.submissions);
+}
+
+// ===== VERSION SORT HELPER =====
+// Sorts submissions for a building by sort_order (if set), then by created_at ascending (oldest first)
+function rfpSortVersions(subs) {
+  return subs.slice().sort(function(a, b) {
+    var aOrder = (a.sort_order != null) ? a.sort_order : 999999;
+    var bOrder = (b.sort_order != null) ? b.sort_order : 999999;
+    if (aOrder !== bOrder) return aOrder - bOrder;
+    // Fallback: oldest first
+    return new Date(a.created_at || a.createdAt || 0) - new Date(b.created_at || b.createdAt || 0);
+  });
+}
+
+// ===== VERSION REORDER =====
+var _rfpDragState = { dragId: null };
+
+function rfpStartDrag(e, id) {
+  _rfpDragState.dragId = id;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', id);
+  e.target.closest('.rfp-version-wrap').style.opacity = '0.4';
+}
+
+function rfpDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+}
+
+function rfpDrop(e, targetId) {
+  e.preventDefault();
+  var dragId = _rfpDragState.dragId;
+  if (!dragId || dragId === targetId) return;
+
+  var subs = window._rfpState.submissions || [];
+  var address = null;
+  subs.forEach(function(s) { if (s.id === dragId) address = s.building_address || s.buildingAddress; });
+  if (!address) return;
+
+  // Get versions for this building in current sort order
+  var buildingSubs = subs.filter(function(s) {
+    return (s.building_address || s.buildingAddress) === address;
+  });
+  var ordered = rfpSortVersions(buildingSubs);
+
+  // Remove dragged item and insert at target position
+  var dragItem = ordered.find(function(s) { return s.id === dragId; });
+  ordered = ordered.filter(function(s) { return s.id !== dragId; });
+  var targetIdx = ordered.findIndex(function(s) { return s.id === targetId; });
+  ordered.splice(targetIdx, 0, dragItem);
+
+  // Assign new sort_order values and save
+  var reorderPayload = ordered.map(function(s, idx) {
+    s.sort_order = idx + 1;
+    return { id: s.id, sort_order: idx + 1 };
+  });
+
+  // Update local state immediately
+  reorderPayload.forEach(function(r) {
+    subs.forEach(function(s) { if (s.id === r.id) s.sort_order = r.sort_order; });
+  });
+  rfpRenderDashboard(subs);
+
+  // Persist to DB
+  fetch('/api/rfp', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reorder: reorderPayload })
+  }).catch(function(err) {
+    console.error('Failed to save version order:', err);
+  });
+}
+
+function rfpDragEnd(e) {
+  _rfpDragState.dragId = null;
+  // Reset opacity on all wraps
+  document.querySelectorAll('.rfp-version-wrap').forEach(function(el) { el.style.opacity = ''; });
+}
+
+// Touch-based reorder for mobile
+function rfpMoveVersion(submissionId, direction) {
+  var subs = window._rfpState.submissions || [];
+  var address = null;
+  subs.forEach(function(s) { if (s.id === submissionId) address = s.building_address || s.buildingAddress; });
+  if (!address) return;
+
+  var buildingSubs = subs.filter(function(s) {
+    return (s.building_address || s.buildingAddress) === address;
+  });
+  var ordered = rfpSortVersions(buildingSubs);
+
+  var idx = ordered.findIndex(function(s) { return s.id === submissionId; });
+  if (idx < 0) return;
+  var newIdx = idx + direction;
+  if (newIdx < 0 || newIdx >= ordered.length) return;
+
+  // Swap
+  var temp = ordered[idx];
+  ordered[idx] = ordered[newIdx];
+  ordered[newIdx] = temp;
+
+  // Assign new sort_order and save
+  var reorderPayload = ordered.map(function(s, i) {
+    s.sort_order = i + 1;
+    return { id: s.id, sort_order: i + 1 };
+  });
+
+  reorderPayload.forEach(function(r) {
+    subs.forEach(function(s) { if (s.id === r.id) s.sort_order = r.sort_order; });
+  });
+  rfpRenderDashboard(subs);
+
+  fetch('/api/rfp', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reorder: reorderPayload })
+  }).catch(function(err) {
+    console.error('Failed to save version order:', err);
+  });
 }
 
 // ===== VERSION RENAME =====
@@ -15387,12 +15539,10 @@ function rfpShowVersionComparison(buildingAddress) {
     return;
   }
 
-  // Get all submissions for this building, sorted oldest first
-  var subs = (window._rfpState.submissions || []).filter(function(s) {
+  // Get all submissions for this building, sorted by user-defined order
+  var subs = rfpSortVersions((window._rfpState.submissions || []).filter(function(s) {
     return (s.building_address || s.buildingAddress) === buildingAddress;
-  }).sort(function(a, b) {
-    return new Date(a.created_at || a.createdAt || 0) - new Date(b.created_at || b.createdAt || 0);
-  });
+  }));
 
   if (subs.length < 2) {
     container.innerHTML = '<div style="padding:var(--space-4);color:var(--color-text-muted);text-align:center;">Need at least 2 versions to compare.</div>';
@@ -16270,11 +16420,9 @@ function rfpExportExcel() {
   }
 
   // ===== VERSION COMPARISON TAB (if multiple submissions for this building) =====
-  var allSubs = (window._rfpState.submissions || []).filter(function(s) {
+  var allSubs = rfpSortVersions((window._rfpState.submissions || []).filter(function(s) {
     return (s.building_address || s.buildingAddress) === address;
-  }).sort(function(a, b) {
-    return new Date(a.created_at || a.createdAt || 0) - new Date(b.created_at || b.createdAt || 0);
-  });
+  }));
 
   if (allSubs.length > 1) {
     var vcFields = [
