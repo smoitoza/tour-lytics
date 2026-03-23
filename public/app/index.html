@@ -15486,20 +15486,28 @@ function rfpMoveVersion(submissionId, direction) {
 // ===== VERSION RENAME =====
 function rfpRenameVersion(submissionId, chipEl, defaultLabel) {
   var currentLabel = chipEl.textContent.trim();
+
+  // Hide the button and insert a standalone input next to it (not inside the button)
+  chipEl.style.display = 'none';
   var input = document.createElement('input');
   input.type = 'text';
   input.value = currentLabel;
   input.placeholder = defaultLabel;
   input.style.cssText = 'width:140px;padding:4px 8px;border:2px solid var(--color-primary,#f47920);border-radius:6px;font-size:0.8rem;font-weight:600;outline:none;background:#fff;';
-  chipEl.textContent = '';
-  chipEl.appendChild(input);
+  chipEl.parentNode.insertBefore(input, chipEl.nextSibling);
   input.focus();
   input.select();
 
+  var saved = false;
   function save() {
+    if (saved) return;
+    saved = true;
     var newLabel = input.value.trim();
-    // If empty or same as default, clear the custom label
     var labelToSave = (newLabel === '' || newLabel === defaultLabel) ? null : newLabel;
+
+    // Remove input, restore button
+    if (input.parentNode) input.parentNode.removeChild(input);
+    chipEl.style.display = '';
     chipEl.textContent = labelToSave || defaultLabel;
 
     // Save to DB
@@ -15508,12 +15516,10 @@ function rfpRenameVersion(submissionId, chipEl, defaultLabel) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: submissionId, versionLabel: labelToSave })
     }).then(function() {
-      // Update local state
       var subs = window._rfpState.submissions || [];
       subs.forEach(function(s) {
         if (s.id === submissionId) s.version_label = labelToSave;
       });
-      // Re-render to pick up the change everywhere
       rfpRenderDashboard(subs);
     }).catch(function(err) {
       console.error('Failed to rename version:', err);
@@ -15523,13 +15529,9 @@ function rfpRenameVersion(submissionId, chipEl, defaultLabel) {
 
   input.addEventListener('blur', save);
   input.addEventListener('keydown', function(e) {
-    e.stopPropagation();
     if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
-    if (e.key === 'Escape') { e.preventDefault(); chipEl.textContent = currentLabel; }
+    if (e.key === 'Escape') { e.preventDefault(); saved = true; if (input.parentNode) input.parentNode.removeChild(input); chipEl.style.display = ''; chipEl.textContent = currentLabel; }
   });
-  input.addEventListener('keyup', function(e) { e.stopPropagation(); });
-  input.addEventListener('keypress', function(e) { e.stopPropagation(); });
-  input.addEventListener('click', function(e) { e.stopPropagation(); });
 }
 
 // ===== VERSION COMPARISON =====
