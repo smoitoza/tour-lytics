@@ -18400,14 +18400,19 @@ function execSummaryInit() {
   var projectId = getProjectId();
   if (!projectId) return;
 
-  // If we already have data for this project (just generated or already loaded), skip fetch
-  if (_execSummaryData && _execSummaryLoadedForProject === projectId) return;
-
-  // Reset state when loading a new project or first visit
-  _execSummaryData = null;
+  // Always reset button visibility on tab open
   document.getElementById('execSummaryPublishBtn').style.display = 'none';
   document.getElementById('execSummaryExportDocx').style.display = 'none';
   document.getElementById('execSummaryExportDrive').style.display = 'none';
+
+  // If we already have data for this project (just generated or already loaded), re-render it
+  if (_execSummaryData && _execSummaryLoadedForProject === projectId) {
+    execSummaryRenderSaved(_execSummaryData);
+    return;
+  }
+
+  // Reset content state when loading a new project or first visit
+  _execSummaryData = null;
   document.getElementById('execSummaryContent').style.display = 'none';
   document.getElementById('execSummaryEmpty').style.display = 'flex';
 
