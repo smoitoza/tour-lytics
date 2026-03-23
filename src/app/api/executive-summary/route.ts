@@ -238,7 +238,9 @@ export async function POST(request: NextRequest) {
 
 ${context}
 
-Write the executive summary in HTML format with these sections. Use proper HTML tags (<h2>, <h3>, <p>, <ul>, <li>, <table>, <strong>, etc.) for clean formatting:
+You MUST output valid HTML only. Do NOT use markdown. Do NOT use # headers or ** bold. Use only HTML tags: <h2>, <h3>, <p>, <ul>, <li>, <ol>, <table>, <thead>, <tbody>, <tr>, <th>, <td>, <strong>, <em>. Start your response with an <h2> tag directly.
+
+Structure the summary with these sections:
 
 1. EXECUTIVE OVERVIEW - 2-3 paragraph summary of the project scope, market, and current status
 
@@ -276,7 +278,8 @@ IMPORTANT GUIDELINES:
 - If data is missing for a section, note it briefly and move on
 - Include comparison tables for buildings with financial data (separate tables for cash and straight-line)
 - Keep it concise but thorough, aim for 1000-1500 words
-- Format monetary values with dollar signs and commas${customPrompt ? `
+- Format monetary values with dollar signs and commas
+- REMINDER: Output pure HTML only. No markdown syntax whatsoever. Start with <h2>.${customPrompt ? `
 
 ADDITIONAL USER INSTRUCTIONS (incorporate these into the summary):
 ${customPrompt}` : ''}`

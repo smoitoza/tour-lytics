@@ -18352,6 +18352,66 @@ function execSummaryInit() {
   // Nothing special on init - just show the current state
 }
 
+// Convert markdown to HTML as fallback if Claude returns markdown instead of HTML
+function execSummaryMarkdownToHTML(md) {
+  var html = md;
+
+  // Headers
+  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  html = html.replace(/^# (.+)$/gm, '<h2>$1</h2>');
+
+  // Bold
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+  // Italic
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+  // Unordered lists: gather consecutive lines starting with - or *
+  html = html.replace(/(^[\-\*] .+$\n?)+/gm, function(block) {
+    var items = block.trim().split('\n').map(function(line) {
+      return '<li>' + line.replace(/^[\-\*] /, '') + '</li>';
+    }).join('');
+    return '<ul>' + items + '</ul>';
+  });
+
+  // Ordered lists
+  html = html.replace(/(^\d+\. .+$\n?)+/gm, function(block) {
+    var items = block.trim().split('\n').map(function(line) {
+      return '<li>' + line.replace(/^\d+\. /, '') + '</li>';
+    }).join('');
+    return '<ol>' + items + '</ol>';
+  });
+
+  // Tables
+  html = html.replace(/(^\|.+\|$\n?)+/gm, function(block) {
+    var rows = block.trim().split('\n').filter(function(r) { return !r.match(/^\|[\s\-:|]+\|$/); });
+    if (rows.length === 0) return '';
+    var tableHTML = '<table>';
+    rows.forEach(function(row, i) {
+      var cells = row.split('|').filter(function(c, idx, arr) { return idx > 0 && idx < arr.length - 1; });
+      var tag = i === 0 ? 'th' : 'td';
+      var wrap = i === 0 ? '<thead>' : (i === 1 ? '<tbody>' : '');
+      var wrapEnd = i === 0 ? '</thead>' : '';
+      tableHTML += wrap + '<tr>' + cells.map(function(c) { return '<' + tag + '>' + c.trim() + '</' + tag + '>'; }).join('') + '</tr>' + wrapEnd;
+    });
+    tableHTML += '</tbody></table>';
+    return tableHTML;
+  });
+
+  // Paragraphs: wrap remaining non-empty lines that aren't already HTML
+  html = html.split('\n\n').map(function(block) {
+    block = block.trim();
+    if (!block) return '';
+    if (block.match(/^<(h[1-6]|ul|ol|table|div|p|blockquote)/)) return block;
+    // Don't wrap if it's a single line that's already tagged
+    if (block.match(/^</) && block.match(/>$/)) return block;
+    return '<p>' + block.replace(/\n/g, '<br>') + '</p>';
+  }).join('\n');
+
+  return html;
+}
+
 async function execSummaryGenerate() {
   if (_execSummaryGenerating) return;
   var projectId = getProjectId();
@@ -18405,9 +18465,15 @@ async function execSummaryGenerate() {
       '<span class="exec-meta-dot"></span>' +
       '<span>Generated ' + dateStr + ' at ' + timeStr + '</span>';
 
-    // Clean the HTML - strip any markdown code fences Claude might add
+    // Clean the response - strip code fences, convert markdown if needed
     var html = data.html || '';
-    html = html.replace(/^```html?\n?/i, '').replace(/\n?```$/i, '');
+    html = html.replace(/^```html?\n?/i, '').replace(/\n?```$/i, '').trim();
+
+    // If Claude returned markdown instead of HTML, convert it
+    if (!html.match(/^</) && html.match(/^#/m)) {
+      html = execSummaryMarkdownToHTML(html);
+    }
+
     bodyEl.innerHTML = html;
 
     // Show content, hide loading
