@@ -416,22 +416,50 @@ export async function GET(request: NextRequest) {
 // PATCH endpoint to publish a draft
 export async function PATCH(request: NextRequest) {
   try {
-    const { summaryId, userEmail } = await request.json()
-
-    if (!summaryId) {
-      return NextResponse.json({ error: 'summaryId required' }, { status: 400 })
-    }
+    const { summaryId, projectId, userEmail } = await request.json()
 
     const supabase = getSupabase()
 
-    // Unpublish any previously published summaries for this project
+    // Find the draft to publish - by ID if provided, otherwise latest draft for this project+user
+    let targetId = summaryId
+    if (!targetId && projectId && userEmail) {
+      const { data: latest } = await supabase
+        .from('executive_summaries')
+        .select('id')
+        .eq('project_id', projectId)
+        .eq('generated_by', userEmail)
+        .eq('status', 'draft')
+        .order('generated_at', { ascending: false })
+        .limit(1)
+        .single()
+      targetId = latest?.id
+    }
+    // Still no target? Try latest draft for this project regardless of user
+    if (!targetId && projectId) {
+      const { data: latest } = await supabase
+        .from('executive_summaries')
+        .select('id, project_id')
+        .eq('project_id', projectId)
+        .eq('status', 'draft')
+        .order('generated_at', { ascending: false })
+        .limit(1)
+        .single()
+      targetId = latest?.id
+    }
+
+    if (!targetId) {
+      return NextResponse.json({ error: 'No draft found to publish' }, { status: 404 })
+    }
+
+    // Get the project_id for this summary
     const { data: current } = await supabase
       .from('executive_summaries')
       .select('project_id')
-      .eq('id', summaryId)
+      .eq('id', targetId)
       .single()
 
     if (current) {
+      // Unpublish any previously published summaries for this project
       await supabase
         .from('executive_summaries')
         .update({ status: 'draft' })
@@ -447,11 +475,12 @@ export async function PATCH(request: NextRequest) {
         published_by: userEmail || null,
         published_at: new Date().toISOString(),
       })
-      .eq('id', summaryId)
+      .eq('id', targetId)
       .select('*')
       .single()
 
     if (error) {
+      console.error('Publish update error:', error)
       return NextResponse.json({ error: 'Failed to publish' }, { status: 500 })
     }
 

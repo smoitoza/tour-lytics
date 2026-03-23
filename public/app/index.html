@@ -18829,7 +18829,7 @@ function execSummaryExportDrive() {
 }
 
 async function execSummaryPublish() {
-  if (!_execSummaryData || !_execSummaryData.id || !_execSummaryData.html) {
+  if (!_execSummaryData || !_execSummaryData.html) {
     alert('Generate a summary first, then publish it to your team.');
     return;
   }
@@ -18843,7 +18843,8 @@ async function execSummaryPublish() {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        summaryId: _execSummaryData.id,
+        summaryId: _execSummaryData.id || null,
+        projectId: getProjectId(),
         userEmail: getCurrentUserEmail()
       })
     });
