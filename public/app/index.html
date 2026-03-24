@@ -4878,6 +4878,47 @@ body {
     .commute-map-toggle-label input[type="checkbox"] {
       width: 14px; height: 14px; accent-color: #2563eb; cursor: pointer;
     }
+    .commute-map-ctrl-divider {
+      width: 1px; height: 20px; background: var(--color-border, #e2e8f0); margin: 0 4px;
+    }
+    .cmap-select-btn {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px; border-radius: 6px; border: 1px solid var(--color-border, #e2e8f0);
+      background: var(--color-surface, #fff); color: var(--color-text-muted, #64748b);
+      font-size: 0.72rem; font-weight: 600; cursor: pointer; transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .cmap-select-btn:hover { border-color: var(--color-primary, #f47920); color: var(--color-primary, #f47920); }
+    .cmap-select-btn.active {
+      background: var(--color-primary, #f47920); color: #fff; border-color: var(--color-primary, #f47920);
+    }
+    .cmap-select-btn.active svg { stroke: #fff; }
+    .cmap-select-clear { padding: 4px 6px; }
+    .cmap-select-popup {
+      position: absolute; z-index: 1001; background: #fff;
+      border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      padding: 14px 18px; min-width: 200px; max-width: 320px;
+      font-family: var(--font-body); pointer-events: auto;
+    }
+    .cmap-select-popup-title {
+      font-size: 0.85rem; font-weight: 700; color: var(--color-text, #0f172a); margin-bottom: 6px;
+    }
+    .cmap-select-popup-count {
+      font-size: 2rem; font-weight: 800; color: var(--color-primary, #f47920); line-height: 1;
+    }
+    .cmap-select-popup-label {
+      font-size: 0.75rem; color: var(--color-text-muted, #64748b); margin-bottom: 8px;
+    }
+    .cmap-select-popup-breakdown {
+      font-size: 0.72rem; color: var(--color-text-muted); border-top: 1px solid var(--color-border, #e2e8f0);
+      padding-top: 8px; margin-top: 6px;
+    }
+    .cmap-select-popup-breakdown div {
+      display: flex; justify-content: space-between; padding: 2px 0;
+    }
+    .cmap-select-popup-breakdown strong { font-weight: 600; color: var(--color-text, #0f172a); }
+    .cmap-selecting { cursor: crosshair !important; }
+    .cmap-selecting .leaflet-container { cursor: crosshair !important; }
     .commute-map-page-body {
       position: relative; overflow: hidden;
     }
@@ -9146,6 +9187,18 @@ body {
           <input type="checkbox" id="cmapTransitToggle" onchange="cmapToggleTransit(this.checked)" />
           <span>Transit</span>
         </label>
+        <div class="commute-map-ctrl-divider"></div>
+        <button class="cmap-select-btn" id="cmapSelectCircle" onclick="cmapStartSelect('circle')" title="Draw circle to count employees">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
+          <span class="cmap-select-label">Circle</span>
+        </button>
+        <button class="cmap-select-btn" id="cmapSelectRect" onclick="cmapStartSelect('rect')" title="Draw rectangle to count employees">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+          <span class="cmap-select-label">Area</span>
+        </button>
+        <button class="cmap-select-btn cmap-select-clear" id="cmapSelectClear" onclick="cmapClearSelect()" title="Clear selection" style="display:none;">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
       </div>
     </div>
     <div class="commute-map-page-body">
@@ -21321,6 +21374,178 @@ function cmapChangeColorBy(val) {
 function cmapChangeShowGroup(val) {
   _cmapShowGroup = val;
   cmapRenderAll();
+}
+
+// ===== AREA SELECTION TOOLS =====
+var _cmapSelectMode = null; // 'circle' or 'rect'
+var _cmapSelectShape = null; // Leaflet layer
+var _cmapSelectStart = null; // {lat, lng}
+var _cmapSelectPopup = null; // DOM element
+var _cmapSelectHandlers = {};
+
+function cmapStartSelect(mode) {
+  // Toggle off if already active
+  if (_cmapSelectMode === mode) { cmapClearSelect(); return; }
+  cmapClearSelect();
+  _cmapSelectMode = mode;
+
+  // Highlight active button
+  document.getElementById('cmapSelectCircle').classList.toggle('active', mode === 'circle');
+  document.getElementById('cmapSelectRect').classList.toggle('active', mode === 'rect');
+
+  if (!_cmapLeaflet) return;
+
+  // Disable map dragging while drawing
+  _cmapLeaflet.dragging.disable();
+  var container = _cmapLeaflet.getContainer();
+  container.style.cursor = 'crosshair';
+
+  _cmapSelectHandlers.mousedown = function(e) {
+    _cmapSelectStart = e.latlng;
+  };
+  _cmapSelectHandlers.mousemove = function(e) {
+    if (!_cmapSelectStart) return;
+    if (_cmapSelectShape) _cmapLeaflet.removeLayer(_cmapSelectShape);
+
+    if (_cmapSelectMode === 'circle') {
+      var radius = _cmapSelectStart.distanceTo(e.latlng);
+      _cmapSelectShape = L.circle(_cmapSelectStart, {
+        radius: radius, color: '#f47920', weight: 2, fillColor: '#f47920', fillOpacity: 0.12, dashArray: '6 4'
+      }).addTo(_cmapLeaflet);
+    } else {
+      _cmapSelectShape = L.rectangle([_cmapSelectStart, e.latlng], {
+        color: '#f47920', weight: 2, fillColor: '#f47920', fillOpacity: 0.12, dashArray: '6 4'
+      }).addTo(_cmapLeaflet);
+    }
+  };
+  _cmapSelectHandlers.mouseup = function(e) {
+    if (!_cmapSelectStart) return;
+    // Finalize the shape and count
+    cmapCountInSelection();
+    _cmapSelectStart = null;
+    // Re-enable dragging
+    _cmapLeaflet.dragging.enable();
+    container.style.cursor = '';
+    // Remove drawing handlers but keep shape
+    _cmapLeaflet.off('mousedown', _cmapSelectHandlers.mousedown);
+    _cmapLeaflet.off('mousemove', _cmapSelectHandlers.mousemove);
+    _cmapLeaflet.off('mouseup', _cmapSelectHandlers.mouseup);
+    // Show clear button and deactivate mode buttons
+    document.getElementById('cmapSelectClear').style.display = '';
+    document.getElementById('cmapSelectCircle').classList.remove('active');
+    document.getElementById('cmapSelectRect').classList.remove('active');
+    _cmapSelectMode = null;
+  };
+
+  _cmapLeaflet.on('mousedown', _cmapSelectHandlers.mousedown);
+  _cmapLeaflet.on('mousemove', _cmapSelectHandlers.mousemove);
+  _cmapLeaflet.on('mouseup', _cmapSelectHandlers.mouseup);
+}
+
+function cmapClearSelect() {
+  if (_cmapSelectShape && _cmapLeaflet) {
+    _cmapLeaflet.removeLayer(_cmapSelectShape);
+    _cmapSelectShape = null;
+  }
+  if (_cmapSelectPopup) {
+    _cmapSelectPopup.remove();
+    _cmapSelectPopup = null;
+  }
+  _cmapSelectMode = null;
+  _cmapSelectStart = null;
+
+  // Clean up handlers
+  if (_cmapLeaflet) {
+    if (_cmapSelectHandlers.mousedown) _cmapLeaflet.off('mousedown', _cmapSelectHandlers.mousedown);
+    if (_cmapSelectHandlers.mousemove) _cmapLeaflet.off('mousemove', _cmapSelectHandlers.mousemove);
+    if (_cmapSelectHandlers.mouseup) _cmapLeaflet.off('mouseup', _cmapSelectHandlers.mouseup);
+    _cmapLeaflet.dragging.enable();
+    _cmapLeaflet.getContainer().style.cursor = '';
+  }
+
+  // Reset buttons
+  var circBtn = document.getElementById('cmapSelectCircle');
+  var rectBtn = document.getElementById('cmapSelectRect');
+  var clearBtn = document.getElementById('cmapSelectClear');
+  if (circBtn) circBtn.classList.remove('active');
+  if (rectBtn) rectBtn.classList.remove('active');
+  if (clearBtn) clearBtn.style.display = 'none';
+
+  // Reset employee marker opacity
+  _cmapMarkers.forEach(function(m) { m.setOpacity(1); });
+}
+
+function cmapCountInSelection() {
+  if (!_cmapSelectShape || !_commuteEmployees) return;
+
+  var inside = [];
+  var segCol = _cmapColorBy;
+  var useSegment = segCol && segCol !== '__none__';
+
+  _commuteEmployees.forEach(function(emp, idx) {
+    if (!emp.lat || !emp.lng) return;
+    var point = L.latLng(emp.lat, emp.lng);
+    var isInside = false;
+
+    if (_cmapSelectShape instanceof L.Circle) {
+      isInside = _cmapSelectShape.getLatLng().distanceTo(point) <= _cmapSelectShape.getRadius();
+    } else if (_cmapSelectShape.getBounds) {
+      isInside = _cmapSelectShape.getBounds().contains(point);
+    }
+
+    if (isInside) inside.push(emp);
+
+    // Dim markers outside selection
+    if (_cmapMarkers[idx]) {
+      _cmapMarkers[idx].setOpacity(isInside ? 1 : 0.2);
+    }
+  });
+
+  // Build breakdown by segment
+  var breakdown = {};
+  if (useSegment) {
+    inside.forEach(function(emp) {
+      var val = (emp.meta[segCol] || 'Unknown').trim();
+      breakdown[val] = (breakdown[val] || 0) + 1;
+    });
+  }
+
+  // Show popup
+  if (_cmapSelectPopup) _cmapSelectPopup.remove();
+
+  var popup = document.createElement('div');
+  popup.className = 'cmap-select-popup';
+
+  var radiusText = '';
+  if (_cmapSelectShape instanceof L.Circle) {
+    var r = _cmapSelectShape.getRadius();
+    radiusText = r > 1609 ? (r / 1609.34).toFixed(1) + ' mi radius' : Math.round(r) + 'm radius';
+  }
+
+  var html = '<div class="cmap-select-popup-title">Area Selection' + (radiusText ? ' (' + radiusText + ')' : '') + '</div>';
+  html += '<div class="cmap-select-popup-count">' + inside.length + '</div>';
+  html += '<div class="cmap-select-popup-label">employees in selection (of ' + _commuteEmployees.length + ' total)</div>';
+
+  if (useSegment && Object.keys(breakdown).length > 0) {
+    html += '<div class="cmap-select-popup-breakdown">';
+    var sorted = Object.keys(breakdown).sort(function(a, b) { return breakdown[b] - breakdown[a]; });
+    sorted.forEach(function(g) {
+      var pct = Math.round((breakdown[g] / inside.length) * 100);
+      html += '<div><span>' + g + '</span><strong>' + breakdown[g] + ' (' + pct + '%)</strong></div>';
+    });
+    html += '</div>';
+  }
+
+  popup.innerHTML = html;
+
+  // Position in top-left of map container
+  var mapContainer = document.querySelector('.commute-map-page-body');
+  if (mapContainer) {
+    popup.style.top = '16px';
+    popup.style.left = '16px';
+    mapContainer.appendChild(popup);
+  }
+  _cmapSelectPopup = popup;
 }
 
 function cmapToggleTransit(checked) {
