@@ -21174,8 +21174,9 @@ function commuteMapChangeSegment(val) {
 // Standalone Commute Map Tab (full-page)
 // ============================================================
 var _cmapLeaflet = null;
-var _cmapMarkers = [];     // employee markers
-var _cmapBldgMarkers = []; // building markers
+var _cmapMarkers = [];       // employee markers
+var _cmapBldgMarkers = [];   // building markers
+var _cmapOfficeMarkers = []; // current office markers
 var _cmapColorBy = null;   // selected segment column
 var _cmapShowGroup = '__all__'; // selected group filter
 var _cmapTransitActive = false;
@@ -21563,6 +21564,36 @@ function cmapRenderAll() {
     });
   }
 
+  // Draw current office locations (gold star markers)
+  if (_cmapOfficeMarkers) {
+    _cmapOfficeMarkers.forEach(function(m) { _cmapLeaflet.removeLayer(m); });
+  }
+  _cmapOfficeMarkers = [];
+  if (_officesData && _officesData.length > 0) {
+    _officesData.forEach(function(o) {
+      if (!o.lat || !o.lng) return;
+      var offIcon = L.divIcon({
+        className: 'hq-marker-wrapper',
+        html: '<div class="hq-marker"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>',
+        iconSize: [36, 36],
+        iconAnchor: [18, 18]
+      });
+      var offMarker = L.marker([o.lat, o.lng], { icon: offIcon, zIndexOffset: 3000 }).addTo(_cmapLeaflet);
+      offMarker.bindTooltip(
+        '<div style="font-family:var(--font-body);padding:4px 0;">' +
+        '<div style="font-weight:800;font-size:13px;color:#0f172a;margin-bottom:2px;">Current Office</div>' +
+        '<div style="font-weight:600;font-size:12px;">' + (o.label || '') + '</div>' +
+        '<div style="font-size:11px;color:#475569;">' + (o.address || '') + '</div></div>',
+        { direction: 'top', offset: [0, -20], className: 'building-tooltip' }
+      );
+      _cmapOfficeMarkers.push(offMarker);
+      bounds.push([o.lat, o.lng]);
+    });
+  } else {
+    // Try loading offices if not yet loaded
+    cmapLoadOffices();
+  }
+
   // Fit bounds
   if (bounds.length > 0) {
     _cmapLeaflet.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
@@ -21581,6 +21612,19 @@ function cmapRenderAll() {
       countEl.textContent = total + ' employees';
     }
   }
+}
+
+function cmapLoadOffices() {
+  var pid = getProjectId();
+  if (!pid) return;
+  fetch('/api/project-offices?projectId=' + encodeURIComponent(pid))
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      _officesData = data;
+      // Re-render to pick up the office markers
+      if (_cmapLeaflet && data.length > 0) cmapRenderAll();
+    })
+    .catch(function(e) { console.warn('Failed to load offices for commute map:', e); });
 }
 
 function cmapRenderLegend(useSegment) {
