@@ -5736,6 +5736,12 @@ body {
     }
     .pbrief-title { font-size: 1.15rem; font-weight: 700; margin: 0 0 2px; }
     .pbrief-subtitle { font-size: 0.8rem; color: var(--color-text-muted); margin: 0; }
+    .pbrief-privacy-note {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 0.72rem; color: #16a34a; font-weight: 500;
+      margin: 4px 0 0; padding: 3px 10px;
+      background: #f0fdf4; border-radius: 6px; border: 1px solid #bbf7d0;
+    }
     .pbrief-chat {
       flex: 1; overflow-y: auto; padding-bottom: var(--space-3);
     }
@@ -9387,7 +9393,8 @@ body {
     <div class="pbrief-header">
       <div>
         <h2 class="pbrief-title">Project Brief</h2>
-        <p class="pbrief-subtitle">Draft emails, memos, and briefs using your project data. Your history is private to you.</p>
+        <p class="pbrief-subtitle">Draft emails, memos, and briefs using your project data.</p>
+        <p class="pbrief-privacy-note"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Your chat history is private and only visible to you, not your team.</p>
       </div>
     </div>
 
