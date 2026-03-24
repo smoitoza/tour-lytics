@@ -17348,23 +17348,21 @@ function rfpExportComparisonToDrive(wb, fileName) {
 
   function doUpload(accessToken) {
     var wbOut = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    var blob = new Blob([wbOut], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    var xlsxBlob = new Blob([wbOut], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 
     var metadata = { name: fileName, mimeType: 'application/vnd.google-apps.spreadsheet' };
-    var boundary = '----TourLyticsBoundary' + Date.now();
-    var body = '--' + boundary + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' +
-      JSON.stringify(metadata) + '\r\n--' + boundary + '\r\nContent-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\r\n\r\n';
-
-    var bodyEnd = '\r\n--' + boundary + '--';
-    var bodyBlob = new Blob([body, wbOut, bodyEnd]);
+    var form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    form.append('file', xlsxBlob);
 
     fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + accessToken },
-      body: bodyBlob
+      body: form
     })
     .then(function(resp) { return resp.json(); })
     .then(function(fileData) {
+      if (fileData.error) { alert('Drive error: ' + (fileData.error.message || JSON.stringify(fileData.error))); return; }
       alert('Saved to Google Drive!');
       window.open('https://docs.google.com/spreadsheets/d/' + fileData.id + '/edit', '_blank');
     })
