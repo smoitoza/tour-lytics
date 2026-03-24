@@ -5727,6 +5727,111 @@ body {
       }
     }
 
+    /* ===== PROJECT BRIEF ===== */
+    .pbrief-page {
+      display: flex; flex-direction: column; height: 100%; max-width: 900px; margin: 0 auto; padding: 0 var(--space-4);
+    }
+    .pbrief-header {
+      padding: var(--space-3) 0; flex-shrink: 0;
+    }
+    .pbrief-title { font-size: 1.15rem; font-weight: 700; margin: 0 0 2px; }
+    .pbrief-subtitle { font-size: 0.8rem; color: var(--color-text-muted); margin: 0; }
+    .pbrief-chat {
+      flex: 1; overflow-y: auto; padding-bottom: var(--space-3);
+    }
+    .pbrief-empty {
+      display: flex; flex-direction: column; align-items: center; text-align: center;
+      padding: var(--space-6) var(--space-4); color: var(--color-text-muted);
+    }
+    .pbrief-empty-icon { margin-bottom: var(--space-3); color: var(--color-text-faint); }
+    .pbrief-empty h3 { font-size: 1rem; font-weight: 600; color: var(--color-text); margin: 0 0 6px; }
+    .pbrief-empty p { font-size: 0.82rem; max-width: 460px; line-height: 1.5; margin: 0 0 var(--space-4); }
+    .pbrief-suggestions { display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: center; }
+    .pbrief-suggestion {
+      padding: 8px 14px; border-radius: 8px; border: 1px solid var(--color-border);
+      background: var(--color-surface); color: var(--color-text-muted); font-size: 0.76rem;
+      cursor: pointer; transition: all 0.15s; text-align: left; max-width: 280px;
+    }
+    .pbrief-suggestion:hover { border-color: var(--color-primary); color: var(--color-primary); }
+    .pbrief-msg {
+      margin-bottom: var(--space-3); animation: pbriefFadeIn 0.3s ease;
+    }
+    @keyframes pbriefFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .pbrief-msg-user {
+      display: flex; justify-content: flex-end;
+    }
+    .pbrief-msg-user-bubble {
+      background: var(--color-primary, #f47920); color: #fff; padding: 10px 16px;
+      border-radius: 14px 14px 4px 14px; max-width: 70%; font-size: 0.85rem; line-height: 1.5;
+    }
+    .pbrief-msg-ai { padding: 0; }
+    .pbrief-msg-ai-bubble {
+      background: var(--color-surface-2, #f8fafc); border: 1px solid var(--color-border);
+      padding: 16px 20px; border-radius: 14px 14px 14px 4px; max-width: 100%;
+      font-size: 0.85rem; line-height: 1.6; color: var(--color-text);
+    }
+    .pbrief-msg-ai-bubble h3 { font-size: 0.95rem; font-weight: 700; margin: var(--space-2) 0 var(--space-1); }
+    .pbrief-msg-ai-bubble h3:first-child { margin-top: 0; }
+    .pbrief-msg-ai-bubble p { margin: 0 0 var(--space-2); }
+    .pbrief-msg-ai-bubble ul, .pbrief-msg-ai-bubble ol { padding-left: 18px; margin: 0 0 var(--space-2); }
+    .pbrief-msg-ai-bubble li { margin-bottom: 3px; }
+    .pbrief-msg-ai-bubble strong { font-weight: 600; }
+    .pbrief-msg-actions {
+      display: flex; gap: var(--space-2); margin-top: 8px;
+    }
+    .pbrief-msg-action {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px; border-radius: 6px; border: 1px solid var(--color-border);
+      background: #fff; color: var(--color-text-muted); font-size: 0.7rem;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .pbrief-msg-action:hover { border-color: var(--color-primary); color: var(--color-primary); }
+    .pbrief-msg-time {
+      font-size: 0.65rem; color: var(--color-text-faint); margin-top: 4px;
+    }
+    .pbrief-loading {
+      display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3);
+      color: var(--color-text-muted); font-size: 0.85rem;
+    }
+    .pbrief-loading-dot {
+      display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--color-primary); animation: pbriefDot 1.2s infinite;
+    }
+    .pbrief-loading-dot:nth-child(2) { animation-delay: 0.2s; }
+    .pbrief-loading-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes pbriefDot { 0%, 80%, 100% { opacity: 0.3; } 40% { opacity: 1; } }
+    .pbrief-input-area {
+      flex-shrink: 0; padding: var(--space-2) 0 var(--space-3); border-top: 1px solid var(--color-border);
+    }
+    .pbrief-input-wrap {
+      display: flex; gap: var(--space-2); align-items: flex-end;
+    }
+    .pbrief-input {
+      flex: 1; padding: 12px 16px; border: 1px solid var(--color-border);
+      border-radius: 12px; font-size: 0.88rem; font-family: inherit;
+      color: var(--color-text); background: var(--color-surface, #fff);
+      resize: none; min-height: 44px; max-height: 120px; line-height: 1.5;
+      transition: border-color 0.2s;
+    }
+    .pbrief-input:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(244,121,32,0.1); }
+    .pbrief-input::placeholder { color: var(--color-text-faint); }
+    .pbrief-send-btn {
+      width: 44px; height: 44px; border-radius: 12px; border: none;
+      background: var(--color-primary, #f47920); color: #fff; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .pbrief-send-btn:hover { background: var(--color-primary-hover, #e06810); transform: translateY(-1px); }
+    .pbrief-send-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .pbrief-input-meta {
+      font-size: 0.65rem; color: var(--color-text-faint); margin-top: 4px; text-align: right;
+    }
+    @media (max-width: 768px) {
+      .pbrief-page { padding: 0 var(--space-2); }
+      .pbrief-msg-user-bubble { max-width: 85%; }
+      .pbrief-suggestion { max-width: 100%; }
+    }
+
     /* ===== AI USAGE DASHBOARD ===== */
     .ai-usage-page {
       padding: var(--space-4) var(--space-6);
@@ -8849,6 +8954,10 @@ body {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
     Exec Summary
   </button>
+  <button class="page-tab" onclick="switchPageTab('project-brief')" data-page-tab="project-brief">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    Brief
+  </button>
   <button class="page-tab admin-only" onclick="switchPageTab('ai-usage')" data-page-tab="ai-usage" id="tabBtnAiUsage" style="display:none;">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4z"/><circle cx="9" cy="15" r="1"/><circle cx="15" cy="15" r="1"/><path d="M9 18h6"/></svg>
     AI Usage
@@ -9269,6 +9378,46 @@ body {
     <div class="exec-summary-content" id="execSummaryContent" style="display:none;">
       <div class="exec-summary-meta" id="execSummaryMeta"></div>
       <div class="exec-summary-body" id="execSummaryBody"></div>
+    </div>
+  </div>
+</div>
+
+<div class="tab-content" id="tab-project-brief">
+  <div class="pbrief-page">
+    <div class="pbrief-header">
+      <div>
+        <h2 class="pbrief-title">Project Brief</h2>
+        <p class="pbrief-subtitle">Draft emails, memos, and briefs using your project data. Your history is private to you.</p>
+      </div>
+    </div>
+
+    <!-- Chat history -->
+    <div class="pbrief-chat" id="pbriefChat">
+      <!-- Empty state -->
+      <div class="pbrief-empty" id="pbriefEmpty">
+        <div class="pbrief-empty-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="44" height="44"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <h3>Your Project Writing Assistant</h3>
+        <p>Ask it to draft emails, write memos, create briefs, or summarize specific aspects of your project. It has access to all your buildings, RFPs, commute data, and shortlist.</p>
+        <div class="pbrief-suggestions">
+          <button class="pbrief-suggestion" onclick="pbriefUseSuggestion(this)">Draft an email to my team about our top building recommendations</button>
+          <button class="pbrief-suggestion" onclick="pbriefUseSuggestion(this)">Write a brief for leadership comparing our shortlisted options</button>
+          <button class="pbrief-suggestion" onclick="pbriefUseSuggestion(this)">Summarize the financial terms we've negotiated so far</button>
+          <button class="pbrief-suggestion" onclick="pbriefUseSuggestion(this)">Draft talking points for our next real estate committee meeting</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input area -->
+    <div class="pbrief-input-area">
+      <div class="pbrief-input-wrap">
+        <textarea class="pbrief-input" id="pbriefInput" rows="2" placeholder="Ask anything about your project... e.g. 'Draft an email to the team about the 301 Brannan RFP timeline'" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();pbriefSend();}"></textarea>
+        <button class="pbrief-send-btn" id="pbriefSendBtn" onclick="pbriefSend()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+      <div class="pbrief-input-meta">2 tokens per brief | Shift+Enter for new line</div>
     </div>
   </div>
 </div>
@@ -12649,6 +12798,10 @@ function switchPageTab(tabId) {
   // Load executive summary when switching to it
   if (tabId === 'exec-summary') {
     execSummaryInit();
+  }
+  // Load project brief history when switching to it
+  if (tabId === 'project-brief') {
+    pbriefInit();
   }
   // Load shortlist when switching to it
   if (tabId === 'shortlist') {
@@ -19496,6 +19649,188 @@ async function execSummaryPublish() {
 }
 
 // ============================================================
+// Project Brief (AI Writing Assistant)
+// ============================================================
+
+var _pbriefLoaded = false;
+var _pbriefSending = false;
+
+function pbriefInit() {
+  if (_pbriefLoaded) return;
+  var email = getCurrentUserEmail();
+  var projectId = getProjectId();
+  if (!email || !projectId) return;
+
+  // Load user's history
+  fetch('/api/project-brief?projectId=' + encodeURIComponent(projectId) + '&userEmail=' + encodeURIComponent(email))
+    .then(function(res) { return res.json(); })
+    .then(function(history) {
+      if (!Array.isArray(history) || history.length === 0) return;
+
+      // Hide empty state
+      var emptyEl = document.getElementById('pbriefEmpty');
+      if (emptyEl) emptyEl.style.display = 'none';
+
+      // Render history (newest first from API, reverse for chronological display)
+      var chatEl = document.getElementById('pbriefChat');
+      history.reverse().forEach(function(item) {
+        pbriefAppendMessage('user', item.prompt, item.created_at);
+        pbriefAppendMessage('ai', item.response, item.created_at);
+      });
+
+      // Scroll to bottom
+      chatEl.scrollTop = chatEl.scrollHeight;
+      _pbriefLoaded = true;
+    })
+    .catch(function(err) {
+      console.warn('Failed to load brief history:', err);
+    });
+}
+
+function pbriefUseSuggestion(btn) {
+  var input = document.getElementById('pbriefInput');
+  if (input) {
+    input.value = btn.textContent;
+    input.focus();
+  }
+}
+
+async function pbriefSend() {
+  if (_pbriefSending) return;
+  var input = document.getElementById('pbriefInput');
+  var prompt = (input.value || '').trim();
+  if (!prompt) return;
+
+  var projectId = getProjectId();
+  var email = getCurrentUserEmail();
+  if (!projectId) { alert('No project selected'); return; }
+
+  _pbriefSending = true;
+  var sendBtn = document.getElementById('pbriefSendBtn');
+  sendBtn.disabled = true;
+
+  // Hide empty state
+  var emptyEl = document.getElementById('pbriefEmpty');
+  if (emptyEl) emptyEl.style.display = 'none';
+
+  // Add user message
+  pbriefAppendMessage('user', prompt);
+  input.value = '';
+
+  // Add loading indicator
+  var chatEl = document.getElementById('pbriefChat');
+  var loadingEl = document.createElement('div');
+  loadingEl.className = 'pbrief-loading';
+  loadingEl.innerHTML = '<span class="pbrief-loading-dot"></span><span class="pbrief-loading-dot"></span><span class="pbrief-loading-dot"></span><span>Writing...</span>';
+  chatEl.appendChild(loadingEl);
+  chatEl.scrollTop = chatEl.scrollHeight;
+
+  try {
+    var resp = await fetch('/api/project-brief', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        projectId: projectId,
+        userEmail: email,
+        prompt: prompt
+      })
+    });
+
+    loadingEl.remove();
+
+    if (!resp.ok) {
+      var errData = await resp.json().catch(function() { return { error: 'Request failed' }; });
+      pbriefAppendMessage('ai', '<p style="color:#dc2626;">Error: ' + (errData.error || 'Failed to generate brief') + '</p>');
+    } else {
+      var data = await resp.json();
+      var html = data.response || '';
+      html = html.replace(/^```html?\n?/i, '').replace(/\n?```$/i, '').trim();
+      // Markdown fallback
+      if (!html.match(/^</) && html.match(/^#/m)) {
+        html = execSummaryMarkdownToHTML(html);
+      }
+      pbriefAppendMessage('ai', html);
+    }
+  } catch (err) {
+    loadingEl.remove();
+    pbriefAppendMessage('ai', '<p style="color:#dc2626;">Error: ' + err.message + '</p>');
+  } finally {
+    _pbriefSending = false;
+    sendBtn.disabled = false;
+    chatEl.scrollTop = chatEl.scrollHeight;
+  }
+}
+
+function pbriefAppendMessage(role, content, timestamp) {
+  var chatEl = document.getElementById('pbriefChat');
+  var msgDiv = document.createElement('div');
+  msgDiv.className = 'pbrief-msg';
+
+  if (role === 'user') {
+    msgDiv.classList.add('pbrief-msg-user');
+    msgDiv.innerHTML = '<div class="pbrief-msg-user-bubble">' + esc(content) + '</div>';
+  } else {
+    msgDiv.classList.add('pbrief-msg-ai');
+    var timeStr = '';
+    if (timestamp) {
+      var d = new Date(timestamp);
+      timeStr = '<div class="pbrief-msg-time">' + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' at ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) + '</div>';
+    }
+    msgDiv.innerHTML =
+      '<div class="pbrief-msg-ai-bubble">' + content + '</div>' +
+      '<div class="pbrief-msg-actions">' +
+        '<button class="pbrief-msg-action" onclick="pbriefCopy(this)">' +
+          '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
+          'Copy' +
+        '</button>' +
+        '<button class="pbrief-msg-action" onclick="pbriefCopyAsEmail(this)">' +
+          '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>' +
+          'Copy as Email' +
+        '</button>' +
+      '</div>' + timeStr;
+  }
+
+  chatEl.appendChild(msgDiv);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+function pbriefCopy(btn) {
+  var bubble = btn.closest('.pbrief-msg').querySelector('.pbrief-msg-ai-bubble');
+  if (!bubble) return;
+  // Copy as plain text
+  var text = bubble.innerText || bubble.textContent;
+  navigator.clipboard.writeText(text).then(function() {
+    var orig = btn.innerHTML;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#16a34a" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Copied!';
+    btn.style.color = '#16a34a'; btn.style.borderColor = '#16a34a';
+    setTimeout(function() { btn.innerHTML = orig; btn.style.color = ''; btn.style.borderColor = ''; }, 2000);
+  });
+}
+
+function pbriefCopyAsEmail(btn) {
+  var bubble = btn.closest('.pbrief-msg').querySelector('.pbrief-msg-ai-bubble');
+  if (!bubble) return;
+  // Copy as HTML (rich text for email paste)
+  var html = bubble.innerHTML;
+  var text = bubble.innerText || bubble.textContent;
+  if (navigator.clipboard.write) {
+    var htmlBlob = new Blob([html], { type: 'text/html' });
+    var textBlob = new Blob([text], { type: 'text/plain' });
+    navigator.clipboard.write([
+      new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': textBlob })
+    ]).then(function() {
+      var orig = btn.innerHTML;
+      btn.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#16a34a" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Copied for email!';
+      btn.style.color = '#16a34a'; btn.style.borderColor = '#16a34a';
+      setTimeout(function() { btn.innerHTML = orig; btn.style.color = ''; btn.style.borderColor = ''; }, 2000);
+    });
+  } else {
+    // Fallback to plain text
+    pbriefCopy(btn);
+  }
+}
+
+// ============================================================
 // AI Usage Dashboard
 // ============================================================
 
@@ -23242,6 +23577,10 @@ function refreshAllShortlistButtons() {
   <button class="mobile-more-item" onclick="mobileTabSwitch('exec-summary'); closeMobileMore();">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
     Exec Summary
+  </button>
+  <button class="mobile-more-item" onclick="mobileTabSwitch('project-brief'); closeMobileMore();">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    Brief
   </button>
   <button class="mobile-more-item admin-only" id="mobileAiUsageBtn" style="display:none;" onclick="mobileTabSwitch('ai-usage'); closeMobileMore();">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4z"/><circle cx="9" cy="15" r="1"/><circle cx="15" cy="15" r="1"/></svg>

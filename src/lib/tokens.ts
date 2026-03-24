@@ -35,6 +35,7 @@ export type TokenAction =
   | 'assumptions_update'
   | 'route_optimization'
   | 'executive_summary'
+  | 'project_brief'
 
 // ============================================================
 // Debit tokens for an AI action
