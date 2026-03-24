@@ -16987,7 +16987,7 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
     var bldg = buildings.find(function(b) { return b.num === parseInt(bNum); });
     var address = latest.building_address || latest.buildingAddress || (bldg ? bldg.address : 'Building #' + bNum);
     var summary = (latest.analysis && latest.analysis.summary) ? latest.analysis.summary : {};
-    var terms = latest.terms || {};
+    var terms = latest.deal_terms || latest.dealTerms || latest.terms || {};
     // Per-building assumptions
     var a = aMap[address] || {};
     var fb = parseFloat(a.opex_food_beverage) || 0;
@@ -17007,7 +17007,7 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
   var dealMetrics = [
     ['RSF', function(d) { return d.summary.rsf; }, false],
     ['Term (months)', function(d) { return d.summary.termMonths; }, false],
-    ['Base Rent $/RSF', function(d) { return d.terms.baseRent; }, true],
+    ['Base Rent $/RSF', function(d) { return d.terms.base_rent_rsf || d.terms.baseRent; }, true],
     ['Effective Rent $/RSF', function(d) { return d.summary.effectiveRentRSF; }, true],
     ['Total All-in Cost', function(d) { return d.summary.totalAllInCost; }, true],
     ['SL Annual Expense', function(d) { return d.summary.straightLineAnnualExpense; }, true],
