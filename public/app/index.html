@@ -17151,15 +17151,16 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
 
   // Metrics to compare - [label, getter, lowerIsBetter]
   var dealMetrics = [
-    ['RSF', function(d) { return d.summary.rsf; }, false],
-    ['Term (months)', function(d) { return d.summary.termMonths; }, false],
-    ['Base Rent $/RSF', function(d) { return d.terms.base_rent_rsf || d.terms.baseRent; }, true],
-    ['Effective Rent $/RSF', function(d) { return d.summary.effectiveRentRSF; }, true],
-    ['Total All-in Cost', function(d) { return d.summary.totalAllInCost; }, true],
-    ['SL Annual Expense', function(d) { return d.summary.straightLineAnnualExpense; }, true],
-    ['Free Rent Value', function(d) { return d.summary.freeRentValue; }, false],
-    ['TI Value', function(d) { return d.summary.tiValue; }, false],
-    ['Total Concessions', function(d) { return d.summary.totalConcessions; }, false]
+    ['RSF', function(d) { return d.summary.rsf; }, false, 'num'],
+    ['Term (months)', function(d) { return d.summary.termMonths; }, false, 'num'],
+    ['Base Rent $/RSF', function(d) { return d.terms.base_rent_rsf || d.terms.baseRent; }, true, 'curr'],
+    ['Effective Rent $/RSF', function(d) { return d.summary.effectiveRentRSF; }, true, 'curr'],
+    ['Total All-in Cost', function(d) { return d.summary.totalAllInCost; }, true, 'curr'],
+    ['SL Monthly Rent', function(d) { return d.summary.straightLineMonthlyRent; }, true, 'curr'],
+    ['SL Annual Expense', function(d) { return d.summary.straightLineAnnualExpense; }, true, 'curr'],
+    ['Free Rent Value', function(d) { return d.summary.freeRentValue; }, false, 'curr'],
+    ['TI Value', function(d) { return d.summary.tiValue; }, false, 'curr'],
+    ['Total Concessions', function(d) { return d.summary.totalConcessions; }, false, 'curr']
   ];
 
   var assumptionMetrics = [
@@ -17225,7 +17226,172 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
   }
 
   html += '</tbody></table></div>';
+
+  // Export buttons for comparison
+  html += '<div style="display:flex;gap:var(--space-2);margin-top:var(--space-3);justify-content:flex-end;">';
+  html += '<button class="rfp-btn-secondary rfp-export-btn" onclick="rfpExportComparison(\'excel\')" style="font-size:var(--text-xs);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export Comparison to Excel</button>';
+  html += '<button class="rfp-btn-secondary rfp-drive-btn" onclick="rfpExportComparison(\'drive\')" style="font-size:var(--text-xs);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>Save to Drive</button>';
+  html += '</div>';
+
+  // Store comparison data for export
+  window._rfpComparisonData = { buildingData: buildingData, dealMetrics: dealMetrics, assumptionMetrics: assumptionMetrics, hasAnyAssumptions: hasAnyAssumptions };
+
   return html;
+}
+
+// ===== COMPARISON EXPORT =====
+function rfpExportComparison(target) {
+  var cd = window._rfpComparisonData;
+  if (!cd || !cd.buildingData || cd.buildingData.length === 0) { alert('No comparison data to export.'); return; }
+
+  var bd = cd.buildingData;
+  var wb = XLSX.utils.book_new();
+
+  // Build the comparison sheet with formulas
+  var data = [];
+  var projectName = (typeof _projectMeta !== 'undefined' && _projectMeta.name) ? _projectMeta.name : (getProjectId() || 'Project');
+  data.push(['Building Comparison - ' + projectName]);
+  data.push([]);
+
+  // Header row
+  var hdr = ['Metric'];
+  bd.forEach(function(b) { hdr.push(b.address); });
+  data.push(hdr);
+
+  // Helper: column letter from index
+  function colLetter(idx) {
+    var s = '';
+    idx++;
+    while (idx > 0) { idx--; s = String.fromCharCode(65 + (idx % 26)) + s; idx = Math.floor(idx / 26); }
+    return s;
+  }
+
+  var dataStartRow = 3; // 0-indexed row where data starts (after title + blank + header)
+
+  // Track which rows have SL Monthly and SL Annual for formula linkage
+  var slMonthlyRow = -1;
+  var slAnnualRow = -1;
+
+  // Deal metrics
+  cd.dealMetrics.forEach(function(m) {
+    var row = [m[0]];
+    bd.forEach(function(d) { row.push(m[1](d) || 0); });
+    if (m[0] === 'SL Monthly Rent') slMonthlyRow = data.length;
+    if (m[0] === 'SL Annual Expense') slAnnualRow = data.length;
+    data.push(row);
+  });
+
+  // Assumptions
+  if (cd.hasAnyAssumptions) {
+    data.push([]);
+    data.push(['YOUR ASSUMPTIONS']);
+    cd.assumptionMetrics.forEach(function(m) {
+      var row = [m[0]];
+      bd.forEach(function(d) { row.push(m[1](d) || 0); });
+      data.push(row);
+    });
+  }
+
+  // Branding
+  data.push([]);
+  data.push(['Generated by TourLytics | tourlytics.ai']);
+
+  var ws = XLSX.utils.aoa_to_sheet(data);
+
+  // Column widths
+  var colWidths = [{ wch: 22 }];
+  bd.forEach(function() { colWidths.push({ wch: 22 }); });
+  ws['!cols'] = colWidths;
+
+  // Add SL Annual formula: =SL_Monthly * 12 (if both rows exist)
+  if (slMonthlyRow >= 0 && slAnnualRow >= 0) {
+    for (var c = 1; c <= bd.length; c++) {
+      var cl = colLetter(c);
+      var annualCell = cl + (slAnnualRow + 1);
+      var monthlyRef = cl + (slMonthlyRow + 1);
+      ws[annualCell] = { t: 'n', f: monthlyRef + '*12', v: data[slAnnualRow][c] };
+    }
+  }
+
+  // Style: currency format for metric rows
+  var fmt = '$#,##0';
+  for (var r = dataStartRow; r < data.length; r++) {
+    var label = data[r] && data[r][0];
+    if (!label) continue;
+    var isCurrency = (label !== 'RSF' && label !== 'Term (months)' && label !== 'YOUR ASSUMPTIONS' && label.indexOf('Generated') < 0);
+    if (isCurrency) {
+      for (var ci = 1; ci <= bd.length; ci++) {
+        var cellRef = colLetter(ci) + (r + 1);
+        if (ws[cellRef]) ws[cellRef].z = fmt;
+      }
+    }
+  }
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Building Comparison');
+  rfpAddBrandingSheet(wb);
+
+  var dateStr = new Date().toISOString().split('T')[0];
+  var fileName = 'Building-Comparison-' + dateStr + '.xlsx';
+
+  if (target === 'drive') {
+    rfpExportComparisonToDrive(wb, fileName);
+  } else {
+    XLSX.writeFile(wb, fileName);
+  }
+}
+
+function rfpExportComparisonToDrive(wb, fileName) {
+  if (!window.google || !window.google.accounts || !window.google.accounts.oauth2) {
+    alert('Google Identity Services not loaded. Please refresh and try again.');
+    return;
+  }
+
+  function doUpload(accessToken) {
+    var wbOut = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    var blob = new Blob([wbOut], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+    var metadata = { name: fileName, mimeType: 'application/vnd.google-apps.spreadsheet' };
+    var boundary = '----TourLyticsBoundary' + Date.now();
+    var body = '--' + boundary + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' +
+      JSON.stringify(metadata) + '\r\n--' + boundary + '\r\nContent-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\r\n\r\n';
+
+    var bodyEnd = '\r\n--' + boundary + '--';
+    var bodyBlob = new Blob([body, wbOut, bodyEnd]);
+
+    fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + accessToken },
+      body: bodyBlob
+    })
+    .then(function(resp) { return resp.json(); })
+    .then(function(fileData) {
+      alert('Saved to Google Drive!');
+      window.open('https://docs.google.com/spreadsheets/d/' + fileData.id + '/edit', '_blank');
+    })
+    .catch(function(err) { alert('Drive upload failed: ' + err.message); });
+  }
+
+  function initAndRequest() {
+    var tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: _gDriveClientId,
+      scope: 'https://www.googleapis.com/auth/drive.file',
+      callback: function(tokenResponse) {
+        if (tokenResponse.error) { alert('Google authorization failed.'); return; }
+        doUpload(tokenResponse.access_token);
+      },
+    });
+    tokenClient.requestAccessToken();
+  }
+
+  if (_gDriveClientId) {
+    initAndRequest();
+  } else {
+    fetch('/api/config').then(function(r) { return r.json(); }).then(function(cfg) {
+      if (!cfg.googleClientId) { alert('Google Drive not configured.'); return; }
+      _gDriveClientId = cfg.googleClientId;
+      initAndRequest();
+    });
+  }
 }
 
 // ===== RENDER ANALYSIS (for one submission) =====
