@@ -8163,17 +8163,33 @@ body {
     max-width: calc(100vw - 32px);
   }
   .tooltip-btn-row {
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: nowrap;
     gap: 4px;
   }
   .tooltip-btn-row .tooltip-tour-btn,
   .tooltip-btn-row .tooltip-shortlist-btn,
   .tooltip-btn-row .tooltip-directions-btn,
   .tooltip-btn-row .tooltip-ni-btn {
-    width: 100%;
-    padding: 10px 8px;
-    font-size: 12px;
+    width: auto;
+    flex: 1;
+    min-width: 0;
+    padding: 7px 4px;
+    font-size: 0;
+    border-radius: 6px;
+    gap: 3px;
   }
+  .tooltip-btn-row .tooltip-tour-btn span,
+  .tooltip-btn-row .tooltip-shortlist-btn span,
+  .tooltip-btn-row .tooltip-directions-btn span,
+  .tooltip-btn-row .tooltip-ni-btn span {
+    font-size: 0;
+  }
+  .tooltip-btn-row .tooltip-tour-btn span::after { content: 'Tour'; font-size: 9px; }
+  .tooltip-btn-row .tooltip-shortlist-btn span::after { content: 'List'; font-size: 9px; }
+  .tooltip-btn-row .tooltip-directions-btn span::after { content: 'Dir'; font-size: 9px; }
+  .tooltip-btn-row .tooltip-ni-btn span::after { content: 'Pass'; font-size: 9px; }
+  .tooltip-btn-row svg { width: 12px; height: 12px; flex-shrink: 0; }
 }
 
 /* --- TOUR LIST PANEL: mobile improvements --- */
