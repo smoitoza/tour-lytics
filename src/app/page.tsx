@@ -719,7 +719,7 @@ export default function LandingPage() {
               One platform that speaks both broker and CFO
             </h2>
             <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', maxWidth: '640px', margin: '0 auto', lineHeight: 1.6 }}>
-              Tour-Lytics transforms raw market data into the financial intelligence corporate real estate teams actually need.
+              From broker surveys to executive summaries, financial models to stakeholder emails. Tour-Lytics is the single platform where deals get analyzed, decisions get made, and teams stay aligned.
             </p>
           </div>
 
@@ -791,8 +791,31 @@ export default function LandingPage() {
                   </svg>
                 ),
                 title: 'Survey Upload & Merge',
-                desc: 'Upload new broker surveys directly into the platform. the platform extracts every building and merges it with your existing map automatically.',
+                desc: 'Upload new broker surveys directly into the platform. The platform extracts every building and merges it with your existing map automatically.',
                 accent: '#f0fdf4',
+              },
+              {
+                icon: (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                  </svg>
+                ),
+                title: 'Executive Summary',
+                desc: 'Generate a comprehensive C-suite-ready executive summary with one click. Cash basis and straight-line analysis side by side, deal progression, commute impact, and recommendations. Export to Word or Google Docs.',
+                accent: '#fff7ed',
+              },
+              {
+                icon: (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                  </svg>
+                ),
+                title: 'Project Brief Assistant',
+                desc: 'Draft internal emails, memos, and stakeholder briefs without leaving the platform. The writing assistant knows your deal terms, buildings, and timelines. Your conversation history stays private to you.',
+                accent: '#faf5ff',
               },
             ].map((card) => (
               <div
@@ -840,7 +863,7 @@ export default function LandingPage() {
             {[
               { num: '1', title: 'Upload Your Survey', desc: 'Drop in any broker survey or tour book PDF - Savills, CBRE, JLL, Cushman, or custom formats. The platform reads every page.' },
               { num: '2', title: 'Auto-Extract & Map', desc: 'Buildings are identified, addresses geocoded, and deal terms pulled automatically. Your interactive map generates in minutes.' },
-              { num: '3', title: 'Analyze & Share', desc: 'Build your tour list right from the map. Upload RFPs or LOIs for instant financial analysis. Ask your assistant anything about your buildings, costs, or tours. Share everything with stakeholders via a single link.' },
+              { num: '3', title: 'Analyze, Write & Share', desc: 'Build your tour list right from the map. Upload RFPs for instant financial modeling. Generate executive summaries and draft stakeholder emails with a built-in writing assistant that already knows your deal data. Export everything to Excel, Word, or Google Drive.' },
             ].map((step) => (
               <div key={step.num} className="relative z-10 text-center" style={{ padding: '1.5rem' }}>
                 <div className="flex items-center justify-center rounded-full text-white font-bold" style={{ width: '56px', height: '56px', background: '#2563eb', fontFamily: 'var(--font-display)', fontSize: 'clamp(1.125rem, 1rem + 0.75vw, 1.5rem)', margin: '0 auto 1.5rem auto', boxShadow: '0 4px 12px rgba(37,99,235,0.25)' }}>
@@ -910,6 +933,8 @@ export default function LandingPage() {
                   'Tour Book with scores, photos, and notes',
                   'Commute analysis in seconds, not weeks',
                   'Monthly cash flow & GAAP P&L',
+                  'One-click executive summary with cash + straight-line analysis',
+                  'Draft emails and briefs with a writing assistant that knows your deal data',
                   'Built-in assistant that answers questions about any building or deal',
                   'Upload new surveys directly to the map',
                 ].map((item) => (
