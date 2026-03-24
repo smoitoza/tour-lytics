@@ -5728,11 +5728,55 @@ body {
     }
 
     /* ===== PROJECT BRIEF ===== */
-    .pbrief-page {
-      display: flex; flex-direction: column; height: 100%; max-width: 900px; margin: 0 auto; padding: 0 var(--space-4);
+    .pbrief-layout {
+      display: flex; height: 100%; overflow: hidden;
     }
-    .pbrief-header {
-      padding: var(--space-3) 0; flex-shrink: 0;
+    .pbrief-sidebar {
+      width: 260px; min-width: 260px; border-right: 1px solid var(--color-border);
+      display: flex; flex-direction: column; background: var(--color-bg-alt, #f8fafc);
+    }
+    .pbrief-sidebar-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px; border-bottom: 1px solid var(--color-border);
+    }
+    .pbrief-sidebar-title {
+      font-size: 0.82rem; font-weight: 700; color: var(--color-text);
+    }
+    .pbrief-new-btn {
+      width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--color-border);
+      background: #fff; color: var(--color-text-muted); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .pbrief-new-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+    .pbrief-sidebar-list {
+      flex: 1; overflow-y: auto; padding: 8px;
+    }
+    .pbrief-sidebar-item {
+      display: block; width: 100%; text-align: left; padding: 10px 12px;
+      border-radius: 8px; border: none; background: transparent;
+      color: var(--color-text-muted); font-size: 0.78rem; line-height: 1.4;
+      cursor: pointer; transition: all 0.15s; margin-bottom: 2px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .pbrief-sidebar-item:hover { background: #fff; color: var(--color-text); }
+    .pbrief-sidebar-item.active {
+      background: #fff; color: var(--color-text); font-weight: 600;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .pbrief-sidebar-item-time {
+      font-size: 0.65rem; color: var(--color-text-faint); margin-top: 2px;
+      display: block;
+    }
+    .pbrief-sidebar-footer {
+      padding: 10px 16px; border-top: 1px solid var(--color-border);
+    }
+    .pbrief-sidebar-empty {
+      padding: 24px 16px; text-align: center; font-size: 0.75rem; color: var(--color-text-faint);
+    }
+    .pbrief-main {
+      flex: 1; display: flex; flex-direction: column; min-width: 0;
+      max-width: 800px; padding: 0 var(--space-4);
     }
     .pbrief-title { font-size: 1.15rem; font-weight: 700; margin: 0 0 2px; }
     .pbrief-subtitle { font-size: 0.8rem; color: var(--color-text-muted); margin: 0; }
@@ -5845,7 +5889,8 @@ body {
       font-size: 0.65rem; color: var(--color-text-faint); margin-top: 4px; text-align: right;
     }
     @media (max-width: 768px) {
-      .pbrief-page { padding: 0 var(--space-2); }
+      .pbrief-sidebar { display: none; }
+      .pbrief-main { padding: 0 var(--space-2); max-width: 100%; }
       .pbrief-msg-user-bubble { max-width: 85%; }
       .pbrief-suggestion { max-width: 100%; }
     }
@@ -9401,45 +9446,55 @@ body {
 </div>
 
 <div class="tab-content" id="tab-project-brief">
-  <div class="pbrief-page">
-    <div class="pbrief-header">
-      <div>
-        <h2 class="pbrief-title">Project Brief</h2>
-        <p class="pbrief-subtitle">Draft emails, memos, and briefs using your project data.</p>
-        <p class="pbrief-privacy-note"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Your chat history is private and only visible to you, not your team.</p>
+  <div class="pbrief-layout">
+    <!-- Left sidebar: chat history -->
+    <div class="pbrief-sidebar" id="pbriefSidebar">
+      <div class="pbrief-sidebar-header">
+        <span class="pbrief-sidebar-title">Recent Briefs</span>
+        <button class="pbrief-new-btn" onclick="pbriefNewChat()" title="New brief">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+      </div>
+      <div class="pbrief-sidebar-list" id="pbriefSidebarList">
+        <!-- Populated by JS -->
+      </div>
+      <div class="pbrief-sidebar-footer">
+        <p class="pbrief-privacy-note"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Private to you</p>
       </div>
     </div>
 
-    <!-- Chat history -->
-    <div class="pbrief-chat" id="pbriefChat">
-      <!-- Empty state -->
-      <div class="pbrief-empty" id="pbriefEmpty">
-        <div class="pbrief-empty-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="44" height="44"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        </div>
-        <h3>Your Project Writing Assistant</h3>
-        <p>Ask it to draft emails, write memos, create briefs, or summarize specific aspects of your project. It has access to all your buildings, RFPs, commute data, and shortlist.</p>
-        <div class="pbrief-suggestions">
-          <button class="pbrief-suggestion" onclick="pbriefUseSuggestion(this)">Draft an email to my team about our top building recommendations</button>
-          <button class="pbrief-suggestion" onclick="pbriefUseSuggestion(this)">Write a brief for leadership comparing our shortlisted options</button>
-          <button class="pbrief-suggestion" onclick="pbriefUseSuggestion(this)">Summarize the financial terms we've negotiated so far</button>
-          <button class="pbrief-suggestion" onclick="pbriefUseSuggestion(this)">Draft talking points for our next real estate committee meeting</button>
+    <!-- Right: main chat area -->
+    <div class="pbrief-main">
+      <div class="pbrief-chat" id="pbriefChat">
+        <!-- Empty state -->
+        <div class="pbrief-empty" id="pbriefEmpty">
+          <div class="pbrief-empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="44" height="44"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <h3>Your Project Writing Assistant</h3>
+          <p>Ask it to draft emails, write memos, create briefs, or summarize specific aspects of your project. It has access to all your buildings, RFPs, commute data, and shortlist.</p>
+          <div class="pbrief-suggestions">
+            <button class="pbrief-suggestion" onclick="pbriefUseSuggestion(this)">Draft an email to my team about our top building recommendations</button>
+            <button class="pbrief-suggestion" onclick="pbriefUseSuggestion(this)">Write a brief for leadership comparing our shortlisted options</button>
+            <button class="pbrief-suggestion" onclick="pbriefUseSuggestion(this)">Summarize the financial terms we've negotiated so far</button>
+            <button class="pbrief-suggestion" onclick="pbriefUseSuggestion(this)">Draft talking points for our next real estate committee meeting</button>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Input area -->
-    <div class="pbrief-input-area">
-      <div class="pbrief-input-wrap">
-        <textarea class="pbrief-input" id="pbriefInput" rows="2" placeholder="Ask anything about your project... e.g. 'Draft an email to the team about the 301 Brannan RFP timeline'" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();pbriefSend();}"></textarea>
-        <button class="pbrief-mic-btn" id="pbriefMicBtn" aria-label="Voice input" style="display:none;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" /></svg>
-        </button>
-        <button class="pbrief-send-btn" id="pbriefSendBtn" onclick="pbriefSend()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-        </button>
+      <!-- Input area -->
+      <div class="pbrief-input-area">
+        <div class="pbrief-input-wrap">
+          <textarea class="pbrief-input" id="pbriefInput" rows="2" placeholder="Ask anything about your project... e.g. 'Draft an email to the team about the 301 Brannan RFP timeline'" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();pbriefSend();}"></textarea>
+          <button class="pbrief-mic-btn" id="pbriefMicBtn" aria-label="Voice input" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" /></svg>
+          </button>
+          <button class="pbrief-send-btn" id="pbriefSendBtn" onclick="pbriefSend()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+        <div class="pbrief-input-meta">2 tokens per brief | Shift+Enter for new line</div>
       </div>
-      <div class="pbrief-input-meta">2 tokens per brief | Shift+Enter for new line</div>
     </div>
   </div>
 </div>
@@ -19676,6 +19731,8 @@ async function execSummaryPublish() {
 
 var _pbriefLoaded = false;
 var _pbriefSending = false;
+var _pbriefHistory = []; // all briefs from DB
+var _pbriefActiveId = null; // currently selected brief ID
 
 function pbriefInit() {
   if (_pbriefLoaded) return;
@@ -19687,26 +19744,85 @@ function pbriefInit() {
   fetch('/api/project-brief?projectId=' + encodeURIComponent(projectId) + '&userEmail=' + encodeURIComponent(email))
     .then(function(res) { return res.json(); })
     .then(function(history) {
-      if (!Array.isArray(history) || history.length === 0) return;
-
-      // Hide empty state
-      var emptyEl = document.getElementById('pbriefEmpty');
-      if (emptyEl) emptyEl.style.display = 'none';
-
-      // Render history (newest first from API, reverse for chronological display)
-      var chatEl = document.getElementById('pbriefChat');
-      history.reverse().forEach(function(item) {
-        pbriefAppendMessage('user', item.prompt, item.created_at);
-        pbriefAppendMessage('ai', item.response, item.created_at);
-      });
-
-      // Scroll to bottom
-      chatEl.scrollTop = chatEl.scrollHeight;
+      _pbriefHistory = Array.isArray(history) ? history : [];
+      pbriefRenderSidebar();
       _pbriefLoaded = true;
     })
     .catch(function(err) {
       console.warn('Failed to load brief history:', err);
     });
+}
+
+function pbriefRenderSidebar() {
+  var listEl = document.getElementById('pbriefSidebarList');
+  if (!listEl) return;
+
+  if (_pbriefHistory.length === 0) {
+    listEl.innerHTML = '<div class="pbrief-sidebar-empty">No briefs yet. Start a conversation.</div>';
+    return;
+  }
+
+  var html = '';
+  _pbriefHistory.forEach(function(item) {
+    var isActive = item.id === _pbriefActiveId;
+    var d = new Date(item.created_at);
+    var timeStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    var preview = (item.prompt || '').substring(0, 60) + (item.prompt && item.prompt.length > 60 ? '...' : '');
+    html += '<button class="pbrief-sidebar-item' + (isActive ? ' active' : '') + '" onclick="pbriefSelectItem(\'' + item.id + '\')">';
+    html += esc(preview);
+    html += '<span class="pbrief-sidebar-item-time">' + timeStr + '</span>';
+    html += '</button>';
+  });
+  listEl.innerHTML = html;
+}
+
+function pbriefSelectItem(id) {
+  _pbriefActiveId = id;
+  var item = _pbriefHistory.find(function(h) { return h.id === id; });
+  if (!item) return;
+
+  // Clear chat and show this brief
+  var chatEl = document.getElementById('pbriefChat');
+  var emptyEl = document.getElementById('pbriefEmpty');
+  if (emptyEl) emptyEl.style.display = 'none';
+
+  // Remove all messages except empty state
+  Array.from(chatEl.children).forEach(function(child) {
+    if (child.id !== 'pbriefEmpty') child.remove();
+  });
+
+  // Render the selected brief
+  pbriefAppendMessage('user', item.prompt, item.created_at);
+  var html = item.response || '';
+  html = html.replace(/^```html?\n?/i, '').replace(/\n?```$/i, '').trim();
+  if (!html.match(/^</) && html.match(/^#/m)) {
+    html = execSummaryMarkdownToHTML(html);
+  }
+  pbriefAppendMessage('ai', html, item.created_at);
+
+  // Update sidebar active state
+  pbriefRenderSidebar();
+}
+
+function pbriefNewChat() {
+  _pbriefActiveId = null;
+  var chatEl = document.getElementById('pbriefChat');
+  var emptyEl = document.getElementById('pbriefEmpty');
+
+  // Clear messages
+  Array.from(chatEl.children).forEach(function(child) {
+    if (child.id !== 'pbriefEmpty') child.remove();
+  });
+
+  // Show empty state
+  if (emptyEl) emptyEl.style.display = 'flex';
+
+  // Deselect sidebar
+  pbriefRenderSidebar();
+
+  // Focus input
+  var input = document.getElementById('pbriefInput');
+  if (input) { input.value = ''; input.focus(); }
 }
 
 function pbriefUseSuggestion(btn) {
@@ -19772,6 +19888,12 @@ async function pbriefSend() {
         html = execSummaryMarkdownToHTML(html);
       }
       pbriefAppendMessage('ai', html);
+
+      // Add to sidebar history
+      var newItem = { id: 'local-' + Date.now(), prompt: prompt, response: data.response, created_at: new Date().toISOString() };
+      _pbriefHistory.unshift(newItem);
+      _pbriefActiveId = newItem.id;
+      pbriefRenderSidebar();
     }
   } catch (err) {
     loadingEl.remove();
