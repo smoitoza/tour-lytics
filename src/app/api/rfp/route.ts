@@ -391,6 +391,35 @@ function generateFinancialAnalysis(terms: DealTerms) {
   const effectiveRentRSF = rsf > 0 ? Math.round((netRentAfterTI / (termMonths / 12)) / rsf * 100) / 100 : 0
   const totalCostPerRSFPerYear = rsf > 0 ? Math.round(((totalAllIn - tiTotal) / (termMonths / 12)) / rsf * 100) / 100 : 0
 
+  // ===== 4. NPV / PRESENT VALUE ANALYSIS =====
+  // Compute NPV of total lease obligation at multiple discount rates
+  // Uses monthly cash flows (totalMonthlyCost) which include rent + opex + parking
+  // Also factors in upfront capital (TI out-of-pocket = buildout cost - TI allowance)
+  function computeNPV(monthlyCashFlows: any[], annualRate: number): number {
+    const monthlyRate = annualRate / 12
+    let npv = 0
+    for (let i = 0; i < monthlyCashFlows.length; i++) {
+      const cf = monthlyCashFlows[i].totalMonthlyCost || 0
+      npv += cf / Math.pow(1 + monthlyRate, i + 1)
+    }
+    return Math.round(npv)
+  }
+
+  const npvRates = [0.06, 0.07, 0.08, 0.09, 0.10]
+  const npvResults: Record<string, { rate: number, npv: number, npvPerRSF: number, avgAnnual: number }> = {}
+  npvRates.forEach(rate => {
+    const npvVal = computeNPV(monthly, rate)
+    npvResults[String(rate)] = {
+      rate,
+      npv: npvVal,
+      npvPerRSF: rsf > 0 ? Math.round(npvVal / rsf * 100) / 100 : 0,
+      avgAnnual: termMonths > 0 ? Math.round(npvVal / (termMonths / 12)) : 0,
+    }
+  })
+
+  // Default NPV at 8% (CRE industry standard)
+  const npvDefault = npvResults['0.08'] || npvResults['0.08']
+
   return {
     cash_flow: {
       monthly,
@@ -426,6 +455,11 @@ function generateFinancialAnalysis(terms: DealTerms) {
       },
       schedule: gaapSchedule,
     },
+    npv: {
+      defaultRate: 0.08,
+      results: npvResults,
+      default: npvDefault,
+    },
     summary: {
       rsf,
       termMonths,
@@ -437,6 +471,9 @@ function generateFinancialAnalysis(terms: DealTerms) {
       freeRentValue: Math.round(totalFreeRentValue),
       tiValue: tiTotal,
       totalConcessions: Math.round(totalFreeRentValue + tiTotal),
+      npv: npvDefault?.npv || 0,
+      npvPerRSF: npvDefault?.npvPerRSF || 0,
+      npvRate: 0.08,
     }
   }
 }

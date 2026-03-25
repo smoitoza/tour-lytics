@@ -16472,7 +16472,49 @@ function rfpBuildStraightLineTable(analysis) {
       '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyDecimals(totals.totalCostPerRSFPerYear) + '</div><div class="rfp-metric-label">Total Cost/RSF/Year</div></div>' +
     '</div>';
 
+  // ===== NPV / Present Value Analysis =====
+  if (analysis.npv && analysis.npv.results) {
+    var npvData = analysis.npv;
+    var currentRate = npvData.defaultRate || 0.08;
+    var npvAtRate = npvData.results[String(currentRate)] || npvData.default || {};
+    var rateOptions = Object.keys(npvData.results).sort();
+
+    html += '<div style="margin-top:var(--space-4);padding-top:var(--space-4);border-top:1px solid var(--color-border)">' +
+      '<div style="display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-3)">' +
+        '<div style="font-weight:600;font-size:var(--text-sm);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted)">Present Value Analysis</div>' +
+        '<select id="npvRateSelector" onchange="updateNPVDisplay(this.value)" style="padding:3px 8px;font-size:var(--text-xs);border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg);color:var(--color-text);font-family:inherit;cursor:pointer;">';
+    rateOptions.forEach(function(r) {
+      var pct = Math.round(parseFloat(r) * 100);
+      html += '<option value="' + r + '"' + (parseFloat(r) === currentRate ? ' selected' : '') + '>' + pct + '% Discount Rate</option>';
+    });
+    html += '</select>' +
+      '</div>' +
+      '<div class="rfp-summary-metrics" id="npvMetricsContainer">' +
+        '<div class="rfp-metric"><div class="rfp-metric-value" id="npvValue" style="color:#2563eb">' + rfpFmtCurrencyPlain(npvAtRate.npv) + '</div><div class="rfp-metric-label">NPV of Lease Obligation</div></div>' +
+        '<div class="rfp-metric"><div class="rfp-metric-value" id="npvPerRSF" style="color:#2563eb">' + rfpFmtCurrencyDecimals(npvAtRate.npvPerRSF) + '</div><div class="rfp-metric-label">NPV per RSF</div></div>' +
+        '<div class="rfp-metric"><div class="rfp-metric-value" id="npvAvgAnnual">' + rfpFmtCurrencyPlain(npvAtRate.avgAnnual) + '</div><div class="rfp-metric-label">NPV Avg Annual</div></div>' +
+        '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(analysis.cash_flow?.totals?.totalAllInCost) + '</div><div class="rfp-metric-label">Nominal Total (undiscounted)</div></div>' +
+      '</div>' +
+    '</div>';
+
+    // Store NPV data globally for rate switching
+    window._currentNPVData = npvData.results;
+  }
+
   return html;
+}
+
+// NPV rate selector handler
+function updateNPVDisplay(rateStr) {
+  var data = window._currentNPVData;
+  if (!data || !data[rateStr]) return;
+  var npv = data[rateStr];
+  var valEl = document.getElementById('npvValue');
+  var rsfEl = document.getElementById('npvPerRSF');
+  var avgEl = document.getElementById('npvAvgAnnual');
+  if (valEl) valEl.textContent = rfpFmtCurrencyPlain(npv.npv);
+  if (rsfEl) rsfEl.textContent = rfpFmtCurrencyDecimals(npv.npvPerRSF);
+  if (avgEl) avgEl.textContent = rfpFmtCurrencyPlain(npv.avgAnnual);
 }
 
 // ===== GAAP ANALYSIS TABLE =====
@@ -16884,6 +16926,40 @@ function rfpExportExcel() {
 
     setCell(slWS, smRow, 0, 'Total Cost/RSF/Year', metricLabelStyle);
     setFormula(slWS, smRow, 1, totalHRef + '/' + DT + dtRefs.rsf + '/(' + DT + dtRefs.lease_term + '/12)', metricValDecStyle);
+    smRow++;
+
+    // NPV / Present Value Analysis
+    smRow++;
+    setCell(slWS, smRow, 0, 'Present Value Analysis', sectionStyle);
+    for (var npvc = 1; npvc < slCols; npvc++) setCell(slWS, smRow, npvc, '', sectionStyle);
+    smRow++;
+
+    // Discount rate input cell (yellow, editable)
+    setCell(slWS, smRow, 0, 'Discount Rate (input)', metricLabelStyle);
+    setCell(slWS, smRow, 1, 0.08, Object.assign({}, inputPctStyle));
+    var npvDiscountRef = 'B' + (smRow + 1);
+    smRow++;
+
+    // NPV formula using Cash Flow tab data
+    // Since the Cash Flow tab has monthly costs in column J (totalMonthlyCost), build a reference
+    // But for simplicity and cross-sheet formula compatibility, use the pre-computed value
+    // with a note that users can adjust the rate
+    var npvVal = analysis.npv && analysis.npv.default ? analysis.npv.default.npv : (analysis.summary.npv || 0);
+    setCell(slWS, smRow, 0, 'NPV of Lease Obligation', metricLabelStyle);
+    setCell(slWS, smRow, 1, n(npvVal), Object.assign({}, metricValStyle, { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: '2563EB' } } }));
+    var npvCellRef = 'B' + (smRow + 1);
+    smRow++;
+
+    setCell(slWS, smRow, 0, 'NPV per RSF', metricLabelStyle);
+    setFormula(slWS, smRow, 1, 'IF(' + DT + dtRefs.rsf + '>0,' + npvCellRef + '/' + DT + dtRefs.rsf + ',0)', Object.assign({}, metricValDecStyle, { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: '2563EB' } } }));
+    smRow++;
+
+    setCell(slWS, smRow, 0, 'NPV Avg Annual', metricLabelStyle);
+    setFormula(slWS, smRow, 1, 'IF(' + DT + dtRefs.lease_term + '>0,' + npvCellRef + '/(' + DT + dtRefs.lease_term + '/12),0)', metricValStyle);
+    smRow++;
+
+    setCell(slWS, smRow, 0, 'Nominal Total (undiscounted)', metricLabelStyle);
+    setCell(slWS, smRow, 1, n(analysis.cash_flow?.totals?.totalAllInCost || analysis.summary?.totalAllInCost || 0), metricValStyle);
     smRow++;
 
     slWS['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: smRow - 1, c: slCols - 1 } });
@@ -17667,7 +17743,9 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
     ['SL Annual Expense', function(d) { return d.summary.straightLineAnnualExpense; }, true, 'curr'],
     ['Free Rent Value', function(d) { return d.summary.freeRentValue; }, false, 'curr'],
     ['TI Value', function(d) { return d.summary.tiValue; }, false, 'curr'],
-    ['Total Concessions', function(d) { return d.summary.totalConcessions; }, false, 'curr']
+    ['Total Concessions', function(d) { return d.summary.totalConcessions; }, false, 'curr'],
+    ['NPV @ 8%', function(d) { return d.summary.npv; }, true, 'curr'],
+    ['NPV per RSF', function(d) { return d.summary.npvPerRSF; }, true, 'curr']
   ];
 
   var assumptionMetrics = [
@@ -17778,6 +17856,10 @@ function rfpExportComparison(target) {
   // Track which rows have SL Monthly and SL Annual for formula linkage
   var slMonthlyRow = -1;
   var slAnnualRow = -1;
+  var npvRow = -1;
+  var npvPerRSFRow = -1;
+  var rsfRow = -1;
+  var totalAllInRow = -1;
 
   // Deal metrics
   cd.dealMetrics.forEach(function(m) {
@@ -17785,6 +17867,10 @@ function rfpExportComparison(target) {
     bd.forEach(function(d) { row.push(m[1](d) || 0); });
     if (m[0] === 'SL Monthly Rent') slMonthlyRow = data.length;
     if (m[0] === 'SL Annual Expense') slAnnualRow = data.length;
+    if (m[0] === 'RSF') rsfRow = data.length;
+    if (m[0] === 'Total All-in Cost') totalAllInRow = data.length;
+    if (m[0] === 'NPV @ 8%') npvRow = data.length;
+    if (m[0] === 'NPV per RSF') npvPerRSFRow = data.length;
     data.push(row);
   });
 
@@ -17798,6 +17884,11 @@ function rfpExportComparison(target) {
       data.push(row);
     });
   }
+
+  // Discount Rate input row
+  data.push([]);
+  var discountRateRow = data.length;
+  data.push(['Discount Rate (input)', 0.08]);
 
   // Branding
   data.push([]);
@@ -17820,16 +17911,42 @@ function rfpExportComparison(target) {
     }
   }
 
+  // Format discount rate cell as percentage with yellow fill
+  var drCellRef = 'B' + (discountRateRow + 1);
+  if (ws[drCellRef]) {
+    ws[drCellRef].z = '0%';
+    ws[drCellRef].s = { fill: { fgColor: { rgb: 'FFF9E8' } }, font: { bold: true } };
+  }
+  // Label cell styling
+  var drLabelRef = 'A' + (discountRateRow + 1);
+  if (ws[drLabelRef]) {
+    ws[drLabelRef].s = { font: { bold: true, color: { rgb: '2563EB' } } };
+  }
+
+  // Add NPV per RSF formula: =NPV / RSF (if both rows exist)
+  if (npvRow >= 0 && npvPerRSFRow >= 0 && rsfRow >= 0) {
+    for (var c2 = 1; c2 <= bd.length; c2++) {
+      var cl2 = colLetter(c2);
+      var perRSFCell = cl2 + (npvPerRSFRow + 1);
+      var npvRef = cl2 + (npvRow + 1);
+      var rsfRef = cl2 + (rsfRow + 1);
+      ws[perRSFCell] = { t: 'n', f: 'IF(' + rsfRef + '>0,' + npvRef + '/' + rsfRef + ',0)', v: data[npvPerRSFRow][c2] };
+    }
+  }
+
   // Style: currency format for metric rows
   var fmt = '$#,##0';
+  var fmtDec = '$#,##0.00';
   for (var r = dataStartRow; r < data.length; r++) {
     var label = data[r] && data[r][0];
     if (!label) continue;
-    var isCurrency = (label !== 'RSF' && label !== 'Term (months)' && label !== 'YOUR ASSUMPTIONS' && label.indexOf('Generated') < 0);
+    var isDecimalCurrency = (label === 'NPV per RSF' || label === 'Effective Rent $/RSF' || label === 'Base Rent $/RSF');
+    var isDiscount = (label === 'Discount Rate (input)');
+    var isCurrency = !isDiscount && label !== 'RSF' && label !== 'Term (months)' && label !== 'YOUR ASSUMPTIONS' && label.indexOf('Generated') < 0;
     if (isCurrency) {
       for (var ci = 1; ci <= bd.length; ci++) {
         var cellRef = colLetter(ci) + (r + 1);
-        if (ws[cellRef]) ws[cellRef].z = fmt;
+        if (ws[cellRef]) ws[cellRef].z = isDecimalCurrency ? fmtDec : fmt;
       }
     }
   }
@@ -23446,6 +23563,13 @@ function renderShortlist() {
         }
         html += '</div>';
       }
+      // NPV section
+      if (financialsInfo.npv > 0) {
+        html += '<div class="shortlist-card-metrics" style="margin-top:var(--space-2);padding-top:var(--space-2);border-top:1px dashed var(--color-border)">';
+        html += '<div class="shortlist-card-metric"><div class="shortlist-card-metric-value" style="color:#2563eb">' + shortlistFmtCurrency(financialsInfo.npv) + '</div><div class="shortlist-card-metric-label">NPV @ 8%</div></div>';
+        html += '<div class="shortlist-card-metric"><div class="shortlist-card-metric-value" style="color:#2563eb">' + shortlistFmtCurrencyDecimals(financialsInfo.npvPerRSF) + '</div><div class="shortlist-card-metric-label">NPV/RSF</div></div>';
+        html += '</div>';
+      }
     } else if (financialsInfo && !financialsInfo.hasAllIn) {
       html += '<div class="shortlist-card-section-title">Financials</div>';
       html += '<div class="shortlist-card-summary-row"><span>' + escHtml(financialsInfo.docType) + ' submitted</span></div>';
@@ -23560,6 +23684,8 @@ function shortlistShowCompare() {
       headcount: fin && fin.headcount > 0 ? String(fin.headcount) : '--',
       costPerEmployee: fin && fin.costPerEmployee > 0 ? shortlistFmtCurrency(fin.costPerEmployee) : '--',
       densityFit: fin && fin.densityFit > 0 ? fin.densityFit + ' RSF' : '--',
+      npv: fin && fin.npv > 0 ? shortlistFmtCurrency(fin.npv) : '--',
+      npvPerRSF: fin && fin.npvPerRSF > 0 ? shortlistFmtCurrencyDecimals(fin.npvPerRSF) : '--',
       _fin: fin, _commute: commute
     };
   });
@@ -23587,7 +23713,9 @@ function shortlistShowCompare() {
       { label: 'Internal OpEx/mo', key: 'totalMonthlyOpex' },
       { label: 'Headcount', key: 'headcount' },
       { label: 'Cost/Employee/yr', key: 'costPerEmployee', best: 'lowest' },
-      { label: 'Density (RSF/Person)', key: 'densityFit' }
+      { label: 'Density (RSF/Person)', key: 'densityFit' },
+      { label: 'NPV @ 8%', key: 'npv', best: 'lowest' },
+      { label: 'NPV per RSF', key: 'npvPerRSF', best: 'lowest' }
     ]}
   ];
 
@@ -23745,6 +23873,10 @@ function getShortlistFinancialsData(type, id, buildingName) {
   var densityFit = (headcount > 0 && rsf > 0) ? Math.round(rsf / headcount) : 0;
   var costPerEmployee = (headcount > 0 && allInAnnual > 0) ? Math.round(allInAnnual / headcount) : 0;
 
+  // NPV from analysis (pre-computed at 8% default)
+  var npvData = (latest.analysis && latest.analysis.npv) ? latest.analysis.npv : null;
+  var npv8 = npvData && npvData.results && npvData.results['0.08'] ? npvData.results['0.08'] : null;
+
   return {
     docType: docType,
     termMonths: summary.termMonths || 0,
@@ -23757,6 +23889,9 @@ function getShortlistFinancialsData(type, id, buildingName) {
     headcount: headcount,
     densityFit: densityFit,
     costPerEmployee: costPerEmployee,
+    npv: npv8 ? npv8.npv : 0,
+    npvPerRSF: npv8 ? npv8.npvPerRSF : 0,
+    npvRate: 0.08,
     hasAllIn: (slMonthly > 0),
     hasAssumptions: (totalMonthlyOpex > 0)
   };
