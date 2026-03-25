@@ -1086,6 +1086,12 @@ body {
   opacity: 0.7;
 }
 
+/* Bulk Not Interested mode - pointer cursor on markers */
+.bulk-ni-active .survey-marker,
+.bulk-ni-active .custom-marker {
+  cursor: pointer !important;
+}
+
 .survey-marker:hover {
   transform: scale(1.3);
   box-shadow: 0 2px 10px rgba(0,0,0,0.3);
@@ -8962,6 +8968,18 @@ body {
     Tour List
     <span class="tour-toggle-count" id="tourToggleCount" data-count="0"></span>
   </button>
+  <button class="survey-upload-toggle" id="bulkNIToggle" style="display:none;" onclick="startBulkNotInterested()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
+    Bulk Pass
+  </button>
+</div>
+
+<!-- Bulk Not Interested floating bar -->
+<div id="bulkNIBar" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:1100;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);box-shadow:0 8px 32px rgba(0,0,0,0.18);padding:10px 16px;display:none;align-items:center;gap:12px;font-family:inherit;font-size:var(--text-sm);">
+  <span id="bulkNICount" style="font-weight:600;color:var(--color-text);">0 selected</span>
+  <button id="bulkNIApplyBtn" onclick="applyBulkNotInterested()" disabled style="padding:6px 14px;font-size:var(--text-xs);font-weight:600;border-radius:var(--radius-md);border:none;background:#e8a0a0;color:#1e293b;cursor:pointer;opacity:0.5;">Mark Not Interested</button>
+  <button id="bulkNIRemoveBtn" onclick="applyBulkRemoveNotInterested()" disabled style="padding:6px 14px;font-size:var(--text-xs);font-weight:600;border-radius:var(--radius-md);border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text);cursor:pointer;opacity:0.5;display:none;">Remove Not Interested</button>
+  <button onclick="cancelBulkNotInterested()" style="padding:6px 14px;font-size:var(--text-xs);font-weight:600;border-radius:var(--radius-md);border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text);cursor:pointer;">Cancel</button>
 </div>
 <script>
 // Immediately show Upload Survey button for admin (inline, runs as soon as button exists)
@@ -8974,6 +8992,8 @@ body {
       if (btn) btn.style.display = '';
       var hqBtn = document.getElementById('setHQBtn');
       if (hqBtn) hqBtn.style.display = '';
+      var bulkNIBtn = document.getElementById('bulkNIToggle');
+      if (bulkNIBtn) bulkNIBtn.style.display = '';
       // Clear Survey button shown later after buildings load (in loadSavedSurveyBuildings)
     }
   } catch(e) {}
@@ -10216,6 +10236,7 @@ BUILDINGS.forEach((b) => {
 
   // Open on hover, but keep open when mouse enters popup
   marker.on('mouseover', function() {
+    if (this._bulkNIPopupDisabled) return;
     this.openPopup();
   });
 
@@ -11095,6 +11116,7 @@ SURVEY_BUILDINGS.forEach((b) => {
   });
 
   marker.on('mouseover', function() {
+    if (this._bulkNIPopupDisabled) return;
     this.openPopup();
   });
 
@@ -11148,7 +11170,7 @@ if (allMarkers.length > 0) {
         closeButton: true, autoPan: true,
         autoPanPadding: [20, 20], offset: [0, -5]
       });
-      marker.on('mouseover', function() { this.openPopup(); });
+      marker.on('mouseover', function() { if (this._bulkNIPopupDisabled) return; this.openPopup(); });
       surveyMarkers.push(marker);
     });
 
@@ -11263,38 +11285,141 @@ function getCityBuildingNum(b) {
 var MARKER_COLOR_TOUR = '#f47920';     // Orange - on tour book
 var MARKER_COLOR_SHORTLIST = '#10b981'; // Emerald - on shortlist
 var MARKER_COLOR_NOT_INTERESTED = '#e8a0a0'; // Soft red - not interested
+var _notInterestedLoaded = false;
 
 // ============================================================
-// Not Interested State (continued - var + isNotInterested declared earlier)
+// Not Interested State - DB-backed (shared across team)
 // ============================================================
 
-function getNotInterestedKey() {
-  return 'tourlytics-not-interested-' + (getProjectId() || 'default');
-}
-
-function getNotInterestedList() {
+// Load not-interested items from database
+async function loadNotInterested() {
   try {
-    return JSON.parse(_storeApi.getItem(getNotInterestedKey())) || [];
-  } catch(e) { return []; }
-}
-
-function saveNotInterestedList(list) {
-  _storeApi.setItem(getNotInterestedKey(), JSON.stringify(list));
-  _notInterestedItems = list;
-}
-
-function toggleNotInterested(type, id) {
-  var list = getNotInterestedList();
-  var idx = list.findIndex(function(item) { return item.type === type && item.id === id; });
-  if (idx >= 0) {
-    list.splice(idx, 1);
-  } else {
-    list.push({ type: type, id: id });
+    var res = await fetch('/api/not-interested?projectId=' + getProjectId());
+    if (!res.ok) throw new Error('Failed to load not-interested');
+    var data = await res.json();
+    // Map DB rows to the { type, id } format used by isNotInterested()
+    _notInterestedItems = (data || []).map(function(row) {
+      return { type: row.building_type, id: row.building_id };
+    });
+    _notInterestedLoaded = true;
+  } catch(e) {
+    console.error('Not-interested load error:', e);
+    // Fallback: try localStorage for offline/migration
+    try {
+      var key = 'tourlytics-not-interested-' + (getProjectId() || 'default');
+      _notInterestedItems = JSON.parse(_storeApi.getItem(key)) || [];
+    } catch(e2) { _notInterestedItems = []; }
   }
-  saveNotInterestedList(list);
   refreshMarkerColors();
-  // Re-open the popup to update button state
+}
+
+async function toggleNotInterested(type, id) {
+  var wasNI = isNotInterested(type, id);
+
+  // Optimistic update: toggle in-memory immediately
+  if (wasNI) {
+    _notInterestedItems = _notInterestedItems.filter(function(item) {
+      return !(item.type === type && item.id === id);
+    });
+  } else {
+    _notInterestedItems.push({ type: type, id: id });
+  }
+  refreshMarkerColors();
   refreshPopupNotInterested(type, id);
+
+  // Persist to DB
+  try {
+    if (wasNI) {
+      // Remove
+      await fetch('/api/not-interested?projectId=' + getProjectId() +
+        '&buildingType=' + encodeURIComponent(type) +
+        '&buildingId=' + id, { method: 'DELETE' });
+    } else {
+      // Add
+      await fetch('/api/not-interested', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: getProjectId(),
+          buildingType: type,
+          buildingId: id,
+          markedBy: getCurrentUserEmail()
+        })
+      });
+    }
+  } catch(e) {
+    console.error('Not-interested save error:', e);
+    // Revert on failure
+    if (wasNI) {
+      _notInterestedItems.push({ type: type, id: id });
+    } else {
+      _notInterestedItems = _notInterestedItems.filter(function(item) {
+        return !(item.type === type && item.id === id);
+      });
+    }
+    refreshMarkerColors();
+    refreshPopupNotInterested(type, id);
+  }
+}
+
+// Bulk mark multiple buildings as not interested
+async function bulkMarkNotInterested(itemsArray) {
+  // itemsArray: [{ type: 'survey', id: 5 }, { type: 'shortlist', id: 12 }, ...]
+  if (!itemsArray || !itemsArray.length) return;
+
+  // Optimistic: add all to in-memory list (skip duplicates)
+  itemsArray.forEach(function(item) {
+    if (!isNotInterested(item.type, item.id)) {
+      _notInterestedItems.push({ type: item.type, id: item.id });
+    }
+  });
+  refreshMarkerColors();
+
+  try {
+    await fetch('/api/not-interested', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        projectId: getProjectId(),
+        items: itemsArray.map(function(item) {
+          return { buildingType: item.type, buildingId: item.id };
+        }),
+        markedBy: getCurrentUserEmail()
+      })
+    });
+  } catch(e) {
+    console.error('Bulk not-interested error:', e);
+    // Reload from DB to get accurate state
+    await loadNotInterested();
+  }
+}
+
+// Bulk remove not-interested status
+async function bulkRemoveNotInterested(itemsArray) {
+  if (!itemsArray || !itemsArray.length) return;
+
+  // Optimistic: remove from in-memory list
+  var removeSet = new Set(itemsArray.map(function(i) { return i.type + '-' + i.id; }));
+  _notInterestedItems = _notInterestedItems.filter(function(item) {
+    return !removeSet.has(item.type + '-' + item.id);
+  });
+  refreshMarkerColors();
+
+  try {
+    await fetch('/api/not-interested', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        projectId: getProjectId(),
+        items: itemsArray.map(function(item) {
+          return { buildingType: item.type, buildingId: item.id };
+        })
+      })
+    });
+  } catch(e) {
+    console.error('Bulk remove not-interested error:', e);
+    await loadNotInterested();
+  }
 }
 
 function refreshPopupNotInterested(type, id) {
@@ -11314,8 +11439,12 @@ function refreshPopupNotInterested(type, id) {
   }
 }
 
-// Initialize not-interested list on load
-_notInterestedItems = getNotInterestedList();
+// Initialize not-interested list: try localStorage first for fast paint,
+// then overwrite from DB once loaded
+try {
+  var _niKey = 'tourlytics-not-interested-' + (getProjectId() || 'default');
+  _notInterestedItems = JSON.parse(_storeApi.getItem(_niKey)) || [];
+} catch(e) { _notInterestedItems = []; }
 
 // Forward-declare shortlist state (populated by initShortlist in a later <script> block)
 var _shortlistItems = [];
@@ -19307,7 +19436,7 @@ function surveyMergeBuildings(newBuildings) {
       autoPanPadding: [20, 20],
       offset: [0, -5]
     });
-    marker.on('mouseover', function() { this.openPopup(); });
+    marker.on('mouseover', function() { if (this._bulkNIPopupDisabled) return; this.openPopup(); });
     surveyMarkers.push(marker);
 
     nextNum++;
@@ -23760,6 +23889,215 @@ function refreshAllShortlistButtons() {
     }
   } catch(e) { console.error('Shortlist init error:', e); }
 })();
+
+// Load not-interested items from DB (replaces localStorage)
+(async function initNotInterested() {
+  await loadNotInterested();
+})();
+
+// ============================================================
+// Bulk Not Interested Mode
+// ============================================================
+var _bulkNIMode = false;
+var _bulkNISelected = new Set(); // Set of 'type-id' strings
+
+function startBulkNotInterested() {
+  _bulkNIMode = true;
+  _bulkNISelected.clear();
+  var bar = document.getElementById('bulkNIBar');
+  if (bar) { bar.style.display = 'flex'; }
+  updateBulkNICount();
+  // Close any open popups
+  map.closePopup();
+  // Add visual mode indicator
+  var mapEl = document.getElementById('map');
+  if (mapEl) mapEl.classList.add('bulk-ni-active');
+  // Add click handlers to markers for selection
+  addBulkNIMarkerHandlers();
+  // Hide the Bulk Pass button while in mode
+  var btn = document.getElementById('bulkNIToggle');
+  if (btn) btn.style.display = 'none';
+}
+
+function cancelBulkNotInterested() {
+  _bulkNIMode = false;
+  _bulkNISelected.clear();
+  var bar = document.getElementById('bulkNIBar');
+  if (bar) { bar.style.display = 'none'; }
+  // Remove visual mode indicator
+  var mapEl = document.getElementById('map');
+  if (mapEl) mapEl.classList.remove('bulk-ni-active');
+  // Remove visual selection highlights
+  clearBulkNIHighlights();
+  removeBulkNIMarkerHandlers();
+  // Re-show the Bulk Pass button
+  var btn = document.getElementById('bulkNIToggle');
+  if (btn) btn.style.display = '';
+}
+
+function toggleBulkNISelection(type, id) {
+  var key = type + '-' + id;
+  if (_bulkNISelected.has(key)) {
+    _bulkNISelected.delete(key);
+  } else {
+    _bulkNISelected.add(key);
+  }
+  updateBulkNICount();
+  updateBulkNIHighlight(type, id);
+}
+
+function updateBulkNICount() {
+  var countEl = document.getElementById('bulkNICount');
+  var applyBtn = document.getElementById('bulkNIApplyBtn');
+  var removeBtn = document.getElementById('bulkNIRemoveBtn');
+  var count = _bulkNISelected.size;
+  if (countEl) countEl.textContent = count + ' selected';
+  if (applyBtn) {
+    applyBtn.disabled = count === 0;
+    applyBtn.style.opacity = count === 0 ? '0.5' : '1';
+  }
+  // Show remove button if any selected are already not-interested
+  var hasNI = false;
+  _bulkNISelected.forEach(function(key) {
+    var parts = key.split('-');
+    var t = parts[0];
+    var i = parseInt(parts.slice(1).join('-'));
+    if (isNotInterested(t, i)) hasNI = true;
+  });
+  if (removeBtn) {
+    removeBtn.style.display = hasNI ? '' : 'none';
+    removeBtn.disabled = count === 0;
+    removeBtn.style.opacity = count === 0 ? '0.5' : '1';
+  }
+}
+
+function updateBulkNIHighlight(type, id) {
+  var key = type + '-' + id;
+  var isSelected = _bulkNISelected.has(key);
+  // Find the marker element and add/remove highlight
+  if (type === 'survey') {
+    surveyMarkers.forEach(function(m) {
+      if (m._surveyNum === id) {
+        var el = m.getElement();
+        if (el) {
+          var dot = el.querySelector('.survey-marker') || el.querySelector('.custom-marker');
+          if (dot) {
+            dot.style.outline = isSelected ? '3px solid #f59e0b' : '';
+            dot.style.outlineOffset = isSelected ? '2px' : '';
+          }
+        }
+      }
+    });
+  } else if (type === 'shortlist' && typeof _buildingMarkers !== 'undefined') {
+    _buildingMarkers.forEach(function(m) {
+      if (m._buildingId === id) {
+        var el = m.getElement();
+        if (el) {
+          var dot = el.querySelector('.custom-marker');
+          if (dot) {
+            dot.style.outline = isSelected ? '3px solid #f59e0b' : '';
+            dot.style.outlineOffset = isSelected ? '2px' : '';
+          }
+        }
+      }
+    });
+  }
+}
+
+function clearBulkNIHighlights() {
+  surveyMarkers.forEach(function(m) {
+    var el = m.getElement();
+    if (el) {
+      var dot = el.querySelector('.survey-marker') || el.querySelector('.custom-marker');
+      if (dot) { dot.style.outline = ''; dot.style.outlineOffset = ''; }
+    }
+  });
+  if (typeof _buildingMarkers !== 'undefined') {
+    _buildingMarkers.forEach(function(m) {
+      var el = m.getElement();
+      if (el) {
+        var dot = el.querySelector('.custom-marker');
+        if (dot) { dot.style.outline = ''; dot.style.outlineOffset = ''; }
+      }
+    });
+  }
+}
+
+// Store original click handlers so we can restore them
+var _bulkNISurveyHandlers = [];
+var _bulkNIBuildingHandlers = [];
+
+function addBulkNIMarkerHandlers() {
+  // Disable popups on all markers during bulk mode
+  surveyMarkers.forEach(function(m) { m._bulkNIPopupDisabled = true; });
+  if (typeof _buildingMarkers !== 'undefined') {
+    _buildingMarkers.forEach(function(m) { m._bulkNIPopupDisabled = true; });
+  }
+  // Survey markers - add click-to-select
+  surveyMarkers.forEach(function(m) {
+    if (typeof m._surveyNum === 'undefined') return;
+    var handler = function(e) {
+      if (!_bulkNIMode) return;
+      m.closePopup();
+      toggleBulkNISelection('survey', m._surveyNum);
+    };
+    m.on('click', handler);
+    _bulkNISurveyHandlers.push({ marker: m, handler: handler });
+  });
+  // Building markers
+  if (typeof _buildingMarkers !== 'undefined') {
+    _buildingMarkers.forEach(function(m) {
+      if (!m._buildingId) return;
+      var handler = function(e) {
+        if (!_bulkNIMode) return;
+        m.closePopup();
+        toggleBulkNISelection('shortlist', m._buildingId);
+      };
+      m.on('click', handler);
+      _bulkNIBuildingHandlers.push({ marker: m, handler: handler });
+    });
+  }
+}
+
+function removeBulkNIMarkerHandlers() {
+  _bulkNISurveyHandlers.forEach(function(h) { h.marker.off('click', h.handler); });
+  _bulkNISurveyHandlers = [];
+  _bulkNIBuildingHandlers.forEach(function(h) { h.marker.off('click', h.handler); });
+  _bulkNIBuildingHandlers = [];
+  // Re-enable popups
+  surveyMarkers.forEach(function(m) { m._bulkNIPopupDisabled = false; });
+  if (typeof _buildingMarkers !== 'undefined') {
+    _buildingMarkers.forEach(function(m) { m._bulkNIPopupDisabled = false; });
+  }
+}
+
+async function applyBulkNotInterested() {
+  if (_bulkNISelected.size === 0) return;
+  var items = [];
+  _bulkNISelected.forEach(function(key) {
+    var parts = key.split('-');
+    var type = parts[0];
+    var id = parseInt(parts.slice(1).join('-'));
+    items.push({ type: type, id: id });
+  });
+  await bulkMarkNotInterested(items);
+  cancelBulkNotInterested();
+  refreshLegend();
+}
+
+async function applyBulkRemoveNotInterested() {
+  if (_bulkNISelected.size === 0) return;
+  var items = [];
+  _bulkNISelected.forEach(function(key) {
+    var parts = key.split('-');
+    var type = parts[0];
+    var id = parseInt(parts.slice(1).join('-'));
+    items.push({ type: type, id: id });
+  });
+  await bulkRemoveNotInterested(items);
+  cancelBulkNotInterested();
+  refreshLegend();
+}
 </script>
 
 <!-- ============================================================
