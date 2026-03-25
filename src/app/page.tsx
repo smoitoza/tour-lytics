@@ -105,14 +105,9 @@ export default function LandingPage() {
     e.preventDefault()
     setFormState('sending')
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/demo_requests`, {
+      const res = await fetch('/api/demo-request', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-          'Prefer': 'return=minimal'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           full_name: formData.name,
           email: formData.email,
