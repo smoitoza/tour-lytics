@@ -15991,6 +15991,7 @@ function rfpBuildDetailHtml(subs) {
       '<button class="fin-sheet-tab" data-sheet="cash-flow" onclick="switchFinSheet(\'cash-flow\')">Cash Flow</button>' +
       '<button class="fin-sheet-tab" data-sheet="straight-line" onclick="switchFinSheet(\'straight-line\')">Straight-Line P&amp;L</button>' +
       '<button class="fin-sheet-tab" data-sheet="gaap" onclick="switchFinSheet(\'gaap\')">GAAP Analysis</button>' +
+      '<button class="fin-sheet-tab" data-sheet="capex" onclick="switchFinSheet(\'capex\')">CAPEX</button>' +
       '<button class="fin-sheet-tab" data-sheet="assumptions" onclick="switchFinSheet(\'assumptions\')">Assumptions</button>' +
     '</div>';
 
@@ -16006,6 +16007,9 @@ function rfpBuildDetailHtml(subs) {
 
   // GAAP tab
   html += '<div class="fin-sheet-content" id="fin-gaap">' + rfpBuildGAAPTable(selected.analysis) + '</div>';
+
+  // CAPEX tab
+  html += '<div class="fin-sheet-content" id="fin-capex">' + rfpBuildCapexPanel(selected) + '</div>';
 
   // Assumptions tab
   html += '<div class="fin-sheet-content" id="fin-assumptions">' + rfpBuildAssumptionsPanel(selected) + '</div>';
@@ -17475,6 +17479,372 @@ function rfpExportGoogleDrive() {
 }
 
 // ===== ASSUMPTIONS PANEL =====
+// ===== CAPEX (Capital Expenditure) PANEL =====
+function rfpBuildCapexPanel(selected) {
+  var buildingAddr = selected ? (selected.building_address || selected.buildingAddress || '') : '';
+  var a = buildingAddr ? (window._rfpState.assumptionsMap[buildingAddr] || {}) : {};
+  var canEdit = hasAdminAccess();
+  var analysis = selected ? selected.analysis : null;
+  var summary = (analysis && analysis.summary) ? analysis.summary : {};
+  var rsf = summary.rsf || 0;
+  var termMonths = summary.termMonths || 60;
+  var termYears = termMonths / 12;
+
+  // Load CAPEX data from assumptions
+  var capex = {
+    construction: { total: parseFloat(a.capex_construction_total) || 0, perRSF: parseFloat(a.capex_construction_per_rsf) || 0, mode: a.capex_construction_input_mode || 'total', depYears: parseFloat(a.capex_construction_depreciation_years) || 15 },
+    ffe: { total: parseFloat(a.capex_ffe_total) || 0, perRSF: parseFloat(a.capex_ffe_per_rsf) || 0, mode: a.capex_ffe_input_mode || 'total', depYears: parseFloat(a.capex_ffe_depreciation_years) || 7 },
+    it: { total: parseFloat(a.capex_it_total) || 0, perRSF: parseFloat(a.capex_it_per_rsf) || 0, mode: a.capex_it_input_mode || 'total', depYears: parseFloat(a.capex_it_depreciation_years) || 5 }
+  };
+  var customItems = a.capex_custom_items || [];
+
+  // Compute effective totals (respecting input mode)
+  function getEffectiveTotal(cat) {
+    if (cat.mode === 'per_rsf' && rsf > 0) return Math.round(cat.perRSF * rsf);
+    return cat.total;
+  }
+  var constrTotal = getEffectiveTotal(capex.construction);
+  var ffeTotal = getEffectiveTotal(capex.ffe);
+  var itTotal = getEffectiveTotal(capex.it);
+  var customTotal = 0;
+  customItems.forEach(function(item) { customTotal += parseFloat(item.total) || 0; });
+  var grandTotal = constrTotal + ffeTotal + itTotal + customTotal;
+
+  // Depreciation (straight-line)
+  var constrMonthlyDep = capex.construction.depYears > 0 ? Math.round(constrTotal / (capex.construction.depYears * 12)) : 0;
+  var ffeMonthlyDep = capex.ffe.depYears > 0 ? Math.round(ffeTotal / (capex.ffe.depYears * 12)) : 0;
+  var itMonthlyDep = capex.it.depYears > 0 ? Math.round(itTotal / (capex.it.depYears * 12)) : 0;
+  var totalMonthlyDep = constrMonthlyDep + ffeMonthlyDep + itMonthlyDep;
+  var totalAnnualDep = totalMonthlyDep * 12;
+
+  var html = '<div style="padding:var(--space-4)" data-capex-building="' + buildingAddr.replace(/"/g, '&quot;') + '">';
+
+  // ===== SUMMARY METRICS =====
+  if (grandTotal > 0) {
+    html += '<div style="margin-bottom:var(--space-5)">' +
+      '<div style="font-weight:600;font-size:var(--text-sm);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);margin-bottom:var(--space-3)">Capital Expenditure Summary</div>' +
+      '<div class="rfp-summary-metrics">' +
+        '<div class="rfp-metric"><div class="rfp-metric-value" style="color:#7c3aed">' + rfpFmtCurrencyPlain(grandTotal) + '</div><div class="rfp-metric-label">Total CAPEX</div></div>' +
+        '<div class="rfp-metric"><div class="rfp-metric-value">' + (rsf > 0 ? rfpFmtCurrencyDecimals(Math.round(grandTotal / rsf * 100) / 100) : '--') + '</div><div class="rfp-metric-label">CAPEX per RSF</div></div>' +
+        '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(totalMonthlyDep) + '</div><div class="rfp-metric-label">Monthly Depreciation</div></div>' +
+        '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(totalAnnualDep) + '</div><div class="rfp-metric-label">Annual Depreciation</div></div>' +
+      '</div>';
+
+    // Breakdown bar
+    if (grandTotal > 0) {
+      var cPct = Math.round(constrTotal / grandTotal * 100);
+      var fPct = Math.round(ffeTotal / grandTotal * 100);
+      var iPct = 100 - cPct - fPct;
+      html += '<div style="margin-top:var(--space-3);display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--color-border)">' +
+        (cPct > 0 ? '<div style="width:' + cPct + '%;background:#7c3aed" title="Construction ' + cPct + '%"></div>' : '') +
+        (fPct > 0 ? '<div style="width:' + fPct + '%;background:#f59e0b" title="FF&E ' + fPct + '%"></div>' : '') +
+        (iPct > 0 ? '<div style="width:' + iPct + '%;background:#06b6d4" title="IT ' + iPct + '%"></div>' : '') +
+      '</div>' +
+      '<div style="display:flex;gap:var(--space-4);margin-top:var(--space-2);font-size:var(--text-xs);color:var(--color-text-muted)">' +
+        '<span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#7c3aed;margin-right:4px"></span>Construction</span>' +
+        '<span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#f59e0b;margin-right:4px"></span>FF&amp;E</span>' +
+        '<span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#06b6d4;margin-right:4px"></span>IT / Technology</span>' +
+      '</div>';
+    }
+
+    html += '</div><hr style="border:none;border-top:1px solid var(--color-border);margin:var(--space-4) 0">';
+  }
+
+  // ===== INPUT FORM =====
+  if (!canEdit) {
+    // Read-only for non-admins
+    if (grandTotal === 0) {
+      html += '<div style="color:var(--color-text-muted);font-size:var(--text-sm);text-align:center;padding:var(--space-8) 0">No CAPEX data entered yet.</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  // RSF callout
+  if (rsf > 0) {
+    html += '<div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-3);padding:8px 12px;background:var(--color-surface-2);border-radius:var(--radius-md)">' +
+      'RSF from deal terms: <strong>' + rfpFmtNum(rsf) + ' SF</strong> &middot; Lease term: <strong>' + termMonths + ' months (' + termYears.toFixed(1) + ' years)</strong></div>';
+  }
+
+  var inputStyle = 'width:100%;padding:8px 10px;font-size:var(--text-sm);border:1px solid var(--color-border);border-radius:var(--radius-md);font-family:inherit;background:var(--color-bg);color:var(--color-text);box-sizing:border-box;';
+  var labelStyle = 'font-size:var(--text-xs);font-weight:600;color:var(--color-text-muted);margin-bottom:4px;display:block;';
+  var sectionStyle = 'margin-bottom:var(--space-5);padding:var(--space-4);border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-bg);';
+
+  // Helper to build a CAPEX category section
+  function buildCapexCategory(id, label, color, cat, defaultDepYears) {
+    var modeIsPerRSF = cat.mode === 'per_rsf';
+    var effectiveTotal = modeIsPerRSF && rsf > 0 ? Math.round(cat.perRSF * rsf) : cat.total;
+    var monthlyDep = cat.depYears > 0 ? Math.round(effectiveTotal / (cat.depYears * 12)) : 0;
+
+    var s = '<div style="' + sectionStyle + '">' +
+      '<div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-3)">' +
+        '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:' + color + '"></span>' +
+        '<span style="font-weight:600;font-size:var(--text-sm);color:var(--color-text)">' + label + '</span>' +
+        (effectiveTotal > 0 ? '<span style="margin-left:auto;font-weight:600;font-size:var(--text-sm);color:' + color + '">' + rfpFmtCurrencyPlain(effectiveTotal) + '</span>' : '') +
+      '</div>';
+
+    // Input mode toggle
+    s += '<div style="display:flex;gap:var(--space-2);margin-bottom:var(--space-3)">' +
+      '<button class="rfp-version-chip' + (!modeIsPerRSF ? ' active' : '') + '" style="font-size:var(--text-xs);padding:4px 10px;' + (!modeIsPerRSF ? 'background:' + color + ';color:white;border-color:' + color : '') + '" onclick="capexSetMode(\'' + id + '\', \'total\')">' +
+        'Total $</button>' +
+      '<button class="rfp-version-chip' + (modeIsPerRSF ? ' active' : '') + '" style="font-size:var(--text-xs);padding:4px 10px;' + (modeIsPerRSF ? 'background:' + color + ';color:white;border-color:' + color : '') + '" onclick="capexSetMode(\'' + id + '\', \'per_rsf\')">' +
+        '$/RSF</button>' +
+    '</div>';
+
+    // Input fields
+    s += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);">';
+
+    if (!modeIsPerRSF) {
+      // Total dollar input
+      s += '<div>' +
+        '<label style="' + labelStyle + '">Total Cost ($)</label>' +
+        '<input type="number" id="capex-' + id + '-total" value="' + (cat.total || '') + '" placeholder="e.g. 500000" style="' + inputStyle + '" onchange="capexRecalc(\'' + id + '\')" />' +
+      '</div>';
+      // Show computed per RSF
+      s += '<div>' +
+        '<label style="' + labelStyle + '">Per RSF (computed)</label>' +
+        '<div style="padding:8px 10px;font-size:var(--text-sm);color:var(--color-text-muted);background:var(--color-surface-2);border-radius:var(--radius-md);">' +
+          (rsf > 0 && effectiveTotal > 0 ? '$' + (effectiveTotal / rsf).toFixed(2) + '/SF' : '--') +
+        '</div>' +
+      '</div>';
+    } else {
+      // Per RSF input
+      s += '<div>' +
+        '<label style="' + labelStyle + '">Cost per RSF ($)</label>' +
+        '<input type="number" step="0.01" id="capex-' + id + '-persqft" value="' + (cat.perRSF || '') + '" placeholder="e.g. 25.00" style="' + inputStyle + '" onchange="capexRecalc(\'' + id + '\')" />' +
+      '</div>';
+      // Show computed total
+      s += '<div>' +
+        '<label style="' + labelStyle + '">Total (computed)</label>' +
+        '<div style="padding:8px 10px;font-size:var(--text-sm);color:var(--color-text-muted);background:var(--color-surface-2);border-radius:var(--radius-md);">' +
+          (rsf > 0 && cat.perRSF > 0 ? rfpFmtCurrencyPlain(Math.round(cat.perRSF * rsf)) : '--') +
+        '</div>' +
+      '</div>';
+    }
+
+    // Depreciation years
+    s += '<div>' +
+      '<label style="' + labelStyle + '">Useful Life (years)</label>' +
+      '<input type="number" step="1" id="capex-' + id + '-depyears" value="' + (cat.depYears || defaultDepYears) + '" placeholder="' + defaultDepYears + '" style="' + inputStyle + '" onchange="capexRecalc(\'' + id + '\')" />' +
+    '</div>';
+
+    // Monthly depreciation
+    s += '<div>' +
+      '<label style="' + labelStyle + '">Monthly Depreciation</label>' +
+      '<div id="capex-' + id + '-mondep" style="padding:8px 10px;font-size:var(--text-sm);color:var(--color-text-muted);background:var(--color-surface-2);border-radius:var(--radius-md);">' +
+        (monthlyDep > 0 ? rfpFmtCurrencyPlain(monthlyDep) + '/mo' : '--') +
+      '</div>' +
+    '</div>';
+
+    s += '</div></div>';
+    return s;
+  }
+
+  html += buildCapexCategory('construction', 'Construction / Build-Out', '#7c3aed', capex.construction, 15);
+  html += buildCapexCategory('ffe', 'FF&E (Furniture, Fixtures & Equipment)', '#f59e0b', capex.ffe, 7);
+  html += buildCapexCategory('it', 'IT / Technology', '#06b6d4', capex.it, 5);
+
+  // Custom line items
+  html += '<div style="' + sectionStyle + '">' +
+    '<div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-3)">' +
+      '<span style="font-weight:600;font-size:var(--text-sm);color:var(--color-text)">Additional CAPEX Items</span>' +
+      '<button class="rfp-version-chip" style="font-size:var(--text-xs);padding:4px 10px;margin-left:auto;" onclick="capexAddCustomItem()">+ Add Item</button>' +
+    '</div>' +
+    '<div id="capex-custom-items">';
+  customItems.forEach(function(item, idx) {
+    html += '<div style="display:grid;grid-template-columns:2fr 1fr auto;gap:var(--space-2);margin-bottom:var(--space-2);align-items:end;" data-capex-custom-idx="' + idx + '">' +
+      '<div><label style="' + labelStyle + '">Description</label><input type="text" value="' + (item.label || '').replace(/"/g, '&quot;') + '" style="' + inputStyle + '" onchange="capexUpdateCustomItem(' + idx + ', \'label\', this.value)" /></div>' +
+      '<div><label style="' + labelStyle + '">Total ($)</label><input type="number" value="' + (item.total || '') + '" style="' + inputStyle + '" onchange="capexUpdateCustomItem(' + idx + ', \'total\', this.value)" /></div>' +
+      '<button onclick="capexRemoveCustomItem(' + idx + ')" style="padding:6px 10px;background:none;border:1px solid var(--color-border);border-radius:var(--radius-md);color:var(--color-text-muted);cursor:pointer;font-size:var(--text-xs);margin-bottom:1px;">&times;</button>' +
+    '</div>';
+  });
+  html += '</div></div>';
+
+  // Save button
+  html += '<div style="display:flex;align-items:center;gap:var(--space-3);margin-top:var(--space-4)">' +
+    '<button onclick="capexSave()" style="padding:10px 24px;font-size:var(--text-sm);font-weight:600;border-radius:var(--radius-md);border:none;background:#7c3aed;color:white;cursor:pointer;">Save CAPEX</button>' +
+    '<span id="capex-save-status" style="font-size:var(--text-xs);color:var(--color-text-muted);"></span>' +
+  '</div>';
+
+  // Depreciation schedule (if data exists)
+  if (grandTotal > 0 && termMonths > 0) {
+    html += '<hr style="border:none;border-top:1px solid var(--color-border);margin:var(--space-5) 0">';
+    html += '<div style="font-weight:600;font-size:var(--text-sm);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);margin-bottom:var(--space-3)">LHI Depreciation Schedule (over lease term)</div>';
+    html += '<div class="fin-table-wrap"><table class="fin-table"><thead><tr>' +
+      '<th class="cell-label">Year</th>' +
+      '<th class="cell-currency">Construction</th>' +
+      '<th class="cell-currency">FF&amp;E</th>' +
+      '<th class="cell-currency">IT</th>' +
+      '<th class="cell-currency">Total Annual</th>' +
+      '<th class="cell-currency">Cumulative</th>' +
+      '<th class="cell-currency">Remaining Book Value</th>' +
+    '</tr></thead><tbody>';
+
+    var cumDep = 0;
+    var totalYears = Math.ceil(termYears);
+    for (var yr = 1; yr <= totalYears; yr++) {
+      var monthsInYear = (yr === totalYears && termMonths % 12 > 0) ? (termMonths % 12) : 12;
+      var cDep = Math.min(constrMonthlyDep * monthsInYear, Math.max(0, constrTotal - (constrMonthlyDep * 12 * (yr - 1))));
+      var fDep = Math.min(ffeMonthlyDep * monthsInYear, Math.max(0, ffeTotal - (ffeMonthlyDep * 12 * (yr - 1))));
+      var iDep = Math.min(itMonthlyDep * monthsInYear, Math.max(0, itTotal - (itMonthlyDep * 12 * (yr - 1))));
+      var yrTotal = cDep + fDep + iDep;
+      cumDep += yrTotal;
+      var remaining = Math.max(0, grandTotal - cumDep);
+
+      html += '<tr>' +
+        '<td class="cell-label">Year ' + yr + '</td>' +
+        '<td class="cell-currency">' + rfpFmtCurrency(Math.round(cDep)) + '</td>' +
+        '<td class="cell-currency">' + rfpFmtCurrency(Math.round(fDep)) + '</td>' +
+        '<td class="cell-currency">' + rfpFmtCurrency(Math.round(iDep)) + '</td>' +
+        '<td class="cell-currency">' + rfpFmtCurrency(Math.round(yrTotal)) + '</td>' +
+        '<td class="cell-currency">' + rfpFmtCurrency(Math.round(cumDep)) + '</td>' +
+        '<td class="cell-currency">' + rfpFmtCurrency(Math.round(remaining)) + '</td>' +
+      '</tr>';
+    }
+    html += '</tbody></table></div>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
+// CAPEX helper: toggle input mode
+function capexSetMode(id, mode) {
+  // Store mode temporarily, re-render will pick it up after save
+  var container = document.querySelector('[data-capex-building]');
+  if (!container) return;
+  var buildingAddr = container.getAttribute('data-capex-building');
+  var a = window._rfpState.assumptionsMap[buildingAddr] || {};
+  a['capex_' + id + '_input_mode'] = mode;
+  window._rfpState.assumptionsMap[buildingAddr] = a;
+  // Re-render CAPEX tab
+  var selected = rfpGetCurrentSubmission();
+  if (selected) {
+    document.getElementById('fin-capex').innerHTML = rfpBuildCapexPanel(selected);
+  }
+}
+
+// CAPEX helper: recalc on input change (visual only, save persists)
+function capexRecalc(id) {
+  // Visual feedback only - actual save happens on Save button
+}
+
+// CAPEX helper: add custom item
+function capexAddCustomItem() {
+  var container = document.querySelector('[data-capex-building]');
+  if (!container) return;
+  var buildingAddr = container.getAttribute('data-capex-building');
+  var a = window._rfpState.assumptionsMap[buildingAddr] || {};
+  var items = a.capex_custom_items || [];
+  items.push({ label: '', total: 0 });
+  a.capex_custom_items = items;
+  window._rfpState.assumptionsMap[buildingAddr] = a;
+  var selected = rfpGetCurrentSubmission();
+  if (selected) {
+    document.getElementById('fin-capex').innerHTML = rfpBuildCapexPanel(selected);
+  }
+}
+
+// CAPEX helper: update custom item
+function capexUpdateCustomItem(idx, field, value) {
+  var container = document.querySelector('[data-capex-building]');
+  if (!container) return;
+  var buildingAddr = container.getAttribute('data-capex-building');
+  var a = window._rfpState.assumptionsMap[buildingAddr] || {};
+  var items = a.capex_custom_items || [];
+  if (items[idx]) {
+    items[idx][field] = field === 'total' ? parseFloat(value) || 0 : value;
+  }
+  a.capex_custom_items = items;
+  window._rfpState.assumptionsMap[buildingAddr] = a;
+}
+
+// CAPEX helper: remove custom item
+function capexRemoveCustomItem(idx) {
+  var container = document.querySelector('[data-capex-building]');
+  if (!container) return;
+  var buildingAddr = container.getAttribute('data-capex-building');
+  var a = window._rfpState.assumptionsMap[buildingAddr] || {};
+  var items = a.capex_custom_items || [];
+  items.splice(idx, 1);
+  a.capex_custom_items = items;
+  window._rfpState.assumptionsMap[buildingAddr] = a;
+  var selected = rfpGetCurrentSubmission();
+  if (selected) {
+    document.getElementById('fin-capex').innerHTML = rfpBuildCapexPanel(selected);
+  }
+}
+
+// CAPEX save: persist to Supabase via assumptions endpoint
+function capexSave() {
+  var container = document.querySelector('[data-capex-building]');
+  if (!container) return;
+  var buildingAddr = container.getAttribute('data-capex-building');
+  var a = window._rfpState.assumptionsMap[buildingAddr] || {};
+  var status = document.getElementById('capex-save-status');
+
+  // Read current input values
+  var ids = ['construction', 'ffe', 'it'];
+  ids.forEach(function(id) {
+    var totalInput = document.getElementById('capex-' + id + '-total');
+    var persqftInput = document.getElementById('capex-' + id + '-persqft');
+    var depInput = document.getElementById('capex-' + id + '-depyears');
+    var mode = a['capex_' + id + '_input_mode'] || 'total';
+
+    if (mode === 'per_rsf' && persqftInput) {
+      a['capex_' + id + '_per_rsf'] = parseFloat(persqftInput.value) || 0;
+      // Also compute and store total
+      var summary = (rfpGetCurrentSubmission().analysis || {}).summary || {};
+      var rsf = summary.rsf || 0;
+      a['capex_' + id + '_total'] = rsf > 0 ? Math.round(a['capex_' + id + '_per_rsf'] * rsf) : 0;
+    } else if (totalInput) {
+      a['capex_' + id + '_total'] = parseFloat(totalInput.value) || 0;
+      // Also compute per RSF
+      var summary2 = (rfpGetCurrentSubmission().analysis || {}).summary || {};
+      var rsf2 = summary2.rsf || 0;
+      a['capex_' + id + '_per_rsf'] = rsf2 > 0 ? Math.round(a['capex_' + id + '_total'] / rsf2 * 100) / 100 : 0;
+    }
+    if (depInput) a['capex_' + id + '_depreciation_years'] = parseFloat(depInput.value) || 0;
+    a['capex_' + id + '_input_mode'] = mode;
+  });
+
+  window._rfpState.assumptionsMap[buildingAddr] = a;
+
+  // Build payload (merge with existing assumptions)
+  var payload = Object.assign({}, a, {
+    projectId: getProjectId(),
+    building_address: buildingAddr,
+    updated_by: getCurrentUserEmail(),
+  });
+
+  if (status) { status.textContent = 'Saving...'; status.style.color = '#64748b'; }
+
+  var email = getCurrentUserEmail();
+  var url = '/api/assumptions';
+  if (email) url += '?userEmail=' + encodeURIComponent(email);
+
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.error) throw new Error(data.error);
+    window._rfpState.assumptionsMap[buildingAddr] = data;
+    if (status) { status.textContent = 'Saved'; status.style.color = '#16a34a'; }
+    // Re-render CAPEX panel to update summary
+    var selected = rfpGetCurrentSubmission();
+    if (selected) {
+      document.getElementById('fin-capex').innerHTML = rfpBuildCapexPanel(selected);
+    }
+  })
+  .catch(function(err) {
+    console.error('CAPEX save error:', err);
+    if (status) { status.textContent = 'Error: ' + (err.message || 'Failed to save'); status.style.color = '#dc2626'; }
+  });
+}
+
 function rfpBuildAssumptionsPanel(selected) {
   var buildingAddr = selected ? (selected.building_address || selected.buildingAddress || '') : '';
   var a = buildingAddr ? (window._rfpState.assumptionsMap[buildingAddr] || {}) : {};
