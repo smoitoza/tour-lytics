@@ -16392,7 +16392,7 @@ function rfpBuildTermsTable(terms) {
 }
 
 // ===== CAPEX DATA HELPER =====
-function getCapexForBuilding(buildingAddr) {
+function getCapexForBuilding(buildingAddr, leaseTermMonths) {
   var a = (buildingAddr && window._rfpState && window._rfpState.assumptionsMap) ? (window._rfpState.assumptionsMap[buildingAddr] || {}) : {};
   var constrTotal = parseFloat(a.capex_construction_total) || 0;
   var ffeTotal = parseFloat(a.capex_ffe_total) || 0;
@@ -16402,13 +16402,20 @@ function getCapexForBuilding(buildingAddr) {
   customItems.forEach(function(item) { customTotal += parseFloat(item.total) || 0; });
   var grandTotal = constrTotal + ffeTotal + itTotal + customTotal;
 
+  // Useful life from user input
   var constrDepYears = parseFloat(a.capex_construction_depreciation_years) || 15;
   var ffeDepYears = parseFloat(a.capex_ffe_depreciation_years) || 7;
   var itDepYears = parseFloat(a.capex_it_depreciation_years) || 5;
 
-  var constrMonthlyDep = constrDepYears > 0 ? Math.round(constrTotal / (constrDepYears * 12)) : 0;
-  var ffeMonthlyDep = ffeDepYears > 0 ? Math.round(ffeTotal / (ffeDepYears * 12)) : 0;
-  var itMonthlyDep = itDepYears > 0 ? Math.round(itTotal / (itDepYears * 12)) : 0;
+  // ASC 842: depreciate over shorter of useful life or lease term
+  var leaseYears = (leaseTermMonths && leaseTermMonths > 0) ? leaseTermMonths / 12 : 0;
+  var constrEffYears = leaseYears > 0 ? Math.min(constrDepYears, leaseYears) : constrDepYears;
+  var ffeEffYears = leaseYears > 0 ? Math.min(ffeDepYears, leaseYears) : ffeDepYears;
+  var itEffYears = leaseYears > 0 ? Math.min(itDepYears, leaseYears) : itDepYears;
+
+  var constrMonthlyDep = constrEffYears > 0 ? Math.round(constrTotal / (constrEffYears * 12)) : 0;
+  var ffeMonthlyDep = ffeEffYears > 0 ? Math.round(ffeTotal / (ffeEffYears * 12)) : 0;
+  var itMonthlyDep = itEffYears > 0 ? Math.round(itTotal / (itEffYears * 12)) : 0;
   var totalMonthlyDep = constrMonthlyDep + ffeMonthlyDep + itMonthlyDep;
 
   return {
@@ -16419,6 +16426,12 @@ function getCapexForBuilding(buildingAddr) {
     custom: customTotal,
     monthlyDepreciation: totalMonthlyDep,
     annualDepreciation: totalMonthlyDep * 12,
+    constrEffYears: constrEffYears,
+    ffeEffYears: ffeEffYears,
+    itEffYears: itEffYears,
+    constrMonthlyDep: constrMonthlyDep,
+    ffeMonthlyDep: ffeMonthlyDep,
+    itMonthlyDep: itMonthlyDep,
     hasCapex: grandTotal > 0
   };
 }
@@ -16430,7 +16443,8 @@ function rfpBuildCashFlowTable(analysis, buildingAddr) {
   }
   var monthly = analysis.cash_flow.monthly;
   var totals = analysis.cash_flow.totals || {};
-  var capex = buildingAddr ? getCapexForBuilding(buildingAddr) : { hasCapex: false, grandTotal: 0, monthlyDepreciation: 0 };
+  var cfTermMonths = (analysis.summary && analysis.summary.termMonths) ? analysis.summary.termMonths : (totals.termMonths || 0);
+  var capex = buildingAddr ? getCapexForBuilding(buildingAddr, cfTermMonths) : { hasCapex: false, grandTotal: 0, monthlyDepreciation: 0 };
 
   var html = '<div class="fin-table-wrap"><table class="fin-table">';
   html += '<thead><tr>' +
@@ -16500,7 +16514,8 @@ function rfpBuildStraightLineTable(analysis, buildingAddr) {
   }
   var annual = analysis.straight_line_pl.annual;
   var totals = analysis.straight_line_pl.totals || {};
-  var capex = buildingAddr ? getCapexForBuilding(buildingAddr) : { hasCapex: false, grandTotal: 0, monthlyDepreciation: 0, annualDepreciation: 0 };
+  var slTermMonths = (analysis.summary && analysis.summary.termMonths) ? analysis.summary.termMonths : 0;
+  var capex = buildingAddr ? getCapexForBuilding(buildingAddr, slTermMonths) : { hasCapex: false, grandTotal: 0, monthlyDepreciation: 0, annualDepreciation: 0 };
 
   var html = '<div class="fin-table-wrap"><table class="fin-table">';
   html += '<thead><tr>' +
@@ -16642,7 +16657,8 @@ function rfpBuildGAAPTable(analysis, buildingAddr) {
   var gaap = analysis.gaap;
   var summary = gaap.summary || {};
   var schedule = gaap.schedule || [];
-  var capex = buildingAddr ? getCapexForBuilding(buildingAddr) : { hasCapex: false, grandTotal: 0, monthlyDepreciation: 0 };
+  var gaapTermMonths = (analysis.summary && analysis.summary.termMonths) ? analysis.summary.termMonths : 0;
+  var capex = buildingAddr ? getCapexForBuilding(buildingAddr, gaapTermMonths) : { hasCapex: false, grandTotal: 0, monthlyDepreciation: 0 };
 
   // Summary box
   var html =
@@ -17053,7 +17069,8 @@ function rfpExportExcel() {
     smRow++;
 
     // CAPEX / LHI Depreciation metrics
-    var exportCapex = getCapexForBuilding(address);
+    var exportTermMonths = (analysis.summary && analysis.summary.termMonths) ? analysis.summary.termMonths : 0;
+    var exportCapex = getCapexForBuilding(address, exportTermMonths);
     if (exportCapex.hasCapex) {
       smRow++;
       setCell(slWS, smRow, 0, 'CAPEX / LHI Depreciation', sectionStyle);
@@ -17648,10 +17665,13 @@ function rfpBuildCapexPanel(selected) {
   customItems.forEach(function(item) { customTotal += parseFloat(item.total) || 0; });
   var grandTotal = constrTotal + ffeTotal + itTotal + customTotal;
 
-  // Depreciation (straight-line)
-  var constrMonthlyDep = capex.construction.depYears > 0 ? Math.round(constrTotal / (capex.construction.depYears * 12)) : 0;
-  var ffeMonthlyDep = capex.ffe.depYears > 0 ? Math.round(ffeTotal / (capex.ffe.depYears * 12)) : 0;
-  var itMonthlyDep = capex.it.depYears > 0 ? Math.round(itTotal / (capex.it.depYears * 12)) : 0;
+  // Depreciation (straight-line, shorter of useful life or lease term per ASC 842)
+  var constrEffYears = termYears > 0 ? Math.min(capex.construction.depYears, termYears) : capex.construction.depYears;
+  var ffeEffYears = termYears > 0 ? Math.min(capex.ffe.depYears, termYears) : capex.ffe.depYears;
+  var itEffYears = termYears > 0 ? Math.min(capex.it.depYears, termYears) : capex.it.depYears;
+  var constrMonthlyDep = constrEffYears > 0 ? Math.round(constrTotal / (constrEffYears * 12)) : 0;
+  var ffeMonthlyDep = ffeEffYears > 0 ? Math.round(ffeTotal / (ffeEffYears * 12)) : 0;
+  var itMonthlyDep = itEffYears > 0 ? Math.round(itTotal / (itEffYears * 12)) : 0;
   var totalMonthlyDep = constrMonthlyDep + ffeMonthlyDep + itMonthlyDep;
   var totalAnnualDep = totalMonthlyDep * 12;
 
@@ -17712,7 +17732,10 @@ function rfpBuildCapexPanel(selected) {
   function buildCapexCategory(id, label, color, cat, defaultDepYears) {
     var modeIsPerRSF = cat.mode === 'per_rsf';
     var effectiveTotal = modeIsPerRSF && rsf > 0 ? Math.round(cat.perRSF * rsf) : cat.total;
-    var monthlyDep = cat.depYears > 0 ? Math.round(effectiveTotal / (cat.depYears * 12)) : 0;
+    // Shorter of useful life or lease term (ASC 842)
+    var effDepYears = termYears > 0 ? Math.min(cat.depYears, termYears) : cat.depYears;
+    var monthlyDep = effDepYears > 0 ? Math.round(effectiveTotal / (effDepYears * 12)) : 0;
+    var usingShorterTerm = termYears > 0 && termYears < cat.depYears;
 
     var s = '<div style="' + sectionStyle + '">' +
       '<div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-3)">' +
@@ -17771,6 +17794,7 @@ function rfpBuildCapexPanel(selected) {
       '<label style="' + labelStyle + '">Monthly Depreciation</label>' +
       '<div id="capex-' + id + '-mondep" style="padding:8px 10px;font-size:var(--text-sm);color:var(--color-text-muted);background:var(--color-surface-2);border-radius:var(--radius-md);">' +
         (monthlyDep > 0 ? rfpFmtCurrencyPlain(monthlyDep) + '/mo' : '--') +
+        (usingShorterTerm ? '<div style="font-size:var(--text-xs);color:#7c3aed;margin-top:2px;">Dep. over ' + termYears.toFixed(1) + 'yr lease (shorter than ' + cat.depYears + 'yr useful life)</div>' : '') +
       '</div>' +
     '</div>';
 
@@ -17807,7 +17831,8 @@ function rfpBuildCapexPanel(selected) {
   // Depreciation schedule (if data exists)
   if (grandTotal > 0 && termMonths > 0) {
     html += '<hr style="border:none;border-top:1px solid var(--color-border);margin:var(--space-5) 0">';
-    html += '<div style="font-weight:600;font-size:var(--text-sm);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);margin-bottom:var(--space-3)">LHI Depreciation Schedule (over lease term)</div>';
+    html += '<div style="font-weight:600;font-size:var(--text-sm);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);margin-bottom:var(--space-2)">LHI Depreciation Schedule (over lease term)</div>';
+    html += '<div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-3)">Per ASC 842, depreciation uses the shorter of useful life or lease term (' + termYears.toFixed(1) + ' years).</div>';
     html += '<div class="fin-table-wrap"><table class="fin-table"><thead><tr>' +
       '<th class="cell-label">Year</th>' +
       '<th class="cell-currency">Construction</th>' +
