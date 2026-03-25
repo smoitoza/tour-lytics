@@ -16236,9 +16236,33 @@ function rfpShowVersionComparison(buildingAddress) {
     { key: 'totalConcessions', label: 'Total Concessions', fmt: 'currency', fromSummary: true },
     { key: 'npv', label: 'NPV @ 8%', fmt: 'currency', computed: 'npv' },
     { key: 'npvPerRSF', label: 'NPV per RSF', fmt: 'currency', computed: 'npvPerRSF' },
+    { key: 'capexTotal', label: 'Total CAPEX', fmt: 'currency', computed: 'capexTotal' },
+    { key: 'capexPerRSF', label: 'CAPEX per RSF', fmt: 'currency', computed: 'capexPerRSF' },
+    { key: 'lhiMonthlyDep', label: 'Monthly LHI Dep.', fmt: 'currency', computed: 'lhiMonthlyDep' },
+    { key: 'slMonthlyWithLHI', label: 'SL Monthly (incl. LHI)', fmt: 'currency', computed: 'slMonthlyWithLHI' },
+    { key: 'totalAllInWithCapex', label: 'Total All-in + CAPEX', fmt: 'currency', computed: 'totalAllInWithCapex' },
   ];
 
   function getTermVal(sub, field) {
+    // CAPEX computed fields
+    if (field.computed && field.computed.indexOf('capex') === 0 || field.computed === 'lhiMonthlyDep' || field.computed === 'slMonthlyWithLHI' || field.computed === 'totalAllInWithCapex') {
+      var termMo = (sub.analysis && sub.analysis.summary) ? (sub.analysis.summary.termMonths || 0) : 0;
+      var cx = getCapexForBuilding(buildingAddress, termMo);
+      if (!cx.hasCapex) return 0;
+      var rsfCx = (sub.analysis && sub.analysis.summary) ? (sub.analysis.summary.rsf || 0) : 0;
+      if (field.computed === 'capexTotal') return cx.grandTotal;
+      if (field.computed === 'capexPerRSF') return rsfCx > 0 ? Math.round(cx.grandTotal / rsfCx * 100) / 100 : 0;
+      if (field.computed === 'lhiMonthlyDep') return cx.monthlyDepreciation;
+      if (field.computed === 'slMonthlyWithLHI') {
+        var slM = (sub.analysis && sub.analysis.summary) ? (sub.analysis.summary.straightLineMonthlyRent || 0) : 0;
+        return Math.round(slM + cx.monthlyDepreciation);
+      }
+      if (field.computed === 'totalAllInWithCapex') {
+        var allIn = (sub.analysis && sub.analysis.summary) ? (sub.analysis.summary.totalAllInCost || 0) : 0;
+        return Math.round(allIn + cx.grandTotal);
+      }
+      return 0;
+    }
     // Compute NPV from cash flow data
     if (field.computed === 'npv' || field.computed === 'npvPerRSF') {
       var cfm = (sub.analysis && sub.analysis.cash_flow && sub.analysis.cash_flow.monthly) ? sub.analysis.cash_flow.monthly : [];
@@ -16320,7 +16344,7 @@ function rfpShowVersionComparison(buildingAddress) {
       var pct = ((diff / first) * 100).toFixed(1);
       var color = '';
       // For costs: lower is better (green). For concessions/TI: higher is better (green).
-      var lowerIsBetter = ['baseRent', 'opex', 'parkingRate', 'effectiveRentRSF', 'straightLineAnnualExpense', 'totalAllInCost', 'npv', 'npvPerRSF'].includes(f.key);
+      var lowerIsBetter = ['baseRent', 'opex', 'parkingRate', 'effectiveRentRSF', 'straightLineAnnualExpense', 'totalAllInCost', 'npv', 'npvPerRSF', 'capexPerRSF', 'lhiMonthlyDep', 'slMonthlyWithLHI', 'totalAllInWithCapex'].includes(f.key);
       if (lowerIsBetter) {
         color = diff < 0 ? '#16a34a' : '#dc2626';
       } else {
