@@ -16227,9 +16227,27 @@ function rfpShowVersionComparison(buildingAddress) {
     { key: 'straightLineAnnualExpense', label: 'SL Annual Expense', fmt: 'currency', fromSummary: true },
     { key: 'totalAllInCost', label: 'Total All-in Cost', fmt: 'currency', fromSummary: true },
     { key: 'totalConcessions', label: 'Total Concessions', fmt: 'currency', fromSummary: true },
+    { key: 'npv', label: 'NPV @ 8%', fmt: 'currency', computed: 'npv' },
+    { key: 'npvPerRSF', label: 'NPV per RSF', fmt: 'currency', computed: 'npvPerRSF' },
   ];
 
   function getTermVal(sub, field) {
+    // Compute NPV from cash flow data
+    if (field.computed === 'npv' || field.computed === 'npvPerRSF') {
+      var cfm = (sub.analysis && sub.analysis.cash_flow && sub.analysis.cash_flow.monthly) ? sub.analysis.cash_flow.monthly : [];
+      if (cfm.length === 0) return 0;
+      var mr = 0.08 / 12;
+      var npvCalc = 0;
+      for (var i = 0; i < cfm.length; i++) {
+        npvCalc += (cfm[i].totalMonthlyCost || 0) / Math.pow(1 + mr, i + 1);
+      }
+      npvCalc = Math.round(npvCalc);
+      if (field.computed === 'npvPerRSF') {
+        var rsfVal = (sub.analysis && sub.analysis.summary) ? (sub.analysis.summary.rsf || 0) : 0;
+        return rsfVal > 0 ? Math.round(npvCalc / rsfVal * 100) / 100 : 0;
+      }
+      return npvCalc;
+    }
     if (field.fromSummary) {
       var summary = (sub.analysis && sub.analysis.summary) || {};
       return summary[field.key] || 0;
@@ -16295,7 +16313,7 @@ function rfpShowVersionComparison(buildingAddress) {
       var pct = ((diff / first) * 100).toFixed(1);
       var color = '';
       // For costs: lower is better (green). For concessions/TI: higher is better (green).
-      var lowerIsBetter = ['baseRent', 'opex', 'parkingRate', 'effectiveRentRSF', 'straightLineAnnualExpense', 'totalAllInCost'].includes(f.key);
+      var lowerIsBetter = ['baseRent', 'opex', 'parkingRate', 'effectiveRentRSF', 'straightLineAnnualExpense', 'totalAllInCost', 'npv', 'npvPerRSF'].includes(f.key);
       if (lowerIsBetter) {
         color = diff < 0 ? '#16a34a' : '#dc2626';
       } else {
