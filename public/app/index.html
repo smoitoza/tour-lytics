@@ -16534,18 +16534,38 @@ function rfpBuildStraightLineTable(analysis, buildingAddr) {
   html += '</tbody></table></div>';
 
   // Summary metrics below table
+  var slMonthlyRent = totals.straightLineMonthlyRent || 0;
+  var slAnnualRent = totals.straightLineAnnualRent || 0;
+  var slMonthlyWithLHI = slMonthlyRent + (capex.hasCapex ? capex.monthlyDepreciation : 0);
+  var slAnnualWithLHI = slMonthlyWithLHI * 12;
+  var rsf_sl = (analysis.summary && analysis.summary.rsf) ? analysis.summary.rsf : 0;
+  var slPerRSFWithLHI = rsf_sl > 0 ? Math.round(slAnnualWithLHI / rsf_sl * 100) / 100 : 0;
+
   var tiNote = (totals.tiAllowanceTotal && totals.tiAllowanceTotal > 0)
     ? '<div class="rfp-metric"><div class="rfp-metric-value" style="color:#16a34a">' + rfpFmtCurrencyPlain(totals.tiAllowanceTotal) + '</div><div class="rfp-metric-label">TI Allowance</div></div>' +
       '<div class="rfp-metric"><div class="rfp-metric-value" style="color:#16a34a">(' + rfpFmtCurrencyPlain(totals.monthlyTIAmortization) + '/mo)</div><div class="rfp-metric-label">TI Amortization</div></div>'
     : '';
+
+  var lhiNote = capex.hasCapex
+    ? '<div class="rfp-metric"><div class="rfp-metric-value" style="color:#7c3aed">' + rfpFmtCurrencyPlain(capex.monthlyDepreciation) + '/mo</div><div class="rfp-metric-label">LHI Depreciation</div></div>'
+    : '';
+
   html +=
     '<div class="rfp-summary-metrics" style="margin-top:var(--space-4)">' +
-      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(totals.straightLineMonthlyRent) + '</div><div class="rfp-metric-label">SL Monthly Rent (net of TI)</div></div>' +
-      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(totals.straightLineAnnualRent) + '</div><div class="rfp-metric-label">SL Annual Rent (net of TI)</div></div>' +
+      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(slMonthlyWithLHI) + '</div><div class="rfp-metric-label">SL Monthly (net of TI + LHI)</div></div>' +
+      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(slAnnualWithLHI) + '</div><div class="rfp-metric-label">SL Annual (net of TI + LHI)</div></div>' +
       tiNote +
+      lhiNote +
       '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyDecimals(totals.effectiveRentRSF) + '</div><div class="rfp-metric-label">Effective Rent/RSF</div></div>' +
-      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyDecimals(totals.totalCostPerRSFPerYear) + '</div><div class="rfp-metric-label">Total Cost/RSF/Year</div></div>' +
+      (capex.hasCapex ? '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyDecimals(slPerRSFWithLHI) + '</div><div class="rfp-metric-label">SL Cost/RSF/yr (incl. LHI)</div></div>' : '') +
     '</div>';
+
+  // Lease-only reference (smaller, secondary)
+  if (capex.hasCapex) {
+    html += '<div style="margin-top:var(--space-2);font-size:var(--text-xs);color:var(--color-text-muted)">' +
+      'Lease only: ' + rfpFmtCurrencyPlain(slMonthlyRent) + '/mo &middot; ' + rfpFmtCurrencyPlain(slAnnualRent) + '/yr &middot; ' + rfpFmtCurrencyDecimals(totals.totalCostPerRSFPerYear) + '/RSF/yr' +
+    '</div>';
+  }
 
   // ===== NPV / Present Value Analysis =====
   // Compute NPV from cash flow data (works even for pre-existing submissions without analysis.npv)
