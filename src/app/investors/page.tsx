@@ -816,7 +816,7 @@ export default function InvestorsPage() {
           </p>
           <div className="flex justify-center flex-wrap" style={{ gap: '1rem' }}>
             <a
-              href="mailto:samoitoza@gmail.com"
+              href="mailto:scott@tourlytics.ai"
               className="inline-flex items-center font-semibold no-underline transition-all"
               style={{ gap: '0.5rem', backgroundColor: '#2563eb', color: '#ffffff', padding: '0.875rem 2.5rem', borderRadius: '0.75rem', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', border: 'none', cursor: 'pointer' }}
             >
@@ -824,7 +824,7 @@ export default function InvestorsPage() {
                 <rect x="2" y="4" width="20" height="16" rx="2" />
                 <path d="M22 4L12 13 2 4" />
               </svg>
-              samoitoza@gmail.com
+              scott@tourlytics.ai
             </a>
           </div>
           <p className="text-xs" style={{ color: '#475569', marginTop: '1.5rem' }}>Founder-led. Pre-seed stage. San Francisco, CA.</p>
