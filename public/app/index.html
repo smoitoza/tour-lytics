@@ -17037,6 +17037,7 @@ function rfpExportExcel() {
 
     setCell(slWS, smRow, 0, 'Straight-Line Monthly Rent (net of TI)', metricLabelStyle);
     setFormula(slWS, smRow, 1, totalERef + '/' + DT + dtRefs.lease_term + '-' + tiMonthlyRef, metricValStyle);
+    var slMonthlyRentRef = 'B' + (smRow + 1);
     smRow++;
 
     setCell(slWS, smRow, 0, 'Straight-Line Annual Rent (net of TI)', metricLabelStyle);
@@ -17051,6 +17052,59 @@ function rfpExportExcel() {
     setFormula(slWS, smRow, 1, totalHRef + '/' + DT + dtRefs.rsf + '/(' + DT + dtRefs.lease_term + '/12)', metricValDecStyle);
     smRow++;
 
+    // CAPEX / LHI Depreciation metrics
+    var exportCapex = getCapexForBuilding(address);
+    if (exportCapex.hasCapex) {
+      smRow++;
+      setCell(slWS, smRow, 0, 'CAPEX / LHI Depreciation', sectionStyle);
+      for (var capexSC = 1; capexSC < slCols; capexSC++) setCell(slWS, smRow, capexSC, '', sectionStyle);
+      smRow++;
+
+      setCell(slWS, smRow, 0, 'Total CAPEX', metricLabelStyle);
+      setCell(slWS, smRow, 1, exportCapex.grandTotal, Object.assign({}, metricValStyle, { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: '7C3AED' } } }));
+      var capexTotalRef = 'B' + (smRow + 1);
+      smRow++;
+
+      setCell(slWS, smRow, 0, 'Construction', metricLabelStyle);
+      setCell(slWS, smRow, 1, exportCapex.construction, currStyle);
+      smRow++;
+
+      setCell(slWS, smRow, 0, 'FF&E', metricLabelStyle);
+      setCell(slWS, smRow, 1, exportCapex.ffe, currStyle);
+      smRow++;
+
+      setCell(slWS, smRow, 0, 'IT / Technology', metricLabelStyle);
+      setCell(slWS, smRow, 1, exportCapex.it, currStyle);
+      smRow++;
+
+      if (exportCapex.custom > 0) {
+        setCell(slWS, smRow, 0, 'Other CAPEX', metricLabelStyle);
+        setCell(slWS, smRow, 1, exportCapex.custom, currStyle);
+        smRow++;
+      }
+
+      setCell(slWS, smRow, 0, 'Monthly LHI Depreciation', metricLabelStyle);
+      setCell(slWS, smRow, 1, exportCapex.monthlyDepreciation, Object.assign({}, metricValStyle, { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: '7C3AED' } } }));
+      var lhiMonthlyRef = 'B' + (smRow + 1);
+      smRow++;
+
+      setCell(slWS, smRow, 0, 'Annual LHI Depreciation', metricLabelStyle);
+      setFormula(slWS, smRow, 1, lhiMonthlyRef + '*12', Object.assign({}, metricValStyle, { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: '7C3AED' } } }));
+      smRow++;
+
+      setCell(slWS, smRow, 0, 'CAPEX per RSF', metricLabelStyle);
+      setFormula(slWS, smRow, 1, 'IF(' + DT + dtRefs.rsf + '>0,' + capexTotalRef + '/' + DT + dtRefs.rsf + ',0)', metricValDecStyle);
+      smRow++;
+
+      setCell(slWS, smRow, 0, 'SL Monthly (net of TI + LHI)', metricLabelStyle);
+      setFormula(slWS, smRow, 1, slMonthlyRentRef + '+' + lhiMonthlyRef, Object.assign({}, metricValStyle, { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: '1E293B' } } }));
+      smRow++;
+
+      setCell(slWS, smRow, 0, 'SL Annual (net of TI + LHI)', metricLabelStyle);
+      setFormula(slWS, smRow, 1, 'B' + smRow + '*12', Object.assign({}, metricValStyle, { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: '1E293B' } } }));
+      smRow++;
+    }
+
     // NPV / Present Value Analysis
     smRow++;
     setCell(slWS, smRow, 0, 'Present Value Analysis', sectionStyle);
@@ -17063,11 +17117,16 @@ function rfpExportExcel() {
     var npvDiscountRef = 'B' + (smRow + 1);
     smRow++;
 
-    // NPV formula using Cash Flow tab data
-    // Since the Cash Flow tab has monthly costs in column J (totalMonthlyCost), build a reference
-    // But for simplicity and cross-sheet formula compatibility, use the pre-computed value
-    // with a note that users can adjust the rate
-    var npvVal = analysis.npv && analysis.npv.default ? analysis.npv.default.npv : (analysis.summary.npv || 0);
+    // Compute NPV from cash flow data (works for all submissions)
+    var npvVal = 0;
+    var cfmExport = (analysis.cash_flow && analysis.cash_flow.monthly) ? analysis.cash_flow.monthly : [];
+    if (cfmExport.length > 0) {
+      var npvMR = 0.08 / 12;
+      for (var npi = 0; npi < cfmExport.length; npi++) {
+        npvVal += (cfmExport[npi].totalMonthlyCost || 0) / Math.pow(1 + npvMR, npi + 1);
+      }
+      npvVal = Math.round(npvVal);
+    }
     setCell(slWS, smRow, 0, 'NPV of Lease Obligation', metricLabelStyle);
     setCell(slWS, smRow, 1, n(npvVal), Object.assign({}, metricValStyle, { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: '2563EB' } } }));
     var npvCellRef = 'B' + (smRow + 1);
