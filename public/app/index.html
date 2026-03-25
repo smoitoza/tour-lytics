@@ -15999,14 +15999,17 @@ function rfpBuildDetailHtml(subs) {
   var terms = selected.deal_terms || selected.terms || {};
   html += '<div class="fin-sheet-content active" id="fin-deal-terms">' + rfpBuildTermsTable(terms) + '</div>';
 
+  // Building address for CAPEX lookup
+  var bAddr = selected.building_address || selected.buildingAddress || '';
+
   // Cash Flow tab
-  html += '<div class="fin-sheet-content" id="fin-cash-flow">' + rfpBuildCashFlowTable(selected.analysis) + '</div>';
+  html += '<div class="fin-sheet-content" id="fin-cash-flow">' + rfpBuildCashFlowTable(selected.analysis, bAddr) + '</div>';
 
   // Straight-Line P&L tab
-  html += '<div class="fin-sheet-content" id="fin-straight-line">' + rfpBuildStraightLineTable(selected.analysis) + '</div>';
+  html += '<div class="fin-sheet-content" id="fin-straight-line">' + rfpBuildStraightLineTable(selected.analysis, bAddr) + '</div>';
 
   // GAAP tab
-  html += '<div class="fin-sheet-content" id="fin-gaap">' + rfpBuildGAAPTable(selected.analysis) + '</div>';
+  html += '<div class="fin-sheet-content" id="fin-gaap">' + rfpBuildGAAPTable(selected.analysis, bAddr) + '</div>';
 
   // CAPEX tab
   html += '<div class="fin-sheet-content" id="fin-capex">' + rfpBuildCapexPanel(selected) + '</div>';
@@ -16388,13 +16391,46 @@ function rfpBuildTermsTable(terms) {
   return html;
 }
 
+// ===== CAPEX DATA HELPER =====
+function getCapexForBuilding(buildingAddr) {
+  var a = (buildingAddr && window._rfpState && window._rfpState.assumptionsMap) ? (window._rfpState.assumptionsMap[buildingAddr] || {}) : {};
+  var constrTotal = parseFloat(a.capex_construction_total) || 0;
+  var ffeTotal = parseFloat(a.capex_ffe_total) || 0;
+  var itTotal = parseFloat(a.capex_it_total) || 0;
+  var customItems = a.capex_custom_items || [];
+  var customTotal = 0;
+  customItems.forEach(function(item) { customTotal += parseFloat(item.total) || 0; });
+  var grandTotal = constrTotal + ffeTotal + itTotal + customTotal;
+
+  var constrDepYears = parseFloat(a.capex_construction_depreciation_years) || 15;
+  var ffeDepYears = parseFloat(a.capex_ffe_depreciation_years) || 7;
+  var itDepYears = parseFloat(a.capex_it_depreciation_years) || 5;
+
+  var constrMonthlyDep = constrDepYears > 0 ? Math.round(constrTotal / (constrDepYears * 12)) : 0;
+  var ffeMonthlyDep = ffeDepYears > 0 ? Math.round(ffeTotal / (ffeDepYears * 12)) : 0;
+  var itMonthlyDep = itDepYears > 0 ? Math.round(itTotal / (itDepYears * 12)) : 0;
+  var totalMonthlyDep = constrMonthlyDep + ffeMonthlyDep + itMonthlyDep;
+
+  return {
+    grandTotal: grandTotal,
+    construction: constrTotal,
+    ffe: ffeTotal,
+    it: itTotal,
+    custom: customTotal,
+    monthlyDepreciation: totalMonthlyDep,
+    annualDepreciation: totalMonthlyDep * 12,
+    hasCapex: grandTotal > 0
+  };
+}
+
 // ===== CASH FLOW TABLE =====
-function rfpBuildCashFlowTable(analysis) {
+function rfpBuildCashFlowTable(analysis, buildingAddr) {
   if (!analysis || !analysis.cash_flow || !analysis.cash_flow.monthly) {
     return '<div style="padding:var(--space-4);color:var(--color-text-muted)">No cash flow data available.</div>';
   }
   var monthly = analysis.cash_flow.monthly;
   var totals = analysis.cash_flow.totals || {};
+  var capex = buildingAddr ? getCapexForBuilding(buildingAddr) : { hasCapex: false, grandTotal: 0, monthlyDepreciation: 0 };
 
   var html = '<div class="fin-table-wrap"><table class="fin-table">';
   html += '<thead><tr>' +
@@ -16407,13 +16443,22 @@ function rfpBuildCashFlowTable(analysis) {
     '<th class="cell-currency">Net Cash Rent</th>' +
     '<th class="cell-currency">OpEx</th>' +
     '<th class="cell-currency">Parking</th>' +
+    (capex.hasCapex ? '<th class="cell-currency" style="color:#7c3aed">CAPEX</th>' : '') +
     '<th class="cell-currency">Total Monthly</th>' +
     '<th class="cell-currency">Cumulative Cash</th>' +
   '</tr></thead><tbody>';
 
+  var capexCumulative = 0;
   monthly.forEach(function(row) {
     var isFreeRent = row.freeRentCredit && row.freeRentCredit !== 0;
-    html += '<tr' + (isFreeRent ? ' style="background:rgba(5,150,105,0.04)"' : '') + '>' +
+    // CAPEX: full outlay in month 1
+    var capexThisMonth = 0;
+    if (capex.hasCapex && row.month === 1) capexThisMonth = capex.grandTotal;
+    capexCumulative += capexThisMonth;
+    var adjustedTotal = row.totalMonthlyCost + capexThisMonth;
+    var adjustedCumulative = row.cumulativeCash + capexCumulative;
+
+    html += '<tr' + (isFreeRent ? ' style="background:rgba(5,150,105,0.04)"' : (row.month === 1 && capex.hasCapex ? ' style="background:rgba(124,58,237,0.04)"' : '')) + '>' +
       '<td class="cell-label">' + (row.month || '') + '</td>' +
       '<td>' + (row.period || '') + '</td>' +
       '<td>' + (row.leaseYear || '') + '</td>' +
@@ -16423,12 +16468,14 @@ function rfpBuildCashFlowTable(analysis) {
       '<td class="cell-currency">' + rfpFmtCurrency(row.netCashRent) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.opex) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.parking) + '</td>' +
-      '<td class="cell-currency">' + rfpFmtCurrency(row.totalMonthlyCost) + '</td>' +
-      '<td class="cell-currency">' + rfpFmtCurrency(row.cumulativeCash) + '</td>' +
+      (capex.hasCapex ? '<td class="cell-currency" style="color:#7c3aed">' + (capexThisMonth > 0 ? rfpFmtCurrency(capexThisMonth) : '') + '</td>' : '') +
+      '<td class="cell-currency">' + rfpFmtCurrency(adjustedTotal) + '</td>' +
+      '<td class="cell-currency">' + rfpFmtCurrency(adjustedCumulative) + '</td>' +
     '</tr>';
   });
 
   // Totals row
+  var totalWithCapex = totals.totalAllInCost + (capex.hasCapex ? capex.grandTotal : 0);
   html += '<tr class="row-bold">' +
     '<td class="cell-label">TOTALS</td>' +
     '<td colspan="3"></td>' +
@@ -16437,7 +16484,8 @@ function rfpBuildCashFlowTable(analysis) {
     '<td class="cell-currency">' + rfpFmtCurrency(totals.totalNetRent) + '</td>' +
     '<td class="cell-currency">' + rfpFmtCurrency(totals.totalOpex) + '</td>' +
     '<td class="cell-currency">' + rfpFmtCurrency(totals.totalParking) + '</td>' +
-    '<td class="cell-currency">' + rfpFmtCurrency(totals.totalAllInCost) + '</td>' +
+    (capex.hasCapex ? '<td class="cell-currency" style="color:#7c3aed">' + rfpFmtCurrency(capex.grandTotal) + '</td>' : '') +
+    '<td class="cell-currency">' + rfpFmtCurrency(totalWithCapex) + '</td>' +
     '<td></td>' +
   '</tr>';
 
@@ -16446,12 +16494,13 @@ function rfpBuildCashFlowTable(analysis) {
 }
 
 // ===== STRAIGHT-LINE P&L TABLE =====
-function rfpBuildStraightLineTable(analysis) {
+function rfpBuildStraightLineTable(analysis, buildingAddr) {
   if (!analysis || !analysis.straight_line_pl || !analysis.straight_line_pl.annual) {
     return '<div style="padding:var(--space-4);color:var(--color-text-muted)">No straight-line P&amp;L data available.</div>';
   }
   var annual = analysis.straight_line_pl.annual;
   var totals = analysis.straight_line_pl.totals || {};
+  var capex = buildingAddr ? getCapexForBuilding(buildingAddr) : { hasCapex: false, grandTotal: 0, monthlyDepreciation: 0, annualDepreciation: 0 };
 
   var html = '<div class="fin-table-wrap"><table class="fin-table">';
   html += '<thead><tr>' +
@@ -16462,10 +16511,13 @@ function rfpBuildStraightLineTable(analysis) {
     '<th class="cell-currency">Net Rent</th>' +
     '<th class="cell-currency">OpEx</th>' +
     '<th class="cell-currency">Parking</th>' +
+    (capex.hasCapex ? '<th class="cell-currency" style="color:#7c3aed">LHI Depreciation</th>' : '') +
     '<th class="cell-currency">Total Cost</th>' +
   '</tr></thead><tbody>';
 
   annual.forEach(function(row) {
+    var lhiDep = capex.hasCapex ? capex.monthlyDepreciation * (row.months || 12) : 0;
+    var adjustedTotal = row.totalCost + lhiDep;
     html += '<tr>' +
       '<td class="cell-label">Year ' + (row.year || '') + '</td>' +
       '<td>' + (row.months || '') + '</td>' +
@@ -16474,7 +16526,8 @@ function rfpBuildStraightLineTable(analysis) {
       '<td class="cell-currency">' + rfpFmtCurrency(row.netRent) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.opex) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.parking) + '</td>' +
-      '<td class="cell-currency">' + rfpFmtCurrency(row.totalCost) + '</td>' +
+      (capex.hasCapex ? '<td class="cell-currency" style="color:#7c3aed">' + rfpFmtCurrency(Math.round(lhiDep)) + '</td>' : '') +
+      '<td class="cell-currency">' + rfpFmtCurrency(Math.round(adjustedTotal)) + '</td>' +
     '</tr>';
   });
 
@@ -16562,13 +16615,14 @@ function updateNPVDisplay(rateStr) {
 }
 
 // ===== GAAP ANALYSIS TABLE =====
-function rfpBuildGAAPTable(analysis) {
+function rfpBuildGAAPTable(analysis, buildingAddr) {
   if (!analysis || !analysis.gaap) {
     return '<div style="padding:var(--space-4);color:var(--color-text-muted)">No GAAP analysis data available.</div>';
   }
   var gaap = analysis.gaap;
   var summary = gaap.summary || {};
   var schedule = gaap.schedule || [];
+  var capex = buildingAddr ? getCapexForBuilding(buildingAddr) : { hasCapex: false, grandTotal: 0, monthlyDepreciation: 0 };
 
   // Summary box
   var html =
@@ -16578,6 +16632,7 @@ function rfpBuildGAAPTable(analysis) {
       '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(summary.rouAsset) + '</div><div class="rfp-metric-label">ROU Asset (Day 1)</div></div>' +
       '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(summary.totalLeasePayments) + '</div><div class="rfp-metric-label">Total Lease Payments</div></div>' +
       '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(summary.tiAllowance) + '</div><div class="rfp-metric-label">TI Allowance</div></div>' +
+      (capex.hasCapex ? '<div class="rfp-metric"><div class="rfp-metric-value" style="color:#7c3aed">' + rfpFmtCurrencyPlain(capex.monthlyDepreciation) + '/mo</div><div class="rfp-metric-label">LHI Depreciation</div></div>' : '') +
     '</div>';
 
   if (schedule.length === 0) return html;
@@ -16593,10 +16648,13 @@ function rfpBuildGAAPTable(analysis) {
     '<th class="cell-currency">ROU Amortization</th>' +
     '<th class="cell-currency">ROU Asset</th>' +
     '<th class="cell-currency">SL Expense</th>' +
+    (capex.hasCapex ? '<th class="cell-currency" style="color:#7c3aed">LHI Dep.</th>' : '') +
     '<th class="cell-currency">Total GAAP Expense</th>' +
   '</tr></thead><tbody>';
 
   schedule.forEach(function(row) {
+    var lhiDep = capex.hasCapex ? capex.monthlyDepreciation : 0;
+    var adjustedGAAP = row.totalGAAPExpense + lhiDep;
     html += '<tr>' +
       '<td class="cell-label">' + (row.month || '') + '</td>' +
       '<td>' + (row.period || '') + '</td>' +
@@ -16607,7 +16665,8 @@ function rfpBuildGAAPTable(analysis) {
       '<td class="cell-currency">' + rfpFmtCurrency(row.rouAmortization) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.rouAsset) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.straightLineExpense) + '</td>' +
-      '<td class="cell-currency">' + rfpFmtCurrency(row.totalGAAPExpense) + '</td>' +
+      (capex.hasCapex ? '<td class="cell-currency" style="color:#7c3aed">' + rfpFmtCurrency(lhiDep) + '</td>' : '') +
+      '<td class="cell-currency">' + rfpFmtCurrency(Math.round(adjustedGAAP)) + '</td>' +
     '</tr>';
   });
 

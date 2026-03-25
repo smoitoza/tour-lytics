@@ -55,6 +55,20 @@ export async function POST(req: Request) {
     target_density_rsf = 0,
     discount_rate = 6.0,
     updated_by = '',
+    // CAPEX fields
+    capex_construction_total = 0,
+    capex_construction_per_rsf = 0,
+    capex_construction_input_mode = 'total',
+    capex_construction_depreciation_years = 15,
+    capex_ffe_total = 0,
+    capex_ffe_per_rsf = 0,
+    capex_ffe_input_mode = 'total',
+    capex_ffe_depreciation_years = 7,
+    capex_it_total = 0,
+    capex_it_per_rsf = 0,
+    capex_it_input_mode = 'total',
+    capex_it_depreciation_years = 5,
+    capex_custom_items = [],
   } = body
 
   if (!building_address) {
@@ -86,6 +100,20 @@ export async function POST(req: Request) {
       headcount,
       target_density_rsf,
       discount_rate,
+      // CAPEX
+      capex_construction_total,
+      capex_construction_per_rsf,
+      capex_construction_input_mode,
+      capex_construction_depreciation_years,
+      capex_ffe_total,
+      capex_ffe_per_rsf,
+      capex_ffe_input_mode,
+      capex_ffe_depreciation_years,
+      capex_it_total,
+      capex_it_per_rsf,
+      capex_it_input_mode,
+      capex_it_depreciation_years,
+      capex_custom_items,
       updated_by,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'project_id,building_address' })
