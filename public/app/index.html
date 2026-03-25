@@ -17355,6 +17355,118 @@ function rfpExportExcel() {
     XLSX.utils.book_append_sheet(wb, gWS, 'GAAP Analysis');
   }
 
+  // ===== TAB 6: CAPEX =====
+  var capexExportTermMonths = (analysis && analysis.summary && analysis.summary.termMonths) ? analysis.summary.termMonths : 0;
+  var capexExport = getCapexForBuilding(address, capexExportTermMonths);
+  if (capexExport.hasCapex) {
+    var cxCols = 7;
+    var cxWS = XLSX.utils.aoa_to_sheet([['']]);
+    cxWS['!cols'] = [{ wch: 28 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 22 }];
+    cxWS['!rows'] = [{ hpt: 32 }];
+    cxWS['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: cxCols - 1 } }];
+    setCell(cxWS, 0, 0, 'Capital Expenditure (CAPEX) - ' + address, titleStyle);
+    for (var cxi = 1; cxi < cxCols; cxi++) setCell(cxWS, 0, cxi, '', titleStyle);
+
+    var cxR = 2;
+    // Summary section
+    setCell(cxWS, cxR, 0, 'CAPEX Summary', sectionStyle);
+    for (var cxs = 1; cxs < cxCols; cxs++) setCell(cxWS, cxR, cxs, '', sectionStyle);
+    cxR++;
+
+    var cxRSF = (analysis && analysis.summary) ? (analysis.summary.rsf || 0) : 0;
+    var cxTermYears = capexExportTermMonths / 12;
+
+    setCell(cxWS, cxR, 0, 'Total CAPEX', metricLabelStyle);
+    setCell(cxWS, cxR, 1, capexExport.grandTotal, Object.assign({}, metricValStyle, { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: '7C3AED' } } }));
+    cxR++;
+    setCell(cxWS, cxR, 0, 'CAPEX per RSF', metricLabelStyle);
+    setCell(cxWS, cxR, 1, cxRSF > 0 ? Math.round(capexExport.grandTotal / cxRSF * 100) / 100 : 0, metricValDecStyle);
+    cxR++;
+    setCell(cxWS, cxR, 0, 'Monthly LHI Depreciation', metricLabelStyle);
+    setCell(cxWS, cxR, 1, capexExport.monthlyDepreciation, Object.assign({}, metricValStyle, { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: '7C3AED' } } }));
+    cxR++;
+    setCell(cxWS, cxR, 0, 'Annual LHI Depreciation', metricLabelStyle);
+    setCell(cxWS, cxR, 1, capexExport.annualDepreciation, metricValStyle);
+    cxR++;
+    setCell(cxWS, cxR, 0, 'Depreciation Method', metricLabelStyle);
+    setCell(cxWS, cxR, 1, 'Straight-line, shorter of useful life or lease term (ASC 842)', Object.assign({}, labelStyle));
+    cxR += 2;
+
+    // Category breakdown
+    setCell(cxWS, cxR, 0, 'Category Breakdown', sectionStyle);
+    for (var cxs2 = 1; cxs2 < cxCols; cxs2++) setCell(cxWS, cxR, cxs2, '', sectionStyle);
+    cxR++;
+
+    var cxCatHeaders = ['Category', 'Total Cost', 'Cost/RSF', 'Useful Life', 'Dep. Period', 'Monthly Dep.', 'Annual Dep.'];
+    cxCatHeaders.forEach(function(h, i) { setCell(cxWS, cxR, i, h, i === 0 ? headerLeftStyle : headerStyle); });
+    cxR++;
+
+    var cxCategories = [
+      { name: 'Construction / Build-Out', total: capexExport.construction, effYears: capexExport.constrEffYears, usefulLife: 15, monthlyDep: capexExport.constrMonthlyDep },
+      { name: 'FF&E (Furniture, Fixtures & Equipment)', total: capexExport.ffe, effYears: capexExport.ffeEffYears, usefulLife: 7, monthlyDep: capexExport.ffeMonthlyDep },
+      { name: 'IT / Technology', total: capexExport.it, effYears: capexExport.itEffYears, usefulLife: 5, monthlyDep: capexExport.itMonthlyDep },
+    ];
+    if (capexExport.custom > 0) {
+      cxCategories.push({ name: 'Other CAPEX', total: capexExport.custom, effYears: cxTermYears, usefulLife: 0, monthlyDep: 0 });
+    }
+
+    cxCategories.forEach(function(cat, i) {
+      var rowFill = (i % 2 === 0) ? { fill: altRowFill } : {};
+      setCell(cxWS, cxR, 0, cat.name, Object.assign({}, labelStyle, rowFill));
+      setCell(cxWS, cxR, 1, cat.total, Object.assign({}, currStyle, rowFill));
+      setCell(cxWS, cxR, 2, cxRSF > 0 ? Math.round(cat.total / cxRSF * 100) / 100 : 0, Object.assign({}, currDecStyle, rowFill));
+      setCell(cxWS, cxR, 3, cat.usefulLife > 0 ? cat.usefulLife + ' years' : '--', Object.assign({}, centerStyle, rowFill));
+      setCell(cxWS, cxR, 4, cat.effYears > 0 ? cat.effYears.toFixed(1) + ' years' : '--', Object.assign({}, centerStyle, rowFill));
+      setCell(cxWS, cxR, 5, cat.monthlyDep, Object.assign({}, currStyle, rowFill));
+      setCell(cxWS, cxR, 6, cat.monthlyDep * 12, Object.assign({}, currStyle, rowFill));
+      cxR++;
+    });
+
+    // Totals row
+    setCell(cxWS, cxR, 0, 'TOTALS', totalLabelStyle);
+    setCell(cxWS, cxR, 1, capexExport.grandTotal, totalRowStyle);
+    setCell(cxWS, cxR, 2, cxRSF > 0 ? Math.round(capexExport.grandTotal / cxRSF * 100) / 100 : 0, Object.assign({}, totalRowStyle, { numFmt: '"$"#,##0.00' }));
+    setCell(cxWS, cxR, 3, '', totalLabelStyle);
+    setCell(cxWS, cxR, 4, '', totalLabelStyle);
+    setCell(cxWS, cxR, 5, capexExport.monthlyDepreciation, totalRowStyle);
+    setCell(cxWS, cxR, 6, capexExport.annualDepreciation, totalRowStyle);
+    cxR += 2;
+
+    // Depreciation schedule
+    setCell(cxWS, cxR, 0, 'LHI Depreciation Schedule', sectionStyle);
+    for (var cxs3 = 1; cxs3 < cxCols; cxs3++) setCell(cxWS, cxR, cxs3, '', sectionStyle);
+    cxR++;
+
+    var depHeaders = ['Year', 'Construction', 'FF&E', 'IT', 'Total Annual', 'Cumulative', 'Remaining Book Value'];
+    depHeaders.forEach(function(h, i) { setCell(cxWS, cxR, i, h, i === 0 ? headerLeftStyle : headerStyle); });
+    cxR++;
+
+    var cxCumDep = 0;
+    var cxTotalYears = Math.ceil(cxTermYears);
+    for (var cxYr = 1; cxYr <= cxTotalYears; cxYr++) {
+      var cxMIY = (cxYr === cxTotalYears && capexExportTermMonths % 12 > 0) ? (capexExportTermMonths % 12) : 12;
+      var cDep = Math.min(capexExport.constrMonthlyDep * cxMIY, Math.max(0, capexExport.construction - (capexExport.constrMonthlyDep * 12 * (cxYr - 1))));
+      var fDep = Math.min(capexExport.ffeMonthlyDep * cxMIY, Math.max(0, capexExport.ffe - (capexExport.ffeMonthlyDep * 12 * (cxYr - 1))));
+      var iDep = Math.min(capexExport.itMonthlyDep * cxMIY, Math.max(0, capexExport.it - (capexExport.itMonthlyDep * 12 * (cxYr - 1))));
+      var yrDep = cDep + fDep + iDep;
+      cxCumDep += yrDep;
+      var cxRemaining = Math.max(0, capexExport.grandTotal - cxCumDep);
+
+      var rowFill2 = (cxYr % 2 === 0) ? { fill: altRowFill } : {};
+      setCell(cxWS, cxR, 0, 'Year ' + cxYr, Object.assign({}, labelStyle, rowFill2));
+      setCell(cxWS, cxR, 1, Math.round(cDep), Object.assign({}, currStyle, rowFill2));
+      setCell(cxWS, cxR, 2, Math.round(fDep), Object.assign({}, currStyle, rowFill2));
+      setCell(cxWS, cxR, 3, Math.round(iDep), Object.assign({}, currStyle, rowFill2));
+      setCell(cxWS, cxR, 4, Math.round(yrDep), Object.assign({}, currBoldStyle, rowFill2));
+      setCell(cxWS, cxR, 5, Math.round(cxCumDep), Object.assign({}, currStyle, rowFill2));
+      setCell(cxWS, cxR, 6, Math.round(cxRemaining), Object.assign({}, currStyle, rowFill2));
+      cxR++;
+    }
+
+    cxWS['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: cxR - 1, c: cxCols - 1 } });
+    XLSX.utils.book_append_sheet(wb, cxWS, 'CAPEX');
+  }
+
   // ===== VERSION COMPARISON TAB (if multiple submissions for this building) =====
   var allSubs = rfpSortVersions((window._rfpState.submissions || []).filter(function(s) {
     return (s.building_address || s.buildingAddress) === address;
