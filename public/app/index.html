@@ -16473,19 +16473,41 @@ function rfpBuildStraightLineTable(analysis) {
     '</div>';
 
   // ===== NPV / Present Value Analysis =====
-  if (analysis.npv && analysis.npv.results) {
-    var npvData = analysis.npv;
-    var currentRate = npvData.defaultRate || 0.08;
-    var npvAtRate = npvData.results[String(currentRate)] || npvData.default || {};
-    var rateOptions = Object.keys(npvData.results).sort();
+  // Compute NPV from cash flow data (works even for pre-existing submissions without analysis.npv)
+  var cfMonthly = (analysis.cash_flow && analysis.cash_flow.monthly) ? analysis.cash_flow.monthly : [];
+  if (cfMonthly.length > 0) {
+    var npvRates = [0.06, 0.07, 0.08, 0.09, 0.10];
+    var npvSummary = analysis.summary || {};
+    var npvRSF = npvSummary.rsf || 0;
+    var npvTermMonths = npvSummary.termMonths || cfMonthly.length;
+    var npvResults = {};
+    npvRates.forEach(function(rate) {
+      var monthlyRate = rate / 12;
+      var npvVal = 0;
+      for (var i = 0; i < cfMonthly.length; i++) {
+        var cf = cfMonthly[i].totalMonthlyCost || 0;
+        npvVal += cf / Math.pow(1 + monthlyRate, i + 1);
+      }
+      npvVal = Math.round(npvVal);
+      npvResults[String(rate)] = {
+        rate: rate,
+        npv: npvVal,
+        npvPerRSF: npvRSF > 0 ? Math.round(npvVal / npvRSF * 100) / 100 : 0,
+        avgAnnual: npvTermMonths > 0 ? Math.round(npvVal / (npvTermMonths / 12)) : 0
+      };
+    });
+
+    var currentRate = 0.08;
+    var npvAtRate = npvResults[String(currentRate)];
+    var nominalTotal = (analysis.cash_flow && analysis.cash_flow.totals) ? analysis.cash_flow.totals.totalAllInCost : 0;
 
     html += '<div style="margin-top:var(--space-4);padding-top:var(--space-4);border-top:1px solid var(--color-border)">' +
       '<div style="display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-3)">' +
         '<div style="font-weight:600;font-size:var(--text-sm);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted)">Present Value Analysis</div>' +
         '<select id="npvRateSelector" onchange="updateNPVDisplay(this.value)" style="padding:3px 8px;font-size:var(--text-xs);border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg);color:var(--color-text);font-family:inherit;cursor:pointer;">';
-    rateOptions.forEach(function(r) {
-      var pct = Math.round(parseFloat(r) * 100);
-      html += '<option value="' + r + '"' + (parseFloat(r) === currentRate ? ' selected' : '') + '>' + pct + '% Discount Rate</option>';
+    npvRates.forEach(function(r) {
+      var pct = Math.round(r * 100);
+      html += '<option value="' + r + '"' + (r === currentRate ? ' selected' : '') + '>' + pct + '% Discount Rate</option>';
     });
     html += '</select>' +
       '</div>' +
@@ -16493,12 +16515,12 @@ function rfpBuildStraightLineTable(analysis) {
         '<div class="rfp-metric"><div class="rfp-metric-value" id="npvValue" style="color:#2563eb">' + rfpFmtCurrencyPlain(npvAtRate.npv) + '</div><div class="rfp-metric-label">NPV of Lease Obligation</div></div>' +
         '<div class="rfp-metric"><div class="rfp-metric-value" id="npvPerRSF" style="color:#2563eb">' + rfpFmtCurrencyDecimals(npvAtRate.npvPerRSF) + '</div><div class="rfp-metric-label">NPV per RSF</div></div>' +
         '<div class="rfp-metric"><div class="rfp-metric-value" id="npvAvgAnnual">' + rfpFmtCurrencyPlain(npvAtRate.avgAnnual) + '</div><div class="rfp-metric-label">NPV Avg Annual</div></div>' +
-        '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(analysis.cash_flow?.totals?.totalAllInCost) + '</div><div class="rfp-metric-label">Nominal Total (undiscounted)</div></div>' +
+        '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(nominalTotal) + '</div><div class="rfp-metric-label">Nominal Total (undiscounted)</div></div>' +
       '</div>' +
     '</div>';
 
     // Store NPV data globally for rate switching
-    window._currentNPVData = npvData.results;
+    window._currentNPVData = npvResults;
   }
 
   return html;
@@ -17729,6 +17751,24 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
     var slMonthly = summary.straightLineMonthlyRent || 0;
     var allInMonthly = slMonthly + totalInternalOpex;
     var allInAnnual = allInMonthly * 12;
+
+    // Compute NPV @ 8% from cash flow data (works for all submissions)
+    var compCfMonthly = (latest.analysis && latest.analysis.cash_flow && latest.analysis.cash_flow.monthly) ? latest.analysis.cash_flow.monthly : [];
+    var compNpv = 0;
+    var compNpvPerRSF = 0;
+    if (compCfMonthly.length > 0) {
+      var compMonthlyRate = 0.08 / 12;
+      for (var ci = 0; ci < compCfMonthly.length; ci++) {
+        compNpv += (compCfMonthly[ci].totalMonthlyCost || 0) / Math.pow(1 + compMonthlyRate, ci + 1);
+      }
+      compNpv = Math.round(compNpv);
+      var compRSF = summary.rsf || 0;
+      compNpvPerRSF = compRSF > 0 ? Math.round(compNpv / compRSF * 100) / 100 : 0;
+    }
+    // Inject NPV into summary for dealMetrics access
+    summary.npv = compNpv;
+    summary.npvPerRSF = compNpvPerRSF;
+
     buildingData.push({ address: address, summary: summary, terms: terms, internalOpex: totalInternalOpex, allInMonthly: allInMonthly, allInAnnual: allInAnnual });
   });
 
@@ -23873,9 +23913,19 @@ function getShortlistFinancialsData(type, id, buildingName) {
   var densityFit = (headcount > 0 && rsf > 0) ? Math.round(rsf / headcount) : 0;
   var costPerEmployee = (headcount > 0 && allInAnnual > 0) ? Math.round(allInAnnual / headcount) : 0;
 
-  // NPV from analysis (pre-computed at 8% default)
-  var npvData = (latest.analysis && latest.analysis.npv) ? latest.analysis.npv : null;
-  var npv8 = npvData && npvData.results && npvData.results['0.08'] ? npvData.results['0.08'] : null;
+  // NPV: compute from cash flow data (works for all submissions, even pre-NPV ones)
+  var npvVal = 0;
+  var npvPerRSFVal = 0;
+  var cfMonthlyData = (latest.analysis && latest.analysis.cash_flow && latest.analysis.cash_flow.monthly) ? latest.analysis.cash_flow.monthly : [];
+  if (cfMonthlyData.length > 0) {
+    var npvRate8 = 0.08 / 12;
+    for (var ni = 0; ni < cfMonthlyData.length; ni++) {
+      var cfVal = cfMonthlyData[ni].totalMonthlyCost || 0;
+      npvVal += cfVal / Math.pow(1 + npvRate8, ni + 1);
+    }
+    npvVal = Math.round(npvVal);
+    npvPerRSFVal = rsf > 0 ? Math.round(npvVal / rsf * 100) / 100 : 0;
+  }
 
   return {
     docType: docType,
@@ -23889,8 +23939,8 @@ function getShortlistFinancialsData(type, id, buildingName) {
     headcount: headcount,
     densityFit: densityFit,
     costPerEmployee: costPerEmployee,
-    npv: npv8 ? npv8.npv : 0,
-    npvPerRSF: npv8 ? npv8.npvPerRSF : 0,
+    npv: npvVal,
+    npvPerRSF: npvPerRSFVal,
     npvRate: 0.08,
     hasAllIn: (slMonthly > 0),
     hasAssumptions: (totalMonthlyOpex > 0)
