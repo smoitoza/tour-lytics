@@ -9622,7 +9622,7 @@ body {
         <h2 class="ai-usage-title">AI Usage Dashboard</h2>
         <p class="ai-usage-subtitle">Track token consumption across all AI-powered features for this project.</p>
       </div>
-      <button class="ai-usage-reseed-btn" id="aiUsageReseedBtn" onclick="aiUsageReseed()">+ Add Tokens</button>
+      <button class="ai-usage-reseed-btn" id="aiUsageReseedBtn" onclick="aiUsageReseed()" style="display:none;">+ Add Tokens</button>
     </div>
 
     <!-- Payment success banner (shown after Stripe redirect) -->
@@ -21791,6 +21791,12 @@ var _aiUsageLoaded = false;
 async function aiUsageLoad() {
   // Any authenticated user can view their project's token usage
   if (!getCurrentUserEmail()) return;
+
+  // Ghost mode: show reseed button only for super admin
+  if (getCurrentUserEmail() === ADMIN_EMAIL) {
+    var reseedBtn = document.getElementById('aiUsageReseedBtn');
+    if (reseedBtn) reseedBtn.style.display = '';
+  }
 
   try {
     // Fetch all data in parallel
