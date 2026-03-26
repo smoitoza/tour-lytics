@@ -178,6 +178,13 @@ export default function DashboardPage() {
   const [creatingProject, setCreatingProject] = useState(false)
   const [dashStats, setDashStats] = useState<{ buildings: number; sqft: number; shortlisted: number; leaseValue: number; projects: number } | null>(null)
   const [createError, setCreateError] = useState<string | null>(null)
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [passwordSuccess, setPasswordSuccess] = useState(false)
+  const [changingPassword, setChangingPassword] = useState(false)
 
   /* ---- Delete project state ---- */
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null)
@@ -288,6 +295,29 @@ export default function DashboardPage() {
     await supabase.auth.signOut()
     router.push('/')
     router.refresh()
+  }
+
+  const handleChangePassword = async () => {
+    setPasswordError(null)
+    if (!currentPassword || !newPassword) { setPasswordError('All fields are required.'); return }
+    if (newPassword.length < 6) { setPasswordError('New password must be at least 6 characters.'); return }
+    if (newPassword !== confirmPassword) { setPasswordError('New passwords do not match.'); return }
+    setChangingPassword(true)
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user?.email, currentPassword, newPassword }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setPasswordError(data.error || 'Failed to change password.'); setChangingPassword(false); return }
+      setPasswordSuccess(true)
+      setChangingPassword(false)
+      setTimeout(() => { setShowPasswordModal(false); setPasswordSuccess(false); setCurrentPassword(''); setNewPassword(''); setConfirmPassword('') }, 2000)
+    } catch (err) {
+      setPasswordError('Something went wrong. Please try again.')
+      setChangingPassword(false)
+    }
   }
 
   const handleCreateProject = async () => {
@@ -740,6 +770,21 @@ export default function DashboardPage() {
               </div>
               <span className="hidden sm:inline" style={{ fontSize: '0.8125rem', color: '#475569', fontWeight: 500 }}>{user?.email}</span>
             </div>
+            <button
+              onClick={() => { setShowPasswordModal(true); setPasswordError(null); setPasswordSuccess(false); setCurrentPassword(''); setNewPassword(''); setConfirmPassword('') }}
+              style={{
+                fontSize: '0.75rem',
+                color: '#94a3b8',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                fontWeight: 400,
+                padding: '0.25rem 0.5rem',
+              }}
+            >
+              Change Password
+            </button>
             <button
               onClick={handleSignOut}
               style={{
@@ -1355,6 +1400,57 @@ export default function DashboardPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* -- Change Password Modal -- */}
+      {showPasswordModal && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '1.5rem' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowPasswordModal(false) }}
+        >
+          <div style={{ background: '#fff', borderRadius: '1.25rem', border: '1px solid #e2e8f0', boxShadow: '0 24px 48px rgba(0,0,0,0.16)', width: '100%', maxWidth: '400px', padding: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: '#0f172a', margin: 0, fontFamily: 'var(--font-display)' }}>Change Password</h3>
+              <button onClick={() => setShowPasswordModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '0.5rem' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </button>
+            </div>
+            {passwordSuccess ? (
+              <div style={{ padding: '1rem', borderRadius: '0.75rem', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a', fontSize: '0.875rem', fontWeight: 500, textAlign: 'center' }}>
+                Password updated successfully.
+              </div>
+            ) : (
+              <>
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#334155', marginBottom: '0.375rem' }}>Current Password</label>
+                  <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} autoFocus
+                    style={{ width: '100%', padding: '0.625rem 0.875rem', fontSize: '0.875rem', border: '1px solid #e2e8f0', borderRadius: '0.625rem', background: '#f8fafc', color: '#0f172a', fontFamily: 'inherit', boxSizing: 'border-box' as const }} />
+                </div>
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#334155', marginBottom: '0.375rem' }}>New Password</label>
+                  <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
+                    style={{ width: '100%', padding: '0.625rem 0.875rem', fontSize: '0.875rem', border: '1px solid #e2e8f0', borderRadius: '0.625rem', background: '#f8fafc', color: '#0f172a', fontFamily: 'inherit', boxSizing: 'border-box' as const }} />
+                </div>
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#334155', marginBottom: '0.375rem' }}>Confirm New Password</label>
+                  <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleChangePassword() }}
+                    style={{ width: '100%', padding: '0.625rem 0.875rem', fontSize: '0.875rem', border: '1px solid #e2e8f0', borderRadius: '0.625rem', background: '#f8fafc', color: '#0f172a', fontFamily: 'inherit', boxSizing: 'border-box' as const }} />
+                </div>
+                {passwordError && (
+                  <div style={{ padding: '0.625rem 0.875rem', borderRadius: '0.5rem', background: '#fef2f2', border: '1px solid #fecaca', fontSize: '0.8125rem', color: '#dc2626', marginBottom: '1rem' }}>{passwordError}</div>
+                )}
+                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                  <button onClick={() => setShowPasswordModal(false)} style={{ padding: '0.625rem 1.25rem', fontSize: '0.8125rem', fontWeight: 500, color: '#64748b', background: 'transparent', border: '1px solid #e2e8f0', borderRadius: '0.625rem', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+                  <button onClick={handleChangePassword} disabled={changingPassword}
+                    style={{ padding: '0.625rem 1.5rem', fontSize: '0.8125rem', fontWeight: 600, color: '#fff', background: '#2563eb', border: 'none', borderRadius: '0.625rem', cursor: changingPassword ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: changingPassword ? 0.6 : 1 }}>
+                    {changingPassword ? 'Updating...' : 'Update Password'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
