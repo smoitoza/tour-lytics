@@ -260,9 +260,13 @@ function generateFinancialAnalysis(terms: DealTerms) {
     const currentRentRSF = baseRentRSF * yearMultiplier
     const monthlyBaseRent = (currentRentRSF * rsf) / 12
 
-    // Free rent
-    const isFreeMonth = m <= freeMonths
-    const freeRentCredit = isFreeMonth ? monthlyBaseRent : 0
+    // Free rent (supports fractional months, e.g. 0.5 = half month free)
+    let freeRentCredit = 0
+    if (m <= Math.floor(freeMonths)) {
+      freeRentCredit = monthlyBaseRent // full free month
+    } else if (m === Math.floor(freeMonths) + 1 && freeMonths % 1 > 0) {
+      freeRentCredit = monthlyBaseRent * (freeMonths % 1) // partial free month
+    }
     const netCashRent = monthlyBaseRent - freeRentCredit
 
     // OpEx (constant, user-defined)
