@@ -373,7 +373,17 @@ export async function GET(request: NextRequest) {
 
     const supabase = getSupabase()
 
-    // First, check if the current user has a draft
+    // Always check for a published version first
+    const { data: published } = await supabase
+      .from('executive_summaries')
+      .select('*')
+      .eq('project_id', projectId)
+      .eq('status', 'published')
+      .order('published_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    // If a published version exists, check if the current user has a NEWER draft
     if (userEmail) {
       const { data: draft } = await supabase
         .from('executive_summaries')
@@ -385,31 +395,26 @@ export async function GET(request: NextRequest) {
         .limit(1)
         .single()
 
+      // Only show draft if it's newer than the published version
       if (draft) {
-        return NextResponse.json({
-          found: true,
-          id: draft.id,
-          html: draft.html,
-          projectName: draft.project_name,
-          market: draft.market,
-          buildingCount: draft.building_count,
-          generatedAt: draft.generated_at,
-          generatedBy: draft.generated_by,
-          customPrompt: draft.custom_prompt,
-          status: 'draft',
-        })
+        const draftTime = new Date(draft.generated_at).getTime()
+        const pubTime = published ? new Date(published.published_at || published.generated_at).getTime() : 0
+        if (draftTime > pubTime) {
+          return NextResponse.json({
+            found: true,
+            id: draft.id,
+            html: draft.html,
+            projectName: draft.project_name,
+            market: draft.market,
+            buildingCount: draft.building_count,
+            generatedAt: draft.generated_at,
+            generatedBy: draft.generated_by,
+            customPrompt: draft.custom_prompt,
+            status: 'draft',
+          })
+        }
       }
     }
-
-    // No draft for this user, look for the latest published version
-    const { data: published } = await supabase
-      .from('executive_summaries')
-      .select('*')
-      .eq('project_id', projectId)
-      .eq('status', 'published')
-      .order('published_at', { ascending: false })
-      .limit(1)
-      .single()
 
     if (!published) {
       return NextResponse.json({ found: false })
