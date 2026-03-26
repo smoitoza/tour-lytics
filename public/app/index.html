@@ -15311,10 +15311,17 @@ function rfpShowUploadModal() {
   }
 
   // All survey buildings
-  optionsHtml += '<optgroup label="All Buildings">';
-  surveyBuildings.forEach(function(b) {
-    optionsHtml += '<option value="survey-' + b.num + '" data-address="' + b.address + '">' + b.address + '</option>';
-  });
+  if (surveyBuildings.length > 0) {
+    optionsHtml += '<optgroup label="All Buildings">';
+    surveyBuildings.forEach(function(b) {
+      optionsHtml += '<option value="survey-' + b.num + '" data-address="' + b.address + '">' + b.address + '</option>';
+    });
+    optionsHtml += '</optgroup>';
+  }
+
+  // Custom address option
+  optionsHtml += '<optgroup label="Other">';
+  optionsHtml += '<option value="custom">+ Add custom address</option>';
   optionsHtml += '</optgroup>';
 
   var modal = document.createElement('div');
@@ -15328,7 +15335,10 @@ function rfpShowUploadModal() {
 
       '<div class="rfp-step">' +
         '<label class="rfp-step-label">Step 1: Select Building</label>' +
-        '<select class="rfp-select" id="rfp-building-select">' + optionsHtml + '</select>' +
+        '<select class="rfp-select" id="rfp-building-select" onchange="rfpBuildingSelectChanged()">' + optionsHtml + '</select>' +
+        '<div id="rfp-custom-address-wrap" style="display:none;margin-top:var(--space-2);">' +
+          '<input class="rfp-input" id="rfp-custom-address" placeholder="Enter full address (e.g. 123 Main St, San Francisco, CA)" style="font-size:var(--text-sm);" />' +
+        '</div>' +
       '</div>' +
 
       '<div class="rfp-step">' +
@@ -15457,6 +15467,18 @@ function rfpCloseModal() {
   if (_rfpModal) { _rfpModal.remove(); _rfpModal = null; }
 }
 
+function rfpBuildingSelectChanged() {
+  var sel = document.getElementById('rfp-building-select');
+  var wrap = document.getElementById('rfp-custom-address-wrap');
+  if (sel && wrap) {
+    wrap.style.display = sel.value === 'custom' ? 'block' : 'none';
+    if (sel.value === 'custom') {
+      var input = document.getElementById('rfp-custom-address');
+      if (input) input.focus();
+    }
+  }
+}
+
 function rfpSetEntryMode(btn, mode) {
   btn.parentNode.querySelectorAll('.rfp-toggle-btn').forEach(function(b) { b.classList.remove('active'); });
   btn.classList.add('active');
@@ -15561,22 +15583,32 @@ function rfpSubmitUpload() {
   var rawVal = buildingSelect ? buildingSelect.value : '';
   if (!rawVal) { alert('Please select a building.'); return; }
 
-  // Parse building value: "deal-1" or "survey-5"
-  var parts = rawVal.split('-');
-  var buildingType = parts[0]; // 'deal' or 'survey'
-  var buildingId = parseInt(parts.slice(1).join('-'));
   var buildingNum, address;
 
-  if (buildingType === 'deal') {
-    var dealBuildings = (typeof BUILDINGS !== 'undefined') ? BUILDINGS : [];
-    var dealB = dealBuildings.find(function(b) { return b.id === buildingId; });
-    buildingNum = dealB ? (1000 + dealB.id) : buildingId; // Use 1000+ range for deal buildings
-    address = dealB ? dealB.name : 'Building #' + buildingId;
+  if (rawVal === 'custom') {
+    // Custom address entry
+    var customAddr = (document.getElementById('rfp-custom-address') || {}).value || '';
+    customAddr = customAddr.trim();
+    if (!customAddr) { alert('Please enter an address.'); return; }
+    buildingNum = 9000 + Math.floor(Math.random() * 1000); // Use 9000+ range for custom addresses
+    address = customAddr;
   } else {
-    var surveyBuildings = (typeof SURVEY_BUILDINGS !== 'undefined') ? SURVEY_BUILDINGS : [];
-    var surveyB = surveyBuildings.find(function(b) { return b.num === buildingId; });
-    buildingNum = buildingId;
-    address = surveyB ? surveyB.address : 'Building #' + buildingId;
+    // Parse building value: "deal-1" or "survey-5"
+    var parts = rawVal.split('-');
+    var buildingType = parts[0]; // 'deal' or 'survey'
+    var buildingId = parseInt(parts.slice(1).join('-'));
+
+    if (buildingType === 'deal') {
+      var dealBuildings = (typeof BUILDINGS !== 'undefined') ? BUILDINGS : [];
+      var dealB = dealBuildings.find(function(b) { return b.id === buildingId; });
+      buildingNum = dealB ? (1000 + dealB.id) : buildingId;
+      address = dealB ? dealB.name : 'Building #' + buildingId;
+    } else {
+      var surveyBuildings = (typeof SURVEY_BUILDINGS !== 'undefined') ? SURVEY_BUILDINGS : [];
+      var surveyB = surveyBuildings.find(function(b) { return b.num === buildingId; });
+      buildingNum = buildingId;
+      address = surveyB ? surveyB.address : 'Building #' + buildingId;
+    }
   }
 
   var docType = _rfpModal._docType || 'RFP';
