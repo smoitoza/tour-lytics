@@ -18143,8 +18143,13 @@ function rfpExportExcel() {
   }
 
   // ===== VERSION COMPARISON TAB (if multiple submissions for this building) =====
+  var vcSelectedComp = window._rfpState.selectedComponent || '';
   var allSubs = rfpSortVersions((window._rfpState.submissions || []).filter(function(s) {
-    return (s.building_address || s.buildingAddress) === address;
+    if ((s.building_address || s.buildingAddress) !== address) return false;
+    if (vcSelectedComp && vcSelectedComp !== '_combined') {
+      return (s.component_label || '') === vcSelectedComp;
+    }
+    return true;
   }));
 
   if (allSubs.length > 1) {
