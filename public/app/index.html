@@ -16369,7 +16369,247 @@ function rfpBuildCombinedView(componentMap, address) {
 
   html += '</tbody></table></div>';
 
+  // Export buttons for Combined Analysis
+  html += '<div style="display:flex;gap:var(--space-2);margin-top:var(--space-3);justify-content:flex-end;">';
+  html += '<button class="rfp-btn-secondary rfp-export-btn" onclick="rfpExportCombinedAnalysis(\'excel\')" style="font-size:var(--text-xs);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export to Excel</button>';
+  html += '<button class="rfp-btn-secondary rfp-drive-btn" onclick="rfpExportCombinedAnalysis(\'drive\')" style="font-size:var(--text-xs);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>Save to Drive</button>';
+  html += '</div>';
+
+  // Store combined data for export
+  window._rfpCombinedData = { components: components, compTerms: compTerms, anyCapex: anyCapex, totalRSF: totalRSF, address: address, npvRate: npvRate };
+
   return html;
+}
+
+// ===== COMBINED ANALYSIS EXPORT =====
+function rfpExportCombinedAnalysis(target) {
+  var cd = window._rfpCombinedData;
+  if (!cd || !cd.components || cd.components.length < 2) { alert('No combined analysis data to export.'); return; }
+
+  var comps = cd.components;
+  var terms = cd.compTerms;
+  var anyCapex = cd.anyCapex;
+  var totalRSF = cd.totalRSF;
+  var address = cd.address || 'Combined';
+  var npvRate = cd.npvRate || (0.08 / 12);
+  var numComps = comps.length;
+
+  // Column layout: A=Metric, B..N=components, last=Combined
+  var combCol = numComps + 1; // 0-indexed column for Combined
+  var wb = XLSX.utils.book_new();
+  var ws = {};
+
+  function colLetter(c) { return String.fromCharCode(65 + c); }
+  function cellRef(r, c) { return colLetter(c) + (r + 1); }
+  function setCell(row, col, val, style) {
+    var ref = cellRef(row, col);
+    var t = typeof val === 'number' ? 'n' : 's';
+    ws[ref] = { v: val, t: t, s: style || {} };
+  }
+  function setFormula(row, col, formula, style) {
+    var ref = cellRef(row, col);
+    ws[ref] = { f: formula, t: 'n', s: style || {} };
+  }
+
+  // Styles
+  var headerStyle = { font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1E293B' } }, alignment: { horizontal: 'center' }, border: { bottom: { style: 'thin', color: { rgb: '94A3B8' } } } };
+  var headerLeftStyle = Object.assign({}, headerStyle, { alignment: { horizontal: 'left' } });
+  var sectionStyle = { font: { bold: true, sz: 10, color: { rgb: '64748B' } }, fill: { fgColor: { rgb: 'F1F5F9' } } };
+  var labelStyle = { font: { sz: 10, color: { rgb: '334155' } }, border: { bottom: { style: 'thin', color: { rgb: 'E2E8F0' } } } };
+  var currStyle = { font: { sz: 10 }, numFmt: '$#,##0', border: { bottom: { style: 'thin', color: { rgb: 'E2E8F0' } } }, alignment: { horizontal: 'right' } };
+  var currDecStyle = Object.assign({}, currStyle, { numFmt: '$#,##0.00' });
+  var numStyle = Object.assign({}, currStyle, { numFmt: '#,##0' });
+  var pctStyle = Object.assign({}, currStyle, { numFmt: '0%' });
+  var plainStyle = Object.assign({}, currStyle, { numFmt: '0' });
+  var combStyle = { font: { sz: 10, bold: true }, numFmt: '$#,##0', border: { bottom: { style: 'thin', color: { rgb: 'E2E8F0' } } }, alignment: { horizontal: 'right' } };
+  var combDecStyle = Object.assign({}, combStyle, { numFmt: '$#,##0.00' });
+  var combNumStyle = Object.assign({}, combStyle, { numFmt: '#,##0' });
+  var combPlainStyle = Object.assign({}, combStyle, { numFmt: '0' });
+  var npvStyle = Object.assign({}, currStyle, { font: { sz: 10, color: { rgb: '2563EB' } } });
+  var combNpvStyle = Object.assign({}, combStyle, { font: { sz: 10, bold: true, color: { rgb: '2563EB' } } });
+  var capexStyle = Object.assign({}, currStyle, { font: { sz: 10, color: { rgb: '7C3AED' } } });
+  var combCapexStyle = Object.assign({}, combStyle, { font: { sz: 10, bold: true, color: { rgb: '7C3AED' } } });
+
+  var r = 0;
+
+  // Title
+  setCell(r, 0, 'Combined Analysis: ' + address, { font: { bold: true, sz: 14, color: { rgb: '1E293B' } } });
+  r += 1;
+  setCell(r, 0, 'Generated ' + new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }), { font: { sz: 10, color: { rgb: '94A3B8' } } });
+  r += 2;
+
+  // Header row
+  setCell(r, 0, 'Metric', headerLeftStyle);
+  comps.forEach(function(c, i) {
+    var vLabel = c.submission.version_label || c.submission.versionLabel || '';
+    setCell(r, i + 1, c.label + (vLabel ? ' - ' + vLabel : ''), headerStyle);
+  });
+  setCell(r, combCol, 'Combined', headerStyle);
+  r++;
+
+  // Helper: sum formula across component columns
+  function sumFormula(row) {
+    var parts = [];
+    for (var i = 1; i <= numComps; i++) parts.push(cellRef(row, i));
+    return parts.join('+');
+  }
+  // Helper: weighted average formula (for per-RSF metrics) using RSF row
+  var rsfRow = -1; // will be set below
+
+  // Helper to add a data row with values and a SUM formula for Combined
+  function addRow(label, values, fmt, combFmt) {
+    setCell(r, 0, label, labelStyle);
+    var valStyle = fmt === 'curr' ? currStyle : fmt === 'curr_dec' ? currDecStyle : fmt === 'num' ? numStyle : fmt === 'pct' ? pctStyle : plainStyle;
+    var cStyle = combFmt === 'curr' ? combStyle : combFmt === 'curr_dec' ? combDecStyle : combFmt === 'num' ? combNumStyle : combFmt === 'plain' ? combPlainStyle : combStyle;
+    values.forEach(function(v, i) {
+      setCell(r, i + 1, v, valStyle);
+    });
+    // Combined = SUM formula (or weighted avg for per-RSF)
+    if (fmt === 'curr_dec' && rsfRow >= 0) {
+      // Weighted average: SUMPRODUCT(values, rsfs) / SUM(rsfs)
+      var numParts = [], denParts = [];
+      for (var i = 1; i <= numComps; i++) {
+        numParts.push(cellRef(r, i) + '*' + cellRef(rsfRow, i));
+        denParts.push(cellRef(rsfRow, i));
+      }
+      setFormula(r, combCol, 'IF((' + denParts.join('+') + ')>0,(' + numParts.join('+') + ')/(' + denParts.join('+') + '),0)', cStyle);
+    } else if (fmt === 'pct' || fmt === 'plain') {
+      setCell(r, combCol, '', { border: { bottom: { style: 'thin', color: { rgb: 'E2E8F0' } } } });
+    } else {
+      setFormula(r, combCol, sumFormula(r), cStyle);
+    }
+    r++;
+  }
+
+  function addSection(label) {
+    for (var i = 0; i <= combCol; i++) setCell(r, i, i === 0 ? label : '', sectionStyle);
+    r++;
+  }
+
+  // === DEAL OVERVIEW ===
+  addSection('Deal Overview');
+  rsfRow = r;
+  addRow('RSF', comps.map(function(c) { return c.summary.rsf || 0; }), 'num', 'num');
+  addRow('Lease Term (mo)', comps.map(function(c) { return c.summary.termMonths || 0; }), 'plain', 'plain');
+  addRow('Base Rent ($/RSF/yr)', terms.map(function(t) { return t.base_rent_rsf || t.baseRent || 0; }), 'curr_dec', 'curr_dec');
+  addRow('Annual Escalation', terms.map(function(t) { return (t.annual_escalation_pct || t.annualEscalation || 0) / 100; }), 'pct', 'plain');
+  addRow('Free Rent (mo)', terms.map(function(t) { return t.free_rent_months || t.freeRent || 0; }), 'plain', 'plain');
+
+  // === RENT ANALYSIS ===
+  addSection('Rent Analysis');
+  addRow('Effective Rent/RSF (after TI credit)', comps.map(function(c) { return c.summary.effectiveRentRSF || 0; }), 'curr_dec', 'curr_dec');
+  addRow('SL Monthly Rent (after TI credit)', comps.map(function(c) { return c.summary.straightLineMonthlyRent || 0; }), 'curr', 'curr');
+  // SL Annual = SL Monthly * 12 (formula)
+  setCell(r, 0, 'SL Annual Rent (after TI credit)', labelStyle);
+  comps.forEach(function(c, i) {
+    setFormula(r, i + 1, cellRef(r - 1, i + 1) + '*12', currStyle);
+  });
+  setFormula(r, combCol, sumFormula(r), combStyle);
+  r++;
+  addRow('SL Monthly All-in (rent + OpEx + parking, after TI credit)', comps.map(function(c) { return Math.round((c.summary.straightLineAnnualExpense || 0) / 12); }), 'curr', 'curr');
+  // SL Annual All-in = monthly * 12 (formula)
+  setCell(r, 0, 'SL Annual All-in (rent + OpEx + parking, after TI credit)', labelStyle);
+  comps.forEach(function(c, i) {
+    setFormula(r, i + 1, cellRef(r - 1, i + 1) + '*12', currStyle);
+  });
+  setFormula(r, combCol, sumFormula(r), combStyle);
+  r++;
+  addRow('Total All-in Cost (full lease term)', comps.map(function(c) { return c.summary.totalAllInCost || 0; }), 'curr', 'curr');
+
+  // === CONCESSIONS ===
+  addSection('Concessions');
+  addRow('TI Allowance', comps.map(function(c) { return c.summary.tiValue || 0; }), 'curr', 'curr');
+  addRow('Free Rent Value', comps.map(function(c) { return c.summary.freeRentValue || 0; }), 'curr', 'curr');
+  // Total Concessions = TI + Free Rent (formula)
+  setCell(r, 0, 'Total Concessions', labelStyle);
+  comps.forEach(function(c, i) {
+    setFormula(r, i + 1, cellRef(r - 2, i + 1) + '+' + cellRef(r - 1, i + 1), currStyle);
+  });
+  setFormula(r, combCol, sumFormula(r), combStyle);
+  r++;
+
+  // === CAPEX ===
+  if (anyCapex) {
+    addSection('Capital Expenditure (CAPEX)');
+    var capexTotalRow = r;
+    addRow('Total CAPEX', comps.map(function(c) { return c.capex.grandTotal || 0; }), 'curr', 'curr');
+    addRow('Construction / Build-Out', comps.map(function(c) { return c.capex.construction || 0; }), 'curr', 'curr');
+    addRow('FF&E', comps.map(function(c) { return c.capex.ffe || 0; }), 'curr', 'curr');
+    addRow('IT / Technology', comps.map(function(c) { return c.capex.it || 0; }), 'curr', 'curr');
+    // CAPEX/RSF = Total CAPEX / RSF (formula)
+    setCell(r, 0, 'CAPEX per RSF', labelStyle);
+    comps.forEach(function(c, i) {
+      setFormula(r, i + 1, 'IF(' + cellRef(rsfRow, i + 1) + '>0,' + cellRef(capexTotalRow, i + 1) + '/' + cellRef(rsfRow, i + 1) + ',0)', currDecStyle);
+    });
+    setFormula(r, combCol, 'IF(' + cellRef(rsfRow, combCol) + '>0,' + cellRef(capexTotalRow, combCol) + '/' + cellRef(rsfRow, combCol) + ',0)', combDecStyle);
+    r++;
+    var lhiMonthlyRow = r;
+    addRow('Monthly LHI Depreciation', comps.map(function(c) { return Math.round(c.capex.monthlyDepreciation || 0); }), 'curr', 'curr');
+    // Annual LHI = Monthly * 12 (formula)
+    setCell(r, 0, 'Annual LHI Depreciation', labelStyle);
+    comps.forEach(function(c, i) {
+      setFormula(r, i + 1, cellRef(r - 1, i + 1) + '*12', currStyle);
+    });
+    setFormula(r, combCol, sumFormula(r), combStyle);
+    r++;
+
+    // === SL ALL-IN + LHI ===
+    addSection('Straight-Line All-in (incl. TI + LHI)');
+    // SL Monthly All-in + LHI: find the SL Monthly All-in row by going back
+    // We stored values, so compute and use formulas referencing the SL Monthly All-in row
+    var slMonthlyAllInVals = comps.map(function(c) {
+      var slAllIn = (c.summary.straightLineAnnualExpense || 0) / 12;
+      var parkMo = (c.totals.totalParking || 0) / (c.summary.termMonths || 1);
+      return Math.round(slAllIn + parkMo + (c.capex.monthlyDepreciation || 0));
+    });
+    addRow('SL Monthly All-in + LHI', slMonthlyAllInVals, 'curr', 'curr');
+    // SL Annual All-in + LHI = monthly * 12 (formula)
+    setCell(r, 0, 'SL Annual All-in + LHI', labelStyle);
+    comps.forEach(function(c, i) {
+      setFormula(r, i + 1, cellRef(r - 1, i + 1) + '*12', currStyle);
+    });
+    setFormula(r, combCol, sumFormula(r), combStyle);
+    r++;
+  }
+
+  // === NPV ===
+  addSection('Present Value Analysis');
+  var npvValues = comps.map(function(c) {
+    var npv = 0;
+    for (var i = 0; i < c.cashFlow.length; i++) {
+      npv += (c.cashFlow[i].totalMonthlyCost || 0) / Math.pow(1 + npvRate, i + 1);
+    }
+    return Math.round(npv);
+  });
+  setCell(r, 0, 'NPV @ 8% (lease obligation)', labelStyle);
+  npvValues.forEach(function(v, i) { setCell(r, i + 1, v, npvStyle); });
+  setFormula(r, combCol, sumFormula(r), combNpvStyle);
+  r++;
+
+  if (anyCapex) {
+    // Total Commitment = Total All-in + CAPEX (formula referencing earlier rows - use values for simplicity)
+    addRow('Total Commitment (All-in + CAPEX)', comps.map(function(c) { return Math.round((c.summary.totalAllInCost || 0) + (c.capex.grandTotal || 0)); }), 'curr', 'curr');
+  }
+
+  // Set sheet range and column widths
+  ws['!ref'] = 'A1:' + cellRef(r, combCol);
+  var cols = [{ wch: 48 }];
+  for (var i = 0; i < numComps; i++) cols.push({ wch: 22 });
+  cols.push({ wch: 22 });
+  ws['!cols'] = cols;
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Combined Analysis');
+  rfpAddBrandingSheet(wb);
+
+  var safeAddr = address.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-').substring(0, 40);
+  var dateStr = new Date().toISOString().split('T')[0];
+  var fileName = 'Combined-Analysis-' + safeAddr + '-' + dateStr + '.xlsx';
+
+  if (target === 'drive') {
+    rfpExportComparisonToDrive(wb, fileName);
+  } else {
+    XLSX.writeFile(wb, fileName);
+  }
 }
 
 // ===== VERSION SORT HELPER =====
