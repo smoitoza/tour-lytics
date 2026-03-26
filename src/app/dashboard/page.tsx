@@ -842,8 +842,10 @@ export default function DashboardPage() {
           const myProjects = projects.filter(p => p.user_role === 'owner' || p.owner_id === user?.email || p.created_by === user?.email)
           const sharedProjects = projects.filter(p => p.user_role !== 'owner' && p.owner_id !== user?.email && p.created_by !== user?.email)
           // Fallback: if no role data, treat all as "my projects"
-          const effectiveMy = projects.some(p => p.user_role) ? myProjects : projects
-          const effectiveShared = projects.some(p => p.user_role) ? sharedProjects : []
+          const statusOrder: Record<string, number> = { active: 0, on_hold: 1, complete: 2 }
+          const sortByStatus = (a: Project, b: Project) => (statusOrder[a.status] ?? 1) - (statusOrder[b.status] ?? 1)
+          const effectiveMy = (projects.some(p => p.user_role) ? myProjects : projects).sort(sortByStatus)
+          const effectiveShared = (projects.some(p => p.user_role) ? sharedProjects : []).sort(sortByStatus)
 
           // Build client list from all projects that have a client_name
           const clientMap = new Map<string, { name: string; projectCount: number; totalBuildings: number; markets: string[] }>()
