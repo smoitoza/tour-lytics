@@ -19127,8 +19127,19 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
     summary.npv = compNpv;
     summary.npvPerRSF = compNpvPerRSF;
 
-    buildingData.push({ address: address, summary: summary, terms: terms, internalOpex: totalInternalOpex, allInMonthly: allInMonthly, allInAnnual: allInAnnual });
+    // Load CAPEX for this building
+    var termMo = summary.termMonths || 0;
+    var capex = (typeof getCapexForBuilding === 'function') ? getCapexForBuilding(address, termMo) : { hasCapex: false };
+    // Compute SL Monthly All-in + LHI
+    var cfTotals = (latest.analysis && latest.analysis.cash_flow && latest.analysis.cash_flow.totals) ? latest.analysis.cash_flow.totals : {};
+    var opexMo = (cfTotals.totalOpex || 0) / (termMo || 1);
+    var parkMo = (cfTotals.totalParking || 0) / (termMo || 1);
+    var slMonthlyAllInLHI = slMonthly + opexMo + parkMo + (capex.hasCapex ? (capex.monthlyDepreciation || 0) : 0);
+
+    buildingData.push({ address: address, summary: summary, terms: terms, internalOpex: totalInternalOpex, allInMonthly: allInMonthly, allInAnnual: allInAnnual, capex: capex, slMonthlyAllInLHI: Math.round(slMonthlyAllInLHI) });
   });
+
+  var hasAnyCapex = buildingData.some(function(d) { return d.capex && d.capex.hasCapex; });
 
   // Metrics to compare - [label, getter, lowerIsBetter]
   var dealMetrics = [
@@ -19145,6 +19156,16 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
     ['NPV @ 8%', function(d) { return d.summary.npv; }, true, 'curr'],
     ['NPV per RSF', function(d) { return d.summary.npvPerRSF; }, true, 'curr']
   ];
+
+  // Add CAPEX rows if any building has CAPEX
+  if (hasAnyCapex) {
+    dealMetrics.push(['Total CAPEX', function(d) { return (d.capex && d.capex.hasCapex) ? d.capex.grandTotal : 0; }, true, 'curr']);
+    dealMetrics.push(['CAPEX per RSF', function(d) { var rsf = d.summary.rsf || 0; return (d.capex && d.capex.hasCapex && rsf > 0) ? Math.round(d.capex.grandTotal / rsf * 100) / 100 : 0; }, true, 'curr']);
+    dealMetrics.push(['Monthly LHI Depreciation', function(d) { return (d.capex && d.capex.hasCapex) ? Math.round(d.capex.monthlyDepreciation || 0) : 0; }, true, 'curr']);
+    dealMetrics.push(['SL Monthly All-in + LHI', function(d) { return d.slMonthlyAllInLHI || 0; }, true, 'curr']);
+    dealMetrics.push(['SL Annual All-in + LHI', function(d) { return (d.slMonthlyAllInLHI || 0) * 12; }, true, 'curr']);
+    dealMetrics.push(['Total Commitment (All-in + CAPEX)', function(d) { return Math.round((d.summary.totalAllInCost || 0) + ((d.capex && d.capex.hasCapex) ? (d.capex.grandTotal || 0) : 0)); }, true, 'curr']);
+  }
 
   var assumptionMetrics = [
     ['Internal OpEx/mo', function(d) { return d.internalOpex; }, true],
