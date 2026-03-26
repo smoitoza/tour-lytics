@@ -50,6 +50,7 @@ export async function POST(req: Request) {
     docSource, doc_source,
     submittedBy, submitted_by,
     dealTerms, terms,
+    componentLabel, component_label,
     status = 'confirmed',
   } = body
 
@@ -137,6 +138,7 @@ export async function POST(req: Request) {
       doc_name: finalDocName,
       doc_source: finalDocSource,
       submitted_by: finalSubmittedBy,
+      component_label: componentLabel || component_label || null,
       deal_terms: finalDealTerms,
       analysis,
       status,
