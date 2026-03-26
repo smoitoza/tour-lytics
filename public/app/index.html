@@ -16168,8 +16168,13 @@ function rfpBuildCombinedView(componentMap, address) {
   Object.keys(componentMap).forEach(function(key) {
     if (!key) return; // skip unlabeled
     var subs = componentMap[key];
-    // Use the latest (last) submission for each component
-    var latest = subs[subs.length - 1];
+    // Use the most recently created submission for each component
+    var latest = subs.reduce(function(best, s) {
+      if (!best) return s;
+      var bestDate = new Date(best.created_at || best.createdAt || 0);
+      var sDate = new Date(s.created_at || s.createdAt || 0);
+      return sDate > bestDate ? s : best;
+    }, null);
     if (latest && latest.analysis && latest.analysis.summary) {
       components.push({
         label: key,
@@ -16218,7 +16223,9 @@ function rfpBuildCombinedView(componentMap, address) {
   html += '<div style="display:grid;grid-template-columns:repeat(' + components.length + ', 1fr);gap:var(--space-3);margin:var(--space-4) 0;">';
   components.forEach(function(c) {
     html += '<div style="padding:var(--space-4);border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-bg);">';
-    html += '<div style="font-weight:700;font-size:var(--text-sm);margin-bottom:var(--space-2);display:flex;align-items:center;gap:var(--space-2);"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#7c3aed;"></span>' + esc(c.label) + '</div>';
+    var vLabel = c.submission.version_label || c.submission.versionLabel || '';
+    html += '<div style="font-weight:700;font-size:var(--text-sm);margin-bottom:var(--space-1);display:flex;align-items:center;gap:var(--space-2);"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#7c3aed;"></span>' + esc(c.label) + '</div>';
+    if (vLabel) { html += '<div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-2);padding-left:16px;">Using: ' + esc(vLabel) + '</div>'; }
     html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2);font-size:var(--text-xs);">';
     html += '<div><div style="font-weight:600;color:var(--color-text);">' + rfpFmtNum(c.summary.rsf || 0) + '</div><div style="color:var(--color-text-muted);">RSF</div></div>';
     html += '<div><div style="font-weight:600;color:var(--color-text);">' + (c.summary.termMonths || '--') + ' mo</div><div style="color:var(--color-text-muted);">Term</div></div>';
@@ -16235,7 +16242,8 @@ function rfpBuildCombinedView(componentMap, address) {
   html += '<div class="fin-table-wrap"><table class="fin-table"><thead><tr>';
   html += '<th class="cell-label">Metric</th>';
   components.forEach(function(c) {
-    html += '<th style="text-align:right;min-width:140px;">' + esc(c.label) + '</th>';
+    var colVersion = c.submission.version_label || c.submission.versionLabel || '';
+    html += '<th style="text-align:right;min-width:140px;">' + esc(c.label) + (colVersion ? '<br><span style="font-weight:400;font-size:var(--text-xs);color:var(--color-text-muted);">' + esc(colVersion) + '</span>' : '') + '</th>';
   });
   html += '<th style="text-align:right;min-width:140px;font-weight:700;">Combined</th>';
   html += '</tr></thead><tbody>';
