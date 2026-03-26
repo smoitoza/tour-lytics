@@ -15968,14 +15968,41 @@ function rfpBuildDetailHtml(subs) {
   // Sort by custom sort_order, then by created_at
   var sorted = rfpSortVersions(subs);
 
+  // Detect multi-component deal (multiple distinct component_labels)
+  var componentMap = {};
+  sorted.forEach(function(s) {
+    var label = s.component_label || '';
+    if (!componentMap[label]) componentMap[label] = [];
+    componentMap[label].push(s);
+  });
+  var componentKeys = Object.keys(componentMap);
+  var hasMultipleComponents = componentKeys.length > 1 || (componentKeys.length === 1 && componentKeys[0] !== '');
+  var isMultiComponent = componentKeys.filter(function(k) { return k !== ''; }).length > 1;
+
+  // Determine selected component
+  var selectedComponent = window._rfpState.selectedComponent || '';
+  if (selectedComponent === '_combined') {
+    // Combined view - handled separately below
+  } else if (isMultiComponent && !componentMap[selectedComponent]) {
+    // Default to first named component
+    selectedComponent = componentKeys.find(function(k) { return k !== ''; }) || componentKeys[0];
+    window._rfpState.selectedComponent = selectedComponent;
+  }
+
+  // Filter submissions to selected component (or all for combined/single)
+  var filteredSubs = sorted;
+  if (isMultiComponent && selectedComponent !== '_combined') {
+    filteredSubs = componentMap[selectedComponent] || sorted;
+  }
+
   var selectedId = window._rfpState.selectedSubmission;
   var selected = null;
   if (selectedId) {
-    selected = sorted.find(function(s) { return s.id === selectedId; });
+    selected = filteredSubs.find(function(s) { return s.id === selectedId; });
   }
+  if (!selected) selected = filteredSubs[0];
   if (!selected) selected = sorted[0];
   if (!selected) return '';
-  // Persist the resolved selection so assumptions/save can find it
   window._rfpState.selectedSubmission = selected.id;
 
   var address = selected.building_address || selected.buildingAddress || '';
@@ -16001,22 +16028,56 @@ function rfpBuildDetailHtml(subs) {
       '</div>' +
     '</div>';
 
-  // Version chips if multiple
-  if (sorted.length > 1) {
+  // ===== COMPONENT TABS (only if multi-component deal) =====
+  if (isMultiComponent) {
+    html += '<div style="display:flex;align-items:center;gap:var(--space-2);margin:var(--space-3) 0;padding:8px 12px;background:var(--color-surface-2);border-radius:var(--radius-lg);border:1px solid var(--color-border);">';
+    html += '<span style="font-size:var(--text-xs);font-weight:600;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.04em;margin-right:var(--space-2);">Components</span>';
+    componentKeys.forEach(function(key) {
+      if (!key) return; // skip unlabeled
+      var count = componentMap[key].length;
+      var isActive = selectedComponent === key;
+      html += '<button onclick="rfpSelectComponent(\'' + key.replace(/'/g, "\\\'" ) + '\')" style="padding:6px 14px;font-size:var(--text-xs);font-weight:600;border-radius:var(--radius-md);cursor:pointer;transition:all 0.15s;' +
+        (isActive ? 'background:#7c3aed;color:white;border:1px solid #7c3aed;' : 'background:var(--color-bg);color:var(--color-text);border:1px solid var(--color-border);') +
+        '">' + esc(key) + ' <span style="opacity:0.7;">(' + count + ')</span></button>';
+    });
+    // Unlabeled submissions go into a "General" group if they exist
+    if (componentMap[''] && componentMap[''].length > 0) {
+      var genActive = selectedComponent === '';
+      html += '<button onclick="rfpSelectComponent(\'\')" style="padding:6px 14px;font-size:var(--text-xs);font-weight:600;border-radius:var(--radius-md);cursor:pointer;' +
+        (genActive ? 'background:#64748b;color:white;border:1px solid #64748b;' : 'background:var(--color-bg);color:var(--color-text);border:1px solid var(--color-border);') +
+        '">General <span style="opacity:0.7;">(' + componentMap[''].length + ')</span></button>';
+    }
+    // Combined view button
+    var combActive = selectedComponent === '_combined';
+    html += '<button onclick="rfpSelectComponent(\'_combined\')" style="margin-left:auto;padding:6px 14px;font-size:var(--text-xs);font-weight:600;border-radius:var(--radius-md);cursor:pointer;' +
+      (combActive ? 'background:#0f172a;color:white;border:1px solid #0f172a;' : 'background:var(--color-bg);color:var(--color-text);border:1px solid var(--color-border);') +
+      '">' +
+      '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:4px;"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>' +
+      'Combined Analysis</button>';
+    html += '</div>';
+  }
+
+  // ===== COMBINED VIEW =====
+  if (isMultiComponent && selectedComponent === '_combined') {
+    html += rfpBuildCombinedView(componentMap, address);
+    html += '</div>';
+    return html;
+  }
+
+  // ===== VERSION CHIPS (filtered to selected component) =====
+  if (filteredSubs.length > 1) {
     html += '<div class="rfp-version-bar"><span class="rfp-version-bar-label">Versions</span>';
-    sorted.forEach(function(s, idx) {
+    filteredSubs.forEach(function(s, idx) {
       var isActive = s.id === selected.id;
       var defaultLabel = (s.doc_type || s.docType || 'RFP') + ' #' + (idx + 1);
       var label = s.version_label || defaultLabel;
       html += '<span class="rfp-version-wrap" draggable="true" ondragstart="rfpStartDrag(event, \'' + s.id + '\')" ondragover="rfpDragOver(event)" ondrop="rfpDrop(event, \'' + s.id + '\')" ondragend="rfpDragEnd(event)">';
-      // Left arrow (move earlier in sequence)
-      if (sorted.length > 1 && idx > 0) {
+      if (filteredSubs.length > 1 && idx > 0) {
         html += '<button class="rfp-version-arrow" onclick="event.stopPropagation(); rfpMoveVersion(\'' + s.id + '\', -1)" title="Move left">&lsaquo;</button>';
       }
       html += '<button class="rfp-version-chip' + (isActive ? ' active' : '') + '" onclick="rfpSelectSubmission(\'' + s.id + '\')">' + esc(label) + '</button>';
       html += '<button class="rfp-version-edit" onclick="event.stopPropagation(); rfpRenameVersion(\'' + s.id + '\', this.previousElementSibling, \'' + defaultLabel.replace(/'/g, '') + '\')" title="Rename"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>';
-      // Right arrow (move later in sequence)
-      if (sorted.length > 1 && idx < sorted.length - 1) {
+      if (filteredSubs.length > 1 && idx < filteredSubs.length - 1) {
         html += '<button class="rfp-version-arrow" onclick="event.stopPropagation(); rfpMoveVersion(\'' + s.id + '\', 1)" title="Move right">&rsaquo;</button>';
       }
       html += '</span>';
@@ -16080,6 +16141,151 @@ function rfpBuildDetailHtml(subs) {
 function rfpSelectSubmission(id) {
   window._rfpState.selectedSubmission = id;
   rfpRenderDashboard(window._rfpState.submissions);
+}
+
+function rfpSelectComponent(componentLabel) {
+  window._rfpState.selectedComponent = componentLabel;
+  // Clear submission selection so it picks the first in the new component
+  if (componentLabel === '_combined') {
+    // Keep current selection for header display
+  } else {
+    window._rfpState.selectedSubmission = null;
+  }
+  rfpRenderDashboard(window._rfpState.submissions);
+}
+
+// ===== COMBINED MULTI-COMPONENT VIEW =====
+function rfpBuildCombinedView(componentMap, address) {
+  var components = [];
+  Object.keys(componentMap).forEach(function(key) {
+    if (!key) return; // skip unlabeled
+    var subs = componentMap[key];
+    // Use the latest (last) submission for each component
+    var latest = subs[subs.length - 1];
+    if (latest && latest.analysis && latest.analysis.summary) {
+      components.push({
+        label: key,
+        submission: latest,
+        summary: latest.analysis.summary,
+        cashFlow: (latest.analysis.cash_flow && latest.analysis.cash_flow.monthly) ? latest.analysis.cash_flow.monthly : [],
+        totals: (latest.analysis.cash_flow && latest.analysis.cash_flow.totals) ? latest.analysis.cash_flow.totals : {}
+      });
+    }
+  });
+
+  if (components.length < 2) {
+    return '<div style="padding:var(--space-8);text-align:center;color:var(--color-text-muted)">Need at least 2 labeled components with analysis data for a combined view.</div>';
+  }
+
+  var html = '';
+
+  // Combined summary metrics
+  var totalRSF = 0, totalAllIn = 0, totalConcessions = 0;
+  components.forEach(function(c) {
+    totalRSF += c.summary.rsf || 0;
+    totalAllIn += c.summary.totalAllInCost || 0;
+    totalConcessions += c.summary.totalConcessions || 0;
+  });
+
+  // Compute combined NPV from all cash flows
+  var combinedNPV = 0;
+  var npvRate = 0.08 / 12;
+  components.forEach(function(c) {
+    for (var i = 0; i < c.cashFlow.length; i++) {
+      combinedNPV += (c.cashFlow[i].totalMonthlyCost || 0) / Math.pow(1 + npvRate, i + 1);
+    }
+  });
+  combinedNPV = Math.round(combinedNPV);
+
+  html += '<div style="font-weight:600;font-size:var(--text-sm);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);margin:var(--space-4) 0 var(--space-2)">Combined Deal Summary</div>';
+  html += '<div class="rfp-summary-metrics">';
+  html += '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtNum(totalRSF) + '</div><div class="rfp-metric-label">Combined RSF</div></div>';
+  html += '<div class="rfp-metric"><div class="rfp-metric-value">' + components.length + '</div><div class="rfp-metric-label">Components</div></div>';
+  html += '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(totalAllIn) + '</div><div class="rfp-metric-label">Total All-in Cost</div></div>';
+  html += '<div class="rfp-metric"><div class="rfp-metric-value" style="color:#2563eb">' + rfpFmtCurrencyPlain(combinedNPV) + '</div><div class="rfp-metric-label">Combined NPV @ 8%</div></div>';
+  html += '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(totalConcessions) + '</div><div class="rfp-metric-label">Total Concessions</div></div>';
+  html += '</div>';
+
+  // Per-component cards
+  html += '<div style="display:grid;grid-template-columns:repeat(' + components.length + ', 1fr);gap:var(--space-3);margin:var(--space-4) 0;">';
+  components.forEach(function(c) {
+    html += '<div style="padding:var(--space-4);border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-bg);">';
+    html += '<div style="font-weight:700;font-size:var(--text-sm);margin-bottom:var(--space-2);display:flex;align-items:center;gap:var(--space-2);"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#7c3aed;"></span>' + esc(c.label) + '</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2);font-size:var(--text-xs);">';
+    html += '<div><div style="font-weight:600;color:var(--color-text);">' + rfpFmtNum(c.summary.rsf || 0) + '</div><div style="color:var(--color-text-muted);">RSF</div></div>';
+    html += '<div><div style="font-weight:600;color:var(--color-text);">' + (c.summary.termMonths || '--') + ' mo</div><div style="color:var(--color-text-muted);">Term</div></div>';
+    html += '<div><div style="font-weight:600;color:var(--color-text);">' + rfpFmtCurrencyDecimals(c.summary.effectiveRentRSF) + '</div><div style="color:var(--color-text-muted);">Eff. Rent/RSF</div></div>';
+    html += '<div><div style="font-weight:600;color:var(--color-text);">' + rfpFmtCurrencyPlain(c.summary.totalAllInCost) + '</div><div style="color:var(--color-text-muted);">Total All-in</div></div>';
+    html += '<div><div style="font-weight:600;color:var(--color-text);">' + rfpFmtCurrencyPlain(c.summary.straightLineMonthlyRent) + '</div><div style="color:var(--color-text-muted);">SL Monthly</div></div>';
+    html += '<div><div style="font-weight:600;color:var(--color-text);">' + rfpFmtCurrencyPlain(c.summary.totalConcessions) + '</div><div style="color:var(--color-text-muted);">Concessions</div></div>';
+    html += '</div></div>';
+  });
+  html += '</div>';
+
+  // Combined comparison table
+  html += '<div style="font-weight:600;font-size:var(--text-sm);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);margin:var(--space-4) 0 var(--space-2)">Component Comparison</div>';
+  html += '<div class="fin-table-wrap"><table class="fin-table"><thead><tr>';
+  html += '<th class="cell-label">Metric</th>';
+  components.forEach(function(c) {
+    html += '<th style="text-align:right;min-width:140px;">' + esc(c.label) + '</th>';
+  });
+  html += '<th style="text-align:right;min-width:140px;font-weight:700;">Combined</th>';
+  html += '</tr></thead><tbody>';
+
+  var compMetrics = [
+    { label: 'RSF', key: 'rsf', fmt: 'num' },
+    { label: 'Lease Term (mo)', key: 'termMonths', fmt: 'plain' },
+    { label: 'Effective Rent/RSF', key: 'effectiveRentRSF', fmt: 'curr_dec' },
+    { label: 'SL Monthly Rent', key: 'straightLineMonthlyRent', fmt: 'curr' },
+    { label: 'SL Annual Expense', key: 'straightLineAnnualExpense', fmt: 'curr' },
+    { label: 'Total All-in Cost', key: 'totalAllInCost', fmt: 'curr' },
+    { label: 'Free Rent Value', key: 'freeRentValue', fmt: 'curr' },
+    { label: 'TI Value', key: 'tiValue', fmt: 'curr' },
+    { label: 'Total Concessions', key: 'totalConcessions', fmt: 'curr' },
+  ];
+
+  compMetrics.forEach(function(m) {
+    html += '<tr><td class="cell-label">' + m.label + '</td>';
+    var combinedVal = 0;
+    components.forEach(function(c) {
+      var val = c.summary[m.key] || 0;
+      combinedVal += val;
+      if (m.fmt === 'curr') html += '<td class="cell-currency">' + rfpFmtCurrency(val) + '</td>';
+      else if (m.fmt === 'curr_dec') html += '<td class="cell-currency">' + rfpFmtCurrencyDecimals(val) + '</td>';
+      else if (m.fmt === 'num') html += '<td class="cell-currency">' + rfpFmtNum(val) + '</td>';
+      else html += '<td class="cell-currency">' + (val || '--') + '</td>';
+    });
+    // Combined column
+    if (m.key === 'effectiveRentRSF') {
+      // Weighted average for per-RSF metrics
+      var weightedSum = 0;
+      components.forEach(function(c) { weightedSum += (c.summary[m.key] || 0) * (c.summary.rsf || 0); });
+      combinedVal = totalRSF > 0 ? Math.round(weightedSum / totalRSF * 100) / 100 : 0;
+      html += '<td class="cell-currency" style="font-weight:700;">' + rfpFmtCurrencyDecimals(combinedVal) + '</td>';
+    } else if (m.key === 'termMonths') {
+      html += '<td class="cell-currency" style="font-weight:700;">--</td>';
+    } else if (m.fmt === 'curr') {
+      html += '<td class="cell-currency" style="font-weight:700;">' + rfpFmtCurrency(combinedVal) + '</td>';
+    } else {
+      html += '<td class="cell-currency" style="font-weight:700;">' + rfpFmtNum(combinedVal) + '</td>';
+    }
+    html += '</tr>';
+  });
+
+  // NPV row
+  html += '<tr style="border-top:2px solid var(--color-border);"><td class="cell-label" style="font-weight:600;">NPV @ 8%</td>';
+  components.forEach(function(c) {
+    var compNPV = 0;
+    for (var i = 0; i < c.cashFlow.length; i++) {
+      compNPV += (c.cashFlow[i].totalMonthlyCost || 0) / Math.pow(1 + npvRate, i + 1);
+    }
+    html += '<td class="cell-currency" style="color:#2563eb;">' + rfpFmtCurrency(Math.round(compNPV)) + '</td>';
+  });
+  html += '<td class="cell-currency" style="font-weight:700;color:#2563eb;">' + rfpFmtCurrency(combinedNPV) + '</td></tr>';
+
+  html += '</tbody></table></div>';
+
+  return html;
 }
 
 // ===== VERSION SORT HELPER =====
