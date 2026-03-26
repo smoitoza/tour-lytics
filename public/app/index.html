@@ -16322,9 +16322,17 @@ function rfpBuildCombinedView(componentMap, address) {
     compRow('Annual LHI Depreciation', components.map(function(c) { return c.capex.annualDepreciation || 0; }), 'curr');
 
     // SL with LHI
-    sectionRow('Straight-Line (incl. TI + LHI)');
-    compRow('SL Monthly (rent after TI credit + LHI dep.)', components.map(function(c) { return Math.round((c.summary.straightLineMonthlyRent || 0) + (c.capex.monthlyDepreciation || 0)); }), 'curr');
-    compRow('SL Annual (rent after TI credit + LHI dep.)', components.map(function(c) { return Math.round(((c.summary.straightLineMonthlyRent || 0) + (c.capex.monthlyDepreciation || 0)) * 12); }), 'curr');
+    sectionRow('Straight-Line All-in (incl. TI + LHI)');
+    compRow('SL Monthly All-in + LHI', components.map(function(c) {
+      var slAllInMonthly = (c.summary.straightLineAnnualExpense || 0) / 12;
+      var parkingMonthly = (c.totals.totalParking || 0) / (c.summary.termMonths || 1);
+      return Math.round(slAllInMonthly + parkingMonthly + (c.capex.monthlyDepreciation || 0));
+    }), 'curr');
+    compRow('SL Annual All-in + LHI', components.map(function(c) {
+      var slAllInMonthly = (c.summary.straightLineAnnualExpense || 0) / 12;
+      var parkingMonthly = (c.totals.totalParking || 0) / (c.summary.termMonths || 1);
+      return Math.round((slAllInMonthly + parkingMonthly + (c.capex.monthlyDepreciation || 0)) * 12);
+    }), 'curr');
   }
 
   // NPV
@@ -16594,7 +16602,7 @@ function rfpShowVersionComparison(buildingAddress) {
     { key: 'capexTotal', label: 'Total CAPEX', fmt: 'currency', computed: 'capexTotal' },
     { key: 'capexPerRSF', label: 'CAPEX per RSF', fmt: 'currency', computed: 'capexPerRSF' },
     { key: 'lhiMonthlyDep', label: 'Monthly LHI Dep.', fmt: 'currency', computed: 'lhiMonthlyDep' },
-    { key: 'slMonthlyWithLHI', label: 'SL Monthly (incl. LHI)', fmt: 'currency', computed: 'slMonthlyWithLHI' },
+    { key: 'slMonthlyWithLHI', label: 'SL Monthly All-in + LHI', fmt: 'currency', computed: 'slMonthlyWithLHI' },
     { key: 'totalAllInWithCapex', label: 'Total All-in + CAPEX', fmt: 'currency', computed: 'totalAllInWithCapex' },
   ];
 
@@ -16615,7 +16623,11 @@ function rfpShowVersionComparison(buildingAddress) {
       if (field.computed === 'lhiMonthlyDep') return cx.monthlyDepreciation;
       if (field.computed === 'slMonthlyWithLHI') {
         var slM = (sub.analysis && sub.analysis.summary) ? (sub.analysis.summary.straightLineMonthlyRent || 0) : 0;
-        return Math.round(slM + cx.monthlyDepreciation);
+        var cfT = (sub.analysis && sub.analysis.cash_flow && sub.analysis.cash_flow.totals) ? sub.analysis.cash_flow.totals : {};
+        var tMo = (sub.analysis && sub.analysis.summary) ? (sub.analysis.summary.termMonths || 1) : 1;
+        var opM = (cfT.totalOpex || 0) / tMo;
+        var pkM = (cfT.totalParking || 0) / tMo;
+        return Math.round(slM + opM + pkM + cx.monthlyDepreciation);
       }
       if (field.computed === 'totalAllInWithCapex') {
         var allIn = (sub.analysis && sub.analysis.summary) ? (sub.analysis.summary.totalAllInCost || 0) : 0;
@@ -16951,7 +16963,11 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
   // Summary metrics below table
   var slMonthlyRent = totals.straightLineMonthlyRent || 0;
   var slAnnualRent = totals.straightLineAnnualRent || 0;
-  var slMonthlyWithLHI = slMonthlyRent + (capex.hasCapex ? capex.monthlyDepreciation : 0);
+  var termMo_sl = (analysis.summary && analysis.summary.termMonths) ? analysis.summary.termMonths : 1;
+  var opexMonthly_sl = (totals.totalOpex || 0) / termMo_sl;
+  var parkingMonthly_sl = (totals.totalParking || 0) / termMo_sl;
+  var slMonthlyAllIn = slMonthlyRent + opexMonthly_sl + parkingMonthly_sl;
+  var slMonthlyWithLHI = slMonthlyAllIn + (capex.hasCapex ? capex.monthlyDepreciation : 0);
   var slAnnualWithLHI = slMonthlyWithLHI * 12;
   var rsf_sl = (analysis.summary && analysis.summary.rsf) ? analysis.summary.rsf : 0;
   var slPerRSFWithLHI = rsf_sl > 0 ? Math.round(slAnnualWithLHI / rsf_sl * 100) / 100 : 0;
@@ -16967,8 +16983,8 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
 
   html +=
     '<div class="rfp-summary-metrics" style="margin-top:var(--space-4)">' +
-      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(slMonthlyWithLHI) + '</div><div class="rfp-metric-label">SL Monthly (after TI credit + LHI)</div></div>' +
-      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(slAnnualWithLHI) + '</div><div class="rfp-metric-label">SL Annual (after TI credit + LHI)</div></div>' +
+      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(slMonthlyWithLHI) + '</div><div class="rfp-metric-label">SL Monthly All-in + LHI</div></div>' +
+      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(slAnnualWithLHI) + '</div><div class="rfp-metric-label">SL Annual All-in + LHI</div></div>' +
       tiNote +
       lhiNote +
       '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyDecimals(totals.effectiveRentRSF) + '</div><div class="rfp-metric-label">Effective Rent/RSF</div></div>' +
@@ -17513,11 +17529,11 @@ function rfpExportExcel() {
       setFormula(slWS, smRow, 1, 'IF(' + DT + dtRefs.rsf + '>0,' + capexTotalRef + '/' + DT + dtRefs.rsf + ',0)', metricValDecStyle);
       smRow++;
 
-      setCell(slWS, smRow, 0, 'SL Monthly (after TI credit + LHI)', metricLabelStyle);
-      setFormula(slWS, smRow, 1, slMonthlyRentRef + '+' + lhiMonthlyRef, Object.assign({}, metricValStyle, { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: '1E293B' } } }));
+      setCell(slWS, smRow, 0, 'SL Monthly All-in + LHI', metricLabelStyle);
+      setFormula(slWS, smRow, 1, slMonthlyRentRef + '+' + DT + dtRefs.opex_monthly + '+' + DT + dtRefs.parking_spots + '*' + DT + dtRefs.parking_rate + '+' + lhiMonthlyRef, Object.assign({}, metricValStyle, { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: '1E293B' } } }));
       smRow++;
 
-      setCell(slWS, smRow, 0, 'SL Annual (after TI credit + LHI)', metricLabelStyle);
+      setCell(slWS, smRow, 0, 'SL Annual All-in + LHI', metricLabelStyle);
       setFormula(slWS, smRow, 1, 'B' + smRow + '*12', Object.assign({}, metricValStyle, { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: '1E293B' } } }));
       smRow++;
     }
