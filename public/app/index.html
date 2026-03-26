@@ -16582,9 +16582,15 @@ function rfpShowVersionComparison(buildingAddress) {
     return;
   }
 
-  // Get all submissions for this building, sorted by user-defined order
+  // Get submissions for this building, filtered to selected component if applicable
+  var selectedComp = window._rfpState.selectedComponent || '';
   var subs = rfpSortVersions((window._rfpState.submissions || []).filter(function(s) {
-    return (s.building_address || s.buildingAddress) === buildingAddress;
+    if ((s.building_address || s.buildingAddress) !== buildingAddress) return false;
+    // If a component is selected (not combined view), filter to that component
+    if (selectedComp && selectedComp !== '_combined') {
+      return (s.component_label || '') === selectedComp;
+    }
+    return true;
   }));
 
   if (subs.length < 2) {
