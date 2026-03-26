@@ -16289,8 +16289,8 @@ function rfpBuildCombinedView(componentMap, address) {
 
   // RENT ANALYSIS
   sectionRow('Rent Analysis');
-  compRow('Effective Rent/RSF (net of TI)', components.map(function(c) { return c.summary.effectiveRentRSF || 0; }), 'curr_dec');
-  compRow('SL Monthly Rent (net of TI)', components.map(function(c) { return c.summary.straightLineMonthlyRent || 0; }), 'curr');
+  compRow('Effective Rent/RSF (after TI credit)', components.map(function(c) { return c.summary.effectiveRentRSF || 0; }), 'curr_dec');
+  compRow('SL Monthly Rent (after TI credit)', components.map(function(c) { return c.summary.straightLineMonthlyRent || 0; }), 'curr');
   compRow('SL Annual Expense (rent only)', components.map(function(c) { return c.summary.straightLineAnnualExpense || 0; }), 'curr');
   compRow('Total All-in Cost (rent + OpEx + parking)', components.map(function(c) { return c.summary.totalAllInCost || 0; }), 'curr');
 
@@ -16313,8 +16313,8 @@ function rfpBuildCombinedView(componentMap, address) {
 
     // SL with LHI
     sectionRow('Straight-Line (incl. TI + LHI)');
-    compRow('SL Monthly (rent net of TI + LHI dep.)', components.map(function(c) { return Math.round((c.summary.straightLineMonthlyRent || 0) + (c.capex.monthlyDepreciation || 0)); }), 'curr');
-    compRow('SL Annual (rent net of TI + LHI dep.)', components.map(function(c) { return Math.round(((c.summary.straightLineMonthlyRent || 0) + (c.capex.monthlyDepreciation || 0)) * 12); }), 'curr');
+    compRow('SL Monthly (rent after TI credit + LHI dep.)', components.map(function(c) { return Math.round((c.summary.straightLineMonthlyRent || 0) + (c.capex.monthlyDepreciation || 0)); }), 'curr');
+    compRow('SL Annual (rent after TI credit + LHI dep.)', components.map(function(c) { return Math.round(((c.summary.straightLineMonthlyRent || 0) + (c.capex.monthlyDepreciation || 0)) * 12); }), 'curr');
   }
 
   // NPV
@@ -16957,8 +16957,8 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
 
   html +=
     '<div class="rfp-summary-metrics" style="margin-top:var(--space-4)">' +
-      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(slMonthlyWithLHI) + '</div><div class="rfp-metric-label">SL Monthly (net of TI + LHI)</div></div>' +
-      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(slAnnualWithLHI) + '</div><div class="rfp-metric-label">SL Annual (net of TI + LHI)</div></div>' +
+      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(slMonthlyWithLHI) + '</div><div class="rfp-metric-label">SL Monthly (after TI credit + LHI)</div></div>' +
+      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(slAnnualWithLHI) + '</div><div class="rfp-metric-label">SL Annual (after TI credit + LHI)</div></div>' +
       tiNote +
       lhiNote +
       '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyDecimals(totals.effectiveRentRSF) + '</div><div class="rfp-metric-label">Effective Rent/RSF</div></div>' +
@@ -17441,12 +17441,12 @@ function rfpExportExcel() {
     var tiMonthlyRef = 'B' + (smRow + 1);
     smRow++;
 
-    setCell(slWS, smRow, 0, 'Straight-Line Monthly Rent (net of TI)', metricLabelStyle);
+    setCell(slWS, smRow, 0, 'Straight-Line Monthly Rent (after TI credit)', metricLabelStyle);
     setFormula(slWS, smRow, 1, totalERef + '/' + DT + dtRefs.lease_term + '-' + tiMonthlyRef, metricValStyle);
     var slMonthlyRentRef = 'B' + (smRow + 1);
     smRow++;
 
-    setCell(slWS, smRow, 0, 'Straight-Line Annual Rent (net of TI)', metricLabelStyle);
+    setCell(slWS, smRow, 0, 'Straight-Line Annual Rent (after TI credit)', metricLabelStyle);
     setFormula(slWS, smRow, 1, 'B' + smRow + '*12', metricValStyle);
     smRow++;
 
@@ -17503,11 +17503,11 @@ function rfpExportExcel() {
       setFormula(slWS, smRow, 1, 'IF(' + DT + dtRefs.rsf + '>0,' + capexTotalRef + '/' + DT + dtRefs.rsf + ',0)', metricValDecStyle);
       smRow++;
 
-      setCell(slWS, smRow, 0, 'SL Monthly (net of TI + LHI)', metricLabelStyle);
+      setCell(slWS, smRow, 0, 'SL Monthly (after TI credit + LHI)', metricLabelStyle);
       setFormula(slWS, smRow, 1, slMonthlyRentRef + '+' + lhiMonthlyRef, Object.assign({}, metricValStyle, { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: '1E293B' } } }));
       smRow++;
 
-      setCell(slWS, smRow, 0, 'SL Annual (net of TI + LHI)', metricLabelStyle);
+      setCell(slWS, smRow, 0, 'SL Annual (after TI credit + LHI)', metricLabelStyle);
       setFormula(slWS, smRow, 1, 'B' + smRow + '*12', Object.assign({}, metricValStyle, { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: '1E293B' } } }));
       smRow++;
     }
