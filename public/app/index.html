@@ -16291,8 +16291,10 @@ function rfpBuildCombinedView(componentMap, address) {
   sectionRow('Rent Analysis');
   compRow('Effective Rent/RSF (after TI credit)', components.map(function(c) { return c.summary.effectiveRentRSF || 0; }), 'curr_dec');
   compRow('SL Monthly Rent (after TI credit)', components.map(function(c) { return c.summary.straightLineMonthlyRent || 0; }), 'curr');
-  compRow('SL Annual Expense (rent only)', components.map(function(c) { return c.summary.straightLineAnnualExpense || 0; }), 'curr');
-  compRow('Total All-in Cost (rent + OpEx + parking)', components.map(function(c) { return c.summary.totalAllInCost || 0; }), 'curr');
+  compRow('SL Annual Rent (after TI credit)', components.map(function(c) { return Math.round((c.summary.straightLineMonthlyRent || 0) * 12); }), 'curr');
+  compRow('SL Monthly All-in (rent + OpEx + parking, after TI credit)', components.map(function(c) { return Math.round((c.summary.straightLineAnnualExpense || 0) / 12); }), 'curr');
+  compRow('SL Annual All-in (rent + OpEx + parking, after TI credit)', components.map(function(c) { return c.summary.straightLineAnnualExpense || 0; }), 'curr');
+  compRow('Total All-in Cost (full lease term)', components.map(function(c) { return c.summary.totalAllInCost || 0; }), 'curr');
 
   // CONCESSIONS
   sectionRow('Concessions');
