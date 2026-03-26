@@ -16240,56 +16240,101 @@ function rfpBuildCombinedView(componentMap, address) {
   html += '<th style="text-align:right;min-width:140px;font-weight:700;">Combined</th>';
   html += '</tr></thead><tbody>';
 
-  var compMetrics = [
-    { label: 'RSF', key: 'rsf', fmt: 'num' },
-    { label: 'Lease Term (mo)', key: 'termMonths', fmt: 'plain' },
-    { label: 'Effective Rent/RSF', key: 'effectiveRentRSF', fmt: 'curr_dec' },
-    { label: 'SL Monthly Rent', key: 'straightLineMonthlyRent', fmt: 'curr' },
-    { label: 'SL Annual Expense', key: 'straightLineAnnualExpense', fmt: 'curr' },
-    { label: 'Total All-in Cost', key: 'totalAllInCost', fmt: 'curr' },
-    { label: 'Free Rent Value', key: 'freeRentValue', fmt: 'curr' },
-    { label: 'TI Value', key: 'tiValue', fmt: 'curr' },
-    { label: 'Total Concessions', key: 'totalConcessions', fmt: 'curr' },
-  ];
-
-  compMetrics.forEach(function(m) {
-    html += '<tr><td class="cell-label">' + m.label + '</td>';
-    var combinedVal = 0;
-    components.forEach(function(c) {
-      var val = c.summary[m.key] || 0;
-      combinedVal += val;
-      if (m.fmt === 'curr') html += '<td class="cell-currency">' + rfpFmtCurrency(val) + '</td>';
-      else if (m.fmt === 'curr_dec') html += '<td class="cell-currency">' + rfpFmtCurrencyDecimals(val) + '</td>';
-      else if (m.fmt === 'num') html += '<td class="cell-currency">' + rfpFmtNum(val) + '</td>';
-      else html += '<td class="cell-currency">' + (val || '--') + '</td>';
-    });
-    // Combined column
-    if (m.key === 'effectiveRentRSF') {
-      // Weighted average for per-RSF metrics
-      var weightedSum = 0;
-      components.forEach(function(c) { weightedSum += (c.summary[m.key] || 0) * (c.summary.rsf || 0); });
-      combinedVal = totalRSF > 0 ? Math.round(weightedSum / totalRSF * 100) / 100 : 0;
-      html += '<td class="cell-currency" style="font-weight:700;">' + rfpFmtCurrencyDecimals(combinedVal) + '</td>';
-    } else if (m.key === 'termMonths') {
-      html += '<td class="cell-currency" style="font-weight:700;">--</td>';
-    } else if (m.fmt === 'curr') {
-      html += '<td class="cell-currency" style="font-weight:700;">' + rfpFmtCurrency(combinedVal) + '</td>';
-    } else {
-      html += '<td class="cell-currency" style="font-weight:700;">' + rfpFmtNum(combinedVal) + '</td>';
-    }
-    html += '</tr>';
+  // Get CAPEX for each component
+  components.forEach(function(c) {
+    var termMo = c.summary.termMonths || 0;
+    c.capex = getCapexForBuilding(address, termMo, c.label);
   });
+  var anyCapex = components.some(function(c) { return c.capex && c.capex.hasCapex; });
 
-  // NPV row
-  html += '<tr style="border-top:2px solid var(--color-border);"><td class="cell-label" style="font-weight:600;">NPV @ 8%</td>';
+  // Helper to render a row
+  function compRow(label, values, fmt, style) {
+    var rowStyle = style || '';
+    html += '<tr' + (rowStyle ? ' style="' + rowStyle + '"' : '') + '><td class="cell-label">' + label + '</td>';
+    var combined = 0;
+    values.forEach(function(v) {
+      combined += (typeof v === 'number' ? v : 0);
+      if (fmt === 'curr') html += '<td class="cell-currency">' + rfpFmtCurrency(v) + '</td>';
+      else if (fmt === 'curr_dec') html += '<td class="cell-currency">' + rfpFmtCurrencyDecimals(v) + '</td>';
+      else if (fmt === 'num') html += '<td class="cell-currency">' + rfpFmtNum(v) + '</td>';
+      else if (fmt === 'pct') html += '<td class="cell-currency">' + (v ? v + '%' : '--') + '</td>';
+      else html += '<td class="cell-currency">' + (v || '--') + '</td>';
+    });
+    // Combined
+    if (fmt === 'curr') html += '<td class="cell-currency" style="font-weight:700;">' + rfpFmtCurrency(combined) + '</td>';
+    else if (fmt === 'curr_dec') {
+      // Weighted average for per-RSF
+      var wSum = 0; components.forEach(function(c, i) { wSum += (values[i] || 0) * (c.summary.rsf || 0); });
+      var wAvg = totalRSF > 0 ? Math.round(wSum / totalRSF * 100) / 100 : 0;
+      html += '<td class="cell-currency" style="font-weight:700;">' + rfpFmtCurrencyDecimals(wAvg) + '</td>';
+    } else if (fmt === 'num') html += '<td class="cell-currency" style="font-weight:700;">' + rfpFmtNum(combined) + '</td>';
+    else html += '<td class="cell-currency" style="font-weight:700;">--</td>';
+    html += '</tr>';
+  }
+
+  function sectionRow(label) {
+    html += '<tr style="background:var(--color-surface-2);"><td colspan="' + (components.length + 2) + '" style="padding:8px 14px;font-weight:600;font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.04em;color:var(--color-text-muted);">' + label + '</td></tr>';
+  }
+
+  // DEAL OVERVIEW
+  sectionRow('Deal Overview');
+  compRow('RSF', components.map(function(c) { return c.summary.rsf || 0; }), 'num');
+  compRow('Lease Term (mo)', components.map(function(c) { return c.summary.termMonths || 0; }), 'plain');
+
+  // Get deal terms for base rent
+  var compTerms = components.map(function(c) { return c.submission.deal_terms || c.submission.dealTerms || {}; });
+  compRow('Base Rent ($/RSF/yr)', compTerms.map(function(t) { return t.base_rent_rsf || t.baseRent || 0; }), 'curr_dec');
+  compRow('Annual Escalation', compTerms.map(function(t) { return t.annual_escalation_pct || t.annualEscalation || 0; }), 'pct');
+  compRow('Free Rent (mo)', compTerms.map(function(t) { return t.free_rent_months || t.freeRent || 0; }), 'plain');
+
+  // RENT ANALYSIS
+  sectionRow('Rent Analysis');
+  compRow('Effective Rent/RSF (net of TI)', components.map(function(c) { return c.summary.effectiveRentRSF || 0; }), 'curr_dec');
+  compRow('SL Monthly Rent (net of TI)', components.map(function(c) { return c.summary.straightLineMonthlyRent || 0; }), 'curr');
+  compRow('SL Annual Expense (rent only)', components.map(function(c) { return c.summary.straightLineAnnualExpense || 0; }), 'curr');
+  compRow('Total All-in Cost (rent + OpEx + parking)', components.map(function(c) { return c.summary.totalAllInCost || 0; }), 'curr');
+
+  // CONCESSIONS
+  sectionRow('Concessions');
+  compRow('TI Allowance', components.map(function(c) { return c.summary.tiValue || 0; }), 'curr');
+  compRow('Free Rent Value', components.map(function(c) { return c.summary.freeRentValue || 0; }), 'curr');
+  compRow('Total Concessions', components.map(function(c) { return c.summary.totalConcessions || 0; }), 'curr');
+
+  // CAPEX
+  if (anyCapex) {
+    sectionRow('Capital Expenditure (CAPEX)');
+    compRow('Total CAPEX', components.map(function(c) { return c.capex.grandTotal || 0; }), 'curr');
+    compRow('Construction / Build-Out', components.map(function(c) { return c.capex.construction || 0; }), 'curr');
+    compRow('FF&E', components.map(function(c) { return c.capex.ffe || 0; }), 'curr');
+    compRow('IT / Technology', components.map(function(c) { return c.capex.it || 0; }), 'curr');
+    compRow('CAPEX per RSF', components.map(function(c) { var rsf = c.summary.rsf || 0; return rsf > 0 ? Math.round(c.capex.grandTotal / rsf * 100) / 100 : 0; }), 'curr_dec');
+    compRow('Monthly LHI Depreciation', components.map(function(c) { return c.capex.monthlyDepreciation || 0; }), 'curr');
+    compRow('Annual LHI Depreciation', components.map(function(c) { return c.capex.annualDepreciation || 0; }), 'curr');
+
+    // SL with LHI
+    sectionRow('Straight-Line (incl. TI + LHI)');
+    compRow('SL Monthly (rent net of TI + LHI dep.)', components.map(function(c) { return Math.round((c.summary.straightLineMonthlyRent || 0) + (c.capex.monthlyDepreciation || 0)); }), 'curr');
+    compRow('SL Annual (rent net of TI + LHI dep.)', components.map(function(c) { return Math.round(((c.summary.straightLineMonthlyRent || 0) + (c.capex.monthlyDepreciation || 0)) * 12); }), 'curr');
+  }
+
+  // NPV
+  sectionRow('Present Value Analysis');
+  html += '<tr style="border-top:2px solid var(--color-border);"><td class="cell-label" style="font-weight:600;">NPV @ 8% (lease obligation)</td>';
+  var combinedNPVCheck = 0;
   components.forEach(function(c) {
     var compNPV = 0;
     for (var i = 0; i < c.cashFlow.length; i++) {
       compNPV += (c.cashFlow[i].totalMonthlyCost || 0) / Math.pow(1 + npvRate, i + 1);
     }
-    html += '<td class="cell-currency" style="color:#2563eb;">' + rfpFmtCurrency(Math.round(compNPV)) + '</td>';
+    compNPV = Math.round(compNPV);
+    combinedNPVCheck += compNPV;
+    html += '<td class="cell-currency" style="color:#2563eb;">' + rfpFmtCurrency(compNPV) + '</td>';
   });
-  html += '<td class="cell-currency" style="font-weight:700;color:#2563eb;">' + rfpFmtCurrency(combinedNPV) + '</td></tr>';
+  html += '<td class="cell-currency" style="font-weight:700;color:#2563eb;">' + rfpFmtCurrency(combinedNPVCheck) + '</td></tr>';
+
+  if (anyCapex) {
+    compRow('Total Commitment (All-in + CAPEX)', components.map(function(c) { return Math.round((c.summary.totalAllInCost || 0) + (c.capex.grandTotal || 0)); }), 'curr');
+  }
 
   html += '</tbody></table></div>';
 
