@@ -13,17 +13,25 @@ export async function GET(req: Request) {
   const projectId = searchParams.get('projectId') || 'sf-office-search'
   const buildingAddress = searchParams.get('buildingAddress')
 
+  const componentLabel = searchParams.get('componentLabel') || null
+
   if (buildingAddress) {
-    // Fetch assumptions for a specific building
-    const { data, error } = await supabase
+    // Fetch assumptions for a specific building (+ optional component)
+    let query = supabase
       .from('project_assumptions')
       .select('*')
       .eq('project_id', projectId)
       .eq('building_address', buildingAddress)
-      .single()
+
+    if (componentLabel) {
+      query = query.eq('component_label', componentLabel)
+    } else {
+      query = query.is('component_label', null)
+    }
+
+    const { data, error } = await query.single()
 
     if (error && error.code === 'PGRST116') {
-      // No row found - return null (no assumptions for this building yet)
       return NextResponse.json(null)
     }
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -47,6 +55,7 @@ export async function POST(req: Request) {
   const {
     projectId = 'sf-office-search',
     building_address = '',
+    component_label = null,
     opex_food_beverage = 0,
     opex_workplace_experience = 0,
     opex_maintenance_security = 0,
@@ -88,37 +97,68 @@ export async function POST(req: Request) {
     console.warn('Token log skipped:', (e as Error).message)
   }
 
-  const { data, error } = await supabase
+  const rowData = {
+    project_id: projectId,
+    building_address,
+    component_label: component_label || null,
+    opex_food_beverage,
+    opex_workplace_experience,
+    opex_maintenance_security,
+    opex_custom_items,
+    headcount,
+    target_density_rsf,
+    discount_rate,
+    capex_construction_total,
+    capex_construction_per_rsf,
+    capex_construction_input_mode,
+    capex_construction_depreciation_years,
+    capex_ffe_total,
+    capex_ffe_per_rsf,
+    capex_ffe_input_mode,
+    capex_ffe_depreciation_years,
+    capex_it_total,
+    capex_it_per_rsf,
+    capex_it_input_mode,
+    capex_it_depreciation_years,
+    capex_custom_items,
+    updated_by,
+    updated_at: new Date().toISOString(),
+  }
+
+  // Check if a row exists for this project + building + component
+  let existsQuery = supabase
     .from('project_assumptions')
-    .upsert({
-      project_id: projectId,
-      building_address,
-      opex_food_beverage,
-      opex_workplace_experience,
-      opex_maintenance_security,
-      opex_custom_items,
-      headcount,
-      target_density_rsf,
-      discount_rate,
-      // CAPEX
-      capex_construction_total,
-      capex_construction_per_rsf,
-      capex_construction_input_mode,
-      capex_construction_depreciation_years,
-      capex_ffe_total,
-      capex_ffe_per_rsf,
-      capex_ffe_input_mode,
-      capex_ffe_depreciation_years,
-      capex_it_total,
-      capex_it_per_rsf,
-      capex_it_input_mode,
-      capex_it_depreciation_years,
-      capex_custom_items,
-      updated_by,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'project_id,building_address' })
-    .select()
-    .single()
+    .select('id')
+    .eq('project_id', projectId)
+    .eq('building_address', building_address)
+  if (component_label) {
+    existsQuery = existsQuery.eq('component_label', component_label)
+  } else {
+    existsQuery = existsQuery.is('component_label', null)
+  }
+  const { data: existing } = await existsQuery.maybeSingle()
+
+  let data, error
+  if (existing) {
+    // Update
+    const result = await supabase
+      .from('project_assumptions')
+      .update(rowData)
+      .eq('id', existing.id)
+      .select()
+      .single()
+    data = result.data
+    error = result.error
+  } else {
+    // Insert
+    const result = await supabase
+      .from('project_assumptions')
+      .insert(rowData)
+      .select()
+      .single()
+    data = result.data
+    error = result.error
+  }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
