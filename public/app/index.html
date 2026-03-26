@@ -12284,7 +12284,7 @@ legend.addTo(map);
     state.data.forEach(function(pt) {
       var emp = pt.employment;
       var empStr = emp >= 1000 ? (emp / 1000).toFixed(emp >= 10000 ? 0 : 1) + 'K' : emp.toString();
-      var payStr = pt.avgPay ? '$' + (pt.avgPay / 1000).toFixed(0) + 'K' : 'N/A';
+      var payStr = pt.avgPay ? getCurrencySymbol() + (pt.avgPay / 1000).toFixed(0) + 'K' : 'N/A';
 
       var circle = L.circleMarker([pt.lat, pt.lng], {
         radius: Math.max(4, Math.min(16, pt.intensity * 18)),
@@ -15133,25 +15133,69 @@ function renderRoutePanelFloat(data, stops) {
 window._rfpState = { submissions: [], selectedBuilding: null, selectedSubmission: null, view: 'dashboard', assumptionsMap: {} };
 var _rfpModal = null;
 
+// Currency configuration (loaded from project)
+var CURRENCY_CONFIG = {
+  USD: { symbol: '$', code: 'USD', locale: 'en-US', decimals: 0, symbolPosition: 'before', excelFmt: '$#,##0', excelFmtDec: '$#,##0.00' },
+  GBP: { symbol: '\u00A3', code: 'GBP', locale: 'en-GB', decimals: 0, symbolPosition: 'before', excelFmt: '\u00A3#,##0', excelFmtDec: '\u00A3#,##0.00' },
+  EUR: { symbol: '\u20AC', code: 'EUR', locale: 'de-DE', decimals: 0, symbolPosition: 'before', excelFmt: '\u20AC#,##0', excelFmtDec: '\u20AC#,##0.00' },
+  CAD: { symbol: 'C$', code: 'CAD', locale: 'en-CA', decimals: 0, symbolPosition: 'before', excelFmt: 'C$#,##0', excelFmtDec: 'C$#,##0.00' },
+  AUD: { symbol: 'A$', code: 'AUD', locale: 'en-AU', decimals: 0, symbolPosition: 'before', excelFmt: 'A$#,##0', excelFmtDec: 'A$#,##0.00' },
+  JPY: { symbol: '\u00A5', code: 'JPY', locale: 'ja-JP', decimals: 0, symbolPosition: 'before', excelFmt: '\u00A5#,##0', excelFmtDec: '\u00A5#,##0' },
+  SGD: { symbol: 'S$', code: 'SGD', locale: 'en-SG', decimals: 0, symbolPosition: 'before', excelFmt: 'S$#,##0', excelFmtDec: 'S$#,##0.00' },
+  HKD: { symbol: 'HK$', code: 'HKD', locale: 'en-HK', decimals: 0, symbolPosition: 'before', excelFmt: 'HK$#,##0', excelFmtDec: 'HK$#,##0.00' },
+  AED: { symbol: 'AED ', code: 'AED', locale: 'ar-AE', decimals: 0, symbolPosition: 'before', excelFmt: '"AED "#,##0', excelFmtDec: '"AED "#,##0.00' },
+  CHF: { symbol: 'CHF ', code: 'CHF', locale: 'de-CH', decimals: 0, symbolPosition: 'before', excelFmt: '"CHF "#,##0', excelFmtDec: '"CHF "#,##0.00' },
+  INR: { symbol: '\u20B9', code: 'INR', locale: 'en-IN', decimals: 0, symbolPosition: 'before', excelFmt: '\u20B9#,##0', excelFmtDec: '\u20B9#,##0.00' },
+  CNY: { symbol: '\u00A5', code: 'CNY', locale: 'zh-CN', decimals: 0, symbolPosition: 'before', excelFmt: '\u00A5#,##0', excelFmtDec: '\u00A5#,##0' },
+  BRL: { symbol: 'R$', code: 'BRL', locale: 'pt-BR', decimals: 0, symbolPosition: 'before', excelFmt: 'R$#,##0', excelFmtDec: 'R$#,##0.00' },
+  MXN: { symbol: 'MX$', code: 'MXN', locale: 'es-MX', decimals: 0, symbolPosition: 'before', excelFmt: 'MX$#,##0', excelFmtDec: 'MX$#,##0.00' },
+  SEK: { symbol: 'kr ', code: 'SEK', locale: 'sv-SE', decimals: 0, symbolPosition: 'before', excelFmt: '"kr "#,##0', excelFmtDec: '"kr "#,##0.00' },
+  NZD: { symbol: 'NZ$', code: 'NZD', locale: 'en-NZ', decimals: 0, symbolPosition: 'before', excelFmt: 'NZ$#,##0', excelFmtDec: 'NZ$#,##0.00' },
+};
+var _projectCurrency = 'USD';
+function getProjectCurrency() { return CURRENCY_CONFIG[_projectCurrency] || CURRENCY_CONFIG.USD; }
+function getCurrencySymbol() { return getProjectCurrency().symbol; }
+function getCurrencyExcelFmt() { return getProjectCurrency().excelFmt; }
+function getCurrencyExcelFmtDec() { return getProjectCurrency().excelFmtDec; }
+
+// Load project currency from API
+(async function loadProjectCurrency() {
+  try {
+    var pid = (new URLSearchParams(window.location.search)).get('projectId') || 'sf-office-search';
+    var res = await fetch('/api/projects?projectId=' + encodeURIComponent(pid));
+    if (res.ok) {
+      var data = await res.json();
+      if (data && data.length > 0 && data[0].currency) {
+        _projectCurrency = data[0].currency;
+      } else if (data && data.currency) {
+        _projectCurrency = data.currency;
+      }
+    }
+  } catch(e) { /* default to USD */ }
+})();
+
 // Currency formatting
 function rfpFmtCurrency(v) {
   if (v == null || isNaN(v)) return '--';
   var abs = Math.abs(v);
-  var formatted = '$' + abs.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  var sym = getCurrencySymbol();
+  var formatted = sym + abs.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   if (v < 0) return '<span class="cell-neg">(' + formatted + ')</span>';
   return formatted;
 }
 function rfpFmtCurrencyPlain(v) {
   if (v == null || isNaN(v)) return '--';
   var abs = Math.abs(v);
-  var formatted = '$' + abs.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  var sym = getCurrencySymbol();
+  var formatted = sym + abs.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   if (v < 0) return '(' + formatted + ')';
   return formatted;
 }
 function rfpFmtCurrencyDecimals(v) {
   if (v == null || isNaN(v)) return '--';
   var abs = Math.abs(v);
-  var formatted = '$' + abs.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  var sym = getCurrencySymbol();
+  var formatted = sym + abs.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   if (v < 0) return '<span class="cell-neg">(' + formatted + ')</span>';
   return formatted;
 }
@@ -16449,13 +16493,13 @@ function rfpExportCombinedAnalysis(target) {
   var headerLeftStyle = Object.assign({}, headerStyle, { alignment: { horizontal: 'left' } });
   var sectionStyle = { font: { bold: true, sz: 10, color: { rgb: '64748B' } }, fill: { fgColor: { rgb: 'F1F5F9' } } };
   var labelStyle = { font: { sz: 10, color: { rgb: '334155' } }, border: { bottom: { style: 'thin', color: { rgb: 'E2E8F0' } } } };
-  var currStyle = { font: { sz: 10 }, numFmt: '$#,##0', border: { bottom: { style: 'thin', color: { rgb: 'E2E8F0' } } }, alignment: { horizontal: 'right' } };
-  var currDecStyle = Object.assign({}, currStyle, { numFmt: '$#,##0.00' });
+  var currStyle = { font: { sz: 10 }, numFmt: getCurrencyExcelFmt(), border: { bottom: { style: 'thin', color: { rgb: 'E2E8F0' } } }, alignment: { horizontal: 'right' } };
+  var currDecStyle = Object.assign({}, currStyle, { numFmt: getCurrencyExcelFmtDec() });
   var numStyle = Object.assign({}, currStyle, { numFmt: '#,##0' });
   var pctStyle = Object.assign({}, currStyle, { numFmt: '0%' });
   var plainStyle = Object.assign({}, currStyle, { numFmt: '0' });
-  var combStyle = { font: { sz: 10, bold: true }, numFmt: '$#,##0', border: { bottom: { style: 'thin', color: { rgb: 'E2E8F0' } } }, alignment: { horizontal: 'right' } };
-  var combDecStyle = Object.assign({}, combStyle, { numFmt: '$#,##0.00' });
+  var combStyle = { font: { sz: 10, bold: true }, numFmt: getCurrencyExcelFmt(), border: { bottom: { style: 'thin', color: { rgb: 'E2E8F0' } } }, alignment: { horizontal: 'right' } };
+  var combDecStyle = Object.assign({}, combStyle, { numFmt: getCurrencyExcelFmtDec() });
   var combNumStyle = Object.assign({}, combStyle, { numFmt: '#,##0' });
   var combPlainStyle = Object.assign({}, combStyle, { numFmt: '0' });
   var npvStyle = Object.assign({}, currStyle, { font: { sz: 10, color: { rgb: '2563EB' } } });
@@ -16965,7 +17009,7 @@ function rfpShowVersionComparison(buildingAddress) {
 
   function fmtVal(val, fmt) {
     if (!val && val !== 0) return '--';
-    if (fmt === 'currency') return '$' + Number(val).toLocaleString(undefined, { maximumFractionDigits: 0 });
+    if (fmt === 'currency') return getCurrencySymbol() + Number(val).toLocaleString(undefined, { maximumFractionDigits: 0 });
     if (fmt === 'num') return Number(val).toLocaleString();
     if (fmt === 'pct') return val + '%';
     return val || '--';
@@ -17456,29 +17500,31 @@ function rfpExportExcel() {
   var headerLeftStyle = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: BRAND_TEXT } }, fill: { fgColor: { rgb: BRAND } }, alignment: { horizontal: 'left', vertical: 'center', wrapText: true }, border: { bottom: { style: 'thin', color: { rgb: '000000' } } } };
   var labelStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: '6B7280' } }, alignment: { horizontal: 'left' } };
   var valStyle = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: BLACK } }, alignment: { horizontal: 'right' } };
-  var currStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: BLACK } }, numFmt: '"$"#,##0', alignment: { horizontal: 'right' } };
-  var currBoldStyle = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: BLACK } }, numFmt: '"$"#,##0', alignment: { horizontal: 'right' } };
-  var currDecStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: BLACK } }, numFmt: '"$"#,##0.00', alignment: { horizontal: 'right' } };
+  var _cFmt = getCurrencyExcelFmt();
+  var _cFmtDec = getCurrencyExcelFmtDec();
+  var currStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: BLACK } }, numFmt: _cFmt, alignment: { horizontal: 'right' } };
+  var currBoldStyle = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: BLACK } }, numFmt: _cFmt, alignment: { horizontal: 'right' } };
+  var currDecStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: BLACK } }, numFmt: _cFmtDec, alignment: { horizontal: 'right' } };
   var pctStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: BLACK } }, numFmt: '0.0%', alignment: { horizontal: 'right' } };
   var numStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: BLACK } }, numFmt: '#,##0', alignment: { horizontal: 'right' } };
   var centerStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: BLACK } }, alignment: { horizontal: 'center' } };
-  var totalRowStyle = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: WHITE } }, fill: { fgColor: { rgb: BRAND } }, numFmt: '"$"#,##0', alignment: { horizontal: 'right' }, border: { top: { style: 'double', color: { rgb: '000000' } } } };
+  var totalRowStyle = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: WHITE } }, fill: { fgColor: { rgb: BRAND } }, numFmt: _cFmt, alignment: { horizontal: 'right' }, border: { top: { style: 'double', color: { rgb: '000000' } } } };
   var totalLabelStyle = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: WHITE } }, fill: { fgColor: { rgb: BRAND } }, alignment: { horizontal: 'left' }, border: { top: { style: 'double', color: { rgb: '000000' } } } };
   var freeRentRowFill = { fgColor: { rgb: GREEN_LT } };
   var altRowFill = { fgColor: { rgb: GRAY_LT } };
-  var greenCurrStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: GREEN } }, numFmt: '"$"#,##0', alignment: { horizontal: 'right' } };
+  var greenCurrStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: GREEN } }, numFmt: _cFmt, alignment: { horizontal: 'right' } };
   var metricLabelStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: '6B7280' } }, alignment: { horizontal: 'left' }, border: { bottom: { style: 'hair', color: { rgb: BORDER_CLR } } } };
-  var metricValStyle = { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: BRAND } }, numFmt: '"$"#,##0', alignment: { horizontal: 'right' }, border: { bottom: { style: 'hair', color: { rgb: BORDER_CLR } } } };
-  var metricValDecStyle = { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: BRAND } }, numFmt: '"$"#,##0.00', alignment: { horizontal: 'right' }, border: { bottom: { style: 'hair', color: { rgb: BORDER_CLR } } } };
+  var metricValStyle = { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: BRAND } }, numFmt: _cFmt, alignment: { horizontal: 'right' }, border: { bottom: { style: 'hair', color: { rgb: BORDER_CLR } } } };
+  var metricValDecStyle = { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: BRAND } }, numFmt: _cFmtDec, alignment: { horizontal: 'right' }, border: { bottom: { style: 'hair', color: { rgb: BORDER_CLR } } } };
   // Input cell styles (yellow highlight for editable inputs)
   var INPUT_FILL = { fgColor: { rgb: 'FFFDE8' } };
-  var inputCurrStyle = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '1565C0' } }, numFmt: '"$"#,##0', alignment: { horizontal: 'right' }, fill: INPUT_FILL, border: { bottom: { style: 'thin', color: { rgb: 'FFD54F' } } } };
-  var inputCurrDecStyle = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '1565C0' } }, numFmt: '"$"#,##0.00', alignment: { horizontal: 'right' }, fill: INPUT_FILL, border: { bottom: { style: 'thin', color: { rgb: 'FFD54F' } } } };
+  var inputCurrStyle = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '1565C0' } }, numFmt: _cFmt, alignment: { horizontal: 'right' }, fill: INPUT_FILL, border: { bottom: { style: 'thin', color: { rgb: 'FFD54F' } } } };
+  var inputCurrDecStyle = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '1565C0' } }, numFmt: _cFmtDec, alignment: { horizontal: 'right' }, fill: INPUT_FILL, border: { bottom: { style: 'thin', color: { rgb: 'FFD54F' } } } };
   var inputNumStyle = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '1565C0' } }, numFmt: '#,##0', alignment: { horizontal: 'right' }, fill: INPUT_FILL, border: { bottom: { style: 'thin', color: { rgb: 'FFD54F' } } } };
   var inputPctStyle = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '1565C0' } }, numFmt: '0.0%', alignment: { horizontal: 'right' }, fill: INPUT_FILL, border: { bottom: { style: 'thin', color: { rgb: 'FFD54F' } } } };
   var inputTextStyle = { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '1565C0' } }, alignment: { horizontal: 'right' }, fill: INPUT_FILL, border: { bottom: { style: 'thin', color: { rgb: 'FFD54F' } } } };
-  var formulaStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: '37474F' } }, numFmt: '"$"#,##0', alignment: { horizontal: 'right' }, border: { bottom: { style: 'hair', color: { rgb: BORDER_CLR } } } };
-  var formulaDecStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: '37474F' } }, numFmt: '"$"#,##0.00', alignment: { horizontal: 'right' }, border: { bottom: { style: 'hair', color: { rgb: BORDER_CLR } } } };
+  var formulaStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: '37474F' } }, numFmt: _cFmt, alignment: { horizontal: 'right' }, border: { bottom: { style: 'hair', color: { rgb: BORDER_CLR } } } };
+  var formulaDecStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: '37474F' } }, numFmt: _cFmtDec, alignment: { horizontal: 'right' }, border: { bottom: { style: 'hair', color: { rgb: BORDER_CLR } } } };
 
   function n(v) { return (typeof v === 'number' && !isNaN(v)) ? v : (parseFloat(v) || 0); }
   function cellRef(r, c) { return XLSX.utils.encode_cell({ r: r, c: c }); }
@@ -17568,7 +17614,7 @@ function rfpExportExcel() {
     if (isFormula && inputFieldMap[10]) {
       var rsfRef = "'Deal Terms'!B" + (3 + 4 + 1); // RSF row
       var tiRsfRef = "'Deal Terms'!B" + (3 + 10 + 1); // TI/RSF row
-      setFormula(dtWS, row, 1, 'B' + (3 + 4 + 1) + '*B' + (3 + 10 + 1), Object.assign({}, formulaStyle, { numFmt: '"$"#,##0' }));
+      setFormula(dtWS, row, 1, 'B' + (3 + 4 + 1) + '*B' + (3 + 10 + 1), Object.assign({}, formulaStyle, { numFmt: _cFmt }));
     } else {
       setCell(dtWS, row, 1, f[1], vStyle);
     }
@@ -18133,7 +18179,7 @@ function rfpExportExcel() {
     // Totals row
     setCell(cxWS, cxR, 0, 'TOTALS', totalLabelStyle);
     setCell(cxWS, cxR, 1, capexExport.grandTotal, totalRowStyle);
-    setCell(cxWS, cxR, 2, cxRSF > 0 ? Math.round(capexExport.grandTotal / cxRSF * 100) / 100 : 0, Object.assign({}, totalRowStyle, { numFmt: '"$"#,##0.00' }));
+    setCell(cxWS, cxR, 2, cxRSF > 0 ? Math.round(capexExport.grandTotal / cxRSF * 100) / 100 : 0, Object.assign({}, totalRowStyle, { numFmt: _cFmtDec }));
     setCell(cxWS, cxR, 3, '', totalLabelStyle);
     setCell(cxWS, cxR, 4, '', totalLabelStyle);
     setCell(cxWS, cxR, 5, capexExport.monthlyDepreciation, totalRowStyle);
@@ -18594,7 +18640,7 @@ function rfpBuildCapexPanel(selected) {
       s += '<div>' +
         '<label style="' + labelStyle + '">Per RSF (computed)</label>' +
         '<div style="padding:8px 10px;font-size:var(--text-sm);color:var(--color-text-muted);background:var(--color-surface-2);border-radius:var(--radius-md);">' +
-          (rsf > 0 && effectiveTotal > 0 ? '$' + (effectiveTotal / rsf).toFixed(2) + '/SF' : '--') +
+          (rsf > 0 && effectiveTotal > 0 ? getCurrencySymbol() + (effectiveTotal / rsf).toFixed(2) + '/SF' : '--') +
         '</div>' +
       '</div>';
     } else {
@@ -24893,11 +24939,11 @@ async function shortlistEnsureSupportingData() {
 // Currency formatting for shortlist cards
 function shortlistFmtCurrency(v) {
   if (v == null || isNaN(v)) return '--';
-  return '$' + Math.round(Math.abs(v)).toLocaleString('en-US');
+  return getCurrencySymbol() + Math.round(Math.abs(v)).toLocaleString('en-US');
 }
 function shortlistFmtCurrencyDecimals(v) {
   if (v == null || isNaN(v)) return '--';
-  return '$' + Number(Math.abs(v)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return getCurrencySymbol() + Number(Math.abs(v)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 // Render shortlist cards

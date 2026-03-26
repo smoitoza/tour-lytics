@@ -201,7 +201,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { name, market, description, createdBy, client_name, hq_address } = body
+    const { name, market, description, createdBy, client_name, hq_address, currency } = body
 
     if (!name || !name.trim()) {
       return NextResponse.json({ error: 'Project name is required.' }, { status: 400 })
@@ -237,6 +237,7 @@ export async function POST(req: NextRequest) {
       shortlisted_count: 0,
       created_by: createdBy,
       owner_id: createdBy, // Project creator is the owner
+      currency: currency || 'USD',
     }
 
     // Geocode HQ address server-side if provided

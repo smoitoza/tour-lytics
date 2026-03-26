@@ -174,6 +174,7 @@ export default function DashboardPage() {
   const [newProjectMarket, setNewProjectMarket] = useState('')
   const [newProjectClient, setNewProjectClient] = useState('')
   const [newProjectHQ, setNewProjectHQ] = useState('')
+  const [newProjectCurrency, setNewProjectCurrency] = useState('USD')
   const [creatingProject, setCreatingProject] = useState(false)
   const [dashStats, setDashStats] = useState<{ buildings: number; sqft: number; shortlisted: number; leaseValue: number; projects: number } | null>(null)
   const [createError, setCreateError] = useState<string | null>(null)
@@ -306,6 +307,7 @@ export default function DashboardPage() {
           name: newProjectName.trim(),
           market: newProjectMarket.trim(),
           client_name: newProjectClient.trim(),
+          currency: newProjectCurrency,
           createdBy: user?.email,
           hq_address: hqAddr || undefined,
         }),
@@ -886,7 +888,7 @@ export default function DashboardPage() {
             {/* Add new project button - any authenticated user */}
             {isAdmin && (
               <button
-                onClick={() => { setShowCreateModal(true); setCreateError(null); setNewProjectName(''); setNewProjectMarket(''); setNewProjectClient(''); setNewProjectHQ('') }}
+                onClick={() => { setShowCreateModal(true); setCreateError(null); setNewProjectName(''); setNewProjectMarket(''); setNewProjectClient(''); setNewProjectHQ(''); setNewProjectCurrency('USD') }}
                 className="create-project-btn"
                 style={{
                   borderRadius: '1rem',
@@ -1238,6 +1240,45 @@ export default function DashboardPage() {
                     transition: 'border-color 0.15s, box-shadow 0.15s',
                   }}
                 />
+              </div>
+
+              {/* Currency */}
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#334155', marginBottom: '0.375rem' }}>Currency</label>
+                <select
+                  value={newProjectCurrency}
+                  onChange={(e) => setNewProjectCurrency(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.625rem 0.875rem',
+                    fontSize: '0.875rem',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '0.625rem',
+                    background: '#f8fafc',
+                    color: '#0f172a',
+                    fontFamily: 'inherit',
+                    boxSizing: 'border-box' as const,
+                    cursor: 'pointer',
+                    appearance: 'auto' as const,
+                  }}
+                >
+                  <option value="USD">$ USD - US Dollar</option>
+                  <option value="GBP">{"\u00A3"} GBP - British Pound</option>
+                  <option value="EUR">{"\u20AC"} EUR - Euro</option>
+                  <option value="CAD">$ CAD - Canadian Dollar</option>
+                  <option value="AUD">$ AUD - Australian Dollar</option>
+                  <option value="JPY">{"\u00A5"} JPY - Japanese Yen</option>
+                  <option value="SGD">$ SGD - Singapore Dollar</option>
+                  <option value="HKD">$ HKD - Hong Kong Dollar</option>
+                  <option value="AED">AED - UAE Dirham</option>
+                  <option value="CHF">CHF - Swiss Franc</option>
+                  <option value="INR">{"\u20B9"} INR - Indian Rupee</option>
+                  <option value="CNY">{"\u00A5"} CNY - Chinese Yuan</option>
+                  <option value="BRL">R$ BRL - Brazilian Real</option>
+                  <option value="MXN">$ MXN - Mexican Peso</option>
+                  <option value="SEK">kr SEK - Swedish Krona</option>
+                  <option value="NZD">$ NZD - New Zealand Dollar</option>
+                </select>
               </div>
 
               {/* Info note */}
