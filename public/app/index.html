@@ -9044,7 +9044,8 @@ body {
         <rect x="17" y="17" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.3"/>
       </svg>
       <div class="header-title-group">
-        <h1 class="header-title" id="projectTitle"></h1>
+        <h1 class="header-title" id="projectTitle" style="cursor:pointer;" onclick="startEditProjectTitle()" title="Click to rename project"></h1>
+        <input type="text" id="projectTitleInput" style="display:none;font:inherit;font-size:inherit;font-weight:inherit;color:inherit;background:var(--color-surface);border:2px solid var(--color-primary);border-radius:var(--radius-md);padding:2px 8px;outline:none;width:100%;box-sizing:border-box;" />
         <span class="header-subtitle" id="projectSubtitle"></span>
       </div>
     </div>
@@ -13674,6 +13675,45 @@ function getProjectId() {
     })
     .catch(function() {});
 })();
+
+// ===== Inline Project Title Editing =====
+function startEditProjectTitle() {
+  if (!hasAdminAccess()) return;
+  var titleEl = document.getElementById('projectTitle');
+  var inputEl = document.getElementById('projectTitleInput');
+  if (!titleEl || !inputEl) return;
+
+  inputEl.value = titleEl.textContent;
+  titleEl.style.display = 'none';
+  inputEl.style.display = '';
+  inputEl.focus();
+  inputEl.select();
+
+  function saveTitle() {
+    var newName = inputEl.value.trim();
+    inputEl.style.display = 'none';
+    titleEl.style.display = '';
+    if (!newName || newName === titleEl.textContent) return;
+
+    titleEl.textContent = newName;
+    document.title = newName;
+    var mobName = document.getElementById('mobileProjectName');
+    if (mobName) mobName.textContent = newName;
+
+    // Persist to DB
+    fetch('/api/projects', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectId: getProjectId(), name: newName })
+    }).catch(function(err) { console.error('Rename error:', err); });
+  }
+
+  inputEl.onblur = saveTitle;
+  inputEl.onkeydown = function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); inputEl.blur(); }
+    if (e.key === 'Escape') { inputEl.value = titleEl.textContent; inputEl.blur(); }
+  };
+}
 
 // (ADMIN_EMAIL, _userRole, _centralTourList, _centralTourListLoaded moved above initTourList)
 

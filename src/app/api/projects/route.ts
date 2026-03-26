@@ -131,6 +131,16 @@ export async function PATCH(req: NextRequest) {
 
     const updates: Record<string, any> = {}
 
+    // Name update
+    if (body.name !== undefined && body.name.trim()) {
+      updates.name = body.name.trim()
+    }
+
+    // Market update
+    if (body.market !== undefined) {
+      updates.market = (body.market || '').trim()
+    }
+
     if (hq_address !== undefined) {
       const addr = (hq_address || '').trim()
       updates.hq_address = addr
