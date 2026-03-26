@@ -16083,6 +16083,7 @@ function rfpBuildDetailHtml(subs) {
       }
       html += '<button class="rfp-version-chip' + (isActive ? ' active' : '') + '" onclick="rfpSelectSubmission(\'' + s.id + '\')">' + esc(label) + '</button>';
       html += '<button class="rfp-version-edit" onclick="event.stopPropagation(); rfpRenameVersion(\'' + s.id + '\', this.previousElementSibling, \'' + defaultLabel.replace(/'/g, '') + '\')" title="Rename"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>';
+      html += '<button class="rfp-version-edit" onclick="event.stopPropagation(); rfpSetComponentLabel(\'' + s.id + '\')" title="Set Component" style="color:#7c3aed;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="11" height="11"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></button>';
       if (filteredSubs.length > 1 && idx < filteredSubs.length - 1) {
         html += '<button class="rfp-version-arrow" onclick="event.stopPropagation(); rfpMoveVersion(\'' + s.id + '\', 1)" title="Move right">&rsaquo;</button>';
       }
@@ -16412,6 +16413,35 @@ function rfpMoveVersion(submissionId, direction) {
   }).catch(function(err) {
     console.error('Failed to save version order:', err);
   });
+}
+
+// ===== SET COMPONENT LABEL =====
+function rfpSetComponentLabel(submissionId) {
+  var subs = window._rfpState.submissions || [];
+  var sub = subs.find(function(s) { return s.id === submissionId; });
+  if (!sub) return;
+
+  var current = sub.component_label || '';
+  var newLabel = prompt('Set component label for this version:\n(e.g. Office, Lab / BTS, Warehouse)\n\nLeave blank to remove.', current);
+  if (newLabel === null) return; // cancelled
+  newLabel = newLabel.trim();
+
+  // Update locally
+  sub.component_label = newLabel || null;
+
+  // Persist to API
+  fetch('/api/rfp', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: submissionId, componentLabel: newLabel || null })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.error) { alert('Error: ' + data.error); return; }
+    // Re-render
+    rfpRenderDashboard(window._rfpState.submissions);
+  })
+  .catch(function(err) { console.error('Set component error:', err); });
 }
 
 // ===== VERSION RENAME =====

@@ -153,7 +153,7 @@ export async function POST(req: Request) {
 // PATCH - update version label or sort order on RFP submissions
 export async function PATCH(req: Request) {
   const body = await req.json()
-  const { id, versionLabel, reorder } = body
+  const { id, versionLabel, componentLabel, reorder } = body
 
   // Batch reorder: [{ id, sort_order }, ...]
   if (reorder && Array.isArray(reorder)) {
@@ -169,14 +169,18 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ success: true, updated: results })
   }
 
-  // Single update: version label
+  // Single update: version label and/or component label
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
+
+  const updates: Record<string, any> = { updated_at: new Date().toISOString() }
+  if (versionLabel !== undefined) updates.version_label = versionLabel || null
+  if (componentLabel !== undefined) updates.component_label = componentLabel || null
 
   const { data, error } = await supabase
     .from('rfp_submissions')
-    .update({ version_label: versionLabel || null, updated_at: new Date().toISOString() })
+    .update(updates)
     .eq('id', id)
-    .select('id, version_label')
+    .select('id, version_label, component_label')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
