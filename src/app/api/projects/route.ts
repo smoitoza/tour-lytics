@@ -141,6 +141,14 @@ export async function PATCH(req: NextRequest) {
       updates.market = (body.market || '').trim()
     }
 
+    // Status update
+    if (body.status !== undefined) {
+      const validStatuses = ['active', 'on_hold', 'complete']
+      if (validStatuses.includes(body.status)) {
+        updates.status = body.status
+      }
+    }
+
     if (hq_address !== undefined) {
       const addr = (hq_address || '').trim()
       updates.hq_address = addr

@@ -153,7 +153,16 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [hoveredCard, setHoveredCard] = useState<string | null>(null)
   const [hoveredAction, setHoveredAction] = useState<number | null>(null)
+  const [statusDropdown, setStatusDropdown] = useState<string | null>(null)
   const router = useRouter()
+
+  // Close status dropdown on outside click
+  useEffect(() => {
+    if (!statusDropdown) return
+    const close = () => setStatusDropdown(null)
+    document.addEventListener('click', close)
+    return () => document.removeEventListener('click', close)
+  }, [statusDropdown])
 
   /* ---- Projects state ---- */
   const [projects, setProjects] = useState<Project[]>([])
@@ -456,6 +465,29 @@ export default function DashboardPage() {
     viewer: { bg: 'rgba(100,116,139,0.08)', color: '#64748b', label: 'Viewer' },
   }
 
+  /* Status config */
+  const STATUS_LABEL: Record<string, string> = { active: 'Active', on_hold: 'On Hold', complete: 'Complete' }
+  const STATUS_DOT: Record<string, string> = { active: '#22c55e', on_hold: '#f59e0b', complete: '#2563eb' }
+  const STATUS_STYLE: Record<string, React.CSSProperties> = {
+    active: { background: 'rgba(34,197,94,0.08)', color: '#16a34a' },
+    on_hold: { background: 'rgba(245,158,11,0.08)', color: '#d97706' },
+    complete: { background: 'rgba(37,99,235,0.08)', color: '#2563eb' },
+  }
+
+  async function handleStatusChange(projectId: string, newStatus: string) {
+    setStatusDropdown(null)
+    try {
+      await fetch('/api/projects', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId, status: newStatus }),
+      })
+      setProjects(prev => prev.map(p => p.id === projectId ? { ...p, status: newStatus } : p))
+    } catch (err) {
+      console.error('Failed to update status:', err)
+    }
+  }
+
   /* Reusable project card renderer */
   function renderProjectCard(project: Project, updatedDate: string, canDelete: boolean) {
     const roleBadge = ROLE_BADGE[project.user_role || ''] || null
@@ -489,21 +521,64 @@ export default function DashboardPage() {
           {/* Status + role badge + arrow */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.375rem',
-                padding: '0.25rem 0.75rem',
-                borderRadius: '9999px',
-                fontSize: '0.6875rem',
-                fontWeight: 600,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                background: project.status === 'active' ? 'rgba(34,197,94,0.08)' : 'rgba(100,116,139,0.08)',
-                color: project.status === 'active' ? '#16a34a' : '#64748b',
-              }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: project.status === 'active' ? '#22c55e' : '#94a3b8', animation: project.status === 'active' ? 'pulse 2s infinite' : 'none' }} />
-                {project.status === 'active' ? 'Active' : project.status}
+              <span
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setStatusDropdown(statusDropdown === project.id ? null : project.id) }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.375rem',
+                  padding: '0.25rem 0.75rem',
+                  borderRadius: '9999px',
+                  fontSize: '0.6875rem',
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  ...STATUS_STYLE[project.status || 'active'],
+                }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: STATUS_DOT[project.status || 'active'] || '#22c55e', animation: project.status === 'active' ? 'pulse 2s infinite' : 'none' }} />
+                {STATUS_LABEL[project.status || 'active'] || 'Active'}
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '2px' }}><polyline points="6 9 12 15 18 9" /></svg>
+                {statusDropdown === project.id && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    marginTop: '4px',
+                    background: '#fff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '0.5rem',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+                    zIndex: 100,
+                    minWidth: '120px',
+                    overflow: 'hidden',
+                  }}>
+                    {(['active', 'on_hold', 'complete'] as const).map((s) => (
+                      <button
+                        key={s}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleStatusChange(project.id, s) }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          width: '100%',
+                          padding: '0.5rem 0.75rem',
+                          border: 'none',
+                          background: project.status === s ? '#f1f5f9' : 'transparent',
+                          cursor: 'pointer',
+                          fontSize: '0.75rem',
+                          fontWeight: project.status === s ? 600 : 400,
+                          color: '#334155',
+                          textAlign: 'left',
+                        }}
+                      >
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: STATUS_DOT[s] }} />
+                        {STATUS_LABEL[s]}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </span>
               {roleBadge && (
                 <span style={{
