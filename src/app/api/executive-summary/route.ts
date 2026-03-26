@@ -130,7 +130,19 @@ export async function POST(request: NextRequest) {
       })
 
       for (const [addr, subs] of Object.entries(byBuilding)) {
-        context += `\n  ${addr} (${subs.length} version${subs.length > 1 ? 's' : ''}):\n`
+        // Check if this building has multiple components (multi-component deal)
+        const componentLabels = [...new Set(subs.map((s: any) => s.component_label).filter(Boolean))]
+        const isMultiComponent = componentLabels.length > 1
+        if (isMultiComponent) {
+          const totalRSF = subs.reduce((sum: number, s: any) => {
+            const latest = subs.filter((x: any) => x.component_label === s.component_label).sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
+            return s === latest ? sum + (s.deal_terms?.rsf || s.analysis?.summary?.rsf || 0) : sum
+          }, 0)
+          context += `\n  ${addr} -- MULTI-COMPONENT DEAL (${componentLabels.join(' + ')}, ~${totalRSF.toLocaleString()} RSF combined):\n`
+          context += `    NOTE: These components are parts of ONE unified deal being pursued together, NOT competing options.\n`
+        } else {
+          context += `\n  ${addr} (${subs.length} version${subs.length > 1 ? 's' : ''}):\n`
+        }
         subs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
 
         subs.forEach((sub: any, idx: number) => {
@@ -141,7 +153,9 @@ export async function POST(request: NextRequest) {
           const gaap = sub.analysis?.gaap || {}
           const gaapSummary = gaap.summary || {}
 
-          context += `    Version ${idx + 1} (${new Date(sub.submitted_at || sub.created_at).toLocaleDateString()}):\n`
+          const versionLabel = sub.version_label || `Version ${idx + 1}`
+          const componentTag = sub.component_label ? ` [${sub.component_label}]` : ''
+          context += `    ${versionLabel}${componentTag} (${new Date(sub.submitted_at || sub.created_at).toLocaleDateString()}):\n`
           if (terms.rsf) context += `      RSF: ${terms.rsf.toLocaleString()}\n`
           if (terms.base_rent_rsf) context += `      Base Rent: $${terms.base_rent_rsf}/RSF/yr\n`
           if (terms.lease_term_months) context += `      Term: ${terms.lease_term_months} months\n`
@@ -266,6 +280,9 @@ Structure the summary with these sections:
 6. COMMUTE & ACCESSIBILITY (if commute data exists) - Summary of employee commute impact by building
 
 7. RECOMMENDATION & NEXT STEPS - Based on ALL the data (cash, straight-line, commute, location), provide a structured recommendation on which buildings represent the strongest options from both an operational AND financial reporting perspective. Call out which building looks best on a cash basis vs. which looks best on a GAAP/straight-line basis if they differ.
+
+CRITICAL - MULTI-COMPONENT DEALS:
+When the data shows multiple components at the same address (marked with component labels like "Office" and "BTS"), these are NOT competing options. They are parts of a SINGLE combined deal being pursued together as a campus or multi-use arrangement. Present them as one unified deal with combined RSF totals and per-component breakdowns. The total deal size is the SUM of all components.
 
 IMPORTANT GUIDELINES:
 - Do not use em dashes

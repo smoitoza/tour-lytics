@@ -98,6 +98,8 @@ async function getRFPContext(projectId: string): Promise<string> {
       const gaapSummary = analysis.gaap?.summary || {}
 
       context += `--- ${sub.building_address || 'Unknown'} (${(sub.doc_type || '').toUpperCase()}) ---\n`
+      if (sub.component_label) context += `  Component: ${sub.component_label} (part of a multi-component deal at this address)\n`
+      if (sub.version_label) context += `  Version: ${sub.version_label}\n`
       context += `  Submitted: ${sub.submitted_at ? new Date(sub.submitted_at).toLocaleDateString() : 'Unknown'}\n`
       if (sub.doc_source) context += `  Source: ${sub.doc_source}\n`
 
@@ -724,6 +726,16 @@ SCORING CATEGORIES (1-10 scale, used by the client to rate buildings during tour
 - Amenities: On-site amenities (gym, cafe, rooftop, etc.)
 - Overall Feel: General impression of the building
 - The Davis Effect: Named after Steve Davis who has a very high bar for office quality
+
+MULTI-COMPONENT DEALS:
+A single building address may have MULTIPLE components (e.g., "Office" and "BTS" at the same address). These are NOT competing proposals. They are parts of a SINGLE combined deal being pursued together. When a building has multiple component labels:
+- Treat all components as one unified deal at that address
+- Combine the RSF across components for total deal size (e.g., 320K Office + 300K BTS = 620K SF total)
+- Each component may have its own versions/proposals (v1, v2, v3) within it
+- The "Combined Analysis" view shows the full deal picture across all components
+- When summarizing the deal, always present the combined totals alongside per-component breakdowns
+- Components are identified by the "component_label" field (e.g., "Office", "BTS")
+- Submissions WITHOUT a component_label are single-component deals (no grouping needed)
 
 FINANCIAL DATA:
 Financial data comes from LIVE RFP/LOI submissions in the Financials tab (injected at the end of this prompt). These are real proposals uploaded by the team with AI-generated analysis including Cash Flow, Straight-Line P&L (with TI amortization), and GAAP/ASC 842 schedules. ALWAYS use these when answering financial questions.

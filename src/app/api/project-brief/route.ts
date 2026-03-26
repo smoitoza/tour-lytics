@@ -114,6 +114,7 @@ export async function POST(request: NextRequest) {
         const slTotals = sub.analysis?.straight_line_pl?.totals || {}
         const label = sub.version_label || (sub.doc_type || 'rfp').toUpperCase()
         context += `  ${sub.building_address} - ${label}`
+        if (sub.component_label) context += ` [Component: ${sub.component_label}]`
         if (terms.rsf) context += ` | ${terms.rsf.toLocaleString()} RSF`
         if (terms.base_rent_rsf) context += ` | $${terms.base_rent_rsf}/RSF`
         if (terms.lease_term_months) context += ` | ${terms.lease_term_months}mo`
@@ -152,6 +153,9 @@ ${context}
 Based on this data, respond to the following request:
 
 ${prompt}
+
+MULTI-COMPONENT DEALS:
+When multiple RFP submissions at the same building address have different component labels (e.g., "Office" and "BTS"), these are NOT competing options. They are parts of a SINGLE combined deal being pursued together. Present them as one unified deal with combined RSF totals and per-component breakdowns.
 
 GUIDELINES:
 - Write in a professional but approachable tone
