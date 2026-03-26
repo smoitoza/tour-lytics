@@ -735,6 +735,7 @@ function LoginPageInner() {
           >
             Created with Perplexity Computer
           </a>
+          <span style={{ color: '#475569', fontSize: '0.65rem' }}>Patent Pending</span>
         </div>
       </div>
     </div>
