@@ -364,23 +364,54 @@ export default function LandingPage() {
                 <span>{isFullscreen ? 'Exit' : 'Fullscreen'}</span>
               </button>
             </div>
-            {/* iframe */}
-            <iframe
-              src="/app/index.html?projectId=procore-sf-2026"
-              loading="lazy"
-              title="SF Office Search Map Demo"
-              style={{
-                width: '100%',
-                height: isFullscreen ? 'calc(100vh - 44px)' : '80vh',
-                minHeight: isFullscreen ? 'unset' : '600px',
-                border: 'none',
-                display: 'block',
-              }}
-            />
+            {/* Static map preview */}
+            <div style={{ position: 'relative', overflow: 'hidden' }}>
+              <img
+                src="/images/map-demo.jpg"
+                alt="TourLytics interactive survey map showing 33 buildings across San Francisco"
+                loading="lazy"
+                style={{
+                  width: '100%',
+                  height: isFullscreen ? 'calc(100vh - 44px)' : 'auto',
+                  maxHeight: isFullscreen ? 'none' : '80vh',
+                  objectFit: 'cover',
+                  display: 'block',
+                }}
+              />
+              {!isFullscreen && (
+                <div style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'linear-gradient(to bottom, transparent 60%, rgba(248,250,252,0.95) 100%)',
+                  display: 'flex',
+                  alignItems: 'flex-end',
+                  justifyContent: 'center',
+                  paddingBottom: '2rem',
+                }}>
+                  <a
+                    href="/login"
+                    className="inline-flex items-center font-semibold no-underline"
+                    style={{
+                      padding: '0.75rem 2rem',
+                      background: '#2563eb',
+                      color: '#fff',
+                      borderRadius: '0.75rem',
+                      fontSize: 'clamp(0.875rem, 0.85rem + 0.25vw, 1rem)',
+                      boxShadow: '0 4px 16px rgba(37,99,235,0.3)',
+                      gap: '0.5rem',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    Create your own map
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+                  </a>
+                </div>
+              )}
+            </div>
           </div>
           <div className="flex items-center" style={{ gap: '0.5rem', marginTop: '1rem', fontSize: 'clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem)', color: '#94a3b8' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
-            Live interactive map - hover buildings for deal terms, click names to jump to the survey PDF, and build your tour list directly from the map
+            Interactive map with 33 buildings across San Francisco. Hover to explore deal terms, click to view surveys, and build your tour list directly from the map.
           </div>
         </div>
       </section>
