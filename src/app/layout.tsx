@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import RecoveryRedirect from '@/components/RecoveryRedirect'
 
 export const metadata: Metadata = {
   title: 'Tour-Lytics - Commercial Real Estate Intelligence',
@@ -19,7 +20,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="w-full min-w-0">{children}</body>
+      <body className="w-full min-w-0"><RecoveryRedirect />{children}</body>
     </html>
   )
 }
