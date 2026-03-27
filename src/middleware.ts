@@ -29,6 +29,17 @@ export async function middleware(request: NextRequest) {
     }
   )
 
+  // Handle auth code from Supabase redirect (PKCE recovery flow)
+  // Supabase redirects to the Site URL with ?code=xxx after password reset verification
+  const code = request.nextUrl.searchParams.get('code')
+  if (code && request.nextUrl.pathname === '/') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/api/auth/callback'
+    url.searchParams.set('code', code)
+    url.searchParams.set('next', '/reset-password')
+    return NextResponse.redirect(url)
+  }
+
   // Refresh session
   const {
     data: { user },
