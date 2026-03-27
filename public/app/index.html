@@ -15792,6 +15792,7 @@ function rfpExtractTerms(text, address) {
       rentBasis: raw.rent_basis || raw.rentBasis || '',
       annualEscalation: raw.annual_escalation_pct || raw.annualEscalation || '',
       freeRent: raw.free_rent_months || raw.freeRent || '',
+      rentPeriods: raw.rent_periods || raw.rentPeriods || null,
       tiAllowancePerRSF: raw.ti_allowance_rsf || raw.tiAllowancePerRSF || '',
       tiAllowanceTotal: raw.ti_allowance_total || raw.tiAllowanceTotal || '',
       opexRSF: raw.opex_rsf_yr || raw.opexRSF || '',
@@ -15805,6 +15806,135 @@ function rfpExtractTerms(text, address) {
       notes: raw.notes || ''
     };
   });
+}
+
+// ===== STEPPED RENT PERIODS UI =====
+function rfpBuildRentPeriodsUI(periods) {
+  var html = '<div id="rfp-rent-periods-list">';
+  if (periods && periods.length > 0) {
+    periods.forEach(function(p, i) {
+      html += rfpRentPeriodRow(i, p);
+    });
+  }
+  html += '</div>';
+  html += '<button type="button" onclick="rfpAddRentPeriod()" style="font-size:var(--text-xs);color:var(--color-accent);background:none;border:1px dashed var(--color-border);border-radius:6px;cursor:pointer;padding:6px 12px;margin-top:4px;width:100%">+ Add Period</button>';
+  return html;
+}
+
+function rfpRentPeriodRow(index, period) {
+  var p = period || { from_month: '', to_month: '', rent_rsf_yr: '', label: '' };
+  return '<div class="rfp-rent-period-row" data-index="' + index + '" style="display:grid;grid-template-columns:1fr 1fr 1fr 1.5fr auto;gap:6px;align-items:end;margin-bottom:6px">' +
+    '<div>' +
+      (index === 0 ? '<label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">From Mo.</label>' : '') +
+      '<input class="rfp-form-input" type="number" min="1" value="' + (p.from_month || '') + '" data-field="from_month" style="padding:6px 8px;font-size:var(--text-sm)" />' +
+    '</div>' +
+    '<div>' +
+      (index === 0 ? '<label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">To Mo.</label>' : '') +
+      '<input class="rfp-form-input" type="number" min="1" value="' + (p.to_month || '') + '" data-field="to_month" style="padding:6px 8px;font-size:var(--text-sm)" />' +
+    '</div>' +
+    '<div>' +
+      (index === 0 ? '<label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">Rate/RSF/yr</label>' : '') +
+      '<input class="rfp-form-input" type="number" step="0.01" min="0" value="' + (p.rent_rsf_yr != null ? p.rent_rsf_yr : '') + '" data-field="rent_rsf_yr" placeholder="0 = free" style="padding:6px 8px;font-size:var(--text-sm)" />' +
+    '</div>' +
+    '<div>' +
+      (index === 0 ? '<label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">Label</label>' : '') +
+      '<input class="rfp-form-input" type="text" value="' + (p.label || '') + '" data-field="label" placeholder="e.g. Free Rent" style="padding:6px 8px;font-size:var(--text-sm)" />' +
+    '</div>' +
+    '<button type="button" onclick="rfpRemoveRentPeriod(' + index + ')" style="background:none;border:none;cursor:pointer;color:var(--color-text-muted);padding:4px;margin-bottom:2px" title="Remove">' +
+      '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+    '</button>' +
+  '</div>';
+}
+
+function rfpAddRentPeriod() {
+  var list = document.getElementById('rfp-rent-periods-list');
+  if (!list) return;
+  var rows = list.querySelectorAll('.rfp-rent-period-row');
+  var nextIndex = rows.length;
+  // Pre-populate from_month based on previous row's to_month + 1
+  var defaultFrom = 1;
+  if (rows.length > 0) {
+    var lastRow = rows[rows.length - 1];
+    var lastTo = lastRow.querySelector('[data-field="to_month"]');
+    if (lastTo && lastTo.value) defaultFrom = parseInt(lastTo.value) + 1;
+  }
+  var div = document.createElement('div');
+  div.innerHTML = rfpRentPeriodRow(nextIndex, { from_month: defaultFrom, to_month: '', rent_rsf_yr: '', label: '' });
+  list.appendChild(div.firstElementChild);
+}
+
+function rfpRemoveRentPeriod(index) {
+  var list = document.getElementById('rfp-rent-periods-list');
+  if (!list) return;
+  var rows = list.querySelectorAll('.rfp-rent-period-row');
+  rows.forEach(function(row) {
+    if (parseInt(row.getAttribute('data-index')) === index) {
+      row.remove();
+    }
+  });
+  // Re-index remaining rows
+  var remaining = list.querySelectorAll('.rfp-rent-period-row');
+  remaining.forEach(function(row, i) {
+    row.setAttribute('data-index', i);
+  });
+}
+
+function rfpToggleRentPeriods() {
+  var container = document.getElementById('rfp-rent-periods-container');
+  var toggle = document.getElementById('rfp-toggle-rent-periods');
+  var baseRentGroup = document.getElementById('rfp-group-baseRent');
+  var freeRentGroup = document.getElementById('rfp-group-freeRent');
+  if (!container) return;
+
+  var isShown = container.style.display !== 'none';
+  if (isShown) {
+    // Switch to single rate mode
+    container.style.display = 'none';
+    if (toggle) toggle.textContent = 'Use stepped rates';
+    if (baseRentGroup) { baseRentGroup.style.opacity = '1'; baseRentGroup.style.pointerEvents = 'auto'; }
+    if (freeRentGroup) { freeRentGroup.style.opacity = '1'; freeRentGroup.style.pointerEvents = 'auto'; }
+  } else {
+    // Switch to stepped rate mode
+    container.style.display = '';
+    if (toggle) toggle.textContent = 'Use single rate';
+    if (baseRentGroup) { baseRentGroup.style.opacity = '0.4'; baseRentGroup.style.pointerEvents = 'none'; }
+    if (freeRentGroup) { freeRentGroup.style.opacity = '0.4'; freeRentGroup.style.pointerEvents = 'none'; }
+    // If no periods exist yet, add an empty one
+    var list = document.getElementById('rfp-rent-periods-list');
+    if (list && list.querySelectorAll('.rfp-rent-period-row').length === 0) {
+      rfpAddRentPeriod();
+    }
+  }
+}
+
+function rfpCollectRentPeriods() {
+  var container = document.getElementById('rfp-rent-periods-container');
+  if (!container || container.style.display === 'none') return null;
+
+  var list = document.getElementById('rfp-rent-periods-list');
+  if (!list) return null;
+
+  var periods = [];
+  var rows = list.querySelectorAll('.rfp-rent-period-row');
+  rows.forEach(function(row) {
+    var fromEl = row.querySelector('[data-field="from_month"]');
+    var toEl = row.querySelector('[data-field="to_month"]');
+    var rateEl = row.querySelector('[data-field="rent_rsf_yr"]');
+    var labelEl = row.querySelector('[data-field="label"]');
+    var fromMonth = fromEl ? parseInt(fromEl.value) : 0;
+    var toMonth = toEl ? parseInt(toEl.value) : 0;
+    var rate = rateEl ? parseFloat(rateEl.value) : 0;
+    var label = labelEl ? labelEl.value.trim() : '';
+    if (fromMonth > 0 && toMonth > 0) {
+      periods.push({
+        from_month: fromMonth,
+        to_month: toMonth,
+        rent_rsf_yr: isNaN(rate) ? 0 : rate,
+        label: label
+      });
+    }
+  });
+  return periods.length > 0 ? periods : null;
 }
 
 // ===== REVIEW FORM =====
@@ -15832,11 +15962,16 @@ function rfpShowReviewForm(terms, meta) {
     { key: 'notes', label: 'Notes', type: 'textarea', fullWidth: true }
   ];
 
+  // Check if stepped rent periods exist
+  var hasRentPeriods = terms.rentPeriods && Array.isArray(terms.rentPeriods) && terms.rentPeriods.length > 0;
+
   var formHtml = '<div class="rfp-form">';
   fields.forEach(function(f) {
     var val = terms[f.key] != null ? terms[f.key] : '';
     var cls = f.fullWidth ? 'rfp-form-group full-width' : 'rfp-form-group';
-    formHtml += '<div class="' + cls + '">';
+    // Dim base rent and free rent fields when stepped rent is active
+    var dimmed = hasRentPeriods && (f.key === 'baseRent' || f.key === 'freeRent');
+    formHtml += '<div class="' + cls + '" id="rfp-group-' + f.key + '"' + (dimmed ? ' style="opacity:0.4;pointer-events:none"' : '') + '>';
     formHtml += '<label class="rfp-form-label">' + f.label + '</label>';
     if (f.type === 'textarea') {
       formHtml += '<textarea class="rfp-form-input rfp-textarea" id="rfp-field-' + f.key + '" placeholder="' + (f.placeholder || '') + '">' + val + '</textarea>';
@@ -15847,6 +15982,21 @@ function rfpShowReviewForm(terms, meta) {
         (f.placeholder ? ' placeholder="' + f.placeholder + '"' : '') + ' />';
     }
     formHtml += '</div>';
+
+    // Insert Rent Schedule section after freeRent field
+    if (f.key === 'freeRent') {
+      formHtml += '<div class="full-width" style="grid-column:1/-1;margin:4px 0 8px">';
+      formHtml += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">';
+      formHtml += '<label class="rfp-form-label" style="margin:0;font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-accent)">Rent Schedule</label>';
+      formHtml += '<button type="button" id="rfp-toggle-rent-periods" onclick="rfpToggleRentPeriods()" style="font-size:var(--text-xs);color:var(--color-accent);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline">';
+      formHtml += hasRentPeriods ? 'Use single rate' : 'Use stepped rates';
+      formHtml += '</button>';
+      formHtml += '</div>';
+      formHtml += '<div id="rfp-rent-periods-container" style="' + (hasRentPeriods ? '' : 'display:none') + '">';
+      formHtml += rfpBuildRentPeriodsUI(hasRentPeriods ? terms.rentPeriods : []);
+      formHtml += '</div>';
+      formHtml += '</div>';
+    }
   });
   formHtml += '</div>';
 
@@ -15894,6 +16044,14 @@ function rfpConfirmFromForm() {
     }
     terms[f.key] = val;
   });
+
+  // Collect stepped rent periods if active
+  var rentPeriods = rfpCollectRentPeriods();
+  if (rentPeriods) {
+    terms.rentPeriods = rentPeriods;
+    // When stepped rent is active, clear legacy base rent / free rent to avoid confusion
+    // The engine will use rent_periods exclusively
+  }
 
   // If opexRSF is set, auto-calculate monthly opex from it: (opexRSF * RSF) / 12
   if (terms.opexRSF && terms.rsf && !terms.opex) {
@@ -16992,10 +17150,17 @@ function rfpShowVersionComparison(buildingAddress) {
       return summary[field.key] || 0;
     }
     var t = sub.deal_terms || sub.dealTerms || {};
+    // For stepped rent, show first paid rate as base rent in comparisons
+    var effectiveBaseRent = t.base_rent_rsf || t.baseRent || 0;
+    var rp = t.rent_periods || t.rentPeriods;
+    if (rp && Array.isArray(rp) && rp.length > 0) {
+      var firstPaid = rp.find(function(p) { return p.rent_rsf_yr > 0; });
+      if (firstPaid) effectiveBaseRent = firstPaid.rent_rsf_yr;
+    }
     var map = {
       rsf: t.rsf || 0,
       leaseTerm: t.lease_term_months || t.leaseTerm || 0,
-      baseRent: t.base_rent_rsf || t.baseRent || 0,
+      baseRent: effectiveBaseRent,
       annualEscalation: t.annual_escalation_pct || t.annualEscalation || 0,
       freeRent: t.free_rent_months || t.freeRent || 0,
       tiAllowancePerRSF: t.ti_allowance_rsf || t.tiAllowancePerRSF || 0,
@@ -17095,14 +17260,37 @@ function rfpBuildTermsTable(terms) {
     landlord: terms.landlord || '',
     notes: terms.notes || ''
   };
+  // Check for rent periods
+  var rentPeriods = terms.rent_periods || terms.rentPeriods || null;
+  var hasRentPeriods = rentPeriods && Array.isArray(rentPeriods) && rentPeriods.length > 0;
+
   var rows = [
     ['RSF', rfpFmtNum(t.rsf)],
     ['Lease Term', t.leaseTerm ? t.leaseTerm + ' months' : '--'],
     ['Commencement Date', t.commencementDate || '--'],
-    ['Base Rent', t.baseRent ? rfpFmtCurrencyDecimals(t.baseRent) + '/RSF/yr' : '--'],
+  ];
+
+  if (hasRentPeriods) {
+    rows.push(['Rent Schedule', 'Stepped (see below)']);
+    rentPeriods.forEach(function(p) {
+      var label = p.label ? p.label + ': ' : '';
+      var rateStr = p.rent_rsf_yr === 0 ? 'No Base Rent' : rfpFmtCurrencyDecimals(p.rent_rsf_yr) + '/RSF/yr';
+      rows.push(['  Mo. ' + p.from_month + '-' + p.to_month, label + rateStr]);
+    });
+  } else {
+    rows.push(['Base Rent', t.baseRent ? rfpFmtCurrencyDecimals(t.baseRent) + '/RSF/yr' : '--']);
+  }
+
+  rows = rows.concat([
     ['Rent Basis', t.rentBasis || '--'],
     ['Annual Escalation', t.annualEscalation ? t.annualEscalation + '%' : '--'],
-    ['Free Rent', t.freeRent ? t.freeRent + ' months' : '--'],
+  ]);
+
+  if (!hasRentPeriods) {
+    rows.push(['Free Rent', t.freeRent ? t.freeRent + ' months' : '--']);
+  }
+
+  rows = rows.concat([
     ['TI Allowance (per RSF)', rfpFmtCurrencyDecimals(t.tiAllowancePerRSF)],
     ['TI Allowance (total)', rfpFmtCurrencyPlain(t.tiAllowanceTotal)],
     ['OpEx (monthly)', rfpFmtCurrencyPlain(t.opex)],
@@ -17564,6 +17752,9 @@ function rfpExportExcel() {
   // Input fields (yellow highlight) vs read-only fields
   // 'input' = user can change these to remodel the deal
   // 'readonly' = informational, not used in calculations
+  var exRentPeriods = terms.rent_periods || terms.rentPeriods || null;
+  var exHasRentPeriods = exRentPeriods && Array.isArray(exRentPeriods) && exRentPeriods.length > 0;
+
   var dtFields = [
     ['Building Address', address, 'text', 'readonly'],
     ['Document Type', docType, 'text', 'readonly'],
@@ -17572,9 +17763,25 @@ function rfpExportExcel() {
     ['RSF', n(terms.rsf), 'num', 'input'],
     ['Lease Term (months)', n(terms.lease_term_months), 'num', 'input'],
     ['Commencement Date', terms.commencement_date || '', 'text', 'input'],
-    ['Base Rent (per RSF/yr)', n(terms.base_rent_rsf), 'curr_dec', 'input'],
-    ['Annual Escalation', n(terms.annual_escalation_pct) / 100, 'pct', 'input'],
-    ['Free Rent (months)', n(terms.free_rent_months), 'num', 'input'],
+  ];
+
+  if (exHasRentPeriods) {
+    dtFields.push(['Rent Schedule', 'Stepped', 'text', 'readonly']);
+    exRentPeriods.forEach(function(p) {
+      var lbl = p.label ? p.label : 'Mo. ' + p.from_month + '-' + p.to_month;
+      dtFields.push(['  Mo. ' + p.from_month + '-' + p.to_month, n(p.rent_rsf_yr), 'curr_dec', 'readonly']);
+    });
+  } else {
+    dtFields.push(['Base Rent (per RSF/yr)', n(terms.base_rent_rsf), 'curr_dec', 'input']);
+  }
+
+  dtFields.push(['Annual Escalation', n(terms.annual_escalation_pct) / 100, 'pct', 'input']);
+
+  if (!exHasRentPeriods) {
+    dtFields.push(['Free Rent (months)', n(terms.free_rent_months), 'num', 'input']);
+  }
+
+  dtFields = dtFields.concat([
     ['TI Allowance (per RSF)', n(terms.ti_allowance_rsf), 'curr_dec', 'input'],
     ['TI Allowance (Total)', n(terms.ti_allowance_total), 'curr', 'formula'],
     ['OpEx/Tax/CAM (per RSF/yr)', n(terms.opex_rsf_yr), 'curr_dec', 'input'],
@@ -17585,15 +17792,30 @@ function rfpExportExcel() {
     ['Security Deposit', n(terms.security_deposit), 'curr', 'readonly'],
     ['Rent Basis', terms.rent_basis || '', 'text', 'readonly'],
     ['Notes', terms.notes || '', 'text', 'readonly'],
-  ];
+  ]);
 
   // Track cell references for inputs that other tabs will reference
   var dtRefs = {}; // { 'rsf': 'B8', 'base_rent': 'B11', etc. }
-  var inputFieldMap = {
-    4: 'rsf', 5: 'lease_term', 7: 'base_rent', 8: 'escalation',
-    9: 'free_rent', 10: 'ti_per_rsf', 12: 'opex_rsf_yr', 13: 'opex_monthly',
-    14: 'parking_spots', 15: 'parking_rate', 16: 'parking_escalation'
+  // Label-based field map (handles dynamic row counts with stepped rent)
+  var labelRefMap = {
+    'RSF': 'rsf',
+    'Lease Term (months)': 'lease_term',
+    'Base Rent (per RSF/yr)': 'base_rent',
+    'Annual Escalation': 'escalation',
+    'Free Rent (months)': 'free_rent',
+    'TI Allowance (per RSF)': 'ti_per_rsf',
+    'OpEx/Tax/CAM (per RSF/yr)': 'opex_rsf_yr',
+    'OpEx (Monthly)': 'opex_monthly',
+    'Parking Spots': 'parking_spots',
+    'Parking Rate (per mo)': 'parking_rate',
+    'Parking Escalation': 'parking_escalation'
   };
+  var tiTotalLabel = 'TI Allowance (Total)';
+  var tiPerRsfLabel = 'TI Allowance (per RSF)';
+  var rsfLabel = 'RSF';
+  var tiTotalRow = -1;
+  var tiPerRsfRow = -1;
+  var rsfRow = -1;
 
   dtFields.forEach(function(f, i) {
     var row = 3 + i;
@@ -17610,18 +17832,21 @@ function rfpExportExcel() {
     else if (i % 2 === 0) { lbl = Object.assign({}, lbl, { fill: altRowFill }); vStyle = Object.assign({}, vStyle, { fill: altRowFill }); }
     setCell(dtWS, row, 0, f[0], lbl);
 
+    // Track special rows for formula references
+    if (f[0] === tiTotalLabel) tiTotalRow = row;
+    if (f[0] === tiPerRsfLabel) tiPerRsfRow = row;
+    if (f[0] === rsfLabel) rsfRow = row;
+
     // TI Total = RSF * TI/RSF (formula)
-    if (isFormula && inputFieldMap[10]) {
-      var rsfRef = "'Deal Terms'!B" + (3 + 4 + 1); // RSF row
-      var tiRsfRef = "'Deal Terms'!B" + (3 + 10 + 1); // TI/RSF row
-      setFormula(dtWS, row, 1, 'B' + (3 + 4 + 1) + '*B' + (3 + 10 + 1), Object.assign({}, formulaStyle, { numFmt: _cFmt }));
+    if (isFormula && f[0] === tiTotalLabel && rsfRow >= 0 && tiPerRsfRow >= 0) {
+      setFormula(dtWS, row, 1, 'B' + (rsfRow + 1) + '*B' + (tiPerRsfRow + 1), Object.assign({}, formulaStyle, { numFmt: _cFmt }));
     } else {
       setCell(dtWS, row, 1, f[1], vStyle);
     }
 
-    // Store reference for this input
-    if (inputFieldMap[i] !== undefined) {
-      dtRefs[inputFieldMap[i]] = 'B' + (row + 1);
+    // Store reference for this input (label-based)
+    if (labelRefMap[f[0]]) {
+      dtRefs[labelRefMap[f[0]]] = 'B' + (row + 1);
     }
   });
 
@@ -17751,13 +17976,18 @@ function rfpExportExcel() {
       setCell(slWS, r, 1, row.months, Object.assign({}, centerStyle, rowFill));
 
       // Col C: Base Rent = RSF * Base_Rent/RSF * (1+escalation)^(year-1) * (months/12)
-      var rentFormula;
-      if (i === 0) {
-        rentFormula = dtRSF + '*' + dtBaseRent + '*B' + excelRow + '/12';
+      if (exHasRentPeriods) {
+        // Stepped rent: use pre-calculated annual base rent values
+        setCell(slWS, r, 2, n(row.baseRent), Object.assign({}, formulaStyle, rowFill));
       } else {
-        rentFormula = dtRSF + '*' + dtBaseRent + '*(1+' + dtEscalation + ')^' + i + '*B' + excelRow + '/12';
+        var rentFormula;
+        if (i === 0) {
+          rentFormula = dtRSF + '*' + dtBaseRent + '*B' + excelRow + '/12';
+        } else {
+          rentFormula = dtRSF + '*' + dtBaseRent + '*(1+' + dtEscalation + ')^' + i + '*B' + excelRow + '/12';
+        }
+        setFormula(slWS, r, 2, rentFormula, Object.assign({}, formulaStyle, rowFill));
       }
-      setFormula(slWS, r, 2, rentFormula, Object.assign({}, formulaStyle, rowFill));
 
       // Col D: Free Rent (using original value - complex to formula-ize the month distribution)
       setCell(slWS, r, 3, n(row.freeRent), Object.assign({}, (hasFreeRent ? greenCurrStyle : currStyle), rowFill));
@@ -17951,17 +18181,28 @@ function rfpExportExcel() {
 
       // Col D: Rent/RSF = Base_Rent/12 * (1+escalation)^(year-1)
       var yr = row.leaseYear || 1;
-      if (yr <= 1) {
+      if (exHasRentPeriods) {
+        // Stepped rent: use pre-calculated values (no simple formula possible)
+        setCell(cfWS, r, 3, Math.round((row.rentRSF || 0) * 100) / 100 / 12, Object.assign({}, formulaDecStyle, rowFill));
+      } else if (yr <= 1) {
         setFormula(cfWS, r, 3, cfDT + dtRefs.base_rent + '/12', Object.assign({}, formulaDecStyle, rowFill));
       } else {
         setFormula(cfWS, r, 3, cfDT + dtRefs.base_rent + '/12*(1+' + cfDT + dtRefs.escalation + ')^' + (yr - 1), Object.assign({}, formulaDecStyle, rowFill));
       }
 
       // Col E: Base Rent = Rent/RSF * RSF
-      setFormula(cfWS, r, 4, 'D' + er + '*' + cfDT + dtRefs.rsf, Object.assign({}, formulaStyle, rowFill));
+      if (exHasRentPeriods) {
+        setCell(cfWS, r, 4, row.monthlyBaseRent || 0, Object.assign({}, formulaStyle, rowFill));
+      } else {
+        setFormula(cfWS, r, 4, 'D' + er + '*' + cfDT + dtRefs.rsf, Object.assign({}, formulaStyle, rowFill));
+      }
 
       // Col F: Free Rent Credit (IF month <= free_rent_months, Base Rent, 0)
-      setFormula(cfWS, r, 5, 'IF(A' + er + '<=' + cfDT + dtRefs.free_rent + ',E' + er + ',0)', Object.assign({}, (isFreeRent ? greenCurrStyle : formulaStyle), rowFill));
+      if (exHasRentPeriods) {
+        setCell(cfWS, r, 5, row.freeRentCredit || 0, Object.assign({}, (isFreeRent ? greenCurrStyle : formulaStyle), rowFill));
+      } else {
+        setFormula(cfWS, r, 5, 'IF(A' + er + '<=' + cfDT + dtRefs.free_rent + ',E' + er + ',0)', Object.assign({}, (isFreeRent ? greenCurrStyle : formulaStyle), rowFill));
+      }
 
       // Col G: Net Cash Rent = Base Rent - Free Rent Credit
       setFormula(cfWS, r, 6, 'E' + er + '-F' + er, Object.assign({}, formulaStyle, rowFill));

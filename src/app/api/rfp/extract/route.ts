@@ -33,10 +33,11 @@ Return a JSON object with these fields (use null for any field you cannot find):
   "lease_term_months": <number - total lease term in months>,
   "commencement_date": <string - "YYYY-MM-DD" format, or estimated>,
   "expiration_date": <string - "YYYY-MM-DD" format, or estimated>,
-  "base_rent_rsf": <number - base rent per RSF per year>,
+  "base_rent_rsf": <number - base rent per RSF per year, use the FIRST paid rent rate if stepped>,
   "rent_basis": <string - "Full Service Gross", "Modified Gross", "NNN", etc.>,
   "annual_escalation_pct": <number - annual rent escalation percentage>,
   "free_rent_months": <number - months of free/abated rent>,
+  "rent_periods": <array or null - ONLY include if the lease has different base rent rates for different time periods (stepped/graduated rent). Each entry: {"from_month": <number>, "to_month": <number>, "rent_rsf_yr": <number - annual rate per RSF>, "label": <string - short description>}. Use rent_rsf_yr=0 for free rent periods. Do NOT include this field if rent is a single flat rate with standard annual escalation.>,
   "ti_allowance_rsf": <number - tenant improvement allowance per RSF>,
   "ti_allowance_total": <number - total TI allowance in dollars>,
   "security_deposit": <number - security deposit amount>,
@@ -56,6 +57,8 @@ IMPORTANT:
 - If TI is given as $/RSF, also calculate the total (RSF x TI/RSF)
 - If rent is given monthly, convert to annual $/RSF
 - For dates, estimate if only month/year is given (use the 1st of the month)
+- If the document specifies different rent rates for different periods (e.g. months 1-12 at $0, months 13-24 at $16.83/RSF/yr), include them in rent_periods. After the last defined period, the annual_escalation_pct applies automatically.
+- Do NOT use rent_periods for simple deals with one flat rate + escalation. Only use it for genuinely stepped/graduated rent structures.
 
 DOCUMENT TEXT:
 ${documentText.substring(0, 15000)}`

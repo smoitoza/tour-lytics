@@ -157,9 +157,19 @@ export async function POST(request: NextRequest) {
           const componentTag = sub.component_label ? ` [${sub.component_label}]` : ''
           context += `    ${versionLabel}${componentTag} (${new Date(sub.submitted_at || sub.created_at).toLocaleDateString()}):\n`
           if (terms.rsf) context += `      RSF: ${terms.rsf.toLocaleString()}\n`
-          if (terms.base_rent_rsf) context += `      Base Rent: $${terms.base_rent_rsf}/RSF/yr\n`
+          const exRentPeriods = terms.rent_periods || terms.rentPeriods
+          if (exRentPeriods && Array.isArray(exRentPeriods) && exRentPeriods.length > 0) {
+            context += `      Rent Schedule: Stepped\n`
+            exRentPeriods.forEach((p: any) => {
+              const lbl = p.label ? ` (${p.label})` : ''
+              const rate = p.rent_rsf_yr === 0 ? 'No Base Rent' : `$${p.rent_rsf_yr}/RSF/yr`
+              context += `        Mo. ${p.from_month}-${p.to_month}: ${rate}${lbl}\n`
+            })
+          } else if (terms.base_rent_rsf) {
+            context += `      Base Rent: $${terms.base_rent_rsf}/RSF/yr\n`
+          }
           if (terms.lease_term_months) context += `      Term: ${terms.lease_term_months} months\n`
-          if (terms.free_rent_months) context += `      Free Rent: ${terms.free_rent_months} months\n`
+          if (!exRentPeriods && terms.free_rent_months) context += `      Free Rent: ${terms.free_rent_months} months\n`
           if (terms.ti_allowance_rsf) context += `      TI: $${terms.ti_allowance_rsf}/RSF\n`
           if (terms.annual_escalation) context += `      Annual Escalation: ${terms.annual_escalation}%\n`
           if (terms.opex_rsf) context += `      OpEx: $${terms.opex_rsf}/RSF/yr\n`

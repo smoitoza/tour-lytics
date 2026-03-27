@@ -116,9 +116,15 @@ export async function POST(request: NextRequest) {
         context += `  ${sub.building_address} - ${label}`
         if (sub.component_label) context += ` [Component: ${sub.component_label}]`
         if (terms.rsf) context += ` | ${terms.rsf.toLocaleString()} RSF`
-        if (terms.base_rent_rsf) context += ` | $${terms.base_rent_rsf}/RSF`
+        const bpRentPeriods = terms.rent_periods || terms.rentPeriods
+        if (bpRentPeriods && Array.isArray(bpRentPeriods) && bpRentPeriods.length > 0) {
+          const firstPaid = bpRentPeriods.find((p: any) => p.rent_rsf_yr > 0)
+          context += ` | Stepped rent (${firstPaid ? '$' + firstPaid.rent_rsf_yr + '/RSF starting Mo.' + firstPaid.from_month : 'see schedule'})`
+        } else if (terms.base_rent_rsf) {
+          context += ` | $${terms.base_rent_rsf}/RSF`
+        }
         if (terms.lease_term_months) context += ` | ${terms.lease_term_months}mo`
-        if (terms.free_rent_months) context += ` | ${terms.free_rent_months}mo free`
+        if (!bpRentPeriods && terms.free_rent_months) context += ` | ${terms.free_rent_months}mo free`
         if (terms.ti_allowance_rsf) context += ` | $${terms.ti_allowance_rsf}/RSF TI`
         if (summary.effectiveRentRSF) context += ` | Eff: $${summary.effectiveRentRSF}/RSF`
         if (summary.totalAllInCost) context += ` | All-in: $${summary.totalAllInCost.toLocaleString()}`

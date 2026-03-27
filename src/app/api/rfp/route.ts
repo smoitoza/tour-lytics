@@ -69,6 +69,7 @@ export async function POST(req: Request) {
     base_rent_rsf: rawTerms.base_rent_rsf ?? rawTerms.baseRent ?? 0,
     annual_escalation_pct: rawTerms.annual_escalation_pct ?? rawTerms.annualEscalation ?? 0,
     free_rent_months: rawTerms.free_rent_months ?? rawTerms.freeRent ?? 0,
+    rent_periods: rawTerms.rent_periods ?? rawTerms.rentPeriods ?? undefined,
     ti_allowance_rsf: rawTerms.ti_allowance_rsf ?? rawTerms.tiAllowancePerRSF ?? 0,
     ti_allowance_total: rawTerms.ti_allowance_total ?? rawTerms.tiAllowanceTotal ?? 0,
     opex_rsf_yr: rawTerms.opex_rsf_yr ?? rawTerms.opexRSF ?? 0,
@@ -206,6 +207,13 @@ export async function DELETE(req: Request) {
 // FINANCIAL ANALYSIS ENGINE
 // ============================================================
 
+interface RentPeriod {
+  from_month: number
+  to_month: number
+  rent_rsf_yr: number
+  label?: string
+}
+
 interface DealTerms {
   rsf?: number
   lease_term_months?: number
@@ -213,6 +221,7 @@ interface DealTerms {
   base_rent_rsf?: number
   annual_escalation_pct?: number
   free_rent_months?: number
+  rent_periods?: RentPeriod[]
   ti_allowance_rsf?: number
   ti_allowance_total?: number
   opex_rsf_yr?: number
@@ -227,12 +236,53 @@ interface DealTerms {
   notes?: string
 }
 
+// Helper: determine rent/RSF/yr for a given month, handling stepped rent periods
+function getRentForMonth(
+  month: number,
+  rentPeriods: RentPeriod[] | undefined,
+  baseRentRSF: number,
+  escalation: number,
+  freeMonths: number
+): { rentRSFYr: number; isFreeRent: boolean } {
+  // If rent_periods defined, they take full control of the rent schedule.
+  // After the last defined period, escalation kicks in annually from the last period's rate.
+  if (rentPeriods && rentPeriods.length > 0) {
+    // Sort periods by from_month
+    const sorted = [...rentPeriods].sort((a, b) => a.from_month - b.from_month)
+
+    // Check if month falls within a defined period
+    for (const p of sorted) {
+      if (month >= p.from_month && month <= p.to_month) {
+        return { rentRSFYr: p.rent_rsf_yr, isFreeRent: p.rent_rsf_yr === 0 }
+      }
+    }
+
+    // Month is past all defined periods -- escalate from last period's rate
+    const lastPeriod = sorted[sorted.length - 1]
+    const lastRate = lastPeriod.rent_rsf_yr
+    const monthsAfterLastPeriod = month - lastPeriod.to_month
+    // Determine how many full years of escalation have passed since last period ended
+    const escalationYears = Math.ceil(monthsAfterLastPeriod / 12)
+    const escalatedRate = lastRate * Math.pow(1 + escalation, escalationYears)
+    return { rentRSFYr: escalatedRate, isFreeRent: false }
+  }
+
+  // Legacy mode: single base rent + free months + annual escalation
+  const leaseYear = Math.ceil(month / 12)
+  const yearMultiplier = Math.pow(1 + escalation, leaseYear - 1)
+  const currentRentRSFYr = baseRentRSF * yearMultiplier
+  const isFree = month <= Math.floor(freeMonths) || (month === Math.floor(freeMonths) + 1 && freeMonths % 1 > 0)
+  return { rentRSFYr: currentRentRSFYr, isFreeRent: false } // free rent handled separately in legacy mode
+}
+
 function generateFinancialAnalysis(terms: DealTerms) {
   const rsf = terms.rsf || 0
   const termMonths = terms.lease_term_months || 60
   const baseRentRSF = terms.base_rent_rsf || 0
   const escalation = (terms.annual_escalation_pct || 0) / 100
   const freeMonths = terms.free_rent_months || 0
+  const rentPeriods = terms.rent_periods
+  const useSteppedRent = rentPeriods && rentPeriods.length > 0
   const tiRSF = terms.ti_allowance_rsf || 0
   const tiTotal = terms.ti_allowance_total || (tiRSF * rsf)
   const opexMonthly = terms.opex_monthly || 0
@@ -255,17 +305,36 @@ function generateFinancialAnalysis(terms: DealTerms) {
     monthDate.setMonth(monthDate.getMonth() + m - 1)
     const period = monthDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
 
-    // Rent with annual escalation
-    const yearMultiplier = Math.pow(1 + escalation, leaseYear - 1)
-    const currentRentRSF = baseRentRSF * yearMultiplier
-    const monthlyBaseRent = (currentRentRSF * rsf) / 12
-
-    // Free rent (supports fractional months, e.g. 0.5 = half month free)
+    let currentRentRSF: number
+    let monthlyBaseRent: number
     let freeRentCredit = 0
-    if (m <= Math.floor(freeMonths)) {
-      freeRentCredit = monthlyBaseRent // full free month
-    } else if (m === Math.floor(freeMonths) + 1 && freeMonths % 1 > 0) {
-      freeRentCredit = monthlyBaseRent * (freeMonths % 1) // partial free month
+
+    if (useSteppedRent) {
+      // Stepped rent mode: rent_periods drives everything
+      const { rentRSFYr } = getRentForMonth(m, rentPeriods, baseRentRSF, escalation, freeMonths)
+      currentRentRSF = rentRSFYr
+      monthlyBaseRent = (currentRentRSF * rsf) / 12
+      // In stepped mode, $0 periods are the "free rent" -- no separate free rent credit
+      // but we track the value of $0 periods as free rent value for reporting
+      if (currentRentRSF === 0) {
+        // Find what rent WOULD be if not free (use first non-zero period or base_rent_rsf)
+        const sorted = [...rentPeriods!].sort((a, b) => a.from_month - b.from_month)
+        const firstPaidPeriod = sorted.find(p => p.rent_rsf_yr > 0)
+        const shadowRent = firstPaidPeriod ? firstPaidPeriod.rent_rsf_yr : baseRentRSF
+        freeRentCredit = (shadowRent * rsf) / 12
+      }
+    } else {
+      // Legacy mode: single base rent + escalation
+      const yearMultiplier = Math.pow(1 + escalation, leaseYear - 1)
+      currentRentRSF = baseRentRSF * yearMultiplier
+      monthlyBaseRent = (currentRentRSF * rsf) / 12
+
+      // Free rent (supports fractional months, e.g. 0.5 = half month free)
+      if (m <= Math.floor(freeMonths)) {
+        freeRentCredit = monthlyBaseRent // full free month
+      } else if (m === Math.floor(freeMonths) + 1 && freeMonths % 1 > 0) {
+        freeRentCredit = monthlyBaseRent * (freeMonths % 1) // partial free month
+      }
     }
     const netCashRent = monthlyBaseRent - freeRentCredit
 

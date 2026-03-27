@@ -107,10 +107,20 @@ async function getRFPContext(projectId: string): Promise<string> {
       if (terms.rsf) context += `    RSF: ${terms.rsf.toLocaleString()}\n`
       if (terms.lease_term_months) context += `    Lease Term: ${terms.lease_term_months} months\n`
       if (terms.commencement_date) context += `    Commencement: ${terms.commencement_date}\n`
-      if (terms.base_rent_rsf) context += `    Base Rent: $${terms.base_rent_rsf}/RSF/yr\n`
+      const rentPeriods = terms.rent_periods || terms.rentPeriods
+      if (rentPeriods && Array.isArray(rentPeriods) && rentPeriods.length > 0) {
+        context += `    Rent Schedule: Stepped/Graduated\n`
+        rentPeriods.forEach((p: any) => {
+          const label = p.label ? ` (${p.label})` : ''
+          const rate = p.rent_rsf_yr === 0 ? 'No Base Rent' : `$${p.rent_rsf_yr}/RSF/yr`
+          context += `      Months ${p.from_month}-${p.to_month}: ${rate}${label}\n`
+        })
+      } else if (terms.base_rent_rsf) {
+        context += `    Base Rent: $${terms.base_rent_rsf}/RSF/yr\n`
+      }
       if (terms.rent_basis) context += `    Rent Basis: ${terms.rent_basis}\n`
       if (terms.annual_escalation_pct) context += `    Annual Escalation: ${terms.annual_escalation_pct}%\n`
-      if (terms.free_rent_months) context += `    Free Rent: ${terms.free_rent_months} months\n`
+      if (!rentPeriods && terms.free_rent_months) context += `    Free Rent: ${terms.free_rent_months} months\n`
       if (terms.ti_allowance_rsf) context += `    TI Allowance: $${terms.ti_allowance_rsf}/RSF\n`
       if (terms.ti_allowance_total) context += `    TI Allowance Total: $${terms.ti_allowance_total.toLocaleString()}\n`
       if (terms.opex_monthly) context += `    OpEx (monthly): $${terms.opex_monthly.toLocaleString()}\n`
