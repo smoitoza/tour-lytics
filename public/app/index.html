@@ -15432,23 +15432,23 @@ function rfpShowUploadModal() {
               '<div class="rfp-form-group"><label>Lease Term (months)</label><input class="rfp-form-input" id="rfp-m-term" type="number" placeholder="e.g. 60"></div>' +
             '</div>' +
             '<div class="rfp-form-row">' +
-              '<div class="rfp-form-group"><label>Base Rent ($/RSF/yr)</label><input class="rfp-form-input" id="rfp-m-rent" type="number" step="0.01" placeholder="e.g. 72.00"></div>' +
+              '<div class="rfp-form-group"><label>Base Rent (per RSF/yr)</label><input class="rfp-form-input" id="rfp-m-rent" type="number" step="0.01" placeholder="e.g. 72.00"></div>' +
               '<div class="rfp-form-group"><label>Annual Escalation %</label><input class="rfp-form-input" id="rfp-m-escalation" type="number" step="0.01" placeholder="e.g. 3"></div>' +
             '</div>' +
             '<div class="rfp-form-row">' +
               '<div class="rfp-form-group"><label>Free Rent (months)</label><input class="rfp-form-input" id="rfp-m-freerent" type="number" placeholder="e.g. 6"></div>' +
-              '<div class="rfp-form-group"><label>TI Allowance ($/RSF)</label><input class="rfp-form-input" id="rfp-m-ti" type="number" step="0.01" placeholder="e.g. 65.00"></div>' +
+              '<div class="rfp-form-group"><label>TI Allowance (per RSF)</label><input class="rfp-form-input" id="rfp-m-ti" type="number" step="0.01" placeholder="e.g. 65.00"></div>' +
             '</div>' +
             '<div class="rfp-form-row">' +
-              '<div class="rfp-form-group"><label>OpEx/CAM ($/RSF/yr)</label><input class="rfp-form-input" id="rfp-m-opex" type="number" step="0.01" placeholder="e.g. 18.00"></div>' +
+              '<div class="rfp-form-group"><label>OpEx/CAM (per RSF/yr)</label><input class="rfp-form-input" id="rfp-m-opex" type="number" step="0.01" placeholder="e.g. 18.00"></div>' +
               '<div class="rfp-form-group"><label>Commencement Date</label><input class="rfp-form-input" id="rfp-m-commence" type="date"></div>' +
             '</div>' +
             '<div class="rfp-form-row">' +
               '<div class="rfp-form-group"><label>Parking Spots</label><input class="rfp-form-input" id="rfp-m-parking" type="number" placeholder="e.g. 10"></div>' +
-              '<div class="rfp-form-group"><label>Parking Rate ($/spot/mo)</label><input class="rfp-form-input" id="rfp-m-parkrate" type="number" step="0.01" placeholder="e.g. 350"></div>' +
+              '<div class="rfp-form-group"><label>Parking Rate (per spot/mo)</label><input class="rfp-form-input" id="rfp-m-parkrate" type="number" step="0.01" placeholder="e.g. 350"></div>' +
             '</div>' +
             '<div class="rfp-form-row">' +
-              '<div class="rfp-form-group"><label>Security Deposit ($)</label><input class="rfp-form-input" id="rfp-m-deposit" type="number" placeholder="e.g. 50000"></div>' +
+              '<div class="rfp-form-group"><label>Security Deposit</label><input class="rfp-form-input" id="rfp-m-deposit" type="number" placeholder="e.g. 50000"></div>' +
               '<div class="rfp-form-group"><label>Rent Basis</label><input class="rfp-form-input" id="rfp-m-basis" type="text" placeholder="e.g. FSG, NNN"></div>' +
             '</div>' +
             '<div class="rfp-form-row" style="grid-template-columns:1fr;">' +
@@ -15815,18 +15815,18 @@ function rfpShowReviewForm(terms, meta) {
     { key: 'rsf', label: 'RSF (Rentable Sq Ft)', type: 'number' },
     { key: 'leaseTerm', label: 'Lease Term (months)', type: 'number' },
     { key: 'commencementDate', label: 'Commencement Date', type: 'date' },
-    { key: 'baseRent', label: 'Base Rent ($/RSF/yr)', type: 'number', step: '0.01' },
+    { key: 'baseRent', label: 'Base Rent (per RSF/yr)', type: 'number', step: '0.01' },
     { key: 'rentBasis', label: 'Rent Basis', type: 'text', placeholder: 'e.g. FSG, NNN, Modified Gross' },
     { key: 'annualEscalation', label: 'Annual Escalation %', type: 'number', step: '0.01' },
     { key: 'freeRent', label: 'Free Rent (months)', type: 'number' },
-    { key: 'tiAllowancePerRSF', label: 'TI Allowance ($/RSF)', type: 'number', step: '0.01' },
+    { key: 'tiAllowancePerRSF', label: 'TI Allowance (per RSF)', type: 'number', step: '0.01' },
     { key: 'tiAllowanceTotal', label: 'TI Allowance (total $)', type: 'number' },
-    { key: 'opexRSF', label: 'OpEx/Tax/CAM ($/RSF/yr)', type: 'number', step: '0.01', placeholder: 'e.g. 18.00' },
-    { key: 'opex', label: 'OpEx (monthly $ override)', type: 'number', placeholder: 'Auto-calculated if $/RSF entered' },
+    { key: 'opexRSF', label: 'OpEx/Tax/CAM (per RSF/yr)', type: 'number', step: '0.01', placeholder: 'e.g. 18.00' },
+    { key: 'opex', label: 'OpEx (monthly override)', type: 'number', placeholder: 'Auto-calculated if per RSF entered' },
     { key: 'parkingSpots', label: 'Parking Spots', type: 'number' },
-    { key: 'parkingRate', label: 'Parking Rate ($/spot/mo)', type: 'number', step: '0.01' },
+    { key: 'parkingRate', label: 'Parking Rate (per spot/mo)', type: 'number', step: '0.01' },
     { key: 'parkingEscalation', label: 'Parking Escalation %', type: 'number', step: '0.01' },
-    { key: 'securityDeposit', label: 'Security Deposit ($)', type: 'number' },
+    { key: 'securityDeposit', label: 'Security Deposit', type: 'number' },
     { key: 'structure', label: 'Structure', type: 'text', placeholder: 'e.g. Direct, Sublease' },
     { key: 'landlord', label: 'Landlord', type: 'text' },
     { key: 'notes', label: 'Notes', type: 'textarea', fullWidth: true }
@@ -16381,7 +16381,7 @@ function rfpBuildCombinedView(componentMap, address) {
 
   // Get deal terms for base rent
   var compTerms = components.map(function(c) { return c.submission.deal_terms || c.submission.dealTerms || {}; });
-  compRow('Base Rent ($/RSF/yr)', compTerms.map(function(t) { return t.base_rent_rsf || t.baseRent || 0; }), 'curr_dec');
+  compRow('Base Rent (per RSF/yr)', compTerms.map(function(t) { return t.base_rent_rsf || t.baseRent || 0; }), 'curr_dec');
   compRow('Annual Escalation', compTerms.map(function(t) { return t.annual_escalation_pct || t.annualEscalation || 0; }), 'pct');
   compRow('Free Rent (mo)', compTerms.map(function(t) { return t.free_rent_months || t.freeRent || 0; }), 'plain');
 
@@ -16568,7 +16568,7 @@ function rfpExportCombinedAnalysis(target) {
   rsfRow = r;
   addRow('RSF', comps.map(function(c) { return c.summary.rsf || 0; }), 'num', 'num');
   addRow('Lease Term (mo)', comps.map(function(c) { return c.summary.termMonths || 0; }), 'plain', 'plain');
-  addRow('Base Rent ($/RSF/yr)', terms.map(function(t) { return t.base_rent_rsf || t.baseRent || 0; }), 'curr_dec', 'curr_dec');
+  addRow('Base Rent (per RSF/yr)', terms.map(function(t) { return t.base_rent_rsf || t.baseRent || 0; }), 'curr_dec', 'curr_dec');
   addRow('Annual Escalation', terms.map(function(t) { return (t.annual_escalation_pct || t.annualEscalation || 0) / 100; }), 'pct', 'plain');
   addRow('Free Rent (mo)', terms.map(function(t) { return t.free_rent_months || t.freeRent || 0; }), 'plain', 'plain');
 
@@ -17572,15 +17572,15 @@ function rfpExportExcel() {
     ['RSF', n(terms.rsf), 'num', 'input'],
     ['Lease Term (months)', n(terms.lease_term_months), 'num', 'input'],
     ['Commencement Date', terms.commencement_date || '', 'text', 'input'],
-    ['Base Rent ($/RSF/yr)', n(terms.base_rent_rsf), 'curr_dec', 'input'],
+    ['Base Rent (per RSF/yr)', n(terms.base_rent_rsf), 'curr_dec', 'input'],
     ['Annual Escalation', n(terms.annual_escalation_pct) / 100, 'pct', 'input'],
     ['Free Rent (months)', n(terms.free_rent_months), 'num', 'input'],
-    ['TI Allowance ($/RSF)', n(terms.ti_allowance_rsf), 'curr_dec', 'input'],
+    ['TI Allowance (per RSF)', n(terms.ti_allowance_rsf), 'curr_dec', 'input'],
     ['TI Allowance (Total)', n(terms.ti_allowance_total), 'curr', 'formula'],
-    ['OpEx/Tax/CAM ($/RSF/yr)', n(terms.opex_rsf_yr), 'curr_dec', 'input'],
+    ['OpEx/Tax/CAM (per RSF/yr)', n(terms.opex_rsf_yr), 'curr_dec', 'input'],
     ['OpEx (Monthly)', n(terms.opex_monthly), 'curr', 'input'],
     ['Parking Spots', n(terms.parking_spots), 'num', 'input'],
-    ['Parking Rate ($/mo)', n(terms.parking_rate_monthly), 'curr', 'input'],
+    ['Parking Rate (per mo)', n(terms.parking_rate_monthly), 'curr', 'input'],
     ['Parking Escalation', n(terms.parking_escalation_pct) / 100, 'pct', 'input'],
     ['Security Deposit', n(terms.security_deposit), 'curr', 'readonly'],
     ['Rent Basis', terms.rent_basis || '', 'text', 'readonly'],
@@ -18236,15 +18236,15 @@ function rfpExportExcel() {
       { key: 'rsf', label: 'RSF', type: 'num', src: 'terms' },
       { key: 'lease_term_months', label: 'Lease Term (months)', type: 'num', src: 'terms' },
       { key: 'commencement_date', label: 'Commencement', type: 'text', src: 'terms' },
-      { key: 'base_rent_rsf', label: 'Base Rent ($/RSF/yr)', type: 'curr_dec', src: 'terms' },
+      { key: 'base_rent_rsf', label: 'Base Rent (per RSF/yr)', type: 'curr_dec', src: 'terms' },
       { key: 'annual_escalation_pct', label: 'Annual Escalation (%)', type: 'pct_plain', src: 'terms' },
       { key: 'free_rent_months', label: 'Free Rent (months)', type: 'num', src: 'terms' },
-      { key: 'ti_allowance_rsf', label: 'TI Allowance ($/RSF)', type: 'curr_dec', src: 'terms' },
+      { key: 'ti_allowance_rsf', label: 'TI Allowance (per RSF)', type: 'curr_dec', src: 'terms' },
       { key: 'ti_allowance_total', label: 'TI Total', type: 'curr', src: 'terms' },
-      { key: 'opex_rsf_yr', label: 'OpEx/Tax/CAM ($/RSF/yr)', type: 'curr_dec', src: 'terms' },
+      { key: 'opex_rsf_yr', label: 'OpEx/Tax/CAM (per RSF/yr)', type: 'curr_dec', src: 'terms' },
       { key: 'opex_monthly', label: 'OpEx (Monthly)', type: 'curr', src: 'terms' },
       { key: 'parking_spots', label: 'Parking Spots', type: 'num', src: 'terms' },
-      { key: 'parking_rate_monthly', label: 'Parking Rate ($/mo)', type: 'curr', src: 'terms' },
+      { key: 'parking_rate_monthly', label: 'Parking Rate (per mo)', type: 'curr', src: 'terms' },
       { key: 'effectiveRentRSF', label: 'Effective Rent/RSF', type: 'curr_dec', src: 'summary' },
       { key: 'straightLineAnnualExpense', label: 'SL Annual Expense', type: 'curr', src: 'summary' },
       { key: 'totalAllInCost', label: 'Total All-in Cost', type: 'curr', src: 'summary' },
@@ -18933,7 +18933,7 @@ function rfpBuildAssumptionsPanel(selected) {
       '<div class="rfp-summary-metrics">' +
         '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(allInMonthly) + '</div><div class="rfp-metric-label">All-In Monthly</div></div>' +
         '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(allInAnnual) + '</div><div class="rfp-metric-label">All-In Annual</div></div>' +
-        '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyDecimals(allInPerRSF) + '</div><div class="rfp-metric-label">All-In $/RSF/yr</div></div>' +
+        '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyDecimals(allInPerRSF) + '</div><div class="rfp-metric-label">All-In per RSF/yr</div></div>' +
         '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(slMonthly) + '</div><div class="rfp-metric-label">Lease (SL Monthly)</div></div>' +
         '<div class="rfp-metric"><div class="rfp-metric-value" style="color:#d97706">+' + rfpFmtCurrencyPlain(totalMonthlyOpex) + '</div><div class="rfp-metric-label">Internal OpEx/mo</div></div>' +
       '</div>';
@@ -18962,15 +18962,15 @@ function rfpBuildAssumptionsPanel(selected) {
   html += '<div style="font-weight:600;font-size:var(--text-sm);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);margin-bottom:var(--space-3)">Internal OpEx (Monthly)</div>';
   html += '<div class="rfp-form">' +
     '<div class="rfp-form-group">' +
-      '<label class="rfp-form-label">Food & Beverage ($/mo)</label>' +
+      '<label class="rfp-form-label">Food & Beverage (per mo)</label>' +
       '<input class="rfp-form-input" id="assumption-fb" type="number" step="1" value="' + fb + '" placeholder="e.g. 30000" />' +
     '</div>' +
     '<div class="rfp-form-group">' +
-      '<label class="rfp-form-label">Workplace Experience ($/mo)</label>' +
+      '<label class="rfp-form-label">Workplace Experience (per mo)</label>' +
       '<input class="rfp-form-input" id="assumption-wpe" type="number" step="1" value="' + wpe + '" placeholder="e.g. 10000" />' +
     '</div>' +
     '<div class="rfp-form-group">' +
-      '<label class="rfp-form-label">Maintenance & Security ($/mo)</label>' +
+      '<label class="rfp-form-label">Maintenance & Security (per mo)</label>' +
       '<input class="rfp-form-input" id="assumption-maint" type="number" step="1" value="' + maint + '" placeholder="e.g. 10000" />' +
     '</div>' +
   '</div>';
@@ -18983,7 +18983,7 @@ function rfpBuildAssumptionsPanel(selected) {
         '<input class="rfp-form-input" id="assumption-custom-label-' + i + '" type="text" value="' + (item.label || '') + '" placeholder="Label (e.g. IT Infrastructure)" />' +
       '</div>' +
       '<div class="rfp-form-group">' +
-        '<input class="rfp-form-input" id="assumption-custom-amount-' + i + '" type="number" step="1" value="' + (item.monthly || 0) + '" placeholder="$/mo" />' +
+        '<input class="rfp-form-input" id="assumption-custom-amount-' + i + '" type="number" step="1" value="' + (item.monthly || 0) + '" placeholder="per mo" />' +
       '</div>' +
       '<div class="rfp-form-group" style="flex:0 0 auto;align-self:flex-end">' +
         '<button class="rfp-btn-danger" style="padding:6px 10px;font-size:0.75rem" onclick="rfpRemoveCustomAssumption(' + i + ')">Remove</button>' +
@@ -19226,8 +19226,8 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
   var dealMetrics = [
     ['RSF', function(d) { return d.summary.rsf; }, false, 'num'],
     ['Term (months)', function(d) { return d.summary.termMonths; }, false, 'num'],
-    ['Base Rent $/RSF', function(d) { return d.terms.base_rent_rsf || d.terms.baseRent; }, true, 'curr'],
-    ['Effective Rent $/RSF', function(d) { return d.summary.effectiveRentRSF; }, true, 'curr'],
+    ['Base Rent per RSF', function(d) { return d.terms.base_rent_rsf || d.terms.baseRent; }, true, 'curr'],
+    ['Effective Rent/RSF', function(d) { return d.summary.effectiveRentRSF; }, true, 'curr'],
     ['Total All-in Cost', function(d) { return d.summary.totalAllInCost; }, true, 'curr'],
     ['SL Monthly Rent', function(d) { return d.summary.straightLineMonthlyRent; }, true, 'curr'],
     ['SL Annual Expense', function(d) { return d.summary.straightLineAnnualExpense; }, true, 'curr'],
@@ -19440,7 +19440,7 @@ function rfpExportComparison(target) {
   for (var r = dataStartRow; r < data.length; r++) {
     var label = data[r] && data[r][0];
     if (!label) continue;
-    var isDecimalCurrency = (label === 'NPV per RSF' || label === 'Effective Rent $/RSF' || label === 'Base Rent $/RSF');
+    var isDecimalCurrency = (label === 'NPV per RSF' || label === 'Effective Rent/RSF' || label === 'Base Rent per RSF');
     var isDiscount = (label === 'Discount Rate (input)');
     var isCurrency = !isDiscount && label !== 'RSF' && label !== 'Term (months)' && label !== 'YOUR ASSUMPTIONS' && label.indexOf('Generated') < 0;
     if (isCurrency) {
@@ -25048,7 +25048,7 @@ function renderShortlist() {
       html += '<div class="shortlist-card-metrics-grid">';
       html += '<div class="shortlist-card-metric"><div class="shortlist-card-metric-value">' + shortlistFmtCurrency(financialsInfo.allInMonthly) + '</div><div class="shortlist-card-metric-label">All-In Monthly</div></div>';
       html += '<div class="shortlist-card-metric"><div class="shortlist-card-metric-value">' + shortlistFmtCurrency(financialsInfo.allInAnnual) + '</div><div class="shortlist-card-metric-label">All-In Annual</div></div>';
-      html += '<div class="shortlist-card-metric"><div class="shortlist-card-metric-value">' + shortlistFmtCurrencyDecimals(financialsInfo.allInPerRSF) + '</div><div class="shortlist-card-metric-label">All-In $/RSF/yr</div></div>';
+      html += '<div class="shortlist-card-metric"><div class="shortlist-card-metric-value">' + shortlistFmtCurrencyDecimals(financialsInfo.allInPerRSF) + '</div><div class="shortlist-card-metric-label">All-In per RSF/yr</div></div>';
       html += '</div>';
       // Lease + OpEx breakdown row
       html += '<div class="shortlist-card-metrics-grid shortlist-card-metrics-sub">';
@@ -25214,7 +25214,7 @@ function shortlistShowCompare() {
     { label: 'Financials', rows: [
       { label: 'All-In Monthly', key: 'allInMonthly', best: 'lowest' },
       { label: 'All-In Annual', key: 'allInAnnual', best: 'lowest' },
-      { label: 'All-In $/RSF/yr', key: 'allInPerRSF', best: 'lowest' },
+      { label: 'All-In per RSF/yr', key: 'allInPerRSF', best: 'lowest' },
       { label: 'Straight-Line Monthly', key: 'slMonthly', best: 'lowest' },
       { label: 'Internal OpEx/mo', key: 'totalMonthlyOpex' },
       { label: 'Headcount', key: 'headcount' },
