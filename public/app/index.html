@@ -15757,7 +15757,12 @@ function rfpSubmitUpload() {
     })
     .then(function(terms) {
       rfpCloseModal();
-      rfpShowReviewForm(terms, { buildingNum: buildingNum, address: address, docType: docType, source: source, componentLabel: componentLabel });
+      if (terms._multiBuilding && terms.components) {
+        // Multi-building deal detected - show multi-component review
+        rfpShowMultiBuildingReview(terms.components, { buildingNum: buildingNum, address: address, docType: docType, source: source });
+      } else {
+        rfpShowReviewForm(terms, { buildingNum: buildingNum, address: address, docType: docType, source: source, componentLabel: componentLabel });
+      }
     })
     .catch(function(err) {
       console.error('RFP upload error:', err);
@@ -15769,6 +15774,30 @@ function rfpSubmitUpload() {
 }
 
 // ===== AI EXTRACTION =====
+function rfpMapTerms(raw) {
+  return {
+    rsf: raw.rsf || '',
+    leaseTerm: raw.lease_term_months || raw.leaseTerm || '',
+    commencementDate: raw.commencement_date || raw.commencementDate || '',
+    baseRent: raw.base_rent_rsf || raw.baseRent || '',
+    rentBasis: raw.rent_basis || raw.rentBasis || '',
+    annualEscalation: raw.annual_escalation_pct || raw.annualEscalation || '',
+    freeRent: raw.free_rent_months || raw.freeRent || '',
+    rentPeriods: raw.rent_periods || raw.rentPeriods || null,
+    tiAllowancePerRSF: raw.ti_allowance_rsf || raw.tiAllowancePerRSF || '',
+    tiAllowanceTotal: raw.ti_allowance_total || raw.tiAllowanceTotal || '',
+    opexRSF: raw.opex_rsf_yr || raw.opexRSF || '',
+    opex: raw.opex_monthly || raw.opex || '',
+    parkingSpots: raw.parking_spots || raw.parkingSpots || '',
+    parkingRate: raw.parking_rate_monthly || raw.parkingRate || '',
+    parkingEscalation: raw.parking_escalation_pct || raw.parkingEscalation || '',
+    securityDeposit: raw.security_deposit || raw.securityDeposit || '',
+    structure: raw.structure || '',
+    landlord: raw.landlord || '',
+    notes: raw.notes || ''
+  };
+}
+
 function rfpExtractTerms(text, address) {
   var email = getCurrentUserEmail();
   var url = '/api/rfp/extract?projectId=' + getProjectId();
@@ -15782,30 +15811,146 @@ function rfpExtractTerms(text, address) {
   .then(function(r) { return r.json(); })
   .then(function(data) {
     if (data.error) throw new Error(data.error);
+
+    // Multi-building detection
+    if (data.multi_building && data.dealTerms && data.dealTerms.components) {
+      var components = data.dealTerms.components.map(function(comp) {
+        return {
+          componentLabel: comp.component_label || comp.componentLabel || '',
+          terms: rfpMapTerms(comp)
+        };
+      });
+      return { _multiBuilding: true, components: components };
+    }
+
     var raw = data.dealTerms || data.terms || data;
-    // Map snake_case API response to camelCase form fields
-    return {
-      rsf: raw.rsf || '',
-      leaseTerm: raw.lease_term_months || raw.leaseTerm || '',
-      commencementDate: raw.commencement_date || raw.commencementDate || '',
-      baseRent: raw.base_rent_rsf || raw.baseRent || '',
-      rentBasis: raw.rent_basis || raw.rentBasis || '',
-      annualEscalation: raw.annual_escalation_pct || raw.annualEscalation || '',
-      freeRent: raw.free_rent_months || raw.freeRent || '',
-      rentPeriods: raw.rent_periods || raw.rentPeriods || null,
-      tiAllowancePerRSF: raw.ti_allowance_rsf || raw.tiAllowancePerRSF || '',
-      tiAllowanceTotal: raw.ti_allowance_total || raw.tiAllowanceTotal || '',
-      opexRSF: raw.opex_rsf_yr || raw.opexRSF || '',
-      opex: raw.opex_monthly || raw.opex || '',
-      parkingSpots: raw.parking_spots || raw.parkingSpots || '',
-      parkingRate: raw.parking_rate_monthly || raw.parkingRate || '',
-      parkingEscalation: raw.parking_escalation_pct || raw.parkingEscalation || '',
-      securityDeposit: raw.security_deposit || raw.securityDeposit || '',
-      structure: raw.structure || '',
-      landlord: raw.landlord || '',
-      notes: raw.notes || ''
-    };
+    return rfpMapTerms(raw);
   });
+}
+
+// ===== MULTI-BUILDING REVIEW =====
+function rfpShowMultiBuildingReview(components, meta) {
+  if (_rfpModal) { _rfpModal.remove(); _rfpModal = null; }
+
+  var html = '<div style="margin-bottom:16px">';
+  html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">';
+  html += '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--color-accent)" stroke-width="2"><path d="M3 21h18M3 7v1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7H3l2-4h14l2 4M4 21V10.7M20 21V10.7"/></svg>';
+  html += '<span style="font-size:var(--text-sm);color:var(--color-text-muted)">This document contains <strong>' + components.length + ' buildings</strong> with separate terms. Each will be created as a component.</span>';
+  html += '</div>';
+
+  components.forEach(function(comp, i) {
+    var t = comp.terms;
+    var label = comp.componentLabel || ('Component ' + (i + 1));
+    html += '<div style="border:1px solid var(--color-border);border-radius:8px;padding:12px 16px;margin-bottom:8px">';
+    html += '<div style="font-weight:600;margin-bottom:8px;color:var(--color-text)">' + label + '</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px 16px;font-size:var(--text-sm)">';
+    if (t.rsf) html += '<div><span style="color:var(--color-text-muted)">RSF:</span> ' + Number(t.rsf).toLocaleString() + '</div>';
+    if (t.leaseTerm) html += '<div><span style="color:var(--color-text-muted)">Term:</span> ' + t.leaseTerm + ' mo</div>';
+    if (t.commencementDate) html += '<div><span style="color:var(--color-text-muted)">Start:</span> ' + t.commencementDate + '</div>';
+    if (t.baseRent) html += '<div><span style="color:var(--color-text-muted)">Rent:</span> $' + t.baseRent + '/RSF/yr</div>';
+    if (t.freeRent) html += '<div><span style="color:var(--color-text-muted)">Free Rent:</span> ' + t.freeRent + ' mo</div>';
+    if (t.rentBasis) html += '<div><span style="color:var(--color-text-muted)">Basis:</span> ' + t.rentBasis + '</div>';
+    if (t.parkingSpots) html += '<div><span style="color:var(--color-text-muted)">Parking:</span> ' + t.parkingSpots + ' spots</div>';
+    if (t.tiAllowancePerRSF) html += '<div><span style="color:var(--color-text-muted)">TI:</span> $' + t.tiAllowancePerRSF + '/RSF</div>';
+    if (t.landlord) html += '<div><span style="color:var(--color-text-muted)">Landlord:</span> ' + t.landlord + '</div>';
+    html += '</div></div>';
+  });
+  html += '</div>';
+
+  var modal = document.createElement('div');
+  modal.className = 'rfp-modal';
+  modal.innerHTML =
+    '<div class="rfp-modal-inner" style="max-width:700px">' +
+      '<button class="rfp-modal-close" onclick="rfpCloseModal()" title="Close">' +
+        '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+      '</button>' +
+      '<div class="rfp-modal-title">Multi-Building Deal Detected</div>' +
+      '<div style="font-size:var(--text-sm);color:var(--color-text-muted);margin:-8px 0 16px">' +
+        meta.address + ' | ' + meta.docType +
+      '</div>' +
+      html +
+      '<div id="rfp-multi-status" style="display:none"></div>' +
+      '<div class="rfp-modal-actions">' +
+        '<button class="rfp-modal-cancel" onclick="rfpCloseModal()">Cancel</button>' +
+        '<button class="rfp-btn-primary" id="rfp-multi-confirm" onclick="rfpConfirmMultiBuilding()">Create ' + components.length + ' Components</button>' +
+      '</div>' +
+    '</div>';
+
+  document.body.appendChild(modal);
+  _rfpModal = modal;
+  _rfpModal._meta = meta;
+  _rfpModal._components = components;
+
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) rfpCloseModal();
+  });
+}
+
+function rfpConfirmMultiBuilding() {
+  if (!_rfpModal || !_rfpModal._components) return;
+  var meta = _rfpModal._meta;
+  var components = _rfpModal._components;
+  var statusEl = document.getElementById('rfp-multi-status');
+  var confirmBtn = document.getElementById('rfp-multi-confirm');
+
+  if (statusEl) {
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = '<div class="rfp-loading"><div class="rfp-spinner"></div><div class="rfp-loading-text">Creating ' + components.length + ' component analyses...</div></div>';
+  }
+  if (confirmBtn) confirmBtn.disabled = true;
+
+  var email = getCurrentUserEmail();
+  var baseUrl = '/api/rfp?projectId=' + getProjectId();
+  if (email) baseUrl += '&userEmail=' + encodeURIComponent(email);
+
+  // Submit each component sequentially
+  var chain = Promise.resolve();
+  var successes = 0;
+  components.forEach(function(comp, i) {
+    chain = chain.then(function() {
+      var terms = comp.terms;
+      // If opexRSF is set, auto-calculate monthly opex
+      if (terms.opexRSF && terms.rsf && !terms.opex) {
+        terms.opex = Math.round((terms.opexRSF * terms.rsf) / 12);
+      }
+      if (terms.opexRSF) terms.opex_rsf_yr = terms.opexRSF;
+
+      return fetch(baseUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: getProjectId(),
+          building_num: meta.buildingNum,
+          building_address: meta.address,
+          doc_type: meta.docType,
+          source: meta.source,
+          component_label: comp.componentLabel,
+          terms: terms
+        })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.error) throw new Error(data.error);
+        successes++;
+        if (statusEl) {
+          statusEl.innerHTML = '<div class="rfp-loading"><div class="rfp-spinner"></div><div class="rfp-loading-text">Created ' + successes + ' of ' + components.length + '...</div></div>';
+        }
+      });
+    });
+  });
+
+  chain
+    .then(function() {
+      rfpCloseModal();
+      rfpLoadSubmissions();
+    })
+    .catch(function(err) {
+      console.error('Multi-building save error:', err);
+      if (statusEl) {
+        statusEl.innerHTML = '<div class="rfp-error">Error: ' + (err.message || 'Failed to create components') + ' (' + successes + ' of ' + components.length + ' created)</div>';
+      }
+      if (confirmBtn) confirmBtn.disabled = false;
+    });
 }
 
 // ===== STEPPED RENT PERIODS UI =====
@@ -16522,10 +16667,12 @@ function rfpBuildCombinedView(componentMap, address) {
       else if (fmt === 'curr_dec') html += '<td class="cell-currency">' + rfpFmtCurrencyDecimals(v) + '</td>';
       else if (fmt === 'num') html += '<td class="cell-currency">' + rfpFmtNum(v) + '</td>';
       else if (fmt === 'pct') html += '<td class="cell-currency">' + (v ? v + '%' : '--') + '</td>';
+      else if (fmt === 'text') html += '<td class="cell-currency">' + (v || '--') + '</td>';
       else html += '<td class="cell-currency">' + (v || '--') + '</td>';
     });
     // Combined
-    if (fmt === 'curr') html += '<td class="cell-currency" style="font-weight:700;">' + rfpFmtCurrency(combined) + '</td>';
+    if (fmt === 'text') html += '<td class="cell-currency" style="font-weight:700;"></td>';
+    else if (fmt === 'curr') html += '<td class="cell-currency" style="font-weight:700;">' + rfpFmtCurrency(combined) + '</td>';
     else if (fmt === 'curr_dec') {
       // Weighted average for per-RSF
       var wSum = 0; components.forEach(function(c, i) { wSum += (values[i] || 0) * (c.summary.rsf || 0); });
@@ -16540,13 +16687,19 @@ function rfpBuildCombinedView(componentMap, address) {
     html += '<tr style="background:var(--color-surface-2);"><td colspan="' + (components.length + 2) + '" style="padding:8px 14px;font-weight:600;font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.04em;color:var(--color-text-muted);">' + label + '</td></tr>';
   }
 
+  // Get deal terms for each component
+  var compTerms = components.map(function(c) { return c.submission.deal_terms || c.submission.dealTerms || {}; });
+
   // DEAL OVERVIEW
   sectionRow('Deal Overview');
   compRow('RSF', components.map(function(c) { return c.summary.rsf || 0; }), 'num');
   compRow('Lease Term (mo)', components.map(function(c) { return c.summary.termMonths || 0; }), 'plain');
-
-  // Get deal terms for base rent
-  var compTerms = components.map(function(c) { return c.submission.deal_terms || c.submission.dealTerms || {}; });
+  // Show commencement dates if they differ across components
+  var commDates = compTerms.map(function(t) { return t.commencement_date || t.commencementDate || ''; });
+  var hasStaggeredStart = commDates.some(function(d, i) { return d && commDates[0] && d !== commDates[0]; });
+  if (hasStaggeredStart) {
+    compRow('Commencement', commDates, 'text');
+  }
   compRow('Base Rent (per RSF/yr)', compTerms.map(function(t) { return t.base_rent_rsf || t.baseRent || 0; }), 'curr_dec');
   compRow('Annual Escalation', compTerms.map(function(t) { return t.annual_escalation_pct || t.annualEscalation || 0; }), 'pct');
   compRow('Free Rent (mo)', compTerms.map(function(t) { return t.free_rent_months || t.freeRent || 0; }), 'plain');

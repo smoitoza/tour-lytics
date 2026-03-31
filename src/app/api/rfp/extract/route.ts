@@ -20,14 +20,49 @@ export async function POST(req: Request) {
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 2000,
+      max_tokens: 4000,
       messages: [
         {
           role: 'user',
-          content: `You are a commercial real estate financial analyst. Extract the key lease deal terms from this RFP (Request for Proposal) or LOI (Letter of Intent) document for the building at ${buildingAddress || 'the property'}.
+          content: `You are a commercial real estate financial analyst. Extract the key lease deal terms from this RFP (Request for Proposal), LOI (Letter of Intent), or Lease document for the property at ${buildingAddress || 'the property'}.
 
-Return a JSON object with these fields (use null for any field you cannot find):
+IMPORTANT: First determine if this document covers MULTIPLE BUILDINGS/PREMISES with different terms (different RSF, different commencement dates, different lease terms, or different rates). This is common in campus deals, multi-building LOIs, and portfolio leases.
 
+IF THE DOCUMENT COVERS MULTIPLE BUILDINGS with different terms, return:
+{
+  "multi_building": true,
+  "shared_terms": {
+    "rent_basis": <string>,
+    "base_rent_rsf": <number - annual $/RSF if same across all>,
+    "annual_escalation_pct": <number>,
+    "structure": <string>,
+    "landlord": <string>,
+    "notes": <string - shared deal notes>
+  },
+  "components": [
+    {
+      "component_label": <string - building name/address, e.g. "190 W. Tasman">,
+      "rsf": <number>,
+      "lease_term_months": <number>,
+      "commencement_date": <string - "YYYY-MM-DD">,
+      "expiration_date": <string - "YYYY-MM-DD">,
+      "base_rent_rsf": <number - annual $/RSF, or null to use shared>,
+      "annual_escalation_pct": <number or null to use shared>,
+      "free_rent_months": <number>,
+      "rent_periods": <array or null>,
+      "ti_allowance_rsf": <number>,
+      "ti_allowance_total": <number>,
+      "parking_spots": <number>,
+      "parking_rate_monthly": <number>,
+      "parking_escalation_pct": <number>,
+      "opex_monthly": <number>,
+      "security_deposit": <number>,
+      "notes": <string - building-specific notes>
+    }
+  ]
+}
+
+IF THE DOCUMENT COVERS A SINGLE BUILDING/PREMISES, return:
 {
   "rsf": <number - rentable square feet>,
   "lease_term_months": <number - total lease term in months>,
@@ -37,7 +72,7 @@ Return a JSON object with these fields (use null for any field you cannot find):
   "rent_basis": <string - "Full Service Gross", "Modified Gross", "NNN", etc.>,
   "annual_escalation_pct": <number - annual rent escalation percentage>,
   "free_rent_months": <number - months of free/abated rent>,
-  "rent_periods": <array or null - ONLY include if the lease has different base rent rates for different time periods (stepped/graduated rent) OR different billable square footage per period (phased RSF). Each entry: {"from_month": <number>, "to_month": <number>, "rent_rsf_yr": <number - annual rate per RSF>, "billable_rsf": <number or null - if rent is calculated on fewer RSF than the full premises, specify the billable RSF for this period; omit or null if rent uses full premises RSF>, "label": <string - short description>}. Use rent_rsf_yr=0 for free rent periods. Do NOT include this field if rent is a single flat rate with standard annual escalation and no RSF phase-in.>,
+  "rent_periods": <array or null - ONLY include if the lease has different base rent rates for different time periods (stepped/graduated rent) OR different billable square footage per period (phased RSF). Each entry: {"from_month": <number>, "to_month": <number>, "rent_rsf_yr": <number - annual rate per RSF>, "billable_rsf": <number or null>, "label": <string>}. Use rent_rsf_yr=0 for free rent periods.>,
   "ti_allowance_rsf": <number - tenant improvement allowance per RSF>,
   "ti_allowance_total": <number - total TI allowance in dollars>,
   "security_deposit": <number - security deposit amount>,
@@ -52,14 +87,15 @@ Return a JSON object with these fields (use null for any field you cannot find):
 
 IMPORTANT:
 - Return ONLY valid JSON, no markdown or explanation
-- Convert all rates to annual $/RSF if given monthly
+- Convert all rates to annual $/RSF if given monthly (multiply monthly by 12)
 - If a lease term is given in years, convert to months
 - If TI is given as $/RSF, also calculate the total (RSF x TI/RSF)
 - If rent is given monthly, convert to annual $/RSF
 - For dates, estimate if only month/year is given (use the 1st of the month)
-- If the document specifies different rent rates for different periods (e.g. months 1-12 at $0, months 13-24 at $16.83/RSF/yr), include them in rent_periods. After the last defined period, the annual_escalation_pct applies automatically.
-- If the lease has phased/ramping billable RSF (e.g. tenant occupies 6,825 RSF but rent is calculated on 5,000 RSF in Year 1, 6,000 in Year 2, full 6,825 in Year 3), include billable_rsf in each rent_periods entry. The top-level RSF should be the FULL premises size (usable/occupiable area), while billable_rsf captures what rent is actually charged on.
-- Do NOT use rent_periods for simple deals with one flat rate + escalation. Only use it for genuinely stepped/graduated rent structures or phased RSF.
+- If the document specifies different rent rates for different periods, include them in rent_periods
+- If the lease has phased/ramping billable RSF, include billable_rsf in each rent_periods entry. The top-level RSF should be the FULL premises size.
+- For multi-building deals: each component should have its OWN commencement date, term, and RSF. Shared terms (rate, landlord, structure) go in shared_terms. Component-specific overrides take priority.
+- Use null for any field you cannot find
 
 DOCUMENT TEXT:
 ${documentText.substring(0, 15000)}`
@@ -87,16 +123,25 @@ ${documentText.substring(0, 15000)}`
       )
     }
 
-    // Clean up null values
-    Object.keys(dealTerms).forEach(key => {
-      if (dealTerms[key] === null || dealTerms[key] === 'null') {
-        if (['rsf', 'lease_term_months', 'base_rent_rsf', 'annual_escalation_pct', 'free_rent_months', 'ti_allowance_rsf', 'ti_allowance_total', 'security_deposit', 'parking_spots', 'parking_rate_monthly', 'parking_escalation_pct', 'opex_monthly'].includes(key)) {
-          dealTerms[key] = 0
-        } else {
-          dealTerms[key] = ''
-        }
-      }
-    })
+    // Check if multi-building response
+    if (dealTerms.multi_building && dealTerms.components && Array.isArray(dealTerms.components)) {
+      // Clean up each component
+      const shared = dealTerms.shared_terms || {}
+      dealTerms.components.forEach((comp: any) => {
+        // Merge shared terms into component (component overrides take priority)
+        Object.keys(shared).forEach(key => {
+          if (comp[key] === undefined || comp[key] === null) {
+            comp[key] = shared[key]
+          }
+        })
+        // Clean nulls
+        cleanNulls(comp)
+      })
+      return NextResponse.json({ dealTerms, multi_building: true, raw: responseText })
+    }
+
+    // Single building - clean up null values
+    cleanNulls(dealTerms)
 
     return NextResponse.json({ dealTerms, raw: responseText })
   } catch (error: any) {
@@ -106,4 +151,17 @@ ${documentText.substring(0, 15000)}`
       { status: 500 }
     )
   }
+}
+
+function cleanNulls(obj: any) {
+  const numericFields = ['rsf', 'lease_term_months', 'base_rent_rsf', 'annual_escalation_pct', 'free_rent_months', 'ti_allowance_rsf', 'ti_allowance_total', 'security_deposit', 'parking_spots', 'parking_rate_monthly', 'parking_escalation_pct', 'opex_monthly']
+  Object.keys(obj).forEach(key => {
+    if (obj[key] === null || obj[key] === 'null') {
+      if (numericFields.includes(key)) {
+        obj[key] = 0
+      } else {
+        obj[key] = ''
+      }
+    }
+  })
 }
