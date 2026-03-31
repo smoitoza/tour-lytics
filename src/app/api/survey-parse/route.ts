@@ -447,19 +447,24 @@ Return ONLY the JSON array, no other text.`
       const addr = b.address?.trim()
       const hood = b.neighborhood?.trim()
       
-      // Skip CRE jargon neighborhoods that confuse geocoders
-      // (e.g. "CBD Submarket", "East Submarket", "Class A District")
+      // Skip CRE jargon neighborhoods that confuse geocoders.
+      // These are brokerage marketing terms, not real geographic names.
+      const CRE_JARGON = /(submarket|corridor|class\s*[abc]|\bCBD\b)/i
+      // CRE "district" names that aren't real place names for geocoders
+      // (e.g. "Plaza District", "Penn Plaza", "Grand Central" as neighborhood)
+      const CRE_DISTRICTS = /^(plaza district|penn plaza|grand central|hudson yards|times square|financial district|midtown east|midtown west|flatiron|noho|soho|tribeca|fidi|world trade center|west end|city center|downtown|uptown|central business)$/i
+
       const isRealNeighborhood = hood && 
-        !/(submarket|district|corridor|class\s*[abc])/i.test(hood) &&
+        !CRE_JARGON.test(hood) &&
+        !CRE_DISTRICTS.test(hood) &&
         hood.length > 2
       
       if (isRealNeighborhood) {
-        // Real neighborhood (e.g. "DUMBO, Brooklyn" or "City of London")
-        // Use: address, neighborhood, market
+        // Genuine neighborhood that helps geocoders (e.g. "DUMBO, Brooklyn", "City of London")
         return `${addr}, ${hood}, ${marketCtx}`
       }
       
-      // No useful neighborhood - rely on market context
+      // No useful neighborhood -- rely on market context only
       return `${addr}, ${marketCtx}`
     }
 
@@ -517,6 +522,73 @@ Return ONLY the JSON array, no other text.`
         await geocodeBuilding(buildings[i])
       } catch (geoErr) {
         console.warn('Geocode failed for:', buildings[i].address, geoErr)
+      }
+    }
+
+    // ============================================================
+    // POST-GEOCODE OUTLIER DETECTION
+    // If 3+ buildings are geocoded, find any that are far from the
+    // cluster median and re-geocode with stronger market context.
+    // This catches cases like NYC where "1700 Broadway" resolves
+    // to Brooklyn instead of Manhattan.
+    // ============================================================
+    const geocoded = buildings.filter((b: any) => b.lat && b.lng)
+    if (geocoded.length >= 3) {
+      // Calculate median lat/lng as the cluster center
+      const lats = geocoded.map((b: any) => b.lat).sort((a: number, b: number) => a - b)
+      const lngs = geocoded.map((b: any) => b.lng).sort((a: number, b: number) => a - b)
+      const medianLat = lats[Math.floor(lats.length / 2)]
+      const medianLng = lngs[Math.floor(lngs.length / 2)]
+
+      // Distance threshold: ~5 miles (0.07 degrees latitude, ~0.09 longitude)
+      const LAT_THRESH = 0.07
+      const LNG_THRESH = 0.09
+
+      const outliers = geocoded.filter((b: any) => {
+        return Math.abs(b.lat - medianLat) > LAT_THRESH || Math.abs(b.lng - medianLng) > LNG_THRESH
+      })
+
+      if (outliers.length > 0 && outliers.length < geocoded.length / 2) {
+        console.log(`Outlier detection: ${outliers.length} of ${geocoded.length} buildings are far from cluster (median: ${medianLat.toFixed(4)}, ${medianLng.toFixed(4)})`)
+
+        // Find a well-geocoded building near the median to use as location anchor
+        const anchor = geocoded.reduce((best: any, b: any) => {
+          const dist = Math.abs(b.lat - medianLat) + Math.abs(b.lng - medianLng)
+          return (!best || dist < best.dist) ? { ...b, dist } : best
+        }, null)
+
+        for (const outlier of outliers) {
+          console.log(`  Re-geocoding outlier: ${outlier.address} (was ${outlier.lat.toFixed(4)}, ${outlier.lng.toFixed(4)})`)
+          // Build a stronger address: use the anchor's approximate location
+          const strongAddr = `${outlier.address}, near ${anchor.address}, ${marketCtx}`
+          const oldLat = outlier.lat
+          const oldLng = outlier.lng
+
+          // Try with just market context (no misleading neighborhood)
+          const simpleAddr = `${outlier.address}, ${marketCtx}`
+          outlier._origNeighborhood = outlier.neighborhood
+          outlier.neighborhood = '' // clear to avoid re-adding jargon
+          try {
+            if (!mapsApiKey) await delay(1100)
+            await geocodeBuilding(outlier)
+          } catch (e) {
+            console.warn('  Re-geocode failed for:', outlier.address)
+          }
+          outlier.neighborhood = outlier._origNeighborhood
+          delete outlier._origNeighborhood
+
+          // Check if re-geocode moved it closer to the cluster
+          const newDist = Math.abs(outlier.lat - medianLat) + Math.abs(outlier.lng - medianLng)
+          const oldDist = Math.abs(oldLat - medianLat) + Math.abs(oldLng - medianLng)
+          if (newDist >= oldDist) {
+            // Re-geocode didn't help, revert
+            outlier.lat = oldLat
+            outlier.lng = oldLng
+            console.log(`  Reverted (no improvement): ${outlier.address}`)
+          } else {
+            console.log(`  Fixed: ${outlier.address} -> ${outlier.lat.toFixed(4)}, ${outlier.lng.toFixed(4)}`)
+          }
+        }
       }
     }
 
