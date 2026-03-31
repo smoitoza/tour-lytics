@@ -15822,8 +15822,8 @@ function rfpBuildRentPeriodsUI(periods) {
 }
 
 function rfpRentPeriodRow(index, period) {
-  var p = period || { from_month: '', to_month: '', rent_rsf_yr: '', label: '' };
-  return '<div class="rfp-rent-period-row" data-index="' + index + '" style="display:grid;grid-template-columns:1fr 1fr 1fr 1.5fr auto;gap:6px;align-items:end;margin-bottom:6px">' +
+  var p = period || { from_month: '', to_month: '', rent_rsf_yr: '', billable_rsf: '', label: '' };
+  return '<div class="rfp-rent-period-row" data-index="' + index + '" style="display:grid;grid-template-columns:1fr 1fr 1.2fr 1fr 1.5fr auto;gap:6px;align-items:end;margin-bottom:6px">' +
     '<div>' +
       (index === 0 ? '<label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">From Mo.</label>' : '') +
       '<input class="rfp-form-input" type="number" min="1" value="' + (p.from_month || '') + '" data-field="from_month" style="padding:6px 8px;font-size:var(--text-sm)" />' +
@@ -15837,8 +15837,12 @@ function rfpRentPeriodRow(index, period) {
       '<input class="rfp-form-input" type="number" step="0.01" min="0" value="' + (p.rent_rsf_yr != null ? p.rent_rsf_yr : '') + '" data-field="rent_rsf_yr" placeholder="0 = free" style="padding:6px 8px;font-size:var(--text-sm)" />' +
     '</div>' +
     '<div>' +
+      (index === 0 ? '<label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">Billable RSF</label>' : '') +
+      '<input class="rfp-form-input" type="number" min="0" value="' + (p.billable_rsf || '') + '" data-field="billable_rsf" placeholder="Full RSF" style="padding:6px 8px;font-size:var(--text-sm)" />' +
+    '</div>' +
+    '<div>' +
       (index === 0 ? '<label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">Label</label>' : '') +
-      '<input class="rfp-form-input" type="text" value="' + (p.label || '') + '" data-field="label" placeholder="e.g. Free Rent" style="padding:6px 8px;font-size:var(--text-sm)" />' +
+      '<input class="rfp-form-input" type="text" value="' + (p.label || '') + '" data-field="label" placeholder="e.g. Phase 1" style="padding:6px 8px;font-size:var(--text-sm)" />' +
     '</div>' +
     '<button type="button" onclick="rfpRemoveRentPeriod(' + index + ')" style="background:none;border:none;cursor:pointer;color:var(--color-text-muted);padding:4px;margin-bottom:2px" title="Remove">' +
       '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
@@ -15859,7 +15863,7 @@ function rfpAddRentPeriod() {
     if (lastTo && lastTo.value) defaultFrom = parseInt(lastTo.value) + 1;
   }
   var div = document.createElement('div');
-  div.innerHTML = rfpRentPeriodRow(nextIndex, { from_month: defaultFrom, to_month: '', rent_rsf_yr: '', label: '' });
+  div.innerHTML = rfpRentPeriodRow(nextIndex, { from_month: defaultFrom, to_month: '', rent_rsf_yr: '', billable_rsf: '', label: '' });
   list.appendChild(div.firstElementChild);
 }
 
@@ -15920,18 +15924,22 @@ function rfpCollectRentPeriods() {
     var fromEl = row.querySelector('[data-field="from_month"]');
     var toEl = row.querySelector('[data-field="to_month"]');
     var rateEl = row.querySelector('[data-field="rent_rsf_yr"]');
+    var billableEl = row.querySelector('[data-field="billable_rsf"]');
     var labelEl = row.querySelector('[data-field="label"]');
     var fromMonth = fromEl ? parseInt(fromEl.value) : 0;
     var toMonth = toEl ? parseInt(toEl.value) : 0;
     var rate = rateEl ? parseFloat(rateEl.value) : 0;
+    var billableRSF = billableEl && billableEl.value ? parseInt(billableEl.value) : null;
     var label = labelEl ? labelEl.value.trim() : '';
     if (fromMonth > 0 && toMonth > 0) {
-      periods.push({
+      var entry = {
         from_month: fromMonth,
         to_month: toMonth,
         rent_rsf_yr: isNaN(rate) ? 0 : rate,
         label: label
-      });
+      };
+      if (billableRSF && billableRSF > 0) entry.billable_rsf = billableRSF;
+      periods.push(entry);
     }
   });
   return periods.length > 0 ? periods : null;
@@ -17275,7 +17283,8 @@ function rfpBuildTermsTable(terms) {
     rentPeriods.forEach(function(p) {
       var label = p.label ? p.label + ': ' : '';
       var rateStr = p.rent_rsf_yr === 0 ? 'No Base Rent' : rfpFmtCurrencyDecimals(p.rent_rsf_yr) + '/RSF/yr';
-      rows.push(['  Mo. ' + p.from_month + '-' + p.to_month, label + rateStr]);
+      var billStr = p.billable_rsf ? ' (' + rfpFmtNum(p.billable_rsf) + ' billable RSF)' : '';
+      rows.push(['  Mo. ' + p.from_month + '-' + p.to_month, label + rateStr + billStr]);
     });
   } else {
     rows.push(['Base Rent', t.baseRent ? rfpFmtCurrencyDecimals(t.baseRent) + '/RSF/yr' : '--']);
@@ -17382,11 +17391,15 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
   var cfTermMonths = (analysis.summary && analysis.summary.termMonths) ? analysis.summary.termMonths : (totals.termMonths || 0);
   var capex = buildingAddr ? getCapexForBuilding(buildingAddr, cfTermMonths, componentLabel) : { hasCapex: false, grandTotal: 0, monthlyDepreciation: 0 };
 
+  // Check if billable RSF varies across months (phased RSF)
+  var hasPhasedRSF = monthly.some(function(r) { return r.billableRSF && r.usableRSF && r.billableRSF !== r.usableRSF; });
+
   var html = '<div class="fin-table-wrap"><table class="fin-table">';
   html += '<thead><tr>' +
     '<th class="cell-label">Month</th>' +
     '<th>Period</th>' +
     '<th>Lease Year</th>' +
+    (hasPhasedRSF ? '<th class="cell-label">Billable RSF</th>' : '') +
     '<th class="cell-currency">Rent/RSF</th>' +
     '<th class="cell-currency">Monthly Base Rent</th>' +
     '<th class="cell-currency">Free Rent Credit</th>' +
@@ -17412,6 +17425,7 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
       '<td class="cell-label">' + (row.month || '') + '</td>' +
       '<td>' + (row.period || '') + '</td>' +
       '<td>' + (row.leaseYear || '') + '</td>' +
+      (hasPhasedRSF ? '<td class="cell-label">' + rfpFmtNum(row.billableRSF || row.usableRSF || '') + '</td>' : '') +
       '<td class="cell-currency">' + rfpFmtCurrencyDecimals(row.rentRSF) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.monthlyBaseRent) + '</td>' +
       '<td class="cell-currency">' + (row.freeRentCredit ? rfpFmtCurrency(row.freeRentCredit) : '') + '</td>' +
@@ -17426,9 +17440,10 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
 
   // Totals row
   var totalWithCapex = totals.totalAllInCost + (capex.hasCapex ? capex.grandTotal : 0);
+  var cfColSpan = hasPhasedRSF ? 4 : 3;
   html += '<tr class="row-bold">' +
     '<td class="cell-label">TOTALS</td>' +
-    '<td colspan="3"></td>' +
+    '<td colspan="' + cfColSpan + '"></td>' +
     '<td class="cell-currency">' + rfpFmtCurrency(totals.totalBaseRent) + '</td>' +
     '<td class="cell-currency cell-savings">' + rfpFmtCurrency(totals.totalFreeRentValue) + '</td>' +
     '<td class="cell-currency">' + rfpFmtCurrency(totals.totalNetRent) + '</td>' +
@@ -17768,8 +17783,9 @@ function rfpExportExcel() {
   if (exHasRentPeriods) {
     dtFields.push(['Rent Schedule', 'Stepped', 'text', 'readonly']);
     exRentPeriods.forEach(function(p) {
-      var lbl = p.label ? p.label : 'Mo. ' + p.from_month + '-' + p.to_month;
-      dtFields.push(['  Mo. ' + p.from_month + '-' + p.to_month, n(p.rent_rsf_yr), 'curr_dec', 'readonly']);
+      var periodLabel = '  Mo. ' + p.from_month + '-' + p.to_month;
+      if (p.billable_rsf) periodLabel += ' (' + p.billable_rsf.toLocaleString() + ' billable RSF)';
+      dtFields.push([periodLabel, n(p.rent_rsf_yr), 'curr_dec', 'readonly']);
     });
   } else {
     dtFields.push(['Base Rent (per RSF/yr)', n(terms.base_rent_rsf), 'curr_dec', 'input']);
@@ -18152,16 +18168,23 @@ function rfpExportExcel() {
   // ===== TAB 4: Cash Flow =====
   if (analysis.cash_flow && analysis.cash_flow.monthly) {
     var cfData = analysis.cash_flow.monthly;
-    var cfCols = 11;
+    // Check if any rent period has phased billable RSF
+    var exHasPhasedRSF = exHasRentPeriods && exRentPeriods.some(function(p) { return p.billable_rsf && p.billable_rsf > 0; });
+    var cfCols = exHasPhasedRSF ? 12 : 11;
     var cfWS = XLSX.utils.aoa_to_sheet([['']]);
-    cfWS['!cols'] = [{ wch: 8 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 18 }];
+    var cfColWidths = [{ wch: 8 }, { wch: 12 }, { wch: 10 }];
+    if (exHasPhasedRSF) cfColWidths.push({ wch: 14 });
+    cfColWidths = cfColWidths.concat([{ wch: 12 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 18 }]);
+    cfWS['!cols'] = cfColWidths;
     cfWS['!rows'] = [{ hpt: 32 }];
     cfWS['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: cfCols - 1 } }];
     setCell(cfWS, 0, 0, 'Cash Flow - ' + address, titleStyle);
     for (var cft = 1; cft < cfCols; cft++) setCell(cfWS, 0, cft, '', titleStyle);
-
-    var cfHeaders = ['Mo', 'Period', 'Year', 'Rent/RSF', 'Base Rent', 'Free Rent', 'Net Cash Rent', 'OpEx', 'Parking', 'Total Monthly', 'Cumulative'];
-    cfHeaders.forEach(function(h, i) { setCell(cfWS, 2, i, h, (i < 3) ? headerLeftStyle : headerStyle); });
+    var cfHeaders = ['Mo', 'Period', 'Year'];
+    if (exHasPhasedRSF) cfHeaders.push('Billable RSF');
+    cfHeaders = cfHeaders.concat(['Rent/RSF', 'Base Rent', 'Free Rent', 'Net Cash Rent', 'OpEx', 'Parking', 'Total Monthly', 'Cumulative']);
+    var cfO = exHasPhasedRSF ? 1 : 0; // column offset for Billable RSF column
+    cfHeaders.forEach(function(h, i) { setCell(cfWS, 2, i, h, (i < 3 + cfO) ? headerLeftStyle : headerStyle); });
 
     // Cash Flow cross-tab refs
     var cfDT = "'Deal Terms'!";
@@ -18179,62 +18202,73 @@ function rfpExportExcel() {
       // Col C: Lease Year
       setCell(cfWS, r, 2, row.leaseYear, Object.assign({}, centerStyle, rowFill));
 
-      // Col D: Rent/RSF = Base_Rent/12 * (1+escalation)^(year-1)
+      // Col C+1 (optional): Billable RSF
+      if (exHasPhasedRSF) {
+        setCell(cfWS, r, 3, row.billableRSF || row.usableRSF || 0, Object.assign({}, numStyle, rowFill));
+      }
+
+      // Col D+cfO: Rent/RSF
       var yr = row.leaseYear || 1;
       if (exHasRentPeriods) {
-        // Stepped rent: use pre-calculated values (no simple formula possible)
-        setCell(cfWS, r, 3, Math.round((row.rentRSF || 0) * 100) / 100 / 12, Object.assign({}, formulaDecStyle, rowFill));
+        setCell(cfWS, r, 3 + cfO, Math.round((row.rentRSF || 0) * 100) / 100 / 12, Object.assign({}, formulaDecStyle, rowFill));
       } else if (yr <= 1) {
-        setFormula(cfWS, r, 3, cfDT + dtRefs.base_rent + '/12', Object.assign({}, formulaDecStyle, rowFill));
+        setFormula(cfWS, r, 3 + cfO, cfDT + dtRefs.base_rent + '/12', Object.assign({}, formulaDecStyle, rowFill));
       } else {
-        setFormula(cfWS, r, 3, cfDT + dtRefs.base_rent + '/12*(1+' + cfDT + dtRefs.escalation + ')^' + (yr - 1), Object.assign({}, formulaDecStyle, rowFill));
+        setFormula(cfWS, r, 3 + cfO, cfDT + dtRefs.base_rent + '/12*(1+' + cfDT + dtRefs.escalation + ')^' + (yr - 1), Object.assign({}, formulaDecStyle, rowFill));
       }
 
-      // Col E: Base Rent = Rent/RSF * RSF
+      // Col E+cfO: Base Rent
       if (exHasRentPeriods) {
-        setCell(cfWS, r, 4, row.monthlyBaseRent || 0, Object.assign({}, formulaStyle, rowFill));
+        setCell(cfWS, r, 4 + cfO, row.monthlyBaseRent || 0, Object.assign({}, formulaStyle, rowFill));
       } else {
-        setFormula(cfWS, r, 4, 'D' + er + '*' + cfDT + dtRefs.rsf, Object.assign({}, formulaStyle, rowFill));
+        var rentCol = XLSX.utils.encode_col(3 + cfO);
+        setFormula(cfWS, r, 4 + cfO, rentCol + er + '*' + cfDT + dtRefs.rsf, Object.assign({}, formulaStyle, rowFill));
       }
 
-      // Col F: Free Rent Credit (IF month <= free_rent_months, Base Rent, 0)
+      // Col F+cfO: Free Rent Credit
       if (exHasRentPeriods) {
-        setCell(cfWS, r, 5, row.freeRentCredit || 0, Object.assign({}, (isFreeRent ? greenCurrStyle : formulaStyle), rowFill));
+        setCell(cfWS, r, 5 + cfO, row.freeRentCredit || 0, Object.assign({}, (isFreeRent ? greenCurrStyle : formulaStyle), rowFill));
       } else {
-        setFormula(cfWS, r, 5, 'IF(A' + er + '<=' + cfDT + dtRefs.free_rent + ',E' + er + ',0)', Object.assign({}, (isFreeRent ? greenCurrStyle : formulaStyle), rowFill));
+        var baseCol = XLSX.utils.encode_col(4 + cfO);
+        setFormula(cfWS, r, 5 + cfO, 'IF(A' + er + '<=' + cfDT + dtRefs.free_rent + ',' + baseCol + er + ',0)', Object.assign({}, (isFreeRent ? greenCurrStyle : formulaStyle), rowFill));
       }
 
-      // Col G: Net Cash Rent = Base Rent - Free Rent Credit
-      setFormula(cfWS, r, 6, 'E' + er + '-F' + er, Object.assign({}, formulaStyle, rowFill));
+      // Col G+cfO: Net Cash Rent = Base Rent - Free Rent Credit
+      var baseColL = XLSX.utils.encode_col(4 + cfO);
+      var freeColL = XLSX.utils.encode_col(5 + cfO);
+      setFormula(cfWS, r, 6 + cfO, baseColL + er + '-' + freeColL + er, Object.assign({}, formulaStyle, rowFill));
 
-      // Col H: OpEx
-      setFormula(cfWS, r, 7, cfDT + dtRefs.opex_monthly, Object.assign({}, formulaStyle, rowFill));
+      // Col H+cfO: OpEx
+      setFormula(cfWS, r, 7 + cfO, cfDT + dtRefs.opex_monthly, Object.assign({}, formulaStyle, rowFill));
 
-      // Col I: Parking = Spots * Rate
-      setFormula(cfWS, r, 8, cfDT + dtRefs.parking_spots + '*' + cfDT + dtRefs.parking_rate, Object.assign({}, formulaStyle, rowFill));
+      // Col I+cfO: Parking = Spots * Rate
+      setFormula(cfWS, r, 8 + cfO, cfDT + dtRefs.parking_spots + '*' + cfDT + dtRefs.parking_rate, Object.assign({}, formulaStyle, rowFill));
 
-      // Col J: Total Monthly = Net Rent + OpEx + Parking
-      setFormula(cfWS, r, 9, 'G' + er + '+H' + er + '+I' + er, Object.assign({}, currBoldStyle, rowFill));
+      // Col J+cfO: Total Monthly = Net Rent + OpEx + Parking
+      var netCol = XLSX.utils.encode_col(6 + cfO);
+      var opexCol = XLSX.utils.encode_col(7 + cfO);
+      var parkCol = XLSX.utils.encode_col(8 + cfO);
+      setFormula(cfWS, r, 9 + cfO, netCol + er + '+' + opexCol + er + '+' + parkCol + er, Object.assign({}, currBoldStyle, rowFill));
 
-      // Col K: Cumulative = previous cumulative + this month total
+      // Col K+cfO: Cumulative = previous cumulative + this month total
+      var totalCol = XLSX.utils.encode_col(9 + cfO);
+      var cumCol = XLSX.utils.encode_col(10 + cfO);
       if (i === 0) {
-        setFormula(cfWS, r, 10, 'J' + er, Object.assign({}, formulaStyle, rowFill));
+        setFormula(cfWS, r, 10 + cfO, totalCol + er, Object.assign({}, formulaStyle, rowFill));
       } else {
-        setFormula(cfWS, r, 10, 'K' + (er - 1) + '+J' + er, Object.assign({}, formulaStyle, rowFill));
+        setFormula(cfWS, r, 10 + cfO, cumCol + (er - 1) + '+' + totalCol + er, Object.assign({}, formulaStyle, rowFill));
       }
     });
 
     // Totals row with SUM formulas
     var cfTotalRow = cfStartRow + cfData.length;
     setCell(cfWS, cfTotalRow, 0, 'TOTALS', totalLabelStyle);
-    setCell(cfWS, cfTotalRow, 1, '', totalLabelStyle);
-    setCell(cfWS, cfTotalRow, 2, '', totalLabelStyle);
-    setCell(cfWS, cfTotalRow, 3, '', totalLabelStyle);
-    for (var cc = 4; cc <= 9; cc++) {
+    for (var cfPad = 1; cfPad <= 3 + cfO; cfPad++) setCell(cfWS, cfTotalRow, cfPad, '', totalLabelStyle);
+    for (var cc = 4 + cfO; cc <= 9 + cfO; cc++) {
       var cLetter = XLSX.utils.encode_cell({ r: 0, c: cc }).replace(/\d+/, '');
       setFormula(cfWS, cfTotalRow, cc, 'SUM(' + cLetter + (cfStartRow + 1) + ':' + cLetter + cfTotalRow + ')', totalRowStyle);
     }
-    setCell(cfWS, cfTotalRow, 10, '', totalLabelStyle);
+    setCell(cfWS, cfTotalRow, 10 + cfO, '', totalLabelStyle);
 
     cfWS['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: cfTotalRow, c: cfCols - 1 } });
     // Freeze header rows

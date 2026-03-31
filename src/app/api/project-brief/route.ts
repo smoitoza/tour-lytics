@@ -119,7 +119,9 @@ export async function POST(request: NextRequest) {
         const bpRentPeriods = terms.rent_periods || terms.rentPeriods
         if (bpRentPeriods && Array.isArray(bpRentPeriods) && bpRentPeriods.length > 0) {
           const firstPaid = bpRentPeriods.find((p: any) => p.rent_rsf_yr > 0)
-          context += ` | Stepped rent (${firstPaid ? '$' + firstPaid.rent_rsf_yr + '/RSF starting Mo.' + firstPaid.from_month : 'see schedule'})`
+          const hasPhasedRSF = bpRentPeriods.some((p: any) => p.billable_rsf && p.billable_rsf > 0)
+          const phasedNote = hasPhasedRSF ? ', phased RSF' : ''
+          context += ` | Stepped rent (${firstPaid ? '$' + firstPaid.rent_rsf_yr + '/RSF starting Mo.' + firstPaid.from_month : 'see schedule'}${phasedNote})`
         } else if (terms.base_rent_rsf) {
           context += ` | $${terms.base_rent_rsf}/RSF`
         }

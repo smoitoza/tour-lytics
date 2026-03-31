@@ -163,7 +163,8 @@ export async function POST(request: NextRequest) {
             exRentPeriods.forEach((p: any) => {
               const lbl = p.label ? ` (${p.label})` : ''
               const rate = p.rent_rsf_yr === 0 ? 'No Base Rent' : `$${p.rent_rsf_yr}/RSF/yr`
-              context += `        Mo. ${p.from_month}-${p.to_month}: ${rate}${lbl}\n`
+              const billable = p.billable_rsf ? ` [${p.billable_rsf.toLocaleString()} billable RSF]` : ''
+              context += `        Mo. ${p.from_month}-${p.to_month}: ${rate}${billable}${lbl}\n`
             })
           } else if (terms.base_rent_rsf) {
             context += `      Base Rent: $${terms.base_rent_rsf}/RSF/yr\n`

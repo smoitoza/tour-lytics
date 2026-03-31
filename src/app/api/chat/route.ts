@@ -113,7 +113,8 @@ async function getRFPContext(projectId: string): Promise<string> {
         rentPeriods.forEach((p: any) => {
           const label = p.label ? ` (${p.label})` : ''
           const rate = p.rent_rsf_yr === 0 ? 'No Base Rent' : `$${p.rent_rsf_yr}/RSF/yr`
-          context += `      Months ${p.from_month}-${p.to_month}: ${rate}${label}\n`
+          const billable = p.billable_rsf ? ` [${p.billable_rsf.toLocaleString()} billable RSF]` : ''
+          context += `      Months ${p.from_month}-${p.to_month}: ${rate}${billable}${label}\n`
         })
       } else if (terms.base_rent_rsf) {
         context += `    Base Rent: $${terms.base_rent_rsf}/RSF/yr\n`

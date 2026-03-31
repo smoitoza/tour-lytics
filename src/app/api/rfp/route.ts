@@ -211,6 +211,7 @@ interface RentPeriod {
   from_month: number
   to_month: number
   rent_rsf_yr: number
+  billable_rsf?: number
   label?: string
 }
 
@@ -236,14 +237,15 @@ interface DealTerms {
   notes?: string
 }
 
-// Helper: determine rent/RSF/yr for a given month, handling stepped rent periods
+// Helper: determine rent/RSF/yr and billable RSF for a given month
 function getRentForMonth(
   month: number,
   rentPeriods: RentPeriod[] | undefined,
   baseRentRSF: number,
   escalation: number,
-  freeMonths: number
-): { rentRSFYr: number; isFreeRent: boolean } {
+  freeMonths: number,
+  defaultRSF: number
+): { rentRSFYr: number; isFreeRent: boolean; billableRSF: number } {
   // If rent_periods defined, they take full control of the rent schedule.
   // After the last defined period, escalation kicks in annually from the last period's rate.
   if (rentPeriods && rentPeriods.length > 0) {
@@ -253,7 +255,11 @@ function getRentForMonth(
     // Check if month falls within a defined period
     for (const p of sorted) {
       if (month >= p.from_month && month <= p.to_month) {
-        return { rentRSFYr: p.rent_rsf_yr, isFreeRent: p.rent_rsf_yr === 0 }
+        return {
+          rentRSFYr: p.rent_rsf_yr,
+          isFreeRent: p.rent_rsf_yr === 0,
+          billableRSF: p.billable_rsf || defaultRSF
+        }
       }
     }
 
@@ -261,18 +267,20 @@ function getRentForMonth(
     const lastPeriod = sorted[sorted.length - 1]
     const lastRate = lastPeriod.rent_rsf_yr
     const monthsAfterLastPeriod = month - lastPeriod.to_month
-    // Determine how many full years of escalation have passed since last period ended
     const escalationYears = Math.ceil(monthsAfterLastPeriod / 12)
     const escalatedRate = lastRate * Math.pow(1 + escalation, escalationYears)
-    return { rentRSFYr: escalatedRate, isFreeRent: false }
+    return {
+      rentRSFYr: escalatedRate,
+      isFreeRent: false,
+      billableRSF: lastPeriod.billable_rsf || defaultRSF
+    }
   }
 
   // Legacy mode: single base rent + free months + annual escalation
   const leaseYear = Math.ceil(month / 12)
   const yearMultiplier = Math.pow(1 + escalation, leaseYear - 1)
   const currentRentRSFYr = baseRentRSF * yearMultiplier
-  const isFree = month <= Math.floor(freeMonths) || (month === Math.floor(freeMonths) + 1 && freeMonths % 1 > 0)
-  return { rentRSFYr: currentRentRSFYr, isFreeRent: false } // free rent handled separately in legacy mode
+  return { rentRSFYr: currentRentRSFYr, isFreeRent: false, billableRSF: defaultRSF }
 }
 
 function generateFinancialAnalysis(terms: DealTerms) {
@@ -308,20 +316,22 @@ function generateFinancialAnalysis(terms: DealTerms) {
     let currentRentRSF: number
     let monthlyBaseRent: number
     let freeRentCredit = 0
+    let billableRSF = rsf // default: full premises RSF
 
     if (useSteppedRent) {
       // Stepped rent mode: rent_periods drives everything
-      const { rentRSFYr } = getRentForMonth(m, rentPeriods, baseRentRSF, escalation, freeMonths)
-      currentRentRSF = rentRSFYr
-      monthlyBaseRent = (currentRentRSF * rsf) / 12
+      const result = getRentForMonth(m, rentPeriods, baseRentRSF, escalation, freeMonths, rsf)
+      currentRentRSF = result.rentRSFYr
+      billableRSF = result.billableRSF
+      // Use billable RSF (not full premises RSF) for rent calculation
+      monthlyBaseRent = (currentRentRSF * billableRSF) / 12
       // In stepped mode, $0 periods are the "free rent" -- no separate free rent credit
-      // but we track the value of $0 periods as free rent value for reporting
       if (currentRentRSF === 0) {
-        // Find what rent WOULD be if not free (use first non-zero period or base_rent_rsf)
         const sorted = [...rentPeriods!].sort((a, b) => a.from_month - b.from_month)
         const firstPaidPeriod = sorted.find(p => p.rent_rsf_yr > 0)
         const shadowRent = firstPaidPeriod ? firstPaidPeriod.rent_rsf_yr : baseRentRSF
-        freeRentCredit = (shadowRent * rsf) / 12
+        const shadowRSF = firstPaidPeriod?.billable_rsf || rsf
+        freeRentCredit = (shadowRent * shadowRSF) / 12
       }
     } else {
       // Legacy mode: single base rent + escalation
@@ -358,6 +368,8 @@ function generateFinancialAnalysis(terms: DealTerms) {
       month: m,
       period,
       leaseYear,
+      billableRSF: billableRSF,
+      usableRSF: rsf,
       rentRSF: Math.round(currentRentRSF * 100) / 100,
       monthlyBaseRent: Math.round(monthlyBaseRent),
       freeRentCredit: Math.round(freeRentCredit),
