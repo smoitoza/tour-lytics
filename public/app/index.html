@@ -18684,6 +18684,14 @@ function rfpExportExcel() {
         } else {
           var t = s.deal_terms || s.dealTerms || {};
           val = t[f.key] || 0;
+          // For base_rent_rsf: if 0 and rent_periods exist, use first paid rate
+          if (f.key === 'base_rent_rsf' && !val) {
+            var rps = t.rent_periods || t.rentPeriods;
+            if (rps && Array.isArray(rps) && rps.length > 0) {
+              var fp = rps.find(function(p) { return p.rent_rsf_yr > 0; });
+              if (fp) val = fp.rent_rsf_yr;
+            }
+          }
         }
         vals.push(val);
         row.push(f.type === 'text' ? (val || '') : n(val));
