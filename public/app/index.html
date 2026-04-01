@@ -19416,7 +19416,7 @@ function rfpBuildBrokerFeesPanel(selected) {
   var types = [{v:'none', l:'No Broker Fee'}, {v:'expense', l:'Tenant Pays (Expense)'}, {v:'credit', l:'Broker Rebate (Credit)'}];
   types.forEach(function(t) {
     var active = feeType === t.v;
-    html += '<button ' + (canEdit ? 'onclick="rfpSetBrokerFeeType(\'' + t.v + '\')"' : 'disabled') + ' style="padding:6px 14px;border-radius:6px;font-size:var(--text-sm);cursor:pointer;border:1px solid ' + (active ? 'var(--color-accent)' : 'var(--color-border)') + ';background:' + (active ? 'var(--color-accent)' : 'transparent') + ';color:' + (active ? 'white' : 'var(--color-text)') + ';font-weight:' + (active ? '600' : '400') + '">' + t.l + '</button>';
+    html += '<button ' + (canEdit ? 'onclick="rfpSetBrokerFeeType(\'' + t.v + '\')"' : 'disabled') + ' style="padding:6px 14px;border-radius:6px;font-size:var(--text-sm);cursor:pointer;border:1px solid ' + (active ? 'var(--color-text)' : 'var(--color-border)') + ';background:' + (active ? 'var(--color-text)' : 'transparent') + ';color:' + (active ? 'var(--color-bg)' : 'var(--color-text)') + ';font-weight:' + (active ? '600' : '400') + '">' + t.l + '</button>';
   });
   html += '</div></div>';
 
@@ -19432,11 +19432,19 @@ function rfpBuildBrokerFeesPanel(selected) {
     html += '<input class="rfp-form-input" type="text" id="broker-fee-notes" value="' + notes.replace(/"/g, '&quot;') + '" ' + (canEdit ? '' : 'disabled') + ' placeholder="e.g. C&W commission rebate" style="font-size:var(--text-sm);" onchange="rfpSaveBrokerFee()" />';
     html += '</div></div>';
 
+    // Save button
+    html += '<div style="margin-top:var(--space-3);display:flex;align-items:center;gap:var(--space-3);">';
+    if (canEdit) {
+      html += '<button class="rfp-btn-primary" onclick="rfpSaveBrokerFee()" style="font-size:var(--text-sm);padding:8px 20px;">Save Broker Fee</button>';
+    }
+    html += '<span id="broker-fee-status" style="font-size:var(--text-sm);color:var(--color-text-muted);"></span>';
+    html += '</div>';
+
     // Summary
     if (amount > 0) {
       var termMonths = (selected.analysis && selected.analysis.summary) ? (selected.analysis.summary.termMonths || 1) : 1;
       var monthlyAmort = Math.round(amount / termMonths);
-      html += '<div style="border:1px solid var(--color-border);border-radius:8px;padding:var(--space-3);background:var(--color-bg);margin-top:var(--space-2);">';
+      html += '<div style="border:1px solid var(--color-border);border-radius:8px;padding:var(--space-3);background:var(--color-bg);margin-top:var(--space-3);">';
       html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--space-3);font-size:var(--text-sm);">';
       html += '<div><div style="font-weight:600;color:' + (feeType === 'credit' ? '#16a34a' : '#b45309') + '">' + rfpFmtCurrencyPlain(amount) + '</div><div style="color:var(--color-text-muted);font-size:var(--text-xs)">' + (feeType === 'credit' ? 'Rebate Amount' : 'Fee Amount') + '</div></div>';
       html += '<div><div style="font-weight:600;color:var(--color-text)">' + rfpFmtCurrencyPlain(monthlyAmort) + '/mo</div><div style="color:var(--color-text-muted);font-size:var(--text-xs)">SL Amortization</div></div>';
@@ -19491,11 +19499,26 @@ function rfpSaveBrokerFee() {
     component_label: compLabel || null,
     updated_by: email || ''
   });
+  var statusEl = document.getElementById('broker-fee-status');
+  if (statusEl) { statusEl.textContent = 'Saving...'; statusEl.style.color = 'var(--color-text-muted)'; }
+
   fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
-  }).catch(function(err) { console.warn('Broker fee save error:', err); });
+  })
+  .then(function(r) { return r.json(); })
+  .then(function() {
+    if (statusEl) { statusEl.textContent = 'Saved'; statusEl.style.color = '#16a34a'; }
+    // Re-render panel to show updated summary
+    var sel = rfpGetCurrentSubmission();
+    var panel = document.getElementById('fin-broker-fees');
+    if (panel && sel) panel.innerHTML = rfpBuildBrokerFeesPanel(sel);
+  })
+  .catch(function(err) {
+    console.warn('Broker fee save error:', err);
+    if (statusEl) { statusEl.textContent = 'Error: ' + (err.message || 'Failed to save'); statusEl.style.color = '#dc2626'; }
+  });
 }
 
 function rfpBuildAssumptionsPanel(selected) {
