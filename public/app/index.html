@@ -16707,6 +16707,31 @@ function rfpBuildCombinedView(componentMap, address) {
   compRow('Total All-in Cost', components.map(function(c) { return c.summary.totalAllInCost || 0; }), 'curr', '', 'Total cash out: rent + OpEx + parking over the full term');
   compRow('Total Concessions', components.map(function(c) { return c.summary.totalConcessions || 0; }), 'curr', '', 'TI allowance + free rent value');
 
+  // PER SF / MONTHLY
+  sectionRow('Per SF / Monthly');
+  compRow('Rent/SF/mo', components.map(function(c) {
+    var rsf = c.summary.rsf || 0;
+    var termMo = c.summary.termMonths || 1;
+    var cfTot = c.totals || {};
+    var totalBaseRent = cfTot.totalBaseRent || 0;
+    return rsf > 0 ? Math.round(totalBaseRent / termMo / rsf * 100) / 100 : 0;
+  }), 'curr_dec', '', 'Base rent per RSF per month (how SJ/Sunnyvale markets quote)');
+  compRow('OpEx/SF/mo', components.map(function(c) {
+    var rsf = c.summary.rsf || 0;
+    var termMo = c.summary.termMonths || 1;
+    var cfTot = c.totals || {};
+    var totalOpex = cfTot.totalOpex || 0;
+    return rsf > 0 ? Math.round(totalOpex / termMo / rsf * 100) / 100 : 0;
+  }), 'curr_dec', '', 'Operating expenses per RSF per month');
+  compRow('Full Service Gross/SF/mo', components.map(function(c) {
+    var rsf = c.summary.rsf || 0;
+    var termMo = c.summary.termMonths || 1;
+    var cfTot = c.totals || {};
+    var totalRent = cfTot.totalBaseRent || 0;
+    var totalOpex = cfTot.totalOpex || 0;
+    return rsf > 0 ? Math.round((totalRent + totalOpex) / termMo / rsf * 100) / 100 : 0;
+  }), 'curr_dec', '', 'Rent + OpEx per RSF per month (all-in occupancy rate)');
+
   // CAPEX
   if (anyCapex) {
     sectionRow('Capital Expenditure (CAPEX)');
@@ -16956,6 +16981,24 @@ function rfpBuildCombinedExcelSheet(wb, cd) {
   addRow('SL Annual Expense', comps.map(function(c) { return c.summary.straightLineAnnualExpense || 0; }), 'curr', 'curr', 'Straight-line annual: rent + OpEx + parking, after TI credit, averaged evenly across the lease');
   addRow('Total All-in Cost', comps.map(function(c) { return c.summary.totalAllInCost || 0; }), 'curr', 'curr', 'Total cash out: rent + OpEx + parking over the full term');
   addRow('Total Concessions', comps.map(function(c) { return c.summary.totalConcessions || 0; }), 'curr', 'curr', 'TI allowance + free rent value');
+
+  // === PER SF / MONTHLY ===
+  addSection('Per SF / Monthly');
+  addRow('Rent/SF/mo', comps.map(function(c) {
+    var rsf = c.summary.rsf || 0; var termMo = c.summary.termMonths || 1;
+    var cfTot = c.totals || {}; var totalBaseRent = cfTot.totalBaseRent || 0;
+    return rsf > 0 ? Math.round(totalBaseRent / termMo / rsf * 100) / 100 : 0;
+  }), 'curr_dec', 'curr_dec', 'Base rent per RSF per month');
+  addRow('OpEx/SF/mo', comps.map(function(c) {
+    var rsf = c.summary.rsf || 0; var termMo = c.summary.termMonths || 1;
+    var cfTot = c.totals || {}; var totalOpex = cfTot.totalOpex || 0;
+    return rsf > 0 ? Math.round(totalOpex / termMo / rsf * 100) / 100 : 0;
+  }), 'curr_dec', 'curr_dec', 'Operating expenses per RSF per month');
+  addRow('Full Service Gross/SF/mo', comps.map(function(c) {
+    var rsf = c.summary.rsf || 0; var termMo = c.summary.termMonths || 1;
+    var cfTot = c.totals || {}; var totalRent = cfTot.totalBaseRent || 0; var totalOpex = cfTot.totalOpex || 0;
+    return rsf > 0 ? Math.round((totalRent + totalOpex) / termMo / rsf * 100) / 100 : 0;
+  }), 'curr_dec', 'curr_dec', 'Rent + OpEx per RSF per month (all-in occupancy rate)');
 
   // === CAPEX ===
   if (anyCapex) {
@@ -20137,7 +20180,7 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
     var parkMo = (cfTotals.totalParking || 0) / (termMo || 1);
     var slMonthlyAllInLHI = slMonthly + opexMo + parkMo + (capex.hasCapex ? (capex.monthlyDepreciation || 0) : 0) + (brokerFee.hasBrokerFee ? (brokerFee.slMonthlyImpact || 0) : 0);
 
-    buildingData.push({ address: address, summary: summary, terms: terms, internalOpex: totalInternalOpex, allInMonthly: allInMonthly, allInAnnual: allInAnnual, capex: capex, brokerFee: brokerFee, slMonthlyAllInLHI: Math.round(slMonthlyAllInLHI) });
+    buildingData.push({ address: address, summary: summary, terms: terms, cfTotals: cfTotals, internalOpex: totalInternalOpex, allInMonthly: allInMonthly, allInAnnual: allInAnnual, capex: capex, brokerFee: brokerFee, slMonthlyAllInLHI: Math.round(slMonthlyAllInLHI) });
   });
 
   var hasAnyCapex = buildingData.some(function(d) { return d.capex && d.capex.hasCapex; });
@@ -20149,6 +20192,21 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
     ['Term (months)', function(d) { return d.summary.termMonths; }, false, 'num'],
     ['Base Rent per RSF', function(d) { return d.terms.base_rent_rsf || d.terms.baseRent; }, true, 'curr'],
     ['Effective Rent/RSF', function(d) { return d.summary.effectiveRentRSF; }, true, 'curr'],
+    ['Rent/SF/mo', function(d) {
+      var rsf = d.summary.rsf || 0; var termMo = d.summary.termMonths || 1;
+      var cfTot = (d.cfTotals || {}); var totalBaseRent = cfTot.totalBaseRent || 0;
+      return rsf > 0 ? Math.round(totalBaseRent / termMo / rsf * 100) / 100 : 0;
+    }, true, 'curr_dec'],
+    ['OpEx/SF/mo', function(d) {
+      var rsf = d.summary.rsf || 0; var termMo = d.summary.termMonths || 1;
+      var cfTot = (d.cfTotals || {}); var totalOpex = cfTot.totalOpex || 0;
+      return rsf > 0 ? Math.round(totalOpex / termMo / rsf * 100) / 100 : 0;
+    }, true, 'curr_dec'],
+    ['Full Service Gross/SF/mo', function(d) {
+      var rsf = d.summary.rsf || 0; var termMo = d.summary.termMonths || 1;
+      var cfTot = (d.cfTotals || {}); var totalRent = cfTot.totalBaseRent || 0; var totalOpex = cfTot.totalOpex || 0;
+      return rsf > 0 ? Math.round((totalRent + totalOpex) / termMo / rsf * 100) / 100 : 0;
+    }, true, 'curr_dec'],
     ['Total All-in Cost', function(d) { return d.summary.totalAllInCost; }, true, 'curr'],
     ['SL Monthly Rent', function(d) { return d.summary.straightLineMonthlyRent; }, true, 'curr'],
     ['SL Annual Expense', function(d) { return d.summary.straightLineAnnualExpense; }, true, 'curr'],
@@ -20202,7 +20260,7 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
   });
   html += '</tr></thead><tbody>';
 
-  function renderMetricRow(label, getter, lowerIsBetter, isAssumption) {
+  function renderMetricRow(label, getter, lowerIsBetter, isAssumption, fmt) {
     var values = buildingData.map(function(d) { return getter(d); });
     var numericValues = values.filter(function(v) { return v != null && !isNaN(v) && v !== 0; });
 
@@ -20233,6 +20291,8 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
         display = rfpFmtNum(v);
       } else if (isAssumption && (v === 0 || v == null)) {
         display = '--';
+      } else if (fmt === 'curr_dec') {
+        display = rfpFmtCurrencyDecimals(v);
       } else {
         display = rfpFmtCurrency(v);
       }
@@ -20242,7 +20302,7 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
   }
 
   // Deal metrics
-  dealMetrics.forEach(function(m) { renderMetricRow(m[0], m[1], m[2], false); });
+  dealMetrics.forEach(function(m) { renderMetricRow(m[0], m[1], m[2], false, m[3]); });
 
   // Assumptions section (separator + rows)
   if (hasAnyAssumptions) {
