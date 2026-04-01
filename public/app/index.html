@@ -17684,7 +17684,7 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
       '<td class="cell-label">Year ' + (row.year || '') + '</td>' +
       '<td>' + months + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.baseRent) + '</td>' +
-      '<td class="cell-currency">' + (slFreeRentYr ? rfpFmtCurrency(slFreeRentYr) : '') + '</td>' +
+      '<td class="cell-currency" style="color:#16a34a">' + (slFreeRentYr ? '(' + rfpFmtCurrency(slFreeRentYr) + ')' : '') + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(slNetRent) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.opex) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.parking) + '</td>' +
