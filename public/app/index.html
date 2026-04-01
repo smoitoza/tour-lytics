@@ -16616,9 +16616,11 @@ function rfpBuildCombinedView(componentMap, address) {
   // CAPEX already loaded above
 
   // Helper to render a row
-  function compRow(label, values, fmt, style) {
+  function compRow(label, values, fmt, style, desc) {
     var rowStyle = style || '';
-    html += '<tr' + (rowStyle ? ' style="' + rowStyle + '"' : '') + '><td class="cell-label">' + label + '</td>';
+    var labelHtml = label;
+    if (desc) labelHtml += '<div style="font-size:var(--text-xs);font-weight:400;color:var(--color-text-muted);margin-top:1px;line-height:1.3">' + desc + '</div>';
+    html += '<tr' + (rowStyle ? ' style="' + rowStyle + '"' : '') + '><td class="cell-label">' + labelHtml + '</td>';
     var combined = 0;
     values.forEach(function(v) {
       combined += (typeof v === 'number' ? v : 0);
@@ -16651,7 +16653,7 @@ function rfpBuildCombinedView(componentMap, address) {
 
   // DEAL OVERVIEW
   sectionRow('Deal Overview');
-  compRow('RSF', components.map(function(c) { return c.summary.rsf || 0; }), 'num');
+  compRow('RSF', components.map(function(c) { return c.summary.rsf || 0; }), 'num', '', 'Rentable square feet');
   compRow('Lease Term (mo)', components.map(function(c) { return c.summary.termMonths || 0; }), 'plain');
   // Show commencement dates if they differ across components
   var commDates = compTerms.map(function(t) { return t.commencement_date || t.commencementDate || ''; });
@@ -16659,33 +16661,33 @@ function rfpBuildCombinedView(componentMap, address) {
   if (hasStaggeredStart) {
     compRow('Commencement', commDates, 'text');
   }
-  compRow('Base Rent/RSF/yr', compTerms.map(function(t) { return t.base_rent_rsf || t.baseRent || 0; }), 'curr_dec');
-  compRow('Total Base Rent', components.map(function(c) { return c.totals.totalBaseRent || 0; }), 'curr');
-  compRow('Annual Escalation', compTerms.map(function(t) { return t.annual_escalation_pct || t.annualEscalation || 0; }), 'pct');
-  compRow('Free Rent (mo)', compTerms.map(function(t) { return t.free_rent_months || t.freeRent || 0; }), 'plain');
-  compRow('TI Allowance/RSF', compTerms.map(function(t) { return t.ti_allowance_rsf || t.tiAllowancePerRSF || 0; }), 'curr_dec');
-  compRow('TI Total', compTerms.map(function(t) { return t.ti_allowance_total || t.tiAllowanceTotal || 0; }), 'curr');
-  compRow('OpEx (monthly)', compTerms.map(function(t) { return t.opex_monthly || t.opex || 0; }), 'curr');
+  compRow('Base Rent/RSF/yr', compTerms.map(function(t) { return t.base_rent_rsf || t.baseRent || 0; }), 'curr_dec', '', 'Starting annual rate per rentable square foot');
+  compRow('Total Base Rent', components.map(function(c) { return c.totals.totalBaseRent || 0; }), 'curr', '', 'Sum of all base rent payments over the full lease term');
+  compRow('Annual Escalation', compTerms.map(function(t) { return t.annual_escalation_pct || t.annualEscalation || 0; }), 'pct', '', 'Yearly rent increase percentage');
+  compRow('Free Rent (mo)', compTerms.map(function(t) { return t.free_rent_months || t.freeRent || 0; }), 'plain', '', 'Months of abated base rent');
+  compRow('TI Allowance/RSF', compTerms.map(function(t) { return t.ti_allowance_rsf || t.tiAllowancePerRSF || 0; }), 'curr_dec', '', 'Landlord contribution toward build-out, per RSF');
+  compRow('TI Total', compTerms.map(function(t) { return t.ti_allowance_total || t.tiAllowanceTotal || 0; }), 'curr', '', 'Total tenant improvement allowance (RSF x TI/RSF)');
+  compRow('OpEx (monthly)', compTerms.map(function(t) { return t.opex_monthly || t.opex || 0; }), 'curr', '', 'Operating expenses, taxes, CAM, insurance');
   compRow('Parking Spots', compTerms.map(function(t) { return t.parking_spots || t.parkingSpots || 0; }), 'plain');
-  compRow('Parking Rate', compTerms.map(function(t) { return t.parking_rate_monthly || t.parkingRate || 0; }), 'curr_dec');
+  compRow('Parking Rate', compTerms.map(function(t) { return t.parking_rate_monthly || t.parkingRate || 0; }), 'curr_dec', '', 'Per spot per month');
 
   // RENT ANALYSIS
   sectionRow('Rent Analysis');
-  compRow('Effective Rent/RSF', components.map(function(c) { return c.summary.effectiveRentRSF || 0; }), 'curr_dec');
-  compRow('SL Annual Expense', components.map(function(c) { return c.summary.straightLineAnnualExpense || 0; }), 'curr');
-  compRow('Total All-in Cost', components.map(function(c) { return c.summary.totalAllInCost || 0; }), 'curr');
-  compRow('Total Concessions', components.map(function(c) { return c.summary.totalConcessions || 0; }), 'curr');
+  compRow('Effective Rent/RSF', components.map(function(c) { return c.summary.effectiveRentRSF || 0; }), 'curr_dec', '', 'Net rent per RSF after TI credit is spread over the term');
+  compRow('SL Annual Expense', components.map(function(c) { return c.summary.straightLineAnnualExpense || 0; }), 'curr', '', 'Straight-line annual: rent + OpEx + parking, after TI credit, averaged evenly across the lease');
+  compRow('Total All-in Cost', components.map(function(c) { return c.summary.totalAllInCost || 0; }), 'curr', '', 'Total cash out: rent + OpEx + parking over the full term');
+  compRow('Total Concessions', components.map(function(c) { return c.summary.totalConcessions || 0; }), 'curr', '', 'TI allowance + free rent value');
 
   // CAPEX
   if (anyCapex) {
     sectionRow('Capital Expenditure (CAPEX)');
-    compRow('Total CAPEX', components.map(function(c) { return c.capex.grandTotal || 0; }), 'curr');
+    compRow('Total CAPEX', components.map(function(c) { return c.capex.grandTotal || 0; }), 'curr', '', 'Construction + FF&E + IT, tenant-funded');
     compRow('Construction / Build-Out', components.map(function(c) { return c.capex.construction || 0; }), 'curr');
-    compRow('FF&E', components.map(function(c) { return c.capex.ffe || 0; }), 'curr');
+    compRow('FF&E', components.map(function(c) { return c.capex.ffe || 0; }), 'curr', '', 'Furniture, fixtures, and equipment');
     compRow('IT / Technology', components.map(function(c) { return c.capex.it || 0; }), 'curr');
     compRow('CAPEX per RSF', components.map(function(c) { var rsf = c.summary.rsf || 0; return rsf > 0 ? Math.round(c.capex.grandTotal / rsf * 100) / 100 : 0; }), 'curr_dec');
-    compRow('Monthly LHI Depreciation', components.map(function(c) { return c.capex.monthlyDepreciation || 0; }), 'curr');
-    compRow('Annual LHI Depreciation', components.map(function(c) { return c.capex.annualDepreciation || 0; }), 'curr');
+    compRow('Monthly LHI Dep.', components.map(function(c) { return c.capex.monthlyDepreciation || 0; }), 'curr', '', 'Leasehold improvement depreciation, straight-line over term');
+    compRow('Annual LHI Dep.', components.map(function(c) { return c.capex.annualDepreciation || 0; }), 'curr');
 
     // SL with LHI
     sectionRow('Straight-Line All-in (incl. TI + LHI)');
@@ -16693,7 +16695,7 @@ function rfpBuildCombinedView(componentMap, address) {
       var slAllInMonthly = (c.summary.straightLineAnnualExpense || 0) / 12;
       var parkingMonthly = (c.totals.totalParking || 0) / (c.summary.termMonths || 1);
       return Math.round(slAllInMonthly + parkingMonthly + (c.capex.monthlyDepreciation || 0));
-    }), 'curr');
+    }), 'curr', '', 'SL rent + OpEx + parking + LHI depreciation, after TI credit');
     compRow('SL Annual All-in + LHI', components.map(function(c) {
       var slAllInMonthly = (c.summary.straightLineAnnualExpense || 0) / 12;
       var parkingMonthly = (c.totals.totalParking || 0) / (c.summary.termMonths || 1);
@@ -16703,7 +16705,7 @@ function rfpBuildCombinedView(componentMap, address) {
 
   // NPV
   sectionRow('Present Value Analysis');
-  html += '<tr style="border-top:2px solid var(--color-border);"><td class="cell-label" style="font-weight:600;">NPV @ 8% (lease obligation)</td>';
+  html += '<tr style="border-top:2px solid var(--color-border);"><td class="cell-label" style="font-weight:600;">NPV @ 8%<div style="font-size:var(--text-xs);font-weight:400;color:var(--color-text-muted);margin-top:1px;line-height:1.3">Present value of all lease payments discounted at 8%</div></td>';
   var combinedNPVCheck = 0;
   components.forEach(function(c) {
     var compNPV = 0;
@@ -16724,10 +16726,10 @@ function rfpBuildCombinedView(componentMap, address) {
     }
     var rsf2 = c.summary.rsf || 1;
     return Math.round(compNPV2 / rsf2);
-  }), 'curr');
+  }), 'curr', '', 'NPV divided by RSF, for per-square-foot comparison');
 
   if (anyCapex) {
-    compRow('Total Commitment (All-in + CAPEX)', components.map(function(c) { return Math.round((c.summary.totalAllInCost || 0) + (c.capex.grandTotal || 0)); }), 'curr');
+    compRow('Total Commitment (All-in + CAPEX)', components.map(function(c) { return Math.round((c.summary.totalAllInCost || 0) + (c.capex.grandTotal || 0)); }), 'curr', '', 'Full lease cost + tenant capital expenditure');
   }
 
   html += '</tbody></table></div>';
