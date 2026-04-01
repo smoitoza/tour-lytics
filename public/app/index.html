@@ -17652,6 +17652,11 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
   var capex = buildingAddr ? getCapexForBuilding(buildingAddr, slTermMonths, componentLabel) : { hasCapex: false, grandTotal: 0, monthlyDepreciation: 0, annualDepreciation: 0 };
   var slBrokerFee = buildingAddr ? getBrokerFeeForBuilding(buildingAddr, slTermMonths, componentLabel) : { hasBrokerFee: false, slMonthlyImpact: 0 };
 
+  // Straight-line free rent: spread total free rent evenly across all years
+  var totalFreeRent = 0;
+  annual.forEach(function(row) { totalFreeRent += (row.freeRent || 0); });
+  var slMonthlyFreeRent = slTermMonths > 0 ? totalFreeRent / slTermMonths : 0;
+
   var html = '<div class="fin-table-wrap"><table class="fin-table">';
   html += '<thead><tr>' +
     '<th class="cell-label">Year</th>' +
@@ -17667,15 +17672,20 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
   '</tr></thead><tbody>';
 
   annual.forEach(function(row) {
-    var lhiDep = capex.hasCapex ? capex.monthlyDepreciation * (row.months || 12) : 0;
-    var brokerAmort = slBrokerFee.hasBrokerFee ? slBrokerFee.slMonthlyImpact * (row.months || 12) : 0;
-    var adjustedTotal = row.totalCost + lhiDep + brokerAmort;
+    var months = row.months || 12;
+    // Straight-line free rent for this year (evenly amortized)
+    var slFreeRentYr = Math.round(slMonthlyFreeRent * months);
+    var slNetRent = Math.round(row.baseRent - slFreeRentYr);
+    var slTotalCost = slNetRent + (row.opex || 0) + (row.parking || 0);
+    var lhiDep = capex.hasCapex ? capex.monthlyDepreciation * months : 0;
+    var brokerAmort = slBrokerFee.hasBrokerFee ? slBrokerFee.slMonthlyImpact * months : 0;
+    var adjustedTotal = slTotalCost + lhiDep + brokerAmort;
     html += '<tr>' +
       '<td class="cell-label">Year ' + (row.year || '') + '</td>' +
-      '<td>' + (row.months || '') + '</td>' +
+      '<td>' + months + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.baseRent) + '</td>' +
-      '<td class="cell-currency">' + (row.freeRent ? rfpFmtCurrency(row.freeRent) : '') + '</td>' +
-      '<td class="cell-currency">' + rfpFmtCurrency(row.netRent) + '</td>' +
+      '<td class="cell-currency">' + (slFreeRentYr ? rfpFmtCurrency(slFreeRentYr) : '') + '</td>' +
+      '<td class="cell-currency">' + rfpFmtCurrency(slNetRent) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.opex) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.parking) + '</td>' +
       (capex.hasCapex ? '<td class="cell-currency" style="color:#7c3aed">' + rfpFmtCurrency(Math.round(lhiDep)) + '</td>' : '') +
