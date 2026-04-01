@@ -17653,13 +17653,15 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
     '<th class="cell-currency">Net Rent</th>' +
     '<th class="cell-currency">OpEx</th>' +
     '<th class="cell-currency">Parking</th>' +
-    (capex.hasCapex ? '<th class="cell-currency" style="color:#7c3aed">LHI Depreciation</th>' : '') +
+    (capex.hasCapex ? '<th class="cell-currency" style="color:#7c3aed">LHI Dep.</th>' : '') +
+    (slBrokerFee.hasBrokerFee ? '<th class="cell-currency" style="color:#b45309">Broker ' + (slBrokerFee.type === 'credit' ? 'Credit' : 'Fee') + '</th>' : '') +
     '<th class="cell-currency">Total Cost</th>' +
   '</tr></thead><tbody>';
 
   annual.forEach(function(row) {
     var lhiDep = capex.hasCapex ? capex.monthlyDepreciation * (row.months || 12) : 0;
-    var adjustedTotal = row.totalCost + lhiDep;
+    var brokerAmort = slBrokerFee.hasBrokerFee ? slBrokerFee.slMonthlyImpact * (row.months || 12) : 0;
+    var adjustedTotal = row.totalCost + lhiDep + brokerAmort;
     html += '<tr>' +
       '<td class="cell-label">Year ' + (row.year || '') + '</td>' +
       '<td>' + (row.months || '') + '</td>' +
@@ -17669,6 +17671,7 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
       '<td class="cell-currency">' + rfpFmtCurrency(row.opex) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.parking) + '</td>' +
       (capex.hasCapex ? '<td class="cell-currency" style="color:#7c3aed">' + rfpFmtCurrency(Math.round(lhiDep)) + '</td>' : '') +
+      (slBrokerFee.hasBrokerFee ? '<td class="cell-currency" style="color:#b45309">' + (brokerAmort < 0 ? '(' + rfpFmtCurrency(Math.abs(Math.round(brokerAmort))) + ')' : rfpFmtCurrency(Math.round(brokerAmort))) + '</td>' : '') +
       '<td class="cell-currency">' + rfpFmtCurrency(Math.round(adjustedTotal)) + '</td>' +
     '</tr>';
   });
@@ -17697,14 +17700,28 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
     ? '<div class="rfp-metric"><div class="rfp-metric-value" style="color:#7c3aed">' + rfpFmtCurrencyPlain(capex.monthlyDepreciation) + '/mo</div><div class="rfp-metric-label">LHI Depreciation</div></div>'
     : '';
 
+  var brokerNote = slBrokerFee.hasBrokerFee
+    ? '<div class="rfp-metric"><div class="rfp-metric-value" style="color:#b45309">' + (slBrokerFee.slMonthlyImpact < 0 ? '(' + rfpFmtCurrencyPlain(Math.abs(slBrokerFee.slMonthlyImpact)) + ')' : rfpFmtCurrencyPlain(slBrokerFee.slMonthlyImpact)) + '/mo</div><div class="rfp-metric-label">Broker ' + (slBrokerFee.type === 'credit' ? 'Credit' : 'Fee') + ' Amortization</div></div>'
+    : '';
+
+  // Build the SL All-in label dynamically based on what's included
+  var slLabelParts = ['SL'];
+  var slLabelSuffix = [];
+  if (capex.hasCapex) slLabelSuffix.push('LHI');
+  if (totals.tiAllowanceTotal > 0) slLabelSuffix.push('TIA');
+  if (slBrokerFee.hasBrokerFee) slLabelSuffix.push('Fees');
+  var slLabel = 'SL Monthly All-in' + (slLabelSuffix.length > 0 ? ' + ' + slLabelSuffix.join(' + ') : '');
+  var slLabelAnnual = 'SL Annual All-in' + (slLabelSuffix.length > 0 ? ' + ' + slLabelSuffix.join(' + ') : '');
+
   html +=
     '<div class="rfp-summary-metrics" style="margin-top:var(--space-4)">' +
-      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(slMonthlyWithLHI) + '</div><div class="rfp-metric-label">SL Monthly All-in + LHI</div></div>' +
-      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(slAnnualWithLHI) + '</div><div class="rfp-metric-label">SL Annual All-in + LHI</div></div>' +
+      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(slMonthlyWithLHI) + '</div><div class="rfp-metric-label">' + slLabel + '</div></div>' +
+      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(slAnnualWithLHI) + '</div><div class="rfp-metric-label">' + slLabelAnnual + '</div></div>' +
       tiNote +
       lhiNote +
+      brokerNote +
       '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyDecimals(totals.effectiveRentRSF) + '</div><div class="rfp-metric-label">Effective Rent/RSF</div></div>' +
-      (capex.hasCapex ? '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyDecimals(slPerRSFWithLHI) + '</div><div class="rfp-metric-label">SL Cost/RSF/yr (incl. LHI)</div></div>' : '') +
+      ((capex.hasCapex || slBrokerFee.hasBrokerFee) ? '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyDecimals(slPerRSFWithLHI) + '</div><div class="rfp-metric-label">SL Cost/RSF/yr (incl. all)</div></div>' : '') +
     '</div>';
 
   // Lease-only reference (smaller, secondary)
