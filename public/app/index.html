@@ -19482,23 +19482,51 @@ function rfpSaveBrokerFee() {
   var address = selected.building_address || selected.buildingAddress || '';
   var compLabel = selected.component_label || '';
   var key = getAssumptionsKey(address, compLabel);
-  var a = window._rfpState.assumptionsMap[key] || {};
+  if (!window._rfpState.assumptionsMap[key]) window._rfpState.assumptionsMap[key] = {};
+  var a = window._rfpState.assumptionsMap[key];
 
+  // Read from DOM if elements exist, otherwise keep current map values
   var amountEl = document.getElementById('broker-fee-amount');
   var notesEl = document.getElementById('broker-fee-notes');
   if (amountEl) a.broker_fee_amount = parseFloat(amountEl.value) || 0;
   if (notesEl) a.broker_fee_notes = notesEl.value || '';
-  window._rfpState.assumptionsMap[key] = a;
 
-  // Save to API
+  // Save to API - send full assumptions row so API can upsert
   var email = getCurrentUserEmail();
   var url = '/api/assumptions?projectId=' + getProjectId();
   if (email) url += '&userEmail=' + encodeURIComponent(email);
-  var payload = Object.assign({}, a, {
+  // Build clean payload with all known fields (avoid sending DB metadata)
+  var payload = {
     building_address: address,
     component_label: compLabel || null,
-    updated_by: email || ''
-  });
+    updated_by: email || '',
+    // Preserve existing assumption fields
+    opex_food_beverage: a.opex_food_beverage || 0,
+    opex_workplace_experience: a.opex_workplace_experience || 0,
+    opex_maintenance_security: a.opex_maintenance_security || 0,
+    opex_custom_items: a.opex_custom_items || [],
+    headcount: a.headcount || 0,
+    target_density_rsf: a.target_density_rsf || 0,
+    discount_rate: a.discount_rate || 6.0,
+    // CAPEX fields (preserve existing)
+    capex_construction_total: a.capex_construction_total || 0,
+    capex_construction_per_rsf: a.capex_construction_per_rsf || 0,
+    capex_construction_input_mode: a.capex_construction_input_mode || 'total',
+    capex_construction_depreciation_years: a.capex_construction_depreciation_years || 15,
+    capex_ffe_total: a.capex_ffe_total || 0,
+    capex_ffe_per_rsf: a.capex_ffe_per_rsf || 0,
+    capex_ffe_input_mode: a.capex_ffe_input_mode || 'total',
+    capex_ffe_depreciation_years: a.capex_ffe_depreciation_years || 7,
+    capex_it_total: a.capex_it_total || 0,
+    capex_it_per_rsf: a.capex_it_per_rsf || 0,
+    capex_it_input_mode: a.capex_it_input_mode || 'total',
+    capex_it_depreciation_years: a.capex_it_depreciation_years || 5,
+    capex_custom_items: a.capex_custom_items || [],
+    // Broker fee fields
+    broker_fee_type: a.broker_fee_type || 'none',
+    broker_fee_amount: a.broker_fee_amount || 0,
+    broker_fee_notes: a.broker_fee_notes || ''
+  };
   var statusEl = document.getElementById('broker-fee-status');
   if (statusEl) { statusEl.textContent = 'Saving...'; statusEl.style.color = 'var(--color-text-muted)'; }
 
@@ -19510,10 +19538,20 @@ function rfpSaveBrokerFee() {
   .then(function(r) { return r.json(); })
   .then(function() {
     if (statusEl) { statusEl.textContent = 'Saved'; statusEl.style.color = '#16a34a'; }
-    // Re-render panel to show updated summary
+    // Re-render all financial tabs to reflect broker fee changes
     var sel = rfpGetCurrentSubmission();
-    var panel = document.getElementById('fin-broker-fees');
-    if (panel && sel) panel.innerHTML = rfpBuildBrokerFeesPanel(sel);
+    if (sel) {
+      var bAddr = sel.building_address || sel.buildingAddress || '';
+      var bComp = sel.component_label || '';
+      var panel = document.getElementById('fin-broker-fees');
+      if (panel) panel.innerHTML = rfpBuildBrokerFeesPanel(sel);
+      var cfPanel = document.getElementById('fin-cash-flow');
+      if (cfPanel) cfPanel.innerHTML = rfpBuildCashFlowTable(sel.analysis, bAddr, bComp);
+      var slPanel = document.getElementById('fin-straight-line');
+      if (slPanel) slPanel.innerHTML = rfpBuildStraightLineTable(sel.analysis, bAddr, bComp);
+      var gaapPanel = document.getElementById('fin-gaap');
+      if (gaapPanel) gaapPanel.innerHTML = rfpBuildGAAPTable(sel.analysis, bAddr, bComp);
+    }
   })
   .catch(function(err) {
     console.warn('Broker fee save error:', err);
