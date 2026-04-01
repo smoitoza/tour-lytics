@@ -15248,6 +15248,9 @@ function rfpLoadAssumptions(callback) {
           }
         });
         window._rfpState.assumptionsMap = map;
+        // If financial panels are already rendered, re-render them
+        // with the freshly loaded assumptions (handles full page refresh)
+        rfpRefreshFinancialsIfVisible();
       }
       if (callback) callback();
     })
@@ -15255,6 +15258,26 @@ function rfpLoadAssumptions(callback) {
       // Assumptions load failed -- still proceed with submissions
       if (callback) callback();
     });
+}
+
+// Re-render financial panels that depend on assumptions (CAPEX, broker fees)
+// Called after assumptions load to fix stale renders from page refresh
+function rfpRefreshFinancialsIfVisible() {
+  var sel = rfpGetCurrentSubmission();
+  if (!sel) return;
+  var bAddr = sel.building_address || sel.buildingAddress || '';
+  var bComp = sel.component_label || '';
+  var panel;
+  panel = document.getElementById('fin-broker-fees');
+  if (panel) panel.innerHTML = rfpBuildBrokerFeesPanel(sel);
+  panel = document.getElementById('fin-capex');
+  if (panel) panel.innerHTML = rfpBuildCapexPanel(sel);
+  panel = document.getElementById('fin-cash-flow');
+  if (panel) panel.innerHTML = rfpBuildCashFlowTable(sel.analysis, bAddr, bComp);
+  panel = document.getElementById('fin-straight-line');
+  if (panel) panel.innerHTML = rfpBuildStraightLineTable(sel.analysis, bAddr, bComp);
+  panel = document.getElementById('fin-gaap');
+  if (panel) panel.innerHTML = rfpBuildGAAPTable(sel.analysis, bAddr, bComp);
 }
 
 // Find the currently selected submission object
