@@ -18837,10 +18837,12 @@ function rfpExportGoogleDrive() {
     if (!capturedWB) { restoreBtn('Failed to generate Excel file.'); return; }
 
     var address = selected.building_address || selected.buildingAddress || 'Building';
+    var driveCompLabel = selected.component_label || selected.componentLabel || '';
     var docType = (selected.doc_type || selected.docType || 'RFP').toUpperCase();
     var safeAddr = address.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-').substring(0, 40);
+    var safeComp = driveCompLabel ? driveCompLabel.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-') : '';
     var dateStr = new Date().toISOString().split('T')[0];
-    var fileName = docType + '-' + safeAddr + '-' + dateStr + '.xlsx';
+    var fileName = docType + '-' + safeAddr + (safeComp ? '-' + safeComp : '') + '-' + dateStr + '.xlsx';
 
     // Write workbook to ArrayBuffer
     var wbOut = XLSX.write(capturedWB, { bookType: 'xlsx', type: 'array' });
