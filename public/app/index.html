@@ -16751,6 +16751,25 @@ function rfpExportCombinedAnalysis(target) {
   var cd = window._rfpCombinedData;
   if (!cd || !cd.components || cd.components.length < 2) { alert('No combined analysis data to export.'); return; }
 
+  var wb = XLSX.utils.book_new();
+  rfpBuildCombinedExcelSheet(wb, cd);
+
+  var address = cd.address || 'Combined';
+  var safeAddr = address.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-').substring(0, 40);
+  var dateStr = new Date().toISOString().split('T')[0];
+  var fileName = 'Combined-Analysis-' + safeAddr + '-' + dateStr + '.xlsx';
+
+  rfpAddBrandingSheet(wb);
+
+  if (target === 'drive') {
+    rfpExportComparisonToDrive(wb, fileName);
+  } else {
+    XLSX.writeFile(wb, fileName);
+  }
+}
+
+// Reusable: builds the Combined Analysis sheet and appends it to wb
+function rfpBuildCombinedExcelSheet(wb, cd) {
   var comps = cd.components;
   var terms = cd.compTerms;
   var anyCapex = cd.anyCapex;
@@ -16760,8 +16779,7 @@ function rfpExportCombinedAnalysis(target) {
   var numComps = comps.length;
 
   // Column layout: A=Metric, B..N=components, last=Combined
-  var combCol = numComps + 1; // 0-indexed column for Combined
-  var wb = XLSX.utils.book_new();
+  var combCol = numComps + 1;
   var ws = {};
 
   function colLetter(c) { return String.fromCharCode(65 + c); }
@@ -16962,17 +16980,6 @@ function rfpExportCombinedAnalysis(target) {
   ws['!cols'] = cols;
 
   XLSX.utils.book_append_sheet(wb, ws, 'Combined Analysis');
-  rfpAddBrandingSheet(wb);
-
-  var safeAddr = address.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-').substring(0, 40);
-  var dateStr = new Date().toISOString().split('T')[0];
-  var fileName = 'Combined-Analysis-' + safeAddr + '-' + dateStr + '.xlsx';
-
-  if (target === 'drive') {
-    rfpExportComparisonToDrive(wb, fileName);
-  } else {
-    XLSX.writeFile(wb, fileName);
-  }
 }
 
 // ===== VERSION SORT HELPER =====
@@ -17794,6 +17801,8 @@ function rfpExportExcel() {
   }
 
   var address = selected.building_address || selected.buildingAddress || 'Building';
+  var compLabel = selected.component_label || selected.componentLabel || '';
+  var titleSuffix = compLabel ? ' [' + compLabel + ']' : '';
   var docType = (selected.doc_type || selected.docType || 'RFP').toUpperCase();
   var analysis = selected.analysis;
   var terms = selected.deal_terms || selected.terms || {};
@@ -17878,7 +17887,7 @@ function rfpExportExcel() {
   dtWS['!cols'] = [{ wch: 30 }, { wch: 40 }];
   dtWS['!rows'] = [{ hpt: 32 }];
   dtWS['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }];
-  setCell(dtWS, 0, 0, 'Deal Terms - ' + address, titleStyle);
+  setCell(dtWS, 0, 0, 'Deal Terms - ' + address + titleSuffix, titleStyle);
   setCell(dtWS, 0, 1, '', titleStyle);
   // Section header
   setCell(dtWS, 2, 0, 'Term', headerLeftStyle);
@@ -18080,7 +18089,7 @@ function rfpExportExcel() {
     slWS['!cols'] = [{ wch: 12 }, { wch: 10 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 18 }];
     slWS['!rows'] = [{ hpt: 32 }];
     slWS['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: slCols - 1 } }];
-    setCell(slWS, 0, 0, 'Straight-Line P&L - ' + address, titleStyle);
+    setCell(slWS, 0, 0, 'Straight-Line P&L - ' + address + titleSuffix, titleStyle);
     for (var tc = 1; tc < slCols; tc++) setCell(slWS, 0, tc, '', titleStyle);
 
     var slHeaders = ['Year', 'Months', 'Base Rent', 'Free Rent', 'Net Rent', 'OpEx', 'Parking', 'Total Cost'];
@@ -18298,7 +18307,7 @@ function rfpExportExcel() {
     cfWS['!cols'] = cfColWidths;
     cfWS['!rows'] = [{ hpt: 32 }];
     cfWS['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: cfCols - 1 } }];
-    setCell(cfWS, 0, 0, 'Cash Flow - ' + address, titleStyle);
+    setCell(cfWS, 0, 0, 'Cash Flow - ' + address + titleSuffix, titleStyle);
     for (var cft = 1; cft < cfCols; cft++) setCell(cfWS, 0, cft, '', titleStyle);
     var cfHeaders = ['Mo', 'Period', 'Year'];
     if (exHasPhasedRSF) cfHeaders.push('Billable RSF');
@@ -18405,7 +18414,7 @@ function rfpExportExcel() {
     gWS['!cols'] = [{ wch: 8 }, { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 18 }];
     gWS['!rows'] = [{ hpt: 32 }];
     gWS['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: gCols - 1 } }];
-    setCell(gWS, 0, 0, 'GAAP / ASC 842 Analysis - ' + address, titleStyle);
+    setCell(gWS, 0, 0, 'GAAP / ASC 842 Analysis - ' + address + titleSuffix, titleStyle);
     for (var gt = 1; gt < gCols; gt++) setCell(gWS, 0, gt, '', titleStyle);
 
     // Summary section
@@ -18719,10 +18728,32 @@ function rfpExportExcel() {
     XLSX.utils.book_append_sheet(wb, vcWS, 'Version Comparison');
   }
 
+  // Add Combined Analysis tab if this building has multiple components
+  if (compLabel) {
+    var allSubs = (window._rfpState && window._rfpState.submissions) || [];
+    var siblingComponents = allSubs.filter(function(s) {
+      return (s.building_address || s.buildingAddress) === address &&
+             (s.component_label || s.componentLabel) &&
+             s.analysis && s.analysis.summary;
+    });
+    if (siblingComponents.length >= 2 && window._rfpCombinedData && window._rfpCombinedData.components) {
+      // Reuse the Combined Analysis export builder
+      try {
+        var combWB = XLSX.utils.book_new();
+        var tempCD = window._rfpCombinedData;
+        // Build a minimal combined sheet using existing export logic by calling rfpBuildCombinedExcelSheet
+        rfpBuildCombinedExcelSheet(wb, tempCD);
+      } catch(e) {
+        console.warn('Could not add Combined Analysis tab:', e);
+      }
+    }
+  }
+
   // Generate filename and download
   var safeAddr = address.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-').substring(0, 40);
+  var safeComp = compLabel ? compLabel.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-') : '';
   var dateStr = new Date().toISOString().split('T')[0];
-  var fileName = docType + '-' + safeAddr + '-' + dateStr + '.xlsx';
+  var fileName = docType + '-' + safeAddr + (safeComp ? '-' + safeComp : '') + '-' + dateStr + '.xlsx';
 
   // Add TourLytics branding sheet (PLG - product-led growth)
   rfpAddBrandingSheet(wb);
