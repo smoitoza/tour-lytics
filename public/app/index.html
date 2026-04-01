@@ -15829,128 +15829,53 @@ function rfpExtractTerms(text, address) {
 }
 
 // ===== MULTI-BUILDING REVIEW =====
+// Stores pending multi-building components for sequential review
+var _multiBuildingQueue = null;
+
 function rfpShowMultiBuildingReview(components, meta) {
-  if (_rfpModal) { _rfpModal.remove(); _rfpModal = null; }
+  // Queue all components, then show the review form for the first one
+  _multiBuildingQueue = {
+    components: components,
+    meta: meta,
+    currentIndex: 0,
+    completed: 0
+  };
+  rfpShowNextMultiBuildingComponent();
+}
 
-  var html = '<div style="margin-bottom:16px">';
-  html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">';
-  html += '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="var(--color-accent)" stroke-width="2"><path d="M3 21h18M3 7v1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7H3l2-4h14l2 4M4 21V10.7M20 21V10.7"/></svg>';
-  html += '<span style="font-size:var(--text-sm);color:var(--color-text-muted)">This document contains <strong>' + components.length + ' buildings</strong> with separate terms. Each will be created as a component.</span>';
-  html += '</div>';
+function rfpShowNextMultiBuildingComponent() {
+  if (!_multiBuildingQueue) return;
+  var q = _multiBuildingQueue;
+  if (q.currentIndex >= q.components.length) {
+    // All components reviewed and saved
+    _multiBuildingQueue = null;
+    rfpLoadSubmissions();
+    return;
+  }
 
-  components.forEach(function(comp, i) {
-    var t = comp.terms;
-    var label = comp.componentLabel || ('Component ' + (i + 1));
-    html += '<div style="border:1px solid var(--color-border);border-radius:8px;padding:12px 16px;margin-bottom:8px">';
-    html += '<div style="font-weight:600;margin-bottom:8px;color:var(--color-text)">' + label + '</div>';
-    html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px 16px;font-size:var(--text-sm)">';
-    if (t.rsf) html += '<div><span style="color:var(--color-text-muted)">RSF:</span> ' + Number(t.rsf).toLocaleString() + '</div>';
-    if (t.leaseTerm) html += '<div><span style="color:var(--color-text-muted)">Term:</span> ' + t.leaseTerm + ' mo</div>';
-    if (t.commencementDate) html += '<div><span style="color:var(--color-text-muted)">Start:</span> ' + t.commencementDate + '</div>';
-    if (t.baseRent) html += '<div><span style="color:var(--color-text-muted)">Rent:</span> $' + t.baseRent + '/RSF/yr</div>';
-    if (t.freeRent) html += '<div><span style="color:var(--color-text-muted)">Free Rent:</span> ' + t.freeRent + ' mo</div>';
-    if (t.rentBasis) html += '<div><span style="color:var(--color-text-muted)">Basis:</span> ' + t.rentBasis + '</div>';
-    if (t.parkingSpots) html += '<div><span style="color:var(--color-text-muted)">Parking:</span> ' + t.parkingSpots + ' spots</div>';
-    if (t.tiAllowancePerRSF) html += '<div><span style="color:var(--color-text-muted)">TI:</span> $' + t.tiAllowancePerRSF + '/RSF</div>';
-    if (t.landlord) html += '<div><span style="color:var(--color-text-muted)">Landlord:</span> ' + t.landlord + '</div>';
-    html += '</div></div>';
-  });
-  html += '</div>';
+  var comp = q.components[q.currentIndex];
+  var meta = q.meta;
+  var label = comp.componentLabel || ('Component ' + (q.currentIndex + 1));
+  var progress = '(' + (q.currentIndex + 1) + ' of ' + q.components.length + ')';
 
-  var modal = document.createElement('div');
-  modal.className = 'rfp-modal';
-  modal.innerHTML =
-    '<div class="rfp-modal-inner" style="max-width:700px">' +
-      '<button class="rfp-modal-close" onclick="rfpCloseModal()" title="Close">' +
-        '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
-      '</button>' +
-      '<div class="rfp-modal-title">Multi-Building Deal Detected</div>' +
-      '<div style="font-size:var(--text-sm);color:var(--color-text-muted);margin:-8px 0 16px">' +
-        meta.address + ' | ' + meta.docType +
-      '</div>' +
-      html +
-      '<div id="rfp-multi-status" style="display:none"></div>' +
-      '<div class="rfp-modal-actions">' +
-        '<button class="rfp-modal-cancel" onclick="rfpCloseModal()">Cancel</button>' +
-        '<button class="rfp-btn-primary" id="rfp-multi-confirm" onclick="rfpConfirmMultiBuilding()">Create ' + components.length + ' Components</button>' +
-      '</div>' +
-    '</div>';
-
-  document.body.appendChild(modal);
-  _rfpModal = modal;
-  _rfpModal._meta = meta;
-  _rfpModal._components = components;
-
-  modal.addEventListener('click', function(e) {
-    if (e.target === modal) rfpCloseModal();
+  // Show the standard review form with component label and progress indicator
+  rfpShowReviewForm(comp.terms, {
+    buildingNum: meta.buildingNum,
+    address: meta.address,
+    docType: meta.docType + ' ' + progress,
+    source: meta.source,
+    componentLabel: label,
+    _isMultiBuilding: true,
+    _multiProgress: progress
   });
 }
 
-function rfpConfirmMultiBuilding() {
-  if (!_rfpModal || !_rfpModal._components) return;
-  var meta = _rfpModal._meta;
-  var components = _rfpModal._components;
-  var statusEl = document.getElementById('rfp-multi-status');
-  var confirmBtn = document.getElementById('rfp-multi-confirm');
-
-  if (statusEl) {
-    statusEl.style.display = 'block';
-    statusEl.innerHTML = '<div class="rfp-loading"><div class="rfp-spinner"></div><div class="rfp-loading-text">Creating ' + components.length + ' component analyses...</div></div>';
-  }
-  if (confirmBtn) confirmBtn.disabled = true;
-
-  var email = getCurrentUserEmail();
-  var baseUrl = '/api/rfp?projectId=' + getProjectId();
-  if (email) baseUrl += '&userEmail=' + encodeURIComponent(email);
-
-  // Submit each component sequentially
-  var chain = Promise.resolve();
-  var successes = 0;
-  components.forEach(function(comp, i) {
-    chain = chain.then(function() {
-      var terms = comp.terms;
-      // If opexRSF is set, auto-calculate monthly opex
-      if (terms.opexRSF && terms.rsf && !terms.opex) {
-        terms.opex = Math.round((terms.opexRSF * terms.rsf) / 12);
-      }
-      if (terms.opexRSF) terms.opex_rsf_yr = terms.opexRSF;
-
-      return fetch(baseUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectId: getProjectId(),
-          building_num: meta.buildingNum,
-          building_address: meta.address,
-          doc_type: meta.docType,
-          source: meta.source,
-          component_label: comp.componentLabel,
-          terms: terms
-        })
-      })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (data.error) throw new Error(data.error);
-        successes++;
-        if (statusEl) {
-          statusEl.innerHTML = '<div class="rfp-loading"><div class="rfp-spinner"></div><div class="rfp-loading-text">Created ' + successes + ' of ' + components.length + '...</div></div>';
-        }
-      });
-    });
-  });
-
-  chain
-    .then(function() {
-      rfpCloseModal();
-      rfpLoadSubmissions();
-    })
-    .catch(function(err) {
-      console.error('Multi-building save error:', err);
-      if (statusEl) {
-        statusEl.innerHTML = '<div class="rfp-error">Error: ' + (err.message || 'Failed to create components') + ' (' + successes + ' of ' + components.length + ' created)</div>';
-      }
-      if (confirmBtn) confirmBtn.disabled = false;
-    });
+// Called after a multi-building component is saved successfully
+function rfpMultiBuildingNext() {
+  if (!_multiBuildingQueue) return;
+  _multiBuildingQueue.currentIndex++;
+  _multiBuildingQueue.completed++;
+  rfpShowNextMultiBuildingComponent();
 }
 
 // ===== STEPPED RENT PERIODS UI =====
@@ -16160,7 +16085,7 @@ function rfpShowReviewForm(terms, meta) {
       '<button class="rfp-modal-close" onclick="rfpCloseModal()" title="Close">' +
         '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
       '</button>' +
-      '<div class="rfp-modal-title">Review Deal Terms</div>' +
+      '<div class="rfp-modal-title">Review Deal Terms' + (meta.componentLabel ? ' - ' + meta.componentLabel : '') + '</div>' +
       '<div style="font-size:var(--text-sm);color:var(--color-text-muted);margin:-8px 0 16px">' +
         meta.address + ' | ' + meta.docType + (meta.source ? ' | ' + meta.source : '') +
       '</div>' +
@@ -16168,7 +16093,9 @@ function rfpShowReviewForm(terms, meta) {
       '<div id="rfp-review-status" style="display:none"></div>' +
       '<div class="rfp-modal-actions">' +
         '<button class="rfp-modal-cancel" onclick="rfpCloseModal()">Cancel</button>' +
-        '<button class="rfp-btn-primary" id="rfp-confirm-btn" onclick="rfpConfirmFromForm()">Confirm &amp; Generate Analysis</button>' +
+        '<button class="rfp-btn-primary" id="rfp-confirm-btn" onclick="rfpConfirmFromForm()">' +
+          (meta._isMultiBuilding ? 'Confirm &amp; Next Component' : 'Confirm &amp; Generate Analysis') +
+        '</button>' +
       '</div>' +
     '</div>';
 
@@ -16248,7 +16175,12 @@ function rfpConfirmAndSave(meta, terms) {
   .then(function(data) {
     if (data.error) throw new Error(data.error);
     rfpCloseModal();
-    rfpLoadSubmissions();
+    // If this was part of a multi-building sequence, advance to next component
+    if (meta._isMultiBuilding && _multiBuildingQueue) {
+      rfpMultiBuildingNext();
+    } else {
+      rfpLoadSubmissions();
+    }
   })
   .catch(function(err) {
     console.error('RFP save error:', err);
