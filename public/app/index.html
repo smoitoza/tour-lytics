@@ -15220,64 +15220,48 @@ function switchFinSheet(sheetId) {
 
 // ===== INIT =====
 function rfpInit() {
-  // Load assumptions first, THEN submissions (which triggers render).
-  // This prevents a race where submissions render before assumptions arrive,
-  // causing CAPEX/broker fees to show as zero.
-  rfpLoadAssumptions(function() {
-    rfpLoadSubmissions();
-  });
-}
+  var root = document.getElementById('rfp-root');
+  if (root) root.innerHTML = '<div class="rfp-loading"><div class="rfp-spinner"></div><div class="rfp-loading-text">Loading proposals...</div></div>';
 
-// ===== LOAD ASSUMPTIONS (all buildings) =====
-function rfpLoadAssumptions(callback) {
   var email = getCurrentUserEmail();
-  var url = '/api/assumptions?projectId=' + getProjectId();
-  if (email) url += '&userEmail=' + encodeURIComponent(email);
-  fetch(url)
+  var pid = getProjectId();
+
+  // Load assumptions and submissions in parallel, render only after BOTH complete
+  var assumptionsPromise = fetch('/api/assumptions?projectId=' + pid + (email ? '&userEmail=' + encodeURIComponent(email) : ''))
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (Array.isArray(data)) {
         var map = {};
         data.forEach(function(row) {
           if (row.building_address) {
-            // Key: address::component_label (or just address if no component)
             var mapKey = row.building_address + (row.component_label ? '::' + row.component_label : '');
             map[mapKey] = row;
-            // Also store under plain address for backward compatibility
             if (!row.component_label && !map[row.building_address]) map[row.building_address] = row;
           }
         });
         window._rfpState.assumptionsMap = map;
-        // If financial panels are already rendered, re-render them
-        // with the freshly loaded assumptions (handles full page refresh)
-        rfpRefreshFinancialsIfVisible();
       }
-      if (callback) callback();
+    })
+    .catch(function() { /* assumptions optional */ });
+
+  var submissionsPromise = fetch('/api/rfp?projectId=' + pid + (email ? '&userEmail=' + encodeURIComponent(email) : ''))
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data && !data.error) {
+        window._rfpState.submissions = data.submissions || data || [];
+      }
     })
     .catch(function() {
-      // Assumptions load failed -- still proceed with submissions
-      if (callback) callback();
+      window._rfpState.submissions = [];
     });
-}
 
-// Re-render financial panels that depend on assumptions (CAPEX, broker fees)
-// Called after assumptions load to fix stale renders from page refresh
-function rfpRefreshFinancialsIfVisible() {
-  var sel = rfpGetCurrentSubmission();
-  if (!sel) return;
-  var bAddr = sel.building_address || sel.buildingAddress || '';
-  var bComp = sel.component_label || '';
-  var panel;
-  panel = document.getElementById('fin-broker-fees');
-  if (panel) panel.innerHTML = rfpBuildBrokerFeesPanel(sel);
-  panel = document.getElementById('fin-capex');
-  if (panel) panel.innerHTML = rfpBuildCapexPanel(sel);
-  panel = document.getElementById('fin-cash-flow');
-  if (panel) panel.innerHTML = rfpBuildCashFlowTable(sel.analysis, bAddr, bComp);
-  panel = document.getElementById('fin-straight-line');
-  if (panel) panel.innerHTML = rfpBuildStraightLineTable(sel.analysis, bAddr, bComp);
-  panel = document.getElementById('fin-gaap');
-  if (panel) panel.innerHTML = rfpBuildGAAPTable(sel.analysis, bAddr, bComp);
+  Promise.all([assumptionsPromise, submissionsPromise]).then(function() {
+    if (window._rfpState.submissions.length === 0) {
+      rfpRenderEmpty();
+    } else {
+      rfpRenderDashboard(window._rfpState.submissions);
+    }
+  });
 }
 
 // Find the currently selected submission object
