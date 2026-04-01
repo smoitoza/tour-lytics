@@ -19723,6 +19723,7 @@ function rfpSaveBrokerFee() {
   if (email) url += '&userEmail=' + encodeURIComponent(email);
   // Build clean payload with all known fields (avoid sending DB metadata)
   var payload = {
+    projectId: getProjectId(),
     building_address: address,
     component_label: compLabel || null,
     updated_by: email || '',
