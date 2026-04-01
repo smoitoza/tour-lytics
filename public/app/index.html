@@ -15794,7 +15794,9 @@ function rfpMapTerms(raw) {
     rsf: raw.rsf || '',
     leaseTerm: raw.lease_term_months || raw.leaseTerm || '',
     commencementDate: raw.commencement_date || raw.commencementDate || '',
+    leaseEndDate: raw.lease_end_date || raw.leaseEndDate || '',
     baseRent: raw.base_rent_rsf || raw.baseRent || '',
+    totalAnnualRent: raw.total_annual_rent || raw.totalAnnualRent || '',
     rentBasis: raw.rent_basis || raw.rentBasis || '',
     annualEscalation: raw.annual_escalation_pct || raw.annualEscalation || '',
     freeRent: raw.free_rent_months || raw.freeRent || '',
@@ -16038,7 +16040,9 @@ function rfpShowReviewForm(terms, meta) {
     { key: 'rsf', label: 'RSF (Rentable Sq Ft)', type: 'number' },
     { key: 'leaseTerm', label: 'Lease Term (months)', type: 'number' },
     { key: 'commencementDate', label: 'Commencement Date', type: 'date' },
+    { key: 'leaseEndDate', label: 'Lease End Date', type: 'date', placeholder: 'Auto-computes term if commencement set' },
     { key: 'baseRent', label: 'Base Rent (per RSF/yr)', type: 'number', step: '0.01' },
+    { key: 'totalAnnualRent', label: 'Total Annual Rent ($)', type: 'number', placeholder: 'Alternative to per-RSF rate' },
     { key: 'rentBasis', label: 'Rent Basis', type: 'text', placeholder: 'e.g. FSG, NNN, Modified Gross' },
     { key: 'annualEscalation', label: 'Annual Escalation %', type: 'number', step: '0.01' },
     { key: 'freeRent', label: 'Free Rent (months)', type: 'number' },
@@ -16119,6 +16123,56 @@ function rfpShowReviewForm(terms, meta) {
   _rfpModal._meta = meta;
   _rfpModal._fields = fields;
 
+  // Auto-compute lease term from commencement + end date
+  function rfpAutoComputeTerm() {
+    var startEl = document.getElementById('rfp-field-commencementDate');
+    var endEl = document.getElementById('rfp-field-leaseEndDate');
+    var termEl = document.getElementById('rfp-field-leaseTerm');
+    if (!startEl || !endEl || !termEl) return;
+    var s = startEl.value, e = endEl.value;
+    if (s && e) {
+      var sd = new Date(s + 'T00:00:00'), ed = new Date(e + 'T00:00:00');
+      if (ed > sd) {
+        var months = (ed.getFullYear() - sd.getFullYear()) * 12 + (ed.getMonth() - sd.getMonth());
+        termEl.value = months;
+      }
+    }
+  }
+  var startInput = document.getElementById('rfp-field-commencementDate');
+  var endInput = document.getElementById('rfp-field-leaseEndDate');
+  if (startInput) startInput.addEventListener('change', rfpAutoComputeTerm);
+  if (endInput) endInput.addEventListener('change', rfpAutoComputeTerm);
+
+  // Auto-compute base rent per RSF from total annual rent (and vice versa)
+  function rfpAutoComputeRent(direction) {
+    var rsfEl = document.getElementById('rfp-field-rsf');
+    var baseEl = document.getElementById('rfp-field-baseRent');
+    var totalEl = document.getElementById('rfp-field-totalAnnualRent');
+    if (!rsfEl || !baseEl || !totalEl) return;
+    var rsf = parseFloat(rsfEl.value) || 0;
+    if (direction === 'fromTotal') {
+      var total = parseFloat(totalEl.value) || 0;
+      if (rsf > 0 && total > 0) {
+        baseEl.value = (total / rsf).toFixed(2);
+      }
+    } else if (direction === 'fromBase') {
+      var base = parseFloat(baseEl.value) || 0;
+      if (rsf > 0 && base > 0) {
+        totalEl.value = Math.round(base * rsf);
+      }
+    }
+  }
+  var totalRentInput = document.getElementById('rfp-field-totalAnnualRent');
+  var baseRentInput = document.getElementById('rfp-field-baseRent');
+  var rsfInput = document.getElementById('rfp-field-rsf');
+  if (totalRentInput) totalRentInput.addEventListener('input', function() { rfpAutoComputeRent('fromTotal'); });
+  if (baseRentInput) baseRentInput.addEventListener('input', function() { rfpAutoComputeRent('fromBase'); });
+  if (rsfInput) rsfInput.addEventListener('input', function() {
+    // If total annual rent has a value, recompute base rent from it
+    var totalEl = document.getElementById('rfp-field-totalAnnualRent');
+    if (totalEl && parseFloat(totalEl.value) > 0) rfpAutoComputeRent('fromTotal');
+  });
+
   modal.addEventListener('click', function(e) {
     if (e.target === modal) rfpCloseModal();
   });
@@ -16167,6 +16221,15 @@ function rfpConfirmFromForm() {
     terms.rentPeriods = rentPeriods;
     // When stepped rent is active, clear legacy base rent / free rent to avoid confusion
     // The engine will use rent_periods exclusively
+  }
+
+  // If totalAnnualRent is set and baseRent is not, compute base rent per RSF
+  if (terms.totalAnnualRent && terms.rsf && !terms.baseRent) {
+    terms.baseRent = Math.round(terms.totalAnnualRent / terms.rsf * 100) / 100;
+  }
+  // Store total annual rent for reference
+  if (terms.totalAnnualRent) {
+    terms.total_annual_rent = terms.totalAnnualRent;
   }
 
   // If opexRSF is set, auto-calculate monthly opex from it: (opexRSF * RSF) / 12
