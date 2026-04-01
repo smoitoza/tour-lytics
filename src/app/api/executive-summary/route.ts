@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
       officesRes,
       commuteRes,
       photosRes,
+      assumptionsRes,
     ] = await Promise.all([
       supabase.from('projects').select('*').eq('id', projectId).single(),
       supabase.from('survey_buildings').select('*').eq('project_id', projectId).order('num', { ascending: true }),
@@ -59,6 +60,7 @@ export async function POST(request: NextRequest) {
       supabase.from('project_offices').select('*').eq('project_id', projectId),
       supabase.from('commute_studies').select('*').eq('project_id', projectId).single(),
       supabase.from('building_photos').select('id, building_name, ai_area_suggestion, ai_description').eq('project_id', projectId).not('ai_analyzed_at', 'is', null).limit(50),
+      supabase.from('project_assumptions').select('*').eq('project_id', projectId).order('building_address', { ascending: true }),
     ])
 
     const project = projectRes.data
@@ -68,6 +70,7 @@ export async function POST(request: NextRequest) {
     const offices = officesRes.data || []
     const commute = commuteRes.data
     const photos = photosRes.data || []
+    const assumptions = assumptionsRes.data || []
 
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
@@ -245,6 +248,45 @@ export async function POST(request: NextRequest) {
       Object.entries(areaBreakdown).forEach(([area, count]) => {
         context += `  ${area}: ${count} photos\n`
       })
+    }
+
+    // Project assumptions (CAPEX, broker fees, internal OpEx)
+    if (assumptions.length > 0) {
+      let hasAnyData = false
+      let assumptionsContext = ''
+      for (const row of assumptions) {
+        const capexConstruction = parseFloat(row.capex_construction_total) || 0
+        const capexFFE = parseFloat(row.capex_ffe_total) || 0
+        const capexIT = parseFloat(row.capex_it_total) || 0
+        const totalCapex = capexConstruction + capexFFE + capexIT
+        const brokerFeeType = row.broker_fee_type || 'none'
+        const brokerFeeAmount = parseFloat(row.broker_fee_amount) || 0
+        const brokerFeeNotes = row.broker_fee_notes || ''
+        const fb = parseFloat(row.opex_food_beverage) || 0
+        const wpe = parseFloat(row.opex_workplace_experience) || 0
+        const maint = parseFloat(row.opex_maintenance_security) || 0
+        const customItems = row.opex_custom_items || []
+        let customTotal = 0
+        customItems.forEach((item: any) => { customTotal += parseFloat(item.monthly) || 0 })
+        const totalMonthlyOpex = fb + wpe + maint + customTotal
+
+        if (totalCapex === 0 && (brokerFeeType === 'none' || brokerFeeAmount === 0) && totalMonthlyOpex === 0) continue
+
+        hasAnyData = true
+        const compLabel = row.component_label ? ` [${row.component_label}]` : ''
+        assumptionsContext += `  ${row.building_address || 'Unknown'}${compLabel}:`
+        if (totalCapex > 0) assumptionsContext += ` CAPEX $${totalCapex.toLocaleString()}`
+        if (brokerFeeType !== 'none' && brokerFeeAmount > 0) {
+          const feeLabel = brokerFeeType === 'expense' ? 'IDC' : 'Incentive'
+          assumptionsContext += ` | Broker Fee $${brokerFeeAmount.toLocaleString()} (${feeLabel})`
+          if (brokerFeeNotes) assumptionsContext += ` - ${brokerFeeNotes}`
+        }
+        if (totalMonthlyOpex > 0) assumptionsContext += ` | Internal OpEx $${totalMonthlyOpex.toLocaleString()}/mo`
+        assumptionsContext += '\n'
+      }
+      if (hasAnyData) {
+        context += `\nPROJECT ASSUMPTIONS:\n${assumptionsContext}`
+      }
     }
 
     // Generate the executive summary with Claude

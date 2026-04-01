@@ -366,11 +366,23 @@ async function getAssumptionsContext(projectId: string): Promise<string> {
       const densityRSF = parseInt(row.target_density_rsf) || 0
       const discountRate = parseFloat(row.discount_rate) || 6.0
 
-      if (totalMonthlyOpex === 0 && headcount === 0 && discountRate === 6.0) {
+      // CAPEX
+      const capexConstruction = parseFloat(row.capex_construction_total) || 0
+      const capexFFE = parseFloat(row.capex_ffe_total) || 0
+      const capexIT = parseFloat(row.capex_it_total) || 0
+      const totalCapex = capexConstruction + capexFFE + capexIT
+
+      // Broker Fee
+      const brokerFeeType = row.broker_fee_type || 'none'
+      const brokerFeeAmount = parseFloat(row.broker_fee_amount) || 0
+      const brokerFeeNotes = row.broker_fee_notes || ''
+
+      if (totalMonthlyOpex === 0 && headcount === 0 && discountRate === 6.0 && totalCapex === 0 && (brokerFeeType === 'none' || brokerFeeAmount === 0)) {
         continue
       }
 
-      context += `\n--- ${row.building_address || 'Unknown Building'} Assumptions ---\n`
+      const compLabel = row.component_label ? ` [${row.component_label}]` : ''
+      context += `\n--- ${row.building_address || 'Unknown Building'}${compLabel} Assumptions ---\n`
 
       if (totalMonthlyOpex > 0) {
         context += '  Internal OpEx (Monthly):\n'
@@ -384,6 +396,20 @@ async function getAssumptionsContext(projectId: string): Promise<string> {
           }
         })
         context += `    Total Internal OpEx: $${totalMonthlyOpex.toLocaleString()}/mo ($${(totalMonthlyOpex * 12).toLocaleString()}/yr)\n`
+      }
+
+      if (totalCapex > 0) {
+        context += '  CAPEX (Tenant-Funded):\n'
+        if (capexConstruction > 0) context += `    Construction / Build-Out: $${capexConstruction.toLocaleString()}\n`
+        if (capexFFE > 0) context += `    FF&E: $${capexFFE.toLocaleString()}\n`
+        if (capexIT > 0) context += `    IT / Technology: $${capexIT.toLocaleString()}\n`
+        context += `    Total CAPEX: $${totalCapex.toLocaleString()}\n`
+      }
+
+      if (brokerFeeType !== 'none' && brokerFeeAmount > 0) {
+        const feeTypeLabel = brokerFeeType === 'expense' ? 'Expense (Initial Direct Cost)' : 'Credit (Lease Incentive)'
+        context += `  Broker Fee: $${brokerFeeAmount.toLocaleString()} - ${feeTypeLabel}\n`
+        if (brokerFeeNotes) context += `    Notes: ${brokerFeeNotes}\n`
       }
 
       if (headcount > 0) {

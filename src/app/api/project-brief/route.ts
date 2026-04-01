@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
       shortlistRes,
       officesRes,
       commuteRes,
+      assumptionsRes,
     ] = await Promise.all([
       supabase.from('projects').select('*').eq('id', projectId).single(),
       supabase.from('survey_buildings').select('*').eq('project_id', projectId).order('num', { ascending: true }),
@@ -58,6 +59,7 @@ export async function POST(request: NextRequest) {
       supabase.from('shortlist_items').select('*').eq('project_id', projectId),
       supabase.from('project_offices').select('*').eq('project_id', projectId),
       supabase.from('commute_studies').select('*').eq('project_id', projectId).single(),
+      supabase.from('project_assumptions').select('*').eq('project_id', projectId).order('building_address', { ascending: true }),
     ])
 
     const project = projectRes.data
@@ -66,6 +68,7 @@ export async function POST(request: NextRequest) {
     const shortlistItems = shortlistRes.data || []
     const offices = officesRes.data || []
     const commute = commuteRes.data
+    const assumptions = assumptionsRes.data || []
 
     // Build context
     let context = `PROJECT: ${project?.name || projectId}\nMARKET: ${project?.market || 'N/A'}\nBUILDINGS EVALUATED: ${buildings.length}\n`
@@ -143,6 +146,45 @@ export async function POST(request: NextRequest) {
         const avgTransit = s.transit_avg_seconds ? Math.round(s.transit_avg_seconds / 60) : null
         context += `  ${s.building}: Drive ${avgDrive || '?'} min, Transit ${avgTransit || '?'} min\n`
       })
+    }
+
+    // Project assumptions (CAPEX, broker fees, internal OpEx)
+    if (assumptions.length > 0) {
+      let hasAnyData = false
+      let assumptionsContext = ''
+      for (const row of assumptions) {
+        const capexConstruction = parseFloat(row.capex_construction_total) || 0
+        const capexFFE = parseFloat(row.capex_ffe_total) || 0
+        const capexIT = parseFloat(row.capex_it_total) || 0
+        const totalCapex = capexConstruction + capexFFE + capexIT
+        const brokerFeeType = row.broker_fee_type || 'none'
+        const brokerFeeAmount = parseFloat(row.broker_fee_amount) || 0
+        const brokerFeeNotes = row.broker_fee_notes || ''
+        const fb = parseFloat(row.opex_food_beverage) || 0
+        const wpe = parseFloat(row.opex_workplace_experience) || 0
+        const maint = parseFloat(row.opex_maintenance_security) || 0
+        const customItems = row.opex_custom_items || []
+        let customTotal = 0
+        customItems.forEach((item: any) => { customTotal += parseFloat(item.monthly) || 0 })
+        const totalMonthlyOpex = fb + wpe + maint + customTotal
+
+        if (totalCapex === 0 && (brokerFeeType === 'none' || brokerFeeAmount === 0) && totalMonthlyOpex === 0) continue
+
+        hasAnyData = true
+        const compLabel = row.component_label ? ` [${row.component_label}]` : ''
+        assumptionsContext += `  ${row.building_address || 'Unknown'}${compLabel}:`
+        if (totalCapex > 0) assumptionsContext += ` CAPEX $${totalCapex.toLocaleString()}`
+        if (brokerFeeType !== 'none' && brokerFeeAmount > 0) {
+          const feeLabel = brokerFeeType === 'expense' ? 'IDC' : 'Incentive'
+          assumptionsContext += ` | Broker Fee $${brokerFeeAmount.toLocaleString()} (${feeLabel})`
+          if (brokerFeeNotes) assumptionsContext += ` - ${brokerFeeNotes}`
+        }
+        if (totalMonthlyOpex > 0) assumptionsContext += ` | Internal OpEx $${totalMonthlyOpex.toLocaleString()}/mo`
+        assumptionsContext += '\n'
+      }
+      if (hasAnyData) {
+        context += `\nPROJECT ASSUMPTIONS:\n${assumptionsContext}`
+      }
     }
 
     // Generate with Claude
