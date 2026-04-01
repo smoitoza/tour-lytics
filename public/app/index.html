@@ -16462,6 +16462,7 @@ function rfpBuildDetailHtml(subs) {
       '<button class="fin-sheet-tab" data-sheet="straight-line" onclick="switchFinSheet(\'straight-line\')">Straight-Line P&amp;L</button>' +
       '<button class="fin-sheet-tab" data-sheet="gaap" onclick="switchFinSheet(\'gaap\')">GAAP Analysis</button>' +
       '<button class="fin-sheet-tab" data-sheet="capex" onclick="switchFinSheet(\'capex\')">CAPEX</button>' +
+      '<button class="fin-sheet-tab" data-sheet="broker-fees" onclick="switchFinSheet(\'broker-fees\')">Broker Fees</button>' +
       '<button class="fin-sheet-tab" data-sheet="assumptions" onclick="switchFinSheet(\'assumptions\')">Assumptions</button>' +
     '</div>';
 
@@ -16485,6 +16486,9 @@ function rfpBuildDetailHtml(subs) {
 
   // CAPEX tab
   html += '<div class="fin-sheet-content" id="fin-capex">' + rfpBuildCapexPanel(selected) + '</div>';
+
+  // Broker Fees tab
+  html += '<div class="fin-sheet-content" id="fin-broker-fees">' + rfpBuildBrokerFeesPanel(selected) + '</div>';
 
   // Assumptions tab
   html += '<div class="fin-sheet-content" id="fin-assumptions">' + rfpBuildAssumptionsPanel(selected) + '</div>';
@@ -17511,6 +17515,38 @@ function getCapexForBuilding(buildingAddr, leaseTermMonths, componentLabel) {
   };
 }
 
+// ===== BROKER FEE HELPER =====
+function getBrokerFeeForBuilding(buildingAddr, leaseTermMonths, componentLabel) {
+  var key = getAssumptionsKey(buildingAddr, componentLabel);
+  var a = (key && window._rfpState && window._rfpState.assumptionsMap) ? (window._rfpState.assumptionsMap[key] || window._rfpState.assumptionsMap[buildingAddr] || {}) : {};
+  var feeType = a.broker_fee_type || 'none'; // 'none', 'expense', 'credit'
+  var amount = parseFloat(a.broker_fee_amount) || 0;
+  var notes = a.broker_fee_notes || '';
+  var termMonths = leaseTermMonths || 1;
+
+  if (feeType === 'none' || amount === 0) {
+    return { hasBrokerFee: false, type: 'none', amount: 0, monthlyAmortization: 0, notes: '' };
+  }
+
+  // ASC 842: amortize over lease term
+  // expense = Initial Direct Cost (increases ROU, amortized as expense)
+  // credit = Lease Incentive (reduces ROU, amortized as credit)
+  var monthlyAmort = Math.round(amount / termMonths);
+
+  return {
+    hasBrokerFee: true,
+    type: feeType,
+    amount: amount,
+    monthlyAmortization: monthlyAmort,
+    annualAmortization: monthlyAmort * 12,
+    // Cash flow: expense = positive outflow in month 1; credit = negative (inflow)
+    cashFlowImpact: feeType === 'expense' ? amount : -amount,
+    // SL/GAAP: expense adds to monthly cost; credit reduces it
+    slMonthlyImpact: feeType === 'expense' ? monthlyAmort : -monthlyAmort,
+    notes: notes
+  };
+}
+
 // ===== CASH FLOW TABLE =====
 function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
   if (!analysis || !analysis.cash_flow || !analysis.cash_flow.monthly) {
@@ -17520,6 +17556,7 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
   var totals = analysis.cash_flow.totals || {};
   var cfTermMonths = (analysis.summary && analysis.summary.termMonths) ? analysis.summary.termMonths : (totals.termMonths || 0);
   var capex = buildingAddr ? getCapexForBuilding(buildingAddr, cfTermMonths, componentLabel) : { hasCapex: false, grandTotal: 0, monthlyDepreciation: 0 };
+  var brokerFee = buildingAddr ? getBrokerFeeForBuilding(buildingAddr, cfTermMonths, componentLabel) : { hasBrokerFee: false, amount: 0, cashFlowImpact: 0 };
 
   // Check if billable RSF varies across months (phased RSF)
   var hasPhasedRSF = monthly.some(function(r) { return r.billableRSF && r.usableRSF && r.billableRSF !== r.usableRSF; });
@@ -17537,21 +17574,27 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
     '<th class="cell-currency">OpEx</th>' +
     '<th class="cell-currency">Parking</th>' +
     (capex.hasCapex ? '<th class="cell-currency" style="color:#7c3aed">CAPEX</th>' : '') +
+    (brokerFee.hasBrokerFee ? '<th class="cell-currency" style="color:#b45309">Broker ' + (brokerFee.type === 'credit' ? 'Credit' : 'Fee') + '</th>' : '') +
     '<th class="cell-currency">Total Monthly</th>' +
     '<th class="cell-currency">Cumulative Cash</th>' +
   '</tr></thead><tbody>';
 
   var capexCumulative = 0;
+  var brokerCumulative = 0;
   monthly.forEach(function(row) {
     var isFreeRent = row.freeRentCredit && row.freeRentCredit !== 0;
     // CAPEX: full outlay in month 1
     var capexThisMonth = 0;
     if (capex.hasCapex && row.month === 1) capexThisMonth = capex.grandTotal;
     capexCumulative += capexThisMonth;
-    var adjustedTotal = row.totalMonthlyCost + capexThisMonth;
-    var adjustedCumulative = row.cumulativeCash + capexCumulative;
+    // Broker fee: full cash impact in month 1
+    var brokerThisMonth = 0;
+    if (brokerFee.hasBrokerFee && row.month === 1) brokerThisMonth = brokerFee.cashFlowImpact;
+    brokerCumulative += brokerThisMonth;
+    var adjustedTotal = row.totalMonthlyCost + capexThisMonth + brokerThisMonth;
+    var adjustedCumulative = row.cumulativeCash + capexCumulative + brokerCumulative;
 
-    html += '<tr' + (isFreeRent ? ' style="background:rgba(5,150,105,0.04)"' : (row.month === 1 && capex.hasCapex ? ' style="background:rgba(124,58,237,0.04)"' : '')) + '>' +
+    html += '<tr' + (isFreeRent ? ' style="background:rgba(5,150,105,0.04)"' : (row.month === 1 && (capex.hasCapex || brokerFee.hasBrokerFee) ? ' style="background:rgba(124,58,237,0.04)"' : '')) + '>' +
       '<td class="cell-label">' + (row.month || '') + '</td>' +
       '<td>' + (row.period || '') + '</td>' +
       '<td>' + (row.leaseYear || '') + '</td>' +
@@ -17563,13 +17606,14 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
       '<td class="cell-currency">' + rfpFmtCurrency(row.opex) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.parking) + '</td>' +
       (capex.hasCapex ? '<td class="cell-currency" style="color:#7c3aed">' + (capexThisMonth > 0 ? rfpFmtCurrency(capexThisMonth) : '') + '</td>' : '') +
+      (brokerFee.hasBrokerFee ? '<td class="cell-currency" style="color:#b45309">' + (brokerThisMonth !== 0 ? (brokerThisMonth < 0 ? '(' + rfpFmtCurrency(Math.abs(brokerThisMonth)) + ')' : rfpFmtCurrency(brokerThisMonth)) : '') + '</td>' : '') +
       '<td class="cell-currency">' + rfpFmtCurrency(adjustedTotal) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(adjustedCumulative) + '</td>' +
     '</tr>';
   });
 
   // Totals row
-  var totalWithCapex = totals.totalAllInCost + (capex.hasCapex ? capex.grandTotal : 0);
+  var totalWithCapex = totals.totalAllInCost + (capex.hasCapex ? capex.grandTotal : 0) + (brokerFee.hasBrokerFee ? brokerFee.cashFlowImpact : 0);
   var cfColSpan = hasPhasedRSF ? 4 : 3;
   html += '<tr class="row-bold">' +
     '<td class="cell-label">TOTALS</td>' +
@@ -17580,6 +17624,7 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
     '<td class="cell-currency">' + rfpFmtCurrency(totals.totalOpex) + '</td>' +
     '<td class="cell-currency">' + rfpFmtCurrency(totals.totalParking) + '</td>' +
     (capex.hasCapex ? '<td class="cell-currency" style="color:#7c3aed">' + rfpFmtCurrency(capex.grandTotal) + '</td>' : '') +
+    (brokerFee.hasBrokerFee ? '<td class="cell-currency" style="color:#b45309">' + (brokerFee.cashFlowImpact < 0 ? '(' + rfpFmtCurrency(Math.abs(brokerFee.cashFlowImpact)) + ')' : rfpFmtCurrency(brokerFee.cashFlowImpact)) + '</td>' : '') +
     '<td class="cell-currency">' + rfpFmtCurrency(totalWithCapex) + '</td>' +
     '<td></td>' +
   '</tr>';
@@ -17597,6 +17642,7 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
   var totals = analysis.straight_line_pl.totals || {};
   var slTermMonths = (analysis.summary && analysis.summary.termMonths) ? analysis.summary.termMonths : 0;
   var capex = buildingAddr ? getCapexForBuilding(buildingAddr, slTermMonths, componentLabel) : { hasCapex: false, grandTotal: 0, monthlyDepreciation: 0, annualDepreciation: 0 };
+  var slBrokerFee = buildingAddr ? getBrokerFeeForBuilding(buildingAddr, slTermMonths, componentLabel) : { hasBrokerFee: false, slMonthlyImpact: 0 };
 
   var html = '<div class="fin-table-wrap"><table class="fin-table">';
   html += '<thead><tr>' +
@@ -17636,7 +17682,8 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
   var opexMonthly_sl = (totals.totalOpex || 0) / termMo_sl;
   var parkingMonthly_sl = (totals.totalParking || 0) / termMo_sl;
   var slMonthlyAllIn = slMonthlyRent + opexMonthly_sl + parkingMonthly_sl;
-  var slMonthlyWithLHI = slMonthlyAllIn + (capex.hasCapex ? capex.monthlyDepreciation : 0);
+  var brokerMonthlyImpact = slBrokerFee.hasBrokerFee ? slBrokerFee.slMonthlyImpact : 0;
+  var slMonthlyWithLHI = slMonthlyAllIn + (capex.hasCapex ? capex.monthlyDepreciation : 0) + brokerMonthlyImpact;
   var slAnnualWithLHI = slMonthlyWithLHI * 12;
   var rsf_sl = (analysis.summary && analysis.summary.rsf) ? analysis.summary.rsf : 0;
   var slPerRSFWithLHI = rsf_sl > 0 ? Math.round(slAnnualWithLHI / rsf_sl * 100) / 100 : 0;
@@ -19343,6 +19390,112 @@ function capexSave() {
     console.error('CAPEX save error:', err);
     if (status) { status.textContent = 'Error: ' + (err.message || 'Failed to save'); status.style.color = '#dc2626'; }
   });
+}
+
+// ===== BROKER FEES PANEL =====
+function rfpBuildBrokerFeesPanel(selected) {
+  if (!selected) return '';
+  var address = selected.building_address || selected.buildingAddress || '';
+  var compLabel = selected.component_label || '';
+  var key = getAssumptionsKey(address, compLabel);
+  var a = (key && window._rfpState && window._rfpState.assumptionsMap) ? (window._rfpState.assumptionsMap[key] || window._rfpState.assumptionsMap[address] || {}) : {};
+
+  var feeType = a.broker_fee_type || 'none';
+  var amount = parseFloat(a.broker_fee_amount) || 0;
+  var notes = a.broker_fee_notes || '';
+  var canEdit = hasAdminAccess();
+
+  var html = '<div style="padding:var(--space-4);max-width:600px;">';
+  html += '<div style="font-weight:600;font-size:var(--text-sm);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);margin-bottom:var(--space-3)">Broker Fees</div>';
+  html += '<div style="font-size:var(--text-sm);color:var(--color-text-muted);margin-bottom:var(--space-4);">Commission paid by tenant (EMEA/international) or rebate received from broker (US). Cash impact in month 1; amortized over the lease term for straight-line and GAAP accounting (ASC 842).</div>';
+
+  // Fee type selector
+  html += '<div style="margin-bottom:var(--space-4);">';
+  html += '<label style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);display:block;margin-bottom:var(--space-2)">Fee Type</label>';
+  html += '<div style="display:flex;gap:var(--space-2);">';
+  var types = [{v:'none', l:'No Broker Fee'}, {v:'expense', l:'Tenant Pays (Expense)'}, {v:'credit', l:'Broker Rebate (Credit)'}];
+  types.forEach(function(t) {
+    var active = feeType === t.v;
+    html += '<button ' + (canEdit ? 'onclick="rfpSetBrokerFeeType(\'' + t.v + '\')"' : 'disabled') + ' style="padding:6px 14px;border-radius:6px;font-size:var(--text-sm);cursor:pointer;border:1px solid ' + (active ? 'var(--color-accent)' : 'var(--color-border)') + ';background:' + (active ? 'var(--color-accent)' : 'transparent') + ';color:' + (active ? 'white' : 'var(--color-text)') + ';font-weight:' + (active ? '600' : '400') + '">' + t.l + '</button>';
+  });
+  html += '</div></div>';
+
+  // Amount input (only show if not 'none')
+  if (feeType !== 'none') {
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);margin-bottom:var(--space-3);">';
+    html += '<div>';
+    html += '<label style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);display:block;margin-bottom:4px">' + (feeType === 'credit' ? 'Rebate Amount' : 'Fee Amount') + '</label>';
+    html += '<input class="rfp-form-input" type="number" id="broker-fee-amount" value="' + amount + '" ' + (canEdit ? '' : 'disabled') + ' style="font-size:var(--text-sm);" onchange="rfpSaveBrokerFee()" />';
+    html += '</div>';
+    html += '<div>';
+    html += '<label style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);display:block;margin-bottom:4px">Notes</label>';
+    html += '<input class="rfp-form-input" type="text" id="broker-fee-notes" value="' + notes.replace(/"/g, '&quot;') + '" ' + (canEdit ? '' : 'disabled') + ' placeholder="e.g. C&W commission rebate" style="font-size:var(--text-sm);" onchange="rfpSaveBrokerFee()" />';
+    html += '</div></div>';
+
+    // Summary
+    if (amount > 0) {
+      var termMonths = (selected.analysis && selected.analysis.summary) ? (selected.analysis.summary.termMonths || 1) : 1;
+      var monthlyAmort = Math.round(amount / termMonths);
+      html += '<div style="border:1px solid var(--color-border);border-radius:8px;padding:var(--space-3);background:var(--color-bg);margin-top:var(--space-2);">';
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--space-3);font-size:var(--text-sm);">';
+      html += '<div><div style="font-weight:600;color:' + (feeType === 'credit' ? '#16a34a' : '#b45309') + '">' + rfpFmtCurrencyPlain(amount) + '</div><div style="color:var(--color-text-muted);font-size:var(--text-xs)">' + (feeType === 'credit' ? 'Rebate Amount' : 'Fee Amount') + '</div></div>';
+      html += '<div><div style="font-weight:600;color:var(--color-text)">' + rfpFmtCurrencyPlain(monthlyAmort) + '/mo</div><div style="color:var(--color-text-muted);font-size:var(--text-xs)">SL Amortization</div></div>';
+      html += '<div><div style="font-weight:600;color:var(--color-text)">' + rfpFmtCurrencyPlain(monthlyAmort * 12) + '/yr</div><div style="color:var(--color-text-muted);font-size:var(--text-xs)">Annual Amortization</div></div>';
+      html += '</div></div>';
+    }
+  }
+
+  html += '</div>';
+  return html;
+}
+
+function rfpSetBrokerFeeType(type) {
+  var selected = rfpGetCurrentSubmission();
+  if (!selected) return;
+  var address = selected.building_address || selected.buildingAddress || '';
+  var compLabel = selected.component_label || '';
+  var key = getAssumptionsKey(address, compLabel);
+  if (!window._rfpState.assumptionsMap[key]) window._rfpState.assumptionsMap[key] = {};
+  window._rfpState.assumptionsMap[key].broker_fee_type = type;
+  if (type === 'none') {
+    window._rfpState.assumptionsMap[key].broker_fee_amount = 0;
+    window._rfpState.assumptionsMap[key].broker_fee_notes = '';
+  }
+  // Re-render panel
+  var panel = document.getElementById('fin-broker-fees');
+  if (panel) panel.innerHTML = rfpBuildBrokerFeesPanel(selected);
+  // Auto-save
+  rfpSaveBrokerFee();
+}
+
+function rfpSaveBrokerFee() {
+  var selected = rfpGetCurrentSubmission();
+  if (!selected) return;
+  var address = selected.building_address || selected.buildingAddress || '';
+  var compLabel = selected.component_label || '';
+  var key = getAssumptionsKey(address, compLabel);
+  var a = window._rfpState.assumptionsMap[key] || {};
+
+  var amountEl = document.getElementById('broker-fee-amount');
+  var notesEl = document.getElementById('broker-fee-notes');
+  if (amountEl) a.broker_fee_amount = parseFloat(amountEl.value) || 0;
+  if (notesEl) a.broker_fee_notes = notesEl.value || '';
+  window._rfpState.assumptionsMap[key] = a;
+
+  // Save to API
+  var email = getCurrentUserEmail();
+  var url = '/api/assumptions?projectId=' + getProjectId();
+  if (email) url += '&userEmail=' + encodeURIComponent(email);
+  var payload = Object.assign({}, a, {
+    building_address: address,
+    component_label: compLabel || null,
+    updated_by: email || ''
+  });
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).catch(function(err) { console.warn('Broker fee save error:', err); });
 }
 
 function rfpBuildAssumptionsPanel(selected) {

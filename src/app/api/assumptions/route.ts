@@ -78,6 +78,10 @@ export async function POST(req: Request) {
     capex_it_input_mode = 'total',
     capex_it_depreciation_years = 5,
     capex_custom_items = [],
+    // Broker fee fields
+    broker_fee_type = 'none',
+    broker_fee_amount = 0,
+    broker_fee_notes = '',
   } = body
 
   if (!building_address) {
@@ -121,6 +125,9 @@ export async function POST(req: Request) {
     capex_it_input_mode,
     capex_it_depreciation_years,
     capex_custom_items,
+    broker_fee_type,
+    broker_fee_amount,
+    broker_fee_notes,
     updated_by,
     updated_at: new Date().toISOString(),
   }
