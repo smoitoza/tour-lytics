@@ -16854,42 +16854,28 @@ function rfpExportCombinedAnalysis(target) {
   rsfRow = r;
   addRow('RSF', comps.map(function(c) { return c.summary.rsf || 0; }), 'num', 'num');
   addRow('Lease Term (mo)', comps.map(function(c) { return c.summary.termMonths || 0; }), 'plain', 'plain');
-  addRow('Base Rent (per RSF/yr)', terms.map(function(t) { return t.base_rent_rsf || t.baseRent || 0; }), 'curr_dec', 'curr_dec');
+  // Commencement dates (if staggered)
+  var exCommDates = terms.map(function(t) { return t.commencement_date || t.commencementDate || ''; });
+  var exHasStagger = exCommDates.some(function(d, i) { return d && exCommDates[0] && d !== exCommDates[0]; });
+  if (exHasStagger) {
+    addRow('Commencement', exCommDates, 'text', 'text');
+  }
+  addRow('Base Rent/RSF/yr', terms.map(function(t) { return t.base_rent_rsf || t.baseRent || 0; }), 'curr_dec', 'curr_dec');
+  addRow('Total Base Rent', comps.map(function(c) { return c.totals.totalBaseRent || 0; }), 'curr', 'curr');
   addRow('Annual Escalation', terms.map(function(t) { return (t.annual_escalation_pct || t.annualEscalation || 0) / 100; }), 'pct', 'plain');
   addRow('Free Rent (mo)', terms.map(function(t) { return t.free_rent_months || t.freeRent || 0; }), 'plain', 'plain');
+  addRow('TI Allowance/RSF', terms.map(function(t) { return t.ti_allowance_rsf || t.tiAllowancePerRSF || 0; }), 'curr_dec', 'curr_dec');
+  addRow('TI Total', terms.map(function(t) { return t.ti_allowance_total || t.tiAllowanceTotal || 0; }), 'curr', 'curr');
+  addRow('OpEx (monthly)', terms.map(function(t) { return t.opex_monthly || t.opex || 0; }), 'curr', 'curr');
+  addRow('Parking Spots', terms.map(function(t) { return t.parking_spots || t.parkingSpots || 0; }), 'plain', 'plain');
+  addRow('Parking Rate', terms.map(function(t) { return t.parking_rate_monthly || t.parkingRate || 0; }), 'curr_dec', 'curr_dec');
 
   // === RENT ANALYSIS ===
   addSection('Rent Analysis');
-  addRow('Effective Rent/RSF (after TI credit)', comps.map(function(c) { return c.summary.effectiveRentRSF || 0; }), 'curr_dec', 'curr_dec');
-  addRow('SL Monthly Rent (after TI credit)', comps.map(function(c) { return c.summary.straightLineMonthlyRent || 0; }), 'curr', 'curr');
-  // SL Annual = SL Monthly * 12 (formula)
-  setCell(r, 0, 'SL Annual Rent (after TI credit)', labelStyle);
-  comps.forEach(function(c, i) {
-    setFormula(r, i + 1, cellRef(r - 1, i + 1) + '*12', currStyle);
-  });
-  setFormula(r, combCol, sumFormula(r), combStyle);
-  r++;
-  addRow('SL Monthly All-in (rent + OpEx + parking, after TI credit)', comps.map(function(c) { return Math.round((c.summary.straightLineAnnualExpense || 0) / 12); }), 'curr', 'curr');
-  // SL Annual All-in = monthly * 12 (formula)
-  setCell(r, 0, 'SL Annual All-in (rent + OpEx + parking, after TI credit)', labelStyle);
-  comps.forEach(function(c, i) {
-    setFormula(r, i + 1, cellRef(r - 1, i + 1) + '*12', currStyle);
-  });
-  setFormula(r, combCol, sumFormula(r), combStyle);
-  r++;
-  addRow('Total All-in Cost (full lease term)', comps.map(function(c) { return c.summary.totalAllInCost || 0; }), 'curr', 'curr');
-
-  // === CONCESSIONS ===
-  addSection('Concessions');
-  addRow('TI Allowance', comps.map(function(c) { return c.summary.tiValue || 0; }), 'curr', 'curr');
-  addRow('Free Rent Value', comps.map(function(c) { return c.summary.freeRentValue || 0; }), 'curr', 'curr');
-  // Total Concessions = TI + Free Rent (formula)
-  setCell(r, 0, 'Total Concessions', labelStyle);
-  comps.forEach(function(c, i) {
-    setFormula(r, i + 1, cellRef(r - 2, i + 1) + '+' + cellRef(r - 1, i + 1), currStyle);
-  });
-  setFormula(r, combCol, sumFormula(r), combStyle);
-  r++;
+  addRow('Effective Rent/RSF', comps.map(function(c) { return c.summary.effectiveRentRSF || 0; }), 'curr_dec', 'curr_dec');
+  addRow('SL Annual Expense', comps.map(function(c) { return c.summary.straightLineAnnualExpense || 0; }), 'curr', 'curr');
+  addRow('Total All-in Cost', comps.map(function(c) { return c.summary.totalAllInCost || 0; }), 'curr', 'curr');
+  addRow('Total Concessions', comps.map(function(c) { return c.summary.totalConcessions || 0; }), 'curr', 'curr');
 
   // === CAPEX ===
   if (anyCapex) {
@@ -16948,6 +16934,12 @@ function rfpExportCombinedAnalysis(target) {
   npvValues.forEach(function(v, i) { setCell(r, i + 1, v, npvStyle); });
   setFormula(r, combCol, sumFormula(r), combNpvStyle);
   r++;
+
+  // NPV per RSF
+  addRow('NPV per RSF', comps.map(function(c, i) {
+    var cRsf = c.summary.rsf || 1;
+    return Math.round(npvValues[i] / cRsf);
+  }), 'curr', 'curr');
 
   if (anyCapex) {
     // Total Commitment = Total All-in + CAPEX (formula referencing earlier rows - use values for simplicity)
