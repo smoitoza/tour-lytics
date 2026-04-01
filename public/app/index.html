@@ -17808,15 +17808,27 @@ function rfpBuildGAAPTable(analysis, buildingAddr, componentLabel) {
   var schedule = gaap.schedule || [];
   var gaapTermMonths = (analysis.summary && analysis.summary.termMonths) ? analysis.summary.termMonths : 0;
   var capex = buildingAddr ? getCapexForBuilding(buildingAddr, gaapTermMonths, componentLabel) : { hasCapex: false, grandTotal: 0, monthlyDepreciation: 0 };
+  var gaapBrokerFee = buildingAddr ? getBrokerFeeForBuilding(buildingAddr, gaapTermMonths, componentLabel) : { hasBrokerFee: false, amount: 0, slMonthlyImpact: 0 };
+
+  // ASC 842: Adjust ROU Asset for broker fee
+  // Expense (Initial Direct Cost) = increases ROU Asset
+  // Credit (Lease Incentive) = decreases ROU Asset
+  var brokerROUAdjust = 0;
+  if (gaapBrokerFee.hasBrokerFee) {
+    brokerROUAdjust = gaapBrokerFee.type === 'expense' ? gaapBrokerFee.amount : -gaapBrokerFee.amount;
+  }
+  var adjustedROUDay1 = (summary.rouAsset || 0) + brokerROUAdjust;
+  var adjustedROUMonthlyAmort = gaapTermMonths > 0 ? Math.round(adjustedROUDay1 / gaapTermMonths) : 0;
 
   // Summary box
   var html =
     '<div class="rfp-summary-metrics" style="margin-bottom:var(--space-4)">' +
       '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtPct(summary.discountRate) + '</div><div class="rfp-metric-label">Discount Rate</div></div>' +
       '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(summary.leaseLiability) + '</div><div class="rfp-metric-label">Lease Liability (Day 1)</div></div>' +
-      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(summary.rouAsset) + '</div><div class="rfp-metric-label">ROU Asset (Day 1)</div></div>' +
+      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(adjustedROUDay1) + '</div><div class="rfp-metric-label">ROU Asset (Day 1)' + (gaapBrokerFee.hasBrokerFee ? '<br><span style="font-size:var(--text-xs);color:#b45309">' + (gaapBrokerFee.type === 'expense' ? 'incl. broker fee IDC' : 'net of broker credit') + '</span>' : '') + '</div></div>' +
       '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(summary.totalLeasePayments) + '</div><div class="rfp-metric-label">Total Lease Payments</div></div>' +
       '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(summary.tiAllowance) + '</div><div class="rfp-metric-label">TI Allowance</div></div>' +
+      (gaapBrokerFee.hasBrokerFee ? '<div class="rfp-metric"><div class="rfp-metric-value" style="color:#b45309">' + rfpFmtCurrencyPlain(gaapBrokerFee.amount) + '</div><div class="rfp-metric-label">Broker ' + (gaapBrokerFee.type === 'credit' ? 'Credit (Incentive)' : 'Fee (IDC)') + '</div></div>' : '') +
       (capex.hasCapex ? '<div class="rfp-metric"><div class="rfp-metric-value" style="color:#7c3aed">' + rfpFmtCurrencyPlain(capex.monthlyDepreciation) + '/mo</div><div class="rfp-metric-label">LHI Depreciation</div></div>' : '') +
     '</div>';
 
@@ -17837,9 +17849,15 @@ function rfpBuildGAAPTable(analysis, buildingAddr, componentLabel) {
     '<th class="cell-currency">Total GAAP Expense</th>' +
   '</tr></thead><tbody>';
 
-  schedule.forEach(function(row) {
+  // Recompute ROU schedule with broker fee adjustment
+  var adjRemainingROU = adjustedROUDay1;
+  schedule.forEach(function(row, idx) {
     var lhiDep = capex.hasCapex ? capex.monthlyDepreciation : 0;
-    var adjustedGAAP = row.totalGAAPExpense + lhiDep;
+    var brokerAmortGAAP = gaapBrokerFee.hasBrokerFee ? gaapBrokerFee.slMonthlyImpact : 0;
+    // Adjusted ROU amortization and remaining ROU asset
+    var adjROUAmort = adjustedROUMonthlyAmort;
+    adjRemainingROU = Math.max(0, adjRemainingROU - adjROUAmort);
+    var adjustedGAAP = row.totalGAAPExpense + lhiDep + brokerAmortGAAP;
     html += '<tr>' +
       '<td class="cell-label">' + (row.month || '') + '</td>' +
       '<td>' + (row.period || '') + '</td>' +
@@ -17847,8 +17865,8 @@ function rfpBuildGAAPTable(analysis, buildingAddr, componentLabel) {
       '<td class="cell-currency">' + rfpFmtCurrency(row.interestExpense) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.principalReduction) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.leaseLiability) + '</td>' +
-      '<td class="cell-currency">' + rfpFmtCurrency(row.rouAmortization) + '</td>' +
-      '<td class="cell-currency">' + rfpFmtCurrency(row.rouAsset) + '</td>' +
+      '<td class="cell-currency">' + rfpFmtCurrency(adjROUAmort) + '</td>' +
+      '<td class="cell-currency">' + rfpFmtCurrency(Math.round(adjRemainingROU)) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.straightLineExpense) + '</td>' +
       (capex.hasCapex ? '<td class="cell-currency" style="color:#7c3aed">' + rfpFmtCurrency(lhiDep) + '</td>' : '') +
       '<td class="cell-currency">' + rfpFmtCurrency(Math.round(adjustedGAAP)) + '</td>' +
