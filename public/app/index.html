@@ -17743,8 +17743,10 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
   var slMonthlyRent = totals.straightLineMonthlyRent || 0;
   var slAnnualRent = totals.straightLineAnnualRent || 0;
   var termMo_sl = (analysis.summary && analysis.summary.termMonths) ? analysis.summary.termMonths : 1;
-  var opexMonthly_sl = (totals.totalOpex || 0) / termMo_sl;
-  var parkingMonthly_sl = (totals.totalParking || 0) / termMo_sl;
+  // OpEx and Parking totals live in the cash flow totals, not SL totals
+  var cfTotals_sl = (analysis.cash_flow && analysis.cash_flow.totals) ? analysis.cash_flow.totals : {};
+  var opexMonthly_sl = (cfTotals_sl.totalOpex || 0) / termMo_sl;
+  var parkingMonthly_sl = (cfTotals_sl.totalParking || 0) / termMo_sl;
   var slMonthlyAllIn = slMonthlyRent + opexMonthly_sl + parkingMonthly_sl;
   var brokerMonthlyImpact = slBrokerFee.hasBrokerFee ? slBrokerFee.slMonthlyImpact : 0;
   var slMonthlyWithLHI = slMonthlyAllIn + (capex.hasCapex ? capex.monthlyDepreciation : 0) + brokerMonthlyImpact;
