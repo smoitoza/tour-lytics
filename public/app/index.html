@@ -16810,6 +16810,7 @@ function rfpExportCombinedAnalysis(target) {
     setCell(r, i + 1, c.label + (vLabel ? ' - ' + vLabel : ''), headerStyle);
   });
   setCell(r, combCol, 'Combined', headerStyle);
+  setCell(r, combCol + 1, 'Notes', { font: { bold: true, sz: 10, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: 'D4A017' } }, alignment: { horizontal: 'left' } });
   r++;
 
   // Helper: sum formula across component columns
@@ -16821,8 +16822,11 @@ function rfpExportCombinedAnalysis(target) {
   // Helper: weighted average formula (for per-RSF metrics) using RSF row
   var rsfRow = -1; // will be set below
 
+  var notesCol = combCol + 1; // Notes column after Combined
+  var notesStyle = { font: { sz: 9, italic: true, color: { rgb: '808080' } }, alignment: { horizontal: 'left', wrap_text: true }, border: { bottom: { style: 'thin', color: { rgb: 'E2E8F0' } } } };
+
   // Helper to add a data row with values and a SUM formula for Combined
-  function addRow(label, values, fmt, combFmt) {
+  function addRow(label, values, fmt, combFmt, desc) {
     setCell(r, 0, label, labelStyle);
     var valStyle = fmt === 'curr' ? currStyle : fmt === 'curr_dec' ? currDecStyle : fmt === 'num' ? numStyle : fmt === 'pct' ? pctStyle : plainStyle;
     var cStyle = combFmt === 'curr' ? combStyle : combFmt === 'curr_dec' ? combDecStyle : combFmt === 'num' ? combNumStyle : combFmt === 'plain' ? combPlainStyle : combStyle;
@@ -16831,30 +16835,31 @@ function rfpExportCombinedAnalysis(target) {
     });
     // Combined = SUM formula (or weighted avg for per-RSF)
     if (fmt === 'curr_dec' && rsfRow >= 0) {
-      // Weighted average: SUMPRODUCT(values, rsfs) / SUM(rsfs)
       var numParts = [], denParts = [];
       for (var i = 1; i <= numComps; i++) {
         numParts.push(cellRef(r, i) + '*' + cellRef(rsfRow, i));
         denParts.push(cellRef(rsfRow, i));
       }
       setFormula(r, combCol, 'IF((' + denParts.join('+') + ')>0,(' + numParts.join('+') + ')/(' + denParts.join('+') + '),0)', cStyle);
-    } else if (fmt === 'pct' || fmt === 'plain') {
+    } else if (fmt === 'pct' || fmt === 'plain' || fmt === 'text') {
       setCell(r, combCol, '', { border: { bottom: { style: 'thin', color: { rgb: 'E2E8F0' } } } });
     } else {
       setFormula(r, combCol, sumFormula(r), cStyle);
     }
+    // Notes column
+    if (desc) setCell(r, notesCol, desc, notesStyle);
     r++;
   }
 
   function addSection(label) {
-    for (var i = 0; i <= combCol; i++) setCell(r, i, i === 0 ? label : '', sectionStyle);
+    for (var i = 0; i <= notesCol; i++) setCell(r, i, i === 0 ? label : '', sectionStyle);
     r++;
   }
 
   // === DEAL OVERVIEW ===
   addSection('Deal Overview');
   rsfRow = r;
-  addRow('RSF', comps.map(function(c) { return c.summary.rsf || 0; }), 'num', 'num');
+  addRow('RSF', comps.map(function(c) { return c.summary.rsf || 0; }), 'num', 'num', 'Rentable square feet');
   addRow('Lease Term (mo)', comps.map(function(c) { return c.summary.termMonths || 0; }), 'plain', 'plain');
   // Commencement dates (if staggered)
   var exCommDates = terms.map(function(t) { return t.commencement_date || t.commencementDate || ''; });
@@ -16862,30 +16867,30 @@ function rfpExportCombinedAnalysis(target) {
   if (exHasStagger) {
     addRow('Commencement', exCommDates, 'text', 'text');
   }
-  addRow('Base Rent/RSF/yr', terms.map(function(t) { return t.base_rent_rsf || t.baseRent || 0; }), 'curr_dec', 'curr_dec');
-  addRow('Total Base Rent', comps.map(function(c) { return c.totals.totalBaseRent || 0; }), 'curr', 'curr');
-  addRow('Annual Escalation', terms.map(function(t) { return (t.annual_escalation_pct || t.annualEscalation || 0) / 100; }), 'pct', 'plain');
-  addRow('Free Rent (mo)', terms.map(function(t) { return t.free_rent_months || t.freeRent || 0; }), 'plain', 'plain');
-  addRow('TI Allowance/RSF', terms.map(function(t) { return t.ti_allowance_rsf || t.tiAllowancePerRSF || 0; }), 'curr_dec', 'curr_dec');
-  addRow('TI Total', terms.map(function(t) { return t.ti_allowance_total || t.tiAllowanceTotal || 0; }), 'curr', 'curr');
-  addRow('OpEx (monthly)', terms.map(function(t) { return t.opex_monthly || t.opex || 0; }), 'curr', 'curr');
+  addRow('Base Rent/RSF/yr', terms.map(function(t) { return t.base_rent_rsf || t.baseRent || 0; }), 'curr_dec', 'curr_dec', 'Starting annual rate per rentable square foot');
+  addRow('Total Base Rent', comps.map(function(c) { return c.totals.totalBaseRent || 0; }), 'curr', 'curr', 'Sum of all base rent payments over the full lease term');
+  addRow('Annual Escalation', terms.map(function(t) { return (t.annual_escalation_pct || t.annualEscalation || 0) / 100; }), 'pct', 'plain', 'Yearly rent increase percentage');
+  addRow('Free Rent (mo)', terms.map(function(t) { return t.free_rent_months || t.freeRent || 0; }), 'plain', 'plain', 'Months of abated base rent');
+  addRow('TI Allowance/RSF', terms.map(function(t) { return t.ti_allowance_rsf || t.tiAllowancePerRSF || 0; }), 'curr_dec', 'curr_dec', 'Landlord contribution toward build-out, per RSF');
+  addRow('TI Total', terms.map(function(t) { return t.ti_allowance_total || t.tiAllowanceTotal || 0; }), 'curr', 'curr', 'Total tenant improvement allowance (RSF x TI/RSF)');
+  addRow('OpEx (monthly)', terms.map(function(t) { return t.opex_monthly || t.opex || 0; }), 'curr', 'curr', 'Operating expenses, taxes, CAM, insurance');
   addRow('Parking Spots', terms.map(function(t) { return t.parking_spots || t.parkingSpots || 0; }), 'plain', 'plain');
-  addRow('Parking Rate', terms.map(function(t) { return t.parking_rate_monthly || t.parkingRate || 0; }), 'curr_dec', 'curr_dec');
+  addRow('Parking Rate', terms.map(function(t) { return t.parking_rate_monthly || t.parkingRate || 0; }), 'curr_dec', 'curr_dec', 'Per spot per month');
 
   // === RENT ANALYSIS ===
   addSection('Rent Analysis');
-  addRow('Effective Rent/RSF', comps.map(function(c) { return c.summary.effectiveRentRSF || 0; }), 'curr_dec', 'curr_dec');
-  addRow('SL Annual Expense', comps.map(function(c) { return c.summary.straightLineAnnualExpense || 0; }), 'curr', 'curr');
-  addRow('Total All-in Cost', comps.map(function(c) { return c.summary.totalAllInCost || 0; }), 'curr', 'curr');
-  addRow('Total Concessions', comps.map(function(c) { return c.summary.totalConcessions || 0; }), 'curr', 'curr');
+  addRow('Effective Rent/RSF', comps.map(function(c) { return c.summary.effectiveRentRSF || 0; }), 'curr_dec', 'curr_dec', 'Net rent per RSF after TI credit is spread over the term');
+  addRow('SL Annual Expense', comps.map(function(c) { return c.summary.straightLineAnnualExpense || 0; }), 'curr', 'curr', 'Straight-line annual: rent + OpEx + parking, after TI credit, averaged evenly across the lease');
+  addRow('Total All-in Cost', comps.map(function(c) { return c.summary.totalAllInCost || 0; }), 'curr', 'curr', 'Total cash out: rent + OpEx + parking over the full term');
+  addRow('Total Concessions', comps.map(function(c) { return c.summary.totalConcessions || 0; }), 'curr', 'curr', 'TI allowance + free rent value');
 
   // === CAPEX ===
   if (anyCapex) {
     addSection('Capital Expenditure (CAPEX)');
     var capexTotalRow = r;
-    addRow('Total CAPEX', comps.map(function(c) { return c.capex.grandTotal || 0; }), 'curr', 'curr');
+    addRow('Total CAPEX', comps.map(function(c) { return c.capex.grandTotal || 0; }), 'curr', 'curr', 'Construction + FF&E + IT, tenant-funded');
     addRow('Construction / Build-Out', comps.map(function(c) { return c.capex.construction || 0; }), 'curr', 'curr');
-    addRow('FF&E', comps.map(function(c) { return c.capex.ffe || 0; }), 'curr', 'curr');
+    addRow('FF&E', comps.map(function(c) { return c.capex.ffe || 0; }), 'curr', 'curr', 'Furniture, fixtures, and equipment');
     addRow('IT / Technology', comps.map(function(c) { return c.capex.it || 0; }), 'curr', 'curr');
     // CAPEX/RSF = Total CAPEX / RSF (formula)
     setCell(r, 0, 'CAPEX per RSF', labelStyle);
@@ -16895,7 +16900,7 @@ function rfpExportCombinedAnalysis(target) {
     setFormula(r, combCol, 'IF(' + cellRef(rsfRow, combCol) + '>0,' + cellRef(capexTotalRow, combCol) + '/' + cellRef(rsfRow, combCol) + ',0)', combDecStyle);
     r++;
     var lhiMonthlyRow = r;
-    addRow('Monthly LHI Depreciation', comps.map(function(c) { return Math.round(c.capex.monthlyDepreciation || 0); }), 'curr', 'curr');
+    addRow('Monthly LHI Depreciation', comps.map(function(c) { return Math.round(c.capex.monthlyDepreciation || 0); }), 'curr', 'curr', 'Leasehold improvement depreciation, straight-line over term');
     // Annual LHI = Monthly * 12 (formula)
     setCell(r, 0, 'Annual LHI Depreciation', labelStyle);
     comps.forEach(function(c, i) {
@@ -16913,7 +16918,7 @@ function rfpExportCombinedAnalysis(target) {
       var parkMo = (c.totals.totalParking || 0) / (c.summary.termMonths || 1);
       return Math.round(slAllIn + parkMo + (c.capex.monthlyDepreciation || 0));
     });
-    addRow('SL Monthly All-in + LHI', slMonthlyAllInVals, 'curr', 'curr');
+    addRow('SL Monthly All-in + LHI', slMonthlyAllInVals, 'curr', 'curr', 'SL rent + OpEx + parking + LHI depreciation, after TI credit');
     // SL Annual All-in + LHI = monthly * 12 (formula)
     setCell(r, 0, 'SL Annual All-in + LHI', labelStyle);
     comps.forEach(function(c, i) {
@@ -16935,24 +16940,25 @@ function rfpExportCombinedAnalysis(target) {
   setCell(r, 0, 'NPV @ 8% (lease obligation)', labelStyle);
   npvValues.forEach(function(v, i) { setCell(r, i + 1, v, npvStyle); });
   setFormula(r, combCol, sumFormula(r), combNpvStyle);
+  setCell(r, notesCol, 'Present value of all lease payments discounted at 8%', notesStyle);
   r++;
 
   // NPV per RSF
   addRow('NPV per RSF', comps.map(function(c, i) {
     var cRsf = c.summary.rsf || 1;
     return Math.round(npvValues[i] / cRsf);
-  }), 'curr', 'curr');
+  }), 'curr', 'curr', 'NPV divided by RSF, for per-square-foot comparison');
 
   if (anyCapex) {
-    // Total Commitment = Total All-in + CAPEX (formula referencing earlier rows - use values for simplicity)
-    addRow('Total Commitment (All-in + CAPEX)', comps.map(function(c) { return Math.round((c.summary.totalAllInCost || 0) + (c.capex.grandTotal || 0)); }), 'curr', 'curr');
+    addRow('Total Commitment (All-in + CAPEX)', comps.map(function(c) { return Math.round((c.summary.totalAllInCost || 0) + (c.capex.grandTotal || 0)); }), 'curr', 'curr', 'Full lease cost + tenant capital expenditure');
   }
 
   // Set sheet range and column widths
-  ws['!ref'] = 'A1:' + cellRef(r, combCol);
+  ws['!ref'] = 'A1:' + cellRef(r, notesCol);
   var cols = [{ wch: 48 }];
   for (var i = 0; i < numComps; i++) cols.push({ wch: 22 });
   cols.push({ wch: 22 });
+  cols.push({ wch: 55 }); // Notes column
   ws['!cols'] = cols;
 
   XLSX.utils.book_append_sheet(wb, ws, 'Combined Analysis');
