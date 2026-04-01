@@ -15220,12 +15220,16 @@ function switchFinSheet(sheetId) {
 
 // ===== INIT =====
 function rfpInit() {
-  rfpLoadAssumptions();
-  rfpLoadSubmissions();
+  // Load assumptions first, THEN submissions (which triggers render).
+  // This prevents a race where submissions render before assumptions arrive,
+  // causing CAPEX/broker fees to show as zero.
+  rfpLoadAssumptions(function() {
+    rfpLoadSubmissions();
+  });
 }
 
 // ===== LOAD ASSUMPTIONS (all buildings) =====
-function rfpLoadAssumptions() {
+function rfpLoadAssumptions(callback) {
   var email = getCurrentUserEmail();
   var url = '/api/assumptions?projectId=' + getProjectId();
   if (email) url += '&userEmail=' + encodeURIComponent(email);
@@ -15245,8 +15249,12 @@ function rfpLoadAssumptions() {
         });
         window._rfpState.assumptionsMap = map;
       }
+      if (callback) callback();
     })
-    .catch(function() { /* silent fail - assumptions are optional */ });
+    .catch(function() {
+      // Assumptions load failed -- still proceed with submissions
+      if (callback) callback();
+    });
 }
 
 // Find the currently selected submission object
@@ -19819,9 +19827,15 @@ function rfpSaveAssumptions() {
     i++;
   }
 
-  var payload = {
+  // Merge with existing map data to preserve CAPEX + broker fee fields
+  var sub = rfpGetCurrentSubmission();
+  var compLabel = sub ? (sub.component_label || '') : '';
+  var assumKey = getAssumptionsKey(buildingAddr, compLabel);
+  var existing = window._rfpState.assumptionsMap[assumKey] || window._rfpState.assumptionsMap[buildingAddr] || {};
+  var payload = Object.assign({}, existing, {
     projectId: getProjectId(),
     building_address: buildingAddr,
+    component_label: compLabel || null,
     opex_food_beverage: parseFloat((document.getElementById('assumption-fb') || {}).value) || 0,
     opex_workplace_experience: parseFloat((document.getElementById('assumption-wpe') || {}).value) || 0,
     opex_maintenance_security: parseFloat((document.getElementById('assumption-maint') || {}).value) || 0,
@@ -19830,7 +19844,7 @@ function rfpSaveAssumptions() {
     target_density_rsf: parseInt((document.getElementById('assumption-density') || {}).value) || 0,
     discount_rate: parseFloat((document.getElementById('assumption-discount') || {}).value) || 6.0,
     updated_by: getCurrentUserEmail() || '',
-  };
+  });
 
   var email = getCurrentUserEmail();
   var url = '/api/assumptions';
