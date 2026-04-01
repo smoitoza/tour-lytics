@@ -17752,45 +17752,66 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
   var rsf_sl = (analysis.summary && analysis.summary.rsf) ? analysis.summary.rsf : 0;
   var slPerRSFWithLHI = rsf_sl > 0 ? Math.round(slAnnualWithLHI / rsf_sl * 100) / 100 : 0;
 
-  var tiNote = (totals.tiAllowanceTotal && totals.tiAllowanceTotal > 0)
-    ? '<div class="rfp-metric"><div class="rfp-metric-value" style="color:#16a34a">' + rfpFmtCurrencyPlain(totals.tiAllowanceTotal) + '</div><div class="rfp-metric-label">TI Allowance</div></div>' +
-      '<div class="rfp-metric"><div class="rfp-metric-value" style="color:#16a34a">(' + rfpFmtCurrencyPlain(totals.monthlyTIAmortization) + '/mo)</div><div class="rfp-metric-label">TI Amortization</div></div>'
-    : '';
+  // ===== STRAIGHT-LINE COST BREAKDOWN =====
+  // Compute individual line items for the build-up
+  var tiMonthly = totals.monthlyTIAmortization || 0;
+  var tiAnnual = tiMonthly * 12;
+  var tiTotal_sl = totals.tiAllowanceTotal || 0;
+  var freeRentMonthly = slTermMonths > 0 ? totalFreeRent / slTermMonths : 0;
+  var lhiMonthly = capex.hasCapex ? capex.monthlyDepreciation : 0;
+  var brokerMonthly = slBrokerFee.hasBrokerFee ? Math.abs(slBrokerFee.slMonthlyImpact) : 0;
+  var brokerSign = (slBrokerFee.hasBrokerFee && slBrokerFee.type === 'credit') ? -1 : 1;
 
-  var lhiNote = capex.hasCapex
-    ? '<div class="rfp-metric"><div class="rfp-metric-value" style="color:#7c3aed">' + rfpFmtCurrencyPlain(capex.monthlyDepreciation) + '/mo</div><div class="rfp-metric-label">LHI Depreciation</div></div>'
-    : '';
+  // Hero: All-in number
+  html += '<div style="margin-top:var(--space-4);padding:var(--space-4);border:2px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-bg);">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-3);">';
+  html += '<div style="font-weight:700;font-size:var(--text-lg);color:var(--color-text);">' + rfpFmtCurrencyPlain(Math.round(slMonthlyWithLHI)) + '<span style="font-size:var(--text-sm);font-weight:400;color:var(--color-text-muted);">/mo</span></div>';
+  html += '<div style="font-weight:700;font-size:var(--text-lg);color:var(--color-text);">' + rfpFmtCurrencyPlain(Math.round(slAnnualWithLHI)) + '<span style="font-size:var(--text-sm);font-weight:400;color:var(--color-text-muted);">/yr</span></div>';
+  if (rsf_sl > 0) html += '<div style="font-weight:600;font-size:var(--text-sm);color:var(--color-text-muted);">' + rfpFmtCurrencyDecimals(slPerRSFWithLHI) + '/RSF/yr</div>';
+  html += '</div>';
+  html += '<div style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);margin-bottom:var(--space-3);">Straight-Line All-in Occupancy Cost</div>';
 
-  var brokerNote = slBrokerFee.hasBrokerFee
-    ? '<div class="rfp-metric"><div class="rfp-metric-value" style="color:#b45309">' + (slBrokerFee.slMonthlyImpact < 0 ? '(' + rfpFmtCurrencyPlain(Math.abs(slBrokerFee.slMonthlyImpact)) + ')' : rfpFmtCurrencyPlain(slBrokerFee.slMonthlyImpact)) + '/mo</div><div class="rfp-metric-label">Broker ' + (slBrokerFee.type === 'credit' ? 'Credit' : 'Fee') + ' Amortization</div></div>'
-    : '';
-
-  // Build the SL All-in label dynamically based on what's included
-  var slLabelParts = ['SL'];
-  var slLabelSuffix = [];
-  if (capex.hasCapex) slLabelSuffix.push('LHI');
-  if (totals.tiAllowanceTotal > 0) slLabelSuffix.push('TIA');
-  if (slBrokerFee.hasBrokerFee) slLabelSuffix.push('Fees');
-  var slLabel = 'SL Monthly All-in' + (slLabelSuffix.length > 0 ? ' + ' + slLabelSuffix.join(' + ') : '');
-  var slLabelAnnual = 'SL Annual All-in' + (slLabelSuffix.length > 0 ? ' + ' + slLabelSuffix.join(' + ') : '');
-
-  html +=
-    '<div class="rfp-summary-metrics" style="margin-top:var(--space-4)">' +
-      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(slMonthlyWithLHI) + '</div><div class="rfp-metric-label">' + slLabel + '</div></div>' +
-      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(slAnnualWithLHI) + '</div><div class="rfp-metric-label">' + slLabelAnnual + '</div></div>' +
-      tiNote +
-      lhiNote +
-      brokerNote +
-      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyDecimals(totals.effectiveRentRSF) + '</div><div class="rfp-metric-label">Effective Rent/RSF</div></div>' +
-      ((capex.hasCapex || slBrokerFee.hasBrokerFee) ? '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyDecimals(slPerRSFWithLHI) + '</div><div class="rfp-metric-label">SL Cost/RSF/yr (incl. all)</div></div>' : '') +
-    '</div>';
-
-  // Lease-only reference (smaller, secondary)
-  if (capex.hasCapex) {
-    html += '<div style="margin-top:var(--space-2);font-size:var(--text-xs);color:var(--color-text-muted)">' +
-      'Lease only: ' + rfpFmtCurrencyPlain(slMonthlyRent) + '/mo &middot; ' + rfpFmtCurrencyPlain(slAnnualRent) + '/yr &middot; ' + rfpFmtCurrencyDecimals(totals.totalCostPerRSFPerYear) + '/RSF/yr' +
-    '</div>';
+  // Build-up table
+  html += '<table style="width:100%;font-size:var(--text-sm);border-collapse:collapse;">';
+  function slBuildRow(label, monthly, style, desc) {
+    var rowStyle = style || '';
+    var mo = Math.round(monthly);
+    var yr = Math.round(monthly * 12);
+    var perRSF = rsf_sl > 0 ? (monthly * 12 / rsf_sl) : 0;
+    html += '<tr style="border-bottom:1px solid var(--color-divider);' + rowStyle + '">';
+    html += '<td style="padding:6px 0;color:var(--color-text);">' + label;
+    if (desc) html += '<div style="font-size:var(--text-xs);color:var(--color-text-muted);font-weight:400;">' + desc + '</div>';
+    html += '</td>';
+    html += '<td style="padding:6px 8px;text-align:right;white-space:nowrap;' + rowStyle + '">' + (mo < 0 ? '(' + rfpFmtCurrencyPlain(Math.abs(mo)) + ')' : rfpFmtCurrencyPlain(mo)) + '/mo</td>';
+    html += '<td style="padding:6px 8px;text-align:right;white-space:nowrap;' + rowStyle + '">' + (yr < 0 ? '(' + rfpFmtCurrencyPlain(Math.abs(yr)) + ')' : rfpFmtCurrencyPlain(yr)) + '/yr</td>';
+    if (rsf_sl > 0) html += '<td style="padding:6px 0;text-align:right;white-space:nowrap;' + rowStyle + '">' + (perRSF < 0 ? '(' + rfpFmtCurrencyDecimals(Math.abs(perRSF)) + ')' : rfpFmtCurrencyDecimals(perRSF)) + '/RSF</td>';
+    html += '</tr>';
   }
+
+  slBuildRow('Base Rent', slMonthlyRent + tiMonthly + freeRentMonthly, '', 'Straight-line rent before concessions');
+  if (totalFreeRent > 0) slBuildRow('Free Rent Credit', -freeRentMonthly, 'color:#16a34a;', 'Amortized over lease term');
+  if (tiTotal_sl > 0) slBuildRow('TI Allowance Credit', -tiMonthly, 'color:#16a34a;', rfpFmtCurrencyPlain(tiTotal_sl) + ' amortized over lease term');
+  html += '<tr style="border-bottom:2px solid var(--color-border);"><td style="padding:6px 0;font-weight:600;">Net SL Rent (after TI credit)</td>';
+  html += '<td style="padding:6px 8px;text-align:right;font-weight:600;">' + rfpFmtCurrencyPlain(Math.round(slMonthlyRent)) + '/mo</td>';
+  html += '<td style="padding:6px 8px;text-align:right;font-weight:600;">' + rfpFmtCurrencyPlain(Math.round(slMonthlyRent * 12)) + '/yr</td>';
+  if (rsf_sl > 0) html += '<td style="padding:6px 0;text-align:right;font-weight:600;">' + rfpFmtCurrencyDecimals(totals.effectiveRentRSF) + '/RSF</td>';
+  html += '</tr>';
+  if (opexMonthly_sl > 0) slBuildRow('OpEx', opexMonthly_sl, '', 'Taxes, CAM, insurance');
+  if (parkingMonthly_sl > 0) slBuildRow('Parking', parkingMonthly_sl, '');
+  if (capex.hasCapex) slBuildRow('LHI Depreciation', lhiMonthly, 'color:#7c3aed;', rfpFmtCurrencyPlain(capex.grandTotal) + ' total CAPEX, straight-line over term');
+  if (slBrokerFee.hasBrokerFee) {
+    var bfLabel = slBrokerFee.type === 'credit' ? 'Broker Credit' : 'Broker Fee';
+    var bfDesc = rfpFmtCurrencyPlain(slBrokerFee.amount) + ' amortized over lease term';
+    slBuildRow(bfLabel, slBrokerFee.slMonthlyImpact, 'color:#b45309;', bfDesc);
+  }
+
+  // Total row
+  html += '<tr style="border-top:2px solid var(--color-text);background:var(--color-surface-2);"><td style="padding:8px 0;font-weight:700;">Total Occupancy Cost</td>';
+  html += '<td style="padding:8px 8px;text-align:right;font-weight:700;">' + rfpFmtCurrencyPlain(Math.round(slMonthlyWithLHI)) + '/mo</td>';
+  html += '<td style="padding:8px 8px;text-align:right;font-weight:700;">' + rfpFmtCurrencyPlain(Math.round(slAnnualWithLHI)) + '/yr</td>';
+  if (rsf_sl > 0) html += '<td style="padding:8px 0;text-align:right;font-weight:700;">' + rfpFmtCurrencyDecimals(slPerRSFWithLHI) + '/RSF</td>';
+  html += '</tr>';
+  html += '</table></div>';
 
   // ===== NPV / Present Value Analysis =====
   // Compute NPV from cash flow data (works even for pre-existing submissions without analysis.npv)
