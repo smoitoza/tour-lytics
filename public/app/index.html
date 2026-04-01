@@ -16094,7 +16094,7 @@ function rfpShowReviewForm(terms, meta) {
       '<div class="rfp-modal-actions">' +
         '<button class="rfp-modal-cancel" onclick="rfpCloseModal()">Cancel</button>' +
         '<button class="rfp-btn-primary" id="rfp-confirm-btn" onclick="rfpConfirmFromForm()">' +
-          (meta._isMultiBuilding ? 'Confirm &amp; Next Component' : 'Confirm &amp; Generate Analysis') +
+          (meta._isMultiBuilding ? 'Confirm &amp; Next Component' : (meta._editId ? 'Save &amp; Recalculate' : 'Confirm &amp; Generate Analysis')) +
         '</button>' +
       '</div>' +
     '</div>';
@@ -16110,6 +16110,27 @@ function rfpShowReviewForm(terms, meta) {
 }
 
 // ===== CONFIRM & SAVE =====
+// ===== EDIT TERMS IN-PLACE =====
+function rfpEditTermsInPlace(submissionId) {
+  // Find the submission in the loaded data
+  var submissions = (window._rfpState && window._rfpState.submissions) || [];
+  var sub = submissions.find(function(s) { return s.id === submissionId; });
+  if (!sub) { alert('Submission not found.'); return; }
+
+  var terms = sub.deal_terms || sub.terms || {};
+  // Map saved snake_case terms to camelCase form fields
+  var formTerms = rfpMapTerms(terms);
+
+  rfpShowReviewForm(formTerms, {
+    buildingNum: sub.building_num || sub.buildingNum,
+    address: sub.building_address || sub.buildingAddress || '',
+    docType: sub.doc_type || sub.docType || 'rfp',
+    source: sub.doc_source || '',
+    componentLabel: sub.component_label || '',
+    _editId: submissionId // signals edit mode
+  });
+}
+
 function rfpConfirmFromForm() {
   if (!_rfpModal) return;
   var meta = _rfpModal._meta;
@@ -16148,9 +16169,10 @@ function rfpConfirmFromForm() {
 function rfpConfirmAndSave(meta, terms) {
   var statusEl = document.getElementById('rfp-review-status');
   var confirmBtn = document.getElementById('rfp-confirm-btn');
+  var loadingText = meta._editId ? 'Updating analysis...' : 'Generating financial analysis...';
   if (statusEl) {
     statusEl.style.display = 'block';
-    statusEl.innerHTML = '<div class="rfp-loading"><div class="rfp-spinner"></div><div class="rfp-loading-text">Generating financial analysis...</div></div>';
+    statusEl.innerHTML = '<div class="rfp-loading"><div class="rfp-spinner"></div><div class="rfp-loading-text">' + loadingText + '</div></div>';
   }
   if (confirmBtn) confirmBtn.disabled = true;
 
@@ -16158,18 +16180,22 @@ function rfpConfirmAndSave(meta, terms) {
   var url = '/api/rfp?projectId=' + getProjectId();
   if (email) url += '&userEmail=' + encodeURIComponent(email);
 
+  var payload = {
+    projectId: getProjectId(),
+    building_num: meta.buildingNum,
+    building_address: meta.address,
+    doc_type: meta.docType,
+    source: meta.source,
+    component_label: meta.componentLabel || null,
+    terms: terms
+  };
+  // Edit mode: include submission ID so API updates instead of creates
+  if (meta._editId) payload.id = meta._editId;
+
   fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      projectId: getProjectId(),
-      building_num: meta.buildingNum,
-      building_address: meta.address,
-      doc_type: meta.docType,
-      source: meta.source,
-      component_label: meta.componentLabel || null,
-      terms: terms
-    })
+    body: JSON.stringify(payload)
   })
   .then(function(r) { return r.json(); })
   .then(function(data) {
@@ -16441,7 +16467,8 @@ function rfpBuildDetailHtml(subs) {
 
   // Deal Terms tab
   var terms = selected.deal_terms || selected.terms || {};
-  html += '<div class="fin-sheet-content active" id="fin-deal-terms">' + rfpBuildTermsTable(terms) + '</div>';
+  var editBtnHtml = hasAdminAccess() ? '<div style="display:flex;justify-content:flex-end;margin-bottom:var(--space-2);"><button class="rfp-btn-secondary" onclick="rfpEditTermsInPlace(\'' + selected.id + '\')" style="font-size:var(--text-xs);padding:4px 12px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px;margin-right:4px"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>Edit Terms</button></div>' : '';
+  html += '<div class="fin-sheet-content active" id="fin-deal-terms">' + editBtnHtml + rfpBuildTermsTable(terms) + '</div>';
 
   // Building address + component for CAPEX lookup
   var bAddr = selected.building_address || selected.buildingAddress || '';
