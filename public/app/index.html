@@ -16659,23 +16659,21 @@ function rfpBuildCombinedView(componentMap, address) {
   if (hasStaggeredStart) {
     compRow('Commencement', commDates, 'text');
   }
-  compRow('Base Rent (per RSF/yr)', compTerms.map(function(t) { return t.base_rent_rsf || t.baseRent || 0; }), 'curr_dec');
+  compRow('Base Rent/RSF/yr', compTerms.map(function(t) { return t.base_rent_rsf || t.baseRent || 0; }), 'curr_dec');
+  compRow('Total Base Rent', components.map(function(c) { return c.totals.totalBaseRent || 0; }), 'curr');
   compRow('Annual Escalation', compTerms.map(function(t) { return t.annual_escalation_pct || t.annualEscalation || 0; }), 'pct');
   compRow('Free Rent (mo)', compTerms.map(function(t) { return t.free_rent_months || t.freeRent || 0; }), 'plain');
+  compRow('TI Allowance/RSF', compTerms.map(function(t) { return t.ti_allowance_rsf || t.tiAllowancePerRSF || 0; }), 'curr_dec');
+  compRow('TI Total', compTerms.map(function(t) { return t.ti_allowance_total || t.tiAllowanceTotal || 0; }), 'curr');
+  compRow('OpEx (monthly)', compTerms.map(function(t) { return t.opex_monthly || t.opex || 0; }), 'curr');
+  compRow('Parking Spots', compTerms.map(function(t) { return t.parking_spots || t.parkingSpots || 0; }), 'plain');
+  compRow('Parking Rate', compTerms.map(function(t) { return t.parking_rate_monthly || t.parkingRate || 0; }), 'curr_dec');
 
   // RENT ANALYSIS
   sectionRow('Rent Analysis');
-  compRow('Effective Rent/RSF (after TI credit)', components.map(function(c) { return c.summary.effectiveRentRSF || 0; }), 'curr_dec');
-  compRow('SL Monthly Rent (after TI credit)', components.map(function(c) { return c.summary.straightLineMonthlyRent || 0; }), 'curr');
-  compRow('SL Annual Rent (after TI credit)', components.map(function(c) { return Math.round((c.summary.straightLineMonthlyRent || 0) * 12); }), 'curr');
-  compRow('SL Monthly All-in (rent + OpEx + parking, after TI credit)', components.map(function(c) { return Math.round((c.summary.straightLineAnnualExpense || 0) / 12); }), 'curr');
-  compRow('SL Annual All-in (rent + OpEx + parking, after TI credit)', components.map(function(c) { return c.summary.straightLineAnnualExpense || 0; }), 'curr');
-  compRow('Total All-in Cost (full lease term)', components.map(function(c) { return c.summary.totalAllInCost || 0; }), 'curr');
-
-  // CONCESSIONS
-  sectionRow('Concessions');
-  compRow('TI Allowance', components.map(function(c) { return c.summary.tiValue || 0; }), 'curr');
-  compRow('Free Rent Value', components.map(function(c) { return c.summary.freeRentValue || 0; }), 'curr');
+  compRow('Effective Rent/RSF', components.map(function(c) { return c.summary.effectiveRentRSF || 0; }), 'curr_dec');
+  compRow('SL Annual Expense', components.map(function(c) { return c.summary.straightLineAnnualExpense || 0; }), 'curr');
+  compRow('Total All-in Cost', components.map(function(c) { return c.summary.totalAllInCost || 0; }), 'curr');
   compRow('Total Concessions', components.map(function(c) { return c.summary.totalConcessions || 0; }), 'curr');
 
   // CAPEX
@@ -16717,6 +16715,16 @@ function rfpBuildCombinedView(componentMap, address) {
     html += '<td class="cell-currency" style="color:#2563eb;">' + rfpFmtCurrency(compNPV) + '</td>';
   });
   html += '<td class="cell-currency" style="font-weight:700;color:#2563eb;">' + rfpFmtCurrency(combinedNPVCheck) + '</td></tr>';
+
+  // NPV per RSF
+  compRow('NPV per RSF', components.map(function(c) {
+    var compNPV2 = 0;
+    for (var j = 0; j < c.cashFlow.length; j++) {
+      compNPV2 += (c.cashFlow[j].totalMonthlyCost || 0) / Math.pow(1 + npvRate, j + 1);
+    }
+    var rsf2 = c.summary.rsf || 1;
+    return Math.round(compNPV2 / rsf2);
+  }), 'curr');
 
   if (anyCapex) {
     compRow('Total Commitment (All-in + CAPEX)', components.map(function(c) { return Math.round((c.summary.totalAllInCost || 0) + (c.capex.grandTotal || 0)); }), 'curr');
