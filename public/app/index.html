@@ -15862,8 +15862,8 @@ function rfpShowNextMultiBuildingComponent() {
   rfpShowReviewForm(comp.terms, {
     buildingNum: meta.buildingNum,
     address: meta.address,
-    docType: meta.docType + ' ' + progress,
-    source: meta.source,
+    docType: meta.docType,
+    source: meta.source + (meta.source ? ' ' : '') + progress,
     componentLabel: label,
     _isMultiBuilding: true,
     _multiProgress: progress
