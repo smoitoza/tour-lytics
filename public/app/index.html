@@ -17556,7 +17556,22 @@ function rfpShowVersionComparison(buildingAddress) {
       leaseTerm: t.lease_term_months || t.leaseTerm || 0,
       baseRent: effectiveBaseRent,
       annualEscalation: t.annual_escalation_pct || t.annualEscalation || 0,
-      freeRent: t.free_rent_months || t.freeRent || 0,
+      freeRent: (function() {
+        // Derive free rent months from rent_periods if available (more accurate than stored field)
+        var rp = t.rent_periods || t.rentPeriods;
+        if (rp && Array.isArray(rp) && rp.length > 0) {
+          var freeMonths = 0;
+          rp.forEach(function(p) {
+            if ((p.rent_rsf_yr || 0) === 0) {
+              var from = p.from_month || p.fromMonth || 1;
+              var to = p.to_month || p.toMonth || 1;
+              freeMonths += (to - from + 1);
+            }
+          });
+          if (freeMonths > 0) return freeMonths;
+        }
+        return t.free_rent_months || t.freeRent || 0;
+      })(),
       tiAllowancePerRSF: t.ti_allowance_rsf || t.tiAllowancePerRSF || 0,
       tiAllowanceTotal: t.ti_allowance_total || t.tiAllowanceTotal || 0,
       opexRSF: t.opex_rsf_yr || t.opexRSF || 0,
@@ -19205,6 +19220,19 @@ function rfpExportExcel() {
             if (camelMap[f.key]) val = t[camelMap[f.key]];
           }
           if (val == null) val = 0;
+          // For free_rent_months: derive from rent_periods zero-rate periods if available
+          if (f.key === 'free_rent_months') {
+            var frRps = t.rent_periods || t.rentPeriods;
+            if (frRps && Array.isArray(frRps) && frRps.length > 0) {
+              var frMonths = 0;
+              frRps.forEach(function(p) {
+                if ((p.rent_rsf_yr || 0) === 0) {
+                  frMonths += ((p.to_month || p.toMonth || 1) - (p.from_month || p.fromMonth || 1) + 1);
+                }
+              });
+              if (frMonths > 0) val = frMonths;
+            }
+          }
           // For base_rent_rsf: if 0 and rent_periods exist, use first paid rate
           if (f.key === 'base_rent_rsf' && !val) {
             var rps = t.rent_periods || t.rentPeriods;
