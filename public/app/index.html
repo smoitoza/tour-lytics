@@ -7211,6 +7211,7 @@ body {
       font-weight: 700;
       color: var(--color-text);
       margin-bottom: var(--space-1);
+      padding-right: 60px;
     }
     .rfp-building-card-meta {
       font-size: var(--text-xs);
@@ -16473,7 +16474,7 @@ function rfpBuildDetailHtml(subs) {
     '<div class="rfp-detail-header">' +
       '<div>' +
         '<div class="rfp-detail-title">' + address + '</div>' +
-        '<div class="rfp-detail-subtitle">' + (selected.component_label ? '<span style="background:#7c3aed;color:white;padding:2px 8px;border-radius:4px;font-size:var(--text-xs);font-weight:600;margin-right:6px;">' + esc(selected.component_label) + '</span>' : '') + (selected.version_label ? '<strong>' + esc(selected.version_label) + '</strong> | ' : '') + docType +
+        '<div class="rfp-detail-subtitle">' + (selected.component_label ? '<span style="background:#7c3aed;color:white;padding:2px 8px;border-radius:4px;font-size:var(--text-xs);font-weight:600;margin-right:2px;">' + esc(selected.component_label) + '</span><button onclick="rfpRenameComponent(\'' + selected.id + '\',\'' + esc(selected.component_label).replace(/'/g, "\\'") + '\')" style="background:none;border:none;cursor:pointer;padding:2px 4px;color:var(--color-text-muted);vertical-align:middle;" title="Rename component"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button> ' : '') + (selected.version_label ? '<strong>' + esc(selected.version_label) + '</strong> | ' : '') + docType +
           (selected.source ? ' | ' + selected.source : '') +
           ' | Submitted ' + (selected.created_at || selected.createdAt ? new Date(selected.created_at || selected.createdAt).toLocaleDateString() : '') +
         '</div>' +
@@ -16605,6 +16606,31 @@ function rfpBuildDetailHtml(subs) {
 function rfpSelectSubmission(id) {
   window._rfpState.selectedSubmission = id;
   rfpRenderDashboard(window._rfpState.submissions);
+}
+
+function rfpRenameComponent(submissionId, currentLabel) {
+  var newLabel = prompt('Rename component:', currentLabel);
+  if (newLabel === null || newLabel.trim() === '' || newLabel.trim() === currentLabel) return;
+  newLabel = newLabel.trim();
+  var email = getCurrentUserEmail();
+  var url = '/api/rfp?userEmail=' + encodeURIComponent(email || '');
+  fetch(url, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: submissionId, componentLabel: newLabel })
+  }).then(function(r) {
+    if (r.ok) {
+      // Update local state
+      var subs = window._rfpState.submissions || [];
+      subs.forEach(function(s) {
+        if (s.id === submissionId) s.component_label = newLabel;
+      });
+      window._rfpState.selectedComponent = newLabel;
+      rfpRenderDashboard(subs);
+    } else {
+      alert('Failed to rename component.');
+    }
+  });
 }
 
 function rfpSelectComponent(componentLabel) {
