@@ -17456,20 +17456,25 @@ function rfpShowVersionComparison(buildingAddress) {
   var fields = [
     { key: 'rsf', label: 'RSF', fmt: 'num' },
     { key: 'leaseTerm', label: 'Lease Term (mo)', fmt: 'plain' },
+    // Rent: year then month together
     { key: 'baseRent', label: 'Base Rent/RSF/yr', fmt: 'currency_dec' },
+    { key: 'rentPerSFMo', label: 'Rent/SF/mo', fmt: 'currency_dec', computed: 'rentPerSFMo' },
     { key: 'totalBaseRent', label: 'Total Base Rent', fmt: 'currency', computed: 'totalBaseRent' },
     { key: 'annualEscalation', label: 'Annual Escalation', fmt: 'pct' },
     { key: 'freeRent', label: 'Free Rent (mo)', fmt: 'num' },
     { key: 'tiAllowancePerRSF', label: 'TI Allowance/RSF', fmt: 'currency_dec' },
     { key: 'tiAllowanceTotal', label: 'TI Total', fmt: 'currency' },
+    // OpEx: year then month together
     { key: 'opexRSF', label: 'OpEx/Tax/CAM (per RSF/yr)', fmt: 'currency_dec' },
-    { key: 'opex', label: 'OpEx (monthly)', fmt: 'currency' },
+    { key: 'opexPerSFMo', label: 'OpEx/SF/mo', fmt: 'currency_dec', computed: 'opexPerSFMo' },
+    { key: 'opex', label: 'OpEx (monthly total)', fmt: 'currency' },
+    // Full service gross
+    { key: 'fsgPerSFMo', label: 'Full Service Gross/SF/mo', fmt: 'currency_dec', computed: 'fsgPerSFMo' },
+    // Parking
     { key: 'parkingSpots', label: 'Parking Spots', fmt: 'num' },
     { key: 'parkingRate', label: 'Parking Rate', fmt: 'currency_dec' },
+    // Summary metrics
     { key: 'effectiveRentRSF', label: 'Effective Rent/RSF', fmt: 'currency_dec', fromSummary: true },
-    { key: 'rentPerSFMo', label: 'Rent/SF/mo', fmt: 'currency_dec', computed: 'rentPerSFMo' },
-    { key: 'opexPerSFMo', label: 'OpEx/SF/mo', fmt: 'currency_dec', computed: 'opexPerSFMo' },
-    { key: 'fsgPerSFMo', label: 'Full Service Gross/SF/mo', fmt: 'currency_dec', computed: 'fsgPerSFMo' },
     { key: 'straightLineAnnualExpense', label: 'SL Annual Expense', fmt: 'currency', fromSummary: true },
     { key: 'totalAllInCost', label: 'Total All-in Cost', fmt: 'currency', fromSummary: true },
     { key: 'totalConcessions', label: 'Total Concessions', fmt: 'currency', fromSummary: true },
@@ -19170,19 +19175,24 @@ function rfpExportExcel() {
       { key: 'rsf', label: 'RSF', type: 'num', src: 'terms' },
       { key: 'lease_term_months', label: 'Lease Term (months)', type: 'num', src: 'terms' },
       { key: 'commencement_date', label: 'Commencement', type: 'text', src: 'terms' },
+      // Rent: year then month together
       { key: 'base_rent_rsf', label: 'Base Rent (per RSF/yr)', type: 'curr_dec', src: 'terms' },
+      { key: 'rentPerSFMo', label: 'Rent/SF/mo', type: 'curr_dec', src: 'computed' },
       { key: 'annual_escalation_pct', label: 'Annual Escalation (%)', type: 'pct_plain', src: 'terms' },
       { key: 'free_rent_months', label: 'Free Rent (months)', type: 'num', src: 'terms' },
       { key: 'ti_allowance_rsf', label: 'TI Allowance (per RSF)', type: 'curr_dec', src: 'terms' },
       { key: 'ti_allowance_total', label: 'TI Total', type: 'curr', src: 'terms' },
+      // OpEx: year then month together
       { key: 'opex_rsf_yr', label: 'OpEx/Tax/CAM (per RSF/yr)', type: 'curr_dec', src: 'terms' },
-      { key: 'opex_monthly', label: 'OpEx (Monthly)', type: 'curr', src: 'terms' },
+      { key: 'opexPerSFMo', label: 'OpEx/SF/mo', type: 'curr_dec', src: 'computed' },
+      { key: 'opex_monthly', label: 'OpEx (monthly total)', type: 'curr', src: 'terms' },
+      // Full service gross
+      { key: 'fsgPerSFMo', label: 'Full Service Gross/SF/mo', type: 'curr_dec', src: 'computed' },
+      // Parking
       { key: 'parking_spots', label: 'Parking Spots', type: 'num', src: 'terms' },
       { key: 'parking_rate_monthly', label: 'Parking Rate (per mo)', type: 'curr', src: 'terms' },
+      // Summary metrics
       { key: 'effectiveRentRSF', label: 'Effective Rent/RSF', type: 'curr_dec', src: 'summary' },
-      { key: 'rentPerSFMo', label: 'Rent/SF/mo', type: 'curr_dec', src: 'computed' },
-      { key: 'opexPerSFMo', label: 'OpEx/SF/mo', type: 'curr_dec', src: 'computed' },
-      { key: 'fsgPerSFMo', label: 'Full Service Gross/SF/mo', type: 'curr_dec', src: 'computed' },
       { key: 'straightLineAnnualExpense', label: 'SL Annual Expense', type: 'curr', src: 'summary' },
       { key: 'totalAllInCost', label: 'Total All-in Cost', type: 'curr', src: 'summary' },
       { key: 'totalConcessions', label: 'Total Concessions', type: 'curr', src: 'summary' },
@@ -20413,23 +20423,27 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
   var dealMetrics = [
     ['RSF', function(d) { return d.summary.rsf; }, false, 'num'],
     ['Term (months)', function(d) { return d.summary.termMonths; }, false, 'num'],
-    ['Base Rent per RSF', function(d) { return d.terms.base_rent_rsf || d.terms.baseRent; }, true, 'curr'],
-    ['Effective Rent/RSF', function(d) { return d.summary.effectiveRentRSF; }, true, 'curr'],
+    // Rent: year then month together
+    ['Base Rent/RSF/yr', function(d) { return d.terms.base_rent_rsf || d.terms.baseRent; }, true, 'curr_dec'],
     ['Rent/SF/mo', function(d) {
       var rsf = d.summary.rsf || 0; var termMo = d.summary.termMonths || 1;
       var cfTot = (d.cfTotals || {}); var totalBaseRent = cfTot.totalBaseRent || 0;
       return rsf > 0 ? Math.round(totalBaseRent / termMo / rsf * 100) / 100 : 0;
     }, true, 'curr_dec'],
+    ['Effective Rent/RSF', function(d) { return d.summary.effectiveRentRSF; }, true, 'curr_dec'],
+    // OpEx: year then month together
     ['OpEx/SF/mo', function(d) {
       var rsf = d.summary.rsf || 0; var termMo = d.summary.termMonths || 1;
       var cfTot = (d.cfTotals || {}); var totalOpex = cfTot.totalOpex || 0;
       return rsf > 0 ? Math.round(totalOpex / termMo / rsf * 100) / 100 : 0;
     }, true, 'curr_dec'],
+    // Full service gross
     ['Full Service Gross/SF/mo', function(d) {
       var rsf = d.summary.rsf || 0; var termMo = d.summary.termMonths || 1;
       var cfTot = (d.cfTotals || {}); var totalRent = cfTot.totalBaseRent || 0; var totalOpex = cfTot.totalOpex || 0;
       return rsf > 0 ? Math.round((totalRent + totalOpex) / termMo / rsf * 100) / 100 : 0;
     }, true, 'curr_dec'],
+    // Totals
     ['Total All-in Cost', function(d) { return d.summary.totalAllInCost; }, true, 'curr'],
     ['SL Monthly Rent', function(d) { return d.summary.straightLineMonthlyRent; }, true, 'curr'],
     ['SL Annual Expense', function(d) { return d.summary.straightLineAnnualExpense; }, true, 'curr'],
@@ -20437,7 +20451,7 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
     ['TI Value', function(d) { return d.summary.tiValue; }, false, 'curr'],
     ['Total Concessions', function(d) { return d.summary.totalConcessions; }, false, 'curr'],
     ['NPV @ 8%', function(d) { return d.summary.npv; }, true, 'curr'],
-    ['NPV per RSF', function(d) { return d.summary.npvPerRSF; }, true, 'curr']
+    ['NPV per RSF', function(d) { return d.summary.npvPerRSF; }, true, 'curr_dec']
   ];
 
   // Add CAPEX rows if any building has CAPEX
