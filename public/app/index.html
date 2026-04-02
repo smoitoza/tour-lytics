@@ -19137,6 +19137,9 @@ function rfpExportExcel() {
       { key: 'parking_spots', label: 'Parking Spots', type: 'num', src: 'terms' },
       { key: 'parking_rate_monthly', label: 'Parking Rate (per mo)', type: 'curr', src: 'terms' },
       { key: 'effectiveRentRSF', label: 'Effective Rent/RSF', type: 'curr_dec', src: 'summary' },
+      { key: 'rentPerSFMo', label: 'Rent/SF/mo', type: 'curr_dec', src: 'computed' },
+      { key: 'opexPerSFMo', label: 'OpEx/SF/mo', type: 'curr_dec', src: 'computed' },
+      { key: 'fsgPerSFMo', label: 'Full Service Gross/SF/mo', type: 'curr_dec', src: 'computed' },
       { key: 'straightLineAnnualExpense', label: 'SL Annual Expense', type: 'curr', src: 'summary' },
       { key: 'totalAllInCost', label: 'Total All-in Cost', type: 'curr', src: 'summary' },
       { key: 'totalConcessions', label: 'Total Concessions', type: 'curr', src: 'summary' },
@@ -19165,9 +19168,28 @@ function rfpExportExcel() {
         if (f.src === 'summary') {
           var sm = (s.analysis && s.analysis.summary) || {};
           val = sm[f.key] || 0;
+        } else if (f.src === 'computed') {
+          // Computed metrics from cash flow totals
+          var cSm = (s.analysis && s.analysis.summary) || {};
+          var cCf = (s.analysis && s.analysis.cash_flow && s.analysis.cash_flow.totals) || {};
+          var cRsf = cSm.rsf || 0;
+          var cTermMo = cSm.termMonths || 1;
+          if (f.key === 'rentPerSFMo') {
+            val = cRsf > 0 ? Math.round((cCf.totalBaseRent || 0) / cTermMo / cRsf * 100) / 100 : 0;
+          } else if (f.key === 'opexPerSFMo') {
+            val = cRsf > 0 ? Math.round((cCf.totalOpex || 0) / cTermMo / cRsf * 100) / 100 : 0;
+          } else if (f.key === 'fsgPerSFMo') {
+            val = cRsf > 0 ? Math.round(((cCf.totalBaseRent || 0) + (cCf.totalOpex || 0)) / cTermMo / cRsf * 100) / 100 : 0;
+          } else { val = 0; }
         } else {
           var t = s.deal_terms || s.dealTerms || {};
-          val = t[f.key] || 0;
+          val = t[f.key];
+          // Also check camelCase variants
+          if (val == null || val === '') {
+            var camelMap = { free_rent_months: 'freeRent', lease_term_months: 'leaseTerm', base_rent_rsf: 'baseRent', commencement_date: 'commencementDate', annual_escalation_pct: 'annualEscalation', ti_allowance_rsf: 'tiAllowancePerRSF', ti_allowance_total: 'tiAllowanceTotal', opex_rsf_yr: 'opexRSF', opex_monthly: 'opex', parking_spots: 'parkingSpots', parking_rate_monthly: 'parkingRate' };
+            if (camelMap[f.key]) val = t[camelMap[f.key]];
+          }
+          if (val == null) val = 0;
           // For base_rent_rsf: if 0 and rent_periods exist, use first paid rate
           if (f.key === 'base_rent_rsf' && !val) {
             var rps = t.rent_periods || t.rentPeriods;
