@@ -15673,9 +15673,12 @@ function rfpSubmitUpload() {
     buildingNum = 9000 + Math.floor(Math.random() * 1000); // Use 9000+ range for custom addresses
     address = customAddr;
   } else if (rawVal.startsWith('prev-')) {
-    // Previously submitted custom address
+    // Previously submitted custom address - reuse building_num from existing submission
     address = rawVal.substring(5); // strip 'prev-' prefix
-    buildingNum = 9000 + Math.floor(Math.random() * 1000);
+    var existingSub = (window._rfpState.submissions || []).find(function(s) {
+      return (s.building_address || '') === address;
+    });
+    buildingNum = existingSub ? (existingSub.building_num || existingSub.buildingNum) : (9000 + Math.floor(Math.random() * 1000));
   } else {
     // Parse building value: "deal-1" or "survey-5"
     var parts = rawVal.split('-');
@@ -16324,10 +16327,10 @@ function rfpRenderDashboard(submissions) {
   var root = document.getElementById('rfp-root');
   if (!root) return;
 
-  // Group submissions by building
+  // Group submissions by building address (not building_num, which can differ for custom addresses)
   var byBuilding = {};
   submissions.forEach(function(s) {
-    var key = s.building_num || s.buildingNum || 'unknown';
+    var key = s.building_address || s.buildingAddress || s.building_num || s.buildingNum || 'unknown';
     if (!byBuilding[key]) byBuilding[key] = [];
     byBuilding[key].push(s);
   });
@@ -16380,7 +16383,7 @@ function rfpBuildDashboardHtml(submissions, byBuilding) {
     var isSelected = window._rfpState.selectedBuilding === bNum;
 
     html +=
-      '<div class="rfp-building-card' + (isSelected ? ' active' : '') + '" onclick="rfpSelectBuilding(\'' + bNum + '\')">' +
+      '<div class="rfp-building-card' + (isSelected ? ' active' : '') + '" onclick="rfpSelectBuilding(\'' + bNum.replace(/'/g, "\\'") + '\')">' +
         '<span class="rfp-building-card-badge ' + docType.toLowerCase() + '">' + docType + '</span>' +
         '<div class="rfp-building-card-addr">' + address + '</div>' +
         '<div class="rfp-building-card-meta">' + subs.length + ' proposal' + (subs.length !== 1 ? 's' : '') +
