@@ -16070,12 +16070,12 @@ function rfpShowReviewForm(terms, meta) {
     { key: 'commencementDate', label: 'Commencement Date', type: 'date' },
     { key: 'leaseEndDate', label: 'Lease End Date', type: 'date', placeholder: 'Auto-computes term if commencement set' },
     { key: 'baseRent', label: 'Base Rent (per RSF/yr)', type: 'number', step: '0.01' },
-    { key: 'totalAnnualRent', label: 'Total Annual Rent ($)', type: 'number', placeholder: 'Alternative to per-RSF rate' },
+    { key: 'totalAnnualRent', label: 'Total Annual Rent', type: 'number', placeholder: 'Alternative to per-RSF rate' },
     { key: 'rentBasis', label: 'Rent Basis', type: 'text', placeholder: 'e.g. FSG, NNN, Modified Gross' },
     { key: 'annualEscalation', label: 'Annual Escalation %', type: 'number', step: '0.01' },
     { key: 'freeRent', label: 'Free Rent (months)', type: 'number' },
     { key: 'tiAllowancePerRSF', label: 'TI Allowance (per RSF)', type: 'number', step: '0.01' },
-    { key: 'tiAllowanceTotal', label: 'TI Allowance (total $)', type: 'number' },
+    { key: 'tiAllowanceTotal', label: 'TI Allowance (total)', type: 'number' },
     { key: 'opexRSF', label: 'OpEx/Tax/CAM (per RSF/yr)', type: 'number', step: '0.01', placeholder: 'e.g. 18.00' },
     { key: 'opex', label: 'OpEx (monthly override)', type: 'number', placeholder: 'Auto-calculated if per RSF entered' },
     { key: 'parkingSpots', label: 'Parking Spots', type: 'number' },
@@ -18383,8 +18383,8 @@ function rfpExportExcel() {
   setCell(aWS, 2, 1, '', sectionStyle);
   setCell(aWS, 2, 2, '', sectionStyle);
   setCell(aWS, 3, 0, 'Category', headerLeftStyle);
-  setCell(aWS, 3, 1, '$/Month', headerStyle);
-  setCell(aWS, 3, 2, '$/Year', headerStyle);
+  setCell(aWS, 3, 1, getCurrencySymbol() + '/Month', headerStyle);
+  setCell(aWS, 3, 2, getCurrencySymbol() + '/Year', headerStyle);
 
   var aRow = 4;
   var opexItems = [
@@ -19186,7 +19186,7 @@ function rfpExportExcel() {
       var diff = last - first;
       if (f.type !== 'text' && first > 0 && diff !== 0) {
         var pctChg = ((diff / first) * 100).toFixed(1);
-        row.push((diff > 0 ? '+' : '') + (f.type === 'curr' || f.type === 'curr_dec' ? '$' : '') + Math.round(Math.abs(diff)).toLocaleString() + ' (' + (diff > 0 ? '+' : '') + pctChg + '%)');
+        row.push((diff > 0 ? '+' : '') + (f.type === 'curr' || f.type === 'curr_dec' ? getCurrencySymbol() : '') + Math.round(Math.abs(diff)).toLocaleString() + ' (' + (diff > 0 ? '+' : '') + pctChg + '%)');
       } else {
         row.push('');
       }
@@ -19555,9 +19555,9 @@ function rfpBuildCapexPanel(selected) {
     // Input mode toggle
     s += '<div style="display:flex;gap:var(--space-2);margin-bottom:var(--space-3)">' +
       '<button class="rfp-version-chip' + (!modeIsPerRSF ? ' active' : '') + '" style="font-size:var(--text-xs);padding:4px 10px;' + (!modeIsPerRSF ? 'background:' + color + ';color:white;border-color:' + color : '') + '" onclick="capexSetMode(\'' + id + '\', \'total\')">' +
-        'Total $</button>' +
+        'Total ' + getCurrencySymbol() + '</button>' +
       '<button class="rfp-version-chip' + (modeIsPerRSF ? ' active' : '') + '" style="font-size:var(--text-xs);padding:4px 10px;' + (modeIsPerRSF ? 'background:' + color + ';color:white;border-color:' + color : '') + '" onclick="capexSetMode(\'' + id + '\', \'per_rsf\')">' +
-        '$/RSF</button>' +
+        getCurrencySymbol() + '/RSF</button>' +
     '</div>';
 
     // Input fields
@@ -19566,7 +19566,7 @@ function rfpBuildCapexPanel(selected) {
     if (!modeIsPerRSF) {
       // Total dollar input
       s += '<div>' +
-        '<label style="' + labelStyle + '">Total Cost ($)</label>' +
+        '<label style="' + labelStyle + '">Total Cost (' + getCurrencySymbol() + ')</label>' +
         '<input type="number" id="capex-' + id + '-total" value="' + (cat.total || '') + '" placeholder="e.g. 500000" style="' + inputStyle + '" onchange="capexRecalc(\'' + id + '\')" />' +
       '</div>';
       // Show computed per RSF
@@ -19579,7 +19579,7 @@ function rfpBuildCapexPanel(selected) {
     } else {
       // Per RSF input
       s += '<div>' +
-        '<label style="' + labelStyle + '">Cost per RSF ($)</label>' +
+        '<label style="' + labelStyle + '">Cost per RSF (' + getCurrencySymbol() + ')</label>' +
         '<input type="number" step="0.01" id="capex-' + id + '-persqft" value="' + (cat.perRSF || '') + '" placeholder="e.g. 25.00" style="' + inputStyle + '" onchange="capexRecalc(\'' + id + '\')" />' +
       '</div>';
       // Show computed total
@@ -20580,8 +20580,8 @@ function rfpExportComparison(target) {
   }
 
   // Style: currency format for metric rows
-  var fmt = '$#,##0';
-  var fmtDec = '$#,##0.00';
+  var fmt = getCurrencyExcelFmt();
+  var fmtDec = getCurrencyExcelFmtDec();
   for (var r = dataStartRow; r < data.length; r++) {
     var label = data[r] && data[r][0];
     if (!label) continue;
