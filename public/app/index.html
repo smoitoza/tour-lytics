@@ -17467,6 +17467,9 @@ function rfpShowVersionComparison(buildingAddress) {
     { key: 'parkingSpots', label: 'Parking Spots', fmt: 'num' },
     { key: 'parkingRate', label: 'Parking Rate', fmt: 'currency_dec' },
     { key: 'effectiveRentRSF', label: 'Effective Rent/RSF', fmt: 'currency_dec', fromSummary: true },
+    { key: 'rentPerSFMo', label: 'Rent/SF/mo', fmt: 'currency_dec', computed: 'rentPerSFMo' },
+    { key: 'opexPerSFMo', label: 'OpEx/SF/mo', fmt: 'currency_dec', computed: 'opexPerSFMo' },
+    { key: 'fsgPerSFMo', label: 'Full Service Gross/SF/mo', fmt: 'currency_dec', computed: 'fsgPerSFMo' },
     { key: 'straightLineAnnualExpense', label: 'SL Annual Expense', fmt: 'currency', fromSummary: true },
     { key: 'totalAllInCost', label: 'Total All-in Cost', fmt: 'currency', fromSummary: true },
     { key: 'totalConcessions', label: 'Total Concessions', fmt: 'currency', fromSummary: true },
@@ -17484,6 +17487,18 @@ function rfpShowVersionComparison(buildingAddress) {
     if (field.computed === 'totalBaseRent') {
       var cfTotals = (sub.analysis && sub.analysis.cash_flow && sub.analysis.cash_flow.totals) ? sub.analysis.cash_flow.totals : {};
       return cfTotals.totalBaseRent || 0;
+    }
+    // Per SF / Monthly computed fields
+    if (field.computed === 'rentPerSFMo' || field.computed === 'opexPerSFMo' || field.computed === 'fsgPerSFMo') {
+      var sm2 = (sub.analysis && sub.analysis.summary) || {};
+      var cf2 = (sub.analysis && sub.analysis.cash_flow && sub.analysis.cash_flow.totals) || {};
+      var rsf2 = sm2.rsf || 0;
+      var termMo2 = sm2.termMonths || 1;
+      if (rsf2 === 0) return 0;
+      if (field.computed === 'rentPerSFMo') return Math.round((cf2.totalBaseRent || 0) / termMo2 / rsf2 * 100) / 100;
+      if (field.computed === 'opexPerSFMo') return Math.round((cf2.totalOpex || 0) / termMo2 / rsf2 * 100) / 100;
+      if (field.computed === 'fsgPerSFMo') return Math.round(((cf2.totalBaseRent || 0) + (cf2.totalOpex || 0)) / termMo2 / rsf2 * 100) / 100;
+      return 0;
     }
     // CAPEX computed fields
     if (field.computed && field.computed.indexOf('capex') === 0 || field.computed === 'lhiMonthlyDep' || field.computed === 'slMonthlyWithLHI' || field.computed === 'totalAllInWithCapex') {
