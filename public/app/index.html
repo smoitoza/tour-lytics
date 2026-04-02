@@ -17685,12 +17685,19 @@ function rfpBuildTermsTable(terms) {
     rows.push(['Rent Schedule', 'Stepped (see below)']);
     rentPeriods.forEach(function(p) {
       var label = p.label ? p.label + ': ' : '';
-      var rateStr = p.rent_rsf_yr === 0 ? 'No Base Rent' : rfpFmtCurrencyDecimals(p.rent_rsf_yr) + '/RSF/yr';
+      var rateStr = p.rent_rsf_yr === 0 ? 'Free rent period: No Base Rent' : rfpFmtCurrencyDecimals(p.rent_rsf_yr) + '/RSF/yr';
+      if (p.rent_rsf_yr > 0) rateStr += ' (' + rfpFmtCurrencyDecimals(p.rent_rsf_yr / 12) + '/SF/mo)';
       var billStr = p.billable_rsf ? ' (' + rfpFmtNum(p.billable_rsf) + ' billable RSF)' : '';
       rows.push(['  Mo. ' + p.from_month + '-' + p.to_month, label + rateStr + billStr]);
     });
+    // Show first paid rate as Base Rent/SF/mo
+    var firstPaid = rentPeriods.find(function(p) { return p.rent_rsf_yr > 0; });
+    if (firstPaid) {
+      rows.push(['Base Rent/SF/mo', rfpFmtCurrencyDecimals(firstPaid.rent_rsf_yr / 12)]);
+    }
   } else {
     rows.push(['Base Rent', t.baseRent ? rfpFmtCurrencyDecimals(t.baseRent) + '/RSF/yr' : '--']);
+    if (t.baseRent) rows.push(['Base Rent/SF/mo', rfpFmtCurrencyDecimals(t.baseRent / 12)]);
   }
 
   rows = rows.concat([
@@ -17706,6 +17713,7 @@ function rfpBuildTermsTable(terms) {
     ['TI Allowance (per RSF)', rfpFmtCurrencyDecimals(t.tiAllowancePerRSF)],
     ['TI Allowance (total)', rfpFmtCurrencyPlain(t.tiAllowanceTotal)],
     ['OpEx (monthly)', rfpFmtCurrencyPlain(t.opex)],
+    ['OpEx/SF/mo', (t.opex && t.rsf) ? rfpFmtCurrencyDecimals(t.opex / t.rsf) : '--'],
     ['Parking Spots', t.parkingSpots || '--'],
     ['Parking Rate', t.parkingRate ? rfpFmtCurrencyDecimals(t.parkingRate) + '/spot/mo' : '--'],
     ['Parking Escalation', t.parkingEscalation ? t.parkingEscalation + '%' : '--'],
@@ -18303,8 +18311,12 @@ function rfpExportExcel() {
       if (p.billable_rsf) periodLabel += ' (' + p.billable_rsf.toLocaleString() + ' billable RSF)';
       dtFields.push([periodLabel, n(p.rent_rsf_yr), 'curr_dec', 'readonly']);
     });
+    // Show first paid rate as Base Rent/SF/mo
+    var exFirstPaid = exRentPeriods.find(function(p) { return n(p.rent_rsf_yr) > 0; });
+    if (exFirstPaid) dtFields.push(['Base Rent/SF/mo', n(exFirstPaid.rent_rsf_yr) / 12, 'curr_dec', 'readonly']);
   } else {
     dtFields.push(['Base Rent (per RSF/yr)', n(terms.base_rent_rsf), 'curr_dec', 'input']);
+    if (n(terms.base_rent_rsf) > 0) dtFields.push(['Base Rent/SF/mo', n(terms.base_rent_rsf) / 12, 'curr_dec', 'readonly']);
   }
 
   dtFields.push(['Annual Escalation', n(terms.annual_escalation_pct) / 100, 'pct', 'input']);
@@ -18318,6 +18330,7 @@ function rfpExportExcel() {
     ['TI Allowance (Total)', n(terms.ti_allowance_total), 'curr', 'formula'],
     ['OpEx/Tax/CAM (per RSF/yr)', n(terms.opex_rsf_yr), 'curr_dec', 'input'],
     ['OpEx (Monthly)', n(terms.opex_monthly), 'curr', 'input'],
+    ['OpEx/SF/mo', (n(terms.opex_monthly) > 0 && n(terms.rsf) > 0) ? n(terms.opex_monthly) / n(terms.rsf) : 0, 'curr_dec', 'readonly'],
     ['Parking Spots', n(terms.parking_spots), 'num', 'input'],
     ['Parking Rate (per mo)', n(terms.parking_rate_monthly), 'curr', 'input'],
     ['Parking Escalation', n(terms.parking_escalation_pct) / 100, 'pct', 'input'],
