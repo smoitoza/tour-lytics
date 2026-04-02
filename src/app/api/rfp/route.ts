@@ -66,6 +66,7 @@ export async function POST(req: Request) {
     rsf: rawTerms.rsf ?? rawTerms.RSF ?? 0,
     lease_term_months: rawTerms.lease_term_months ?? rawTerms.leaseTerm ?? 0,
     commencement_date: rawTerms.commencement_date ?? rawTerms.commencementDate ?? '',
+    lease_end_date: rawTerms.lease_end_date ?? rawTerms.leaseEndDate ?? '',
     base_rent_rsf: rawTerms.base_rent_rsf ?? rawTerms.baseRent ?? 0,
     annual_escalation_pct: rawTerms.annual_escalation_pct ?? rawTerms.annualEscalation ?? 0,
     free_rent_months: rawTerms.free_rent_months ?? rawTerms.freeRent ?? 0,
@@ -219,6 +220,7 @@ interface DealTerms {
   rsf?: number
   lease_term_months?: number
   commencement_date?: string
+  lease_end_date?: string
   base_rent_rsf?: number
   annual_escalation_pct?: number
   free_rent_months?: number
@@ -297,7 +299,22 @@ function generateFinancialAnalysis(terms: DealTerms) {
   const parkingSpots = terms.parking_spots || 0
   const parkingRate = terms.parking_rate_monthly || 0
   const parkingEsc = (terms.parking_escalation_pct || 0) / 100
-  const commDate = terms.commencement_date ? new Date(terms.commencement_date) : new Date()
+  const commDate = terms.commencement_date ? new Date(terms.commencement_date + 'T00:00:00') : new Date()
+  const leaseEndDate = terms.lease_end_date ? new Date(terms.lease_end_date + 'T00:00:00') : null
+
+  // Proration: compute fraction of first and last month
+  // Month 1 proration: remaining days in the commencement month / total days in that month
+  const commDay = commDate.getDate()
+  const commMonthDays = new Date(commDate.getFullYear(), commDate.getMonth() + 1, 0).getDate()
+  const firstMonthProration = commDay === 1 ? 1.0 : (commMonthDays - commDay + 1) / commMonthDays
+
+  // Last month proration: if lease_end_date is set, days used in final month / total days
+  let lastMonthProration = 1.0
+  if (leaseEndDate) {
+    const endDay = leaseEndDate.getDate()
+    const endMonthDays = new Date(leaseEndDate.getFullYear(), leaseEndDate.getMonth() + 1, 0).getDate()
+    lastMonthProration = endDay === endMonthDays ? 1.0 : endDay / endMonthDays
+  }
 
   // ===== 1. MONTHLY CASH FLOW =====
   const monthly: any[] = []
@@ -312,6 +329,9 @@ function generateFinancialAnalysis(terms: DealTerms) {
     const monthDate = new Date(commDate)
     monthDate.setMonth(monthDate.getMonth() + m - 1)
     const period = monthDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+
+    // Proration factor: partial month for first and/or last month
+    const proration = (m === 1 ? firstMonthProration : 1.0) * (m === termMonths ? lastMonthProration : 1.0)
 
     let currentRentRSF: number
     let monthlyBaseRent: number
@@ -346,14 +366,17 @@ function generateFinancialAnalysis(terms: DealTerms) {
         freeRentCredit = monthlyBaseRent * (freeMonths % 1) // partial free month
       }
     }
+    // Apply proration to partial months (first/last month of lease)
+    monthlyBaseRent = monthlyBaseRent * proration
+    freeRentCredit = freeRentCredit * proration
     const netCashRent = monthlyBaseRent - freeRentCredit
 
-    // OpEx (constant, user-defined)
-    const opex = opexMonthly
+    // OpEx (constant, user-defined) - prorated for partial months
+    const opex = opexMonthly * proration
 
-    // Parking with escalation (starts year 2 typically)
+    // Parking with escalation (starts year 2 typically) - prorated for partial months
     const parkYearMultiplier = m <= 12 ? 1 : Math.pow(1 + parkingEsc, leaseYear - 1)
-    const monthlyParking = parkingSpots * parkingRate * parkYearMultiplier
+    const monthlyParking = parkingSpots * parkingRate * parkYearMultiplier * proration
 
     // Total monthly cost
     const totalMonthlyCost = netCashRent + opex + monthlyParking
