@@ -15378,6 +15378,26 @@ function rfpShowUploadModal() {
     optionsHtml += '</optgroup>';
   }
 
+  // Previously submitted custom addresses (not in survey or deal buildings)
+  var submittedAddresses = [];
+  var knownAddresses = {};
+  dealBuildings.forEach(function(b) { knownAddresses[(b.address || b.name || '').toLowerCase()] = true; });
+  surveyBuildings.forEach(function(b) { knownAddresses[(b.address || '').toLowerCase()] = true; });
+  (window._rfpState.submissions || []).forEach(function(s) {
+    var addr = s.building_address || '';
+    if (addr && !knownAddresses[addr.toLowerCase()]) {
+      knownAddresses[addr.toLowerCase()] = true;
+      submittedAddresses.push(addr);
+    }
+  });
+  if (submittedAddresses.length > 0) {
+    optionsHtml += '<optgroup label="Previously Added">';
+    submittedAddresses.forEach(function(addr) {
+      optionsHtml += '<option value="prev-' + addr + '" data-address="' + addr + '">' + addr + '</option>';
+    });
+    optionsHtml += '</optgroup>';
+  }
+
   // Custom address option
   optionsHtml += '<optgroup label="Other">';
   optionsHtml += '<option value="custom">+ Add custom address</option>';
@@ -15652,6 +15672,10 @@ function rfpSubmitUpload() {
     if (!customAddr) { alert('Please enter an address.'); return; }
     buildingNum = 9000 + Math.floor(Math.random() * 1000); // Use 9000+ range for custom addresses
     address = customAddr;
+  } else if (rawVal.startsWith('prev-')) {
+    // Previously submitted custom address
+    address = rawVal.substring(5); // strip 'prev-' prefix
+    buildingNum = 9000 + Math.floor(Math.random() * 1000);
   } else {
     // Parse building value: "deal-1" or "survey-5"
     var parts = rawVal.split('-');
@@ -21705,6 +21729,24 @@ function renderOfficeMarkers() {
   // Set window._hqMarker for legend compatibility
   if (_officeMarkers.length > 0) window._hqMarker = true;
   else window._hqMarker = null;
+
+  // Re-fit map bounds to include office markers alongside any survey/deal markers
+  if (_officeMarkers.length > 0 && typeof map !== 'undefined') {
+    var allLayers = [];
+    _officeMarkers.forEach(function(om) { allLayers.push(om.marker); });
+    // Include survey markers if they exist
+    if (typeof surveyMarkers !== 'undefined' && surveyMarkers.length > 0) {
+      surveyMarkers.forEach(function(m) { allLayers.push(m); });
+    }
+    // Include deal/shortlist markers
+    if (typeof markers !== 'undefined' && markers.length > 0) {
+      markers.forEach(function(m) { allLayers.push(m); });
+    }
+    if (allLayers.length > 0) {
+      var group = L.featureGroup(allLayers);
+      map.fitBounds(group.getBounds().pad(0.15));
+    }
+  }
 }
 
 function renderOfficesList() {
