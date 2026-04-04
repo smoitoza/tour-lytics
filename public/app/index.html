@@ -18877,24 +18877,30 @@ function rfpExportExcel() {
 
     // Total Occupancy Cost
     smRow++;
-    var tocSlRent = exportSlMonthlyRent;
-    var tocOpexMo = dtOpexMonthly;
-    var tocParkMo = dtParkingTotal;
+    var tocSummary = (selected.analysis && selected.analysis.summary) || {};
+    var tocCfTotals = (selected.analysis && selected.analysis.cash_flow && selected.analysis.cash_flow.totals) || {};
+    var tocTermMo = tocSummary.termMonths || 1;
+    var tocRSF = tocSummary.rsf || 0;
+    var tocSlRent = tocSummary.straightLineMonthlyRent || 0;
+    var tocOpexMo = (tocCfTotals.totalOpex || 0) / tocTermMo;
+    var tocParkMo = (tocCfTotals.totalParking || 0) / tocTermMo;
     var tocLHIMo = exportCapex.hasCapex ? exportCapex.monthlyDepreciation : 0;
     var tocBrkMo = exportBrokerFee.hasBrokerFee ? exportBrokerFee.slMonthlyImpact : 0;
     var tocTotalMo = tocSlRent + tocOpexMo + tocParkMo + tocLHIMo + tocBrkMo + exIntTotal;
     setCell(slWS, smRow, 0, 'Total Occupancy Cost', Object.assign({}, sectionStyle));
     for (var tocc = 1; tocc < slCols; tocc++) setCell(slWS, smRow, tocc, '', sectionStyle);
     smRow++;
-    setCell(slWS, smRow, 0, 'Total Occupancy Cost (monthly)', Object.assign({}, metricLabelStyle, { font: { name: 'Calibri', sz: 11, bold: true } }));
-    setCell(slWS, smRow, 1, Math.round(tocTotalMo), Object.assign({}, formulaStyle, { font: { name: 'Calibri', sz: 11, bold: true } }));
+    var boldMetricLabel = Object.assign({}, metricLabelStyle, { font: { name: 'Calibri', sz: 11, bold: true } });
+    var boldMetricVal = Object.assign({}, formulaStyle, { font: { name: 'Calibri', sz: 11, bold: true } });
+    setCell(slWS, smRow, 0, 'Total Occupancy Cost (monthly)', boldMetricLabel);
+    setCell(slWS, smRow, 1, Math.round(tocTotalMo), boldMetricVal);
     smRow++;
-    setCell(slWS, smRow, 0, 'Total Occupancy Cost (annual)', Object.assign({}, metricLabelStyle, { font: { name: 'Calibri', sz: 11, bold: true } }));
-    setCell(slWS, smRow, 1, Math.round(tocTotalMo * 12), Object.assign({}, formulaStyle, { font: { name: 'Calibri', sz: 11, bold: true } }));
-    if (exportRSF > 0) {
+    setCell(slWS, smRow, 0, 'Total Occupancy Cost (annual)', boldMetricLabel);
+    setCell(slWS, smRow, 1, Math.round(tocTotalMo * 12), boldMetricVal);
+    if (tocRSF > 0) {
       smRow++;
-      setCell(slWS, smRow, 0, 'Total Occupancy Cost (per RSF/yr)', Object.assign({}, metricLabelStyle, { font: { name: 'Calibri', sz: 11, bold: true } }));
-      setCell(slWS, smRow, 1, Math.round(tocTotalMo * 12 / exportRSF * 100) / 100, Object.assign({}, { numFmt: getCurrencyExcelFmtDec() }, { font: { name: 'Calibri', sz: 11, bold: true } }));
+      setCell(slWS, smRow, 0, 'Total Occupancy Cost (per RSF/yr)', boldMetricLabel);
+      setCell(slWS, smRow, 1, Math.round(tocTotalMo * 12 / tocRSF * 100) / 100, Object.assign({}, { numFmt: getCurrencyExcelFmtDec() }, { font: { name: 'Calibri', sz: 11, bold: true } }));
     }
     smRow++;
 
