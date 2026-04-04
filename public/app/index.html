@@ -17480,6 +17480,10 @@ function rfpShowVersionComparison(buildingAddress) {
     { key: 'totalConcessions', label: 'Total Concessions', fmt: 'currency', fromSummary: true },
     { key: 'npv', label: 'NPV @ 8%', fmt: 'currency', computed: 'npv' },
     { key: 'npvPerRSF', label: 'NPV per RSF', fmt: 'currency', computed: 'npvPerRSF' },
+    { key: 'intFB', label: 'F&B (monthly)', fmt: 'currency', computed: 'intFB' },
+    { key: 'intWPE', label: 'Workplace Experience (monthly)', fmt: 'currency', computed: 'intWPE' },
+    { key: 'intMaint', label: 'Maintenance & Security (monthly)', fmt: 'currency', computed: 'intMaint' },
+    { key: 'intTotal', label: 'Total Internal OpEx (monthly)', fmt: 'currency', computed: 'intTotal' },
     { key: 'capexTotal', label: 'Total CAPEX', fmt: 'currency', computed: 'capexTotal' },
     { key: 'capexPerRSF', label: 'CAPEX per RSF', fmt: 'currency', computed: 'capexPerRSF' },
     { key: 'lhiMonthlyDep', label: 'Monthly LHI Dep.', fmt: 'currency', computed: 'lhiMonthlyDep' },
@@ -17492,6 +17496,22 @@ function rfpShowVersionComparison(buildingAddress) {
     if (field.computed === 'totalBaseRent') {
       var cfTotals = (sub.analysis && sub.analysis.cash_flow && sub.analysis.cash_flow.totals) ? sub.analysis.cash_flow.totals : {};
       return cfTotals.totalBaseRent || 0;
+    }
+    // Internal OpEx computed fields
+    if (field.computed === 'intFB' || field.computed === 'intWPE' || field.computed === 'intMaint' || field.computed === 'intTotal') {
+      var aKey = getAssumptionsKey(buildingAddress, '');
+      var aData = window._rfpState.assumptionsMap[aKey] || window._rfpState.assumptionsMap[buildingAddress] || {};
+      if (field.computed === 'intFB') return parseFloat(aData.opex_food_beverage) || 0;
+      if (field.computed === 'intWPE') return parseFloat(aData.opex_workplace_experience) || 0;
+      if (field.computed === 'intMaint') return parseFloat(aData.opex_maintenance_security) || 0;
+      if (field.computed === 'intTotal') {
+        var cItems = aData.opex_custom_items || [];
+        if (typeof cItems === 'string') { try { cItems = JSON.parse(cItems); } catch(e) { cItems = []; } }
+        var cTotal = 0;
+        if (Array.isArray(cItems)) cItems.forEach(function(ci) { cTotal += parseFloat(ci.amount) || 0; });
+        return (parseFloat(aData.opex_food_beverage) || 0) + (parseFloat(aData.opex_workplace_experience) || 0) + (parseFloat(aData.opex_maintenance_security) || 0) + cTotal;
+      }
+      return 0;
     }
     // Per SF / Monthly computed fields
     if (field.computed === 'rentPerSFMo' || field.computed === 'opexPerSFMo' || field.computed === 'fsgPerSFMo') {
@@ -17980,7 +18000,21 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
   var parkingMonthly_sl = (cfTotals_sl.totalParking || 0) / termMo_sl;
   var slMonthlyAllIn = slMonthlyRent + opexMonthly_sl + parkingMonthly_sl;
   var brokerMonthlyImpact = slBrokerFee.hasBrokerFee ? slBrokerFee.slMonthlyImpact : 0;
-  var slMonthlyWithLHI = slMonthlyAllIn + (capex.hasCapex ? capex.monthlyDepreciation : 0) + brokerMonthlyImpact;
+
+  // Internal assumptions (F&B, Workplace Experience, Maintenance, custom items)
+  var assumKey_sl = getAssumptionsKey(buildingAddr, componentLabel);
+  var assum_sl = window._rfpState.assumptionsMap[assumKey_sl] || window._rfpState.assumptionsMap[buildingAddr] || {};
+  var intFB = parseFloat(assum_sl.opex_food_beverage) || 0;
+  var intWPE = parseFloat(assum_sl.opex_workplace_experience) || 0;
+  var intMaint = parseFloat(assum_sl.opex_maintenance_security) || 0;
+  var intCustomItems = assum_sl.opex_custom_items || [];
+  if (typeof intCustomItems === 'string') { try { intCustomItems = JSON.parse(intCustomItems); } catch(e) { intCustomItems = []; } }
+  var intCustomTotal = 0;
+  if (Array.isArray(intCustomItems)) intCustomItems.forEach(function(ci) { intCustomTotal += parseFloat(ci.amount) || 0; });
+  var intTotalMonthly = intFB + intWPE + intMaint + intCustomTotal;
+  var hasInternalOpex = intTotalMonthly > 0;
+
+  var slMonthlyWithLHI = slMonthlyAllIn + (capex.hasCapex ? capex.monthlyDepreciation : 0) + brokerMonthlyImpact + intTotalMonthly;
   var slAnnualWithLHI = slMonthlyWithLHI * 12;
   var rsf_sl = (analysis.summary && analysis.summary.rsf) ? analysis.summary.rsf : 0;
   var slPerRSFWithLHI = rsf_sl > 0 ? Math.round(slAnnualWithLHI / rsf_sl * 100) / 100 : 0;
@@ -18036,6 +18070,18 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
     var bfLabel = slBrokerFee.type === 'credit' ? 'Broker Credit' : 'Broker Fee';
     var bfDesc = rfpFmtCurrencyPlain(slBrokerFee.amount) + ' amortized over lease term';
     slBuildRow(bfLabel, slBrokerFee.slMonthlyImpact, 'color:#b45309;', bfDesc);
+  }
+
+  // Internal OpEx (from Assumptions)
+  if (hasInternalOpex) {
+    html += '<tr><td colspan="' + (rsf_sl > 0 ? 4 : 3) + '" style="padding:8px 0 4px;font-weight:600;font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);border-top:1px solid var(--color-divider);">Internal Operating Costs</td></tr>';
+    if (intFB > 0) slBuildRow('Food & Beverage', intFB, 'color:#0369a1;', '');
+    if (intWPE > 0) slBuildRow('Workplace Experience', intWPE, 'color:#0369a1;', '');
+    if (intMaint > 0) slBuildRow('Maintenance & Security', intMaint, 'color:#0369a1;', '');
+    if (Array.isArray(intCustomItems)) intCustomItems.forEach(function(ci) {
+      var ciAmt = parseFloat(ci.amount) || 0;
+      if (ciAmt > 0) slBuildRow(ci.label || 'Custom', ciAmt, 'color:#0369a1;', '');
+    });
   }
 
   // Total row
