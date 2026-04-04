@@ -17487,8 +17487,8 @@ function rfpShowVersionComparison(buildingAddress) {
     { key: 'capexTotal', label: 'Total CAPEX', fmt: 'currency', computed: 'capexTotal' },
     { key: 'capexPerRSF', label: 'CAPEX per RSF', fmt: 'currency', computed: 'capexPerRSF' },
     { key: 'lhiMonthlyDep', label: 'Monthly LHI Dep.', fmt: 'currency', computed: 'lhiMonthlyDep' },
-    { key: 'slMonthlyWithLHI', label: 'SL Monthly All-in + LHI', fmt: 'currency', computed: 'slMonthlyWithLHI' },
-    { key: 'totalAllInWithCapex', label: 'Total All-in + CAPEX', fmt: 'currency', computed: 'totalAllInWithCapex' },
+    { key: 'totalOccupancyCost', label: 'Total Occupancy Cost (monthly)', fmt: 'currency', computed: 'totalOccupancyCost' },
+    { key: 'totalOccupancyCostAnnual', label: 'Total Occupancy Cost (annual)', fmt: 'currency', computed: 'totalOccupancyCostAnnual' },
   ];
 
   function getTermVal(sub, field) {
@@ -17525,8 +17525,35 @@ function rfpShowVersionComparison(buildingAddress) {
       if (field.computed === 'fsgPerSFMo') return Math.round(((cf2.totalBaseRent || 0) + (cf2.totalOpex || 0)) / termMo2 / rsf2 * 100) / 100;
       return 0;
     }
+    // Total Occupancy Cost (rent + OpEx + parking + LHI + broker + internal)
+    if (field.computed === 'totalOccupancyCost' || field.computed === 'totalOccupancyCostAnnual') {
+      var tocSm = (sub.analysis && sub.analysis.summary) || {};
+      var tocCf = (sub.analysis && sub.analysis.cash_flow && sub.analysis.cash_flow.totals) || {};
+      var tocTermMo = tocSm.termMonths || 1;
+      var tocSlRent = tocSm.straightLineMonthlyRent || 0;
+      var tocOpex = (tocCf.totalOpex || 0) / tocTermMo;
+      var tocPark = (tocCf.totalParking || 0) / tocTermMo;
+      var tocCapex = getCapexForBuilding(buildingAddress, tocTermMo);
+      var tocBroker = getBrokerFeeForBuilding(buildingAddress, tocTermMo);
+      var tocLHI = (tocCapex && tocCapex.hasCapex) ? (tocCapex.monthlyDepreciation || 0) : 0;
+      var tocBF = (tocBroker && tocBroker.hasBrokerFee) ? (tocBroker.slMonthlyImpact || 0) : 0;
+      // Internal OpEx
+      var tocAKey = getAssumptionsKey(buildingAddress, '');
+      var tocAData = window._rfpState.assumptionsMap[tocAKey] || window._rfpState.assumptionsMap[buildingAddress] || {};
+      var tocIntFB = parseFloat(tocAData.opex_food_beverage) || 0;
+      var tocIntWPE = parseFloat(tocAData.opex_workplace_experience) || 0;
+      var tocIntMaint = parseFloat(tocAData.opex_maintenance_security) || 0;
+      var tocIntCustom = tocAData.opex_custom_items || [];
+      if (typeof tocIntCustom === 'string') { try { tocIntCustom = JSON.parse(tocIntCustom); } catch(e) { tocIntCustom = []; } }
+      var tocIntCTotal = 0;
+      if (Array.isArray(tocIntCustom)) tocIntCustom.forEach(function(ci) { tocIntCTotal += parseFloat(ci.amount) || 0; });
+      var tocIntTotal = tocIntFB + tocIntWPE + tocIntMaint + tocIntCTotal;
+      var tocMonthly = tocSlRent + tocOpex + tocPark + tocLHI + tocBF + tocIntTotal;
+      if (field.computed === 'totalOccupancyCost') return Math.round(tocMonthly);
+      return Math.round(tocMonthly * 12);
+    }
     // CAPEX computed fields
-    if (field.computed && field.computed.indexOf('capex') === 0 || field.computed === 'lhiMonthlyDep' || field.computed === 'slMonthlyWithLHI' || field.computed === 'totalAllInWithCapex') {
+    if (field.computed && field.computed.indexOf('capex') === 0 || field.computed === 'lhiMonthlyDep') {
       var termMo = (sub.analysis && sub.analysis.summary) ? (sub.analysis.summary.termMonths || 0) : 0;
       var cx = getCapexForBuilding(buildingAddress, termMo);
       if (!cx.hasCapex) return 0;
