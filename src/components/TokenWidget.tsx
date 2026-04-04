@@ -21,12 +21,22 @@ export default function TokenWidget() {
       if (!user) { setLoading(false); return }
       try {
         const res = await fetch(`/api/tokens?userId=${user.id}&view=balance`)
+        const json = await res.json()
         if (res.ok) {
-          const json = await res.json()
-          setData(json)
+          setData({
+            balance: json.balance ?? 0,
+            total_purchased: json.total_purchased ?? 0,
+            total_consumed: json.total_consumed ?? 0,
+            project_breakdown: json.project_breakdown ?? [],
+          })
+        } else {
+          console.warn('TokenWidget API error:', json)
+          // Show widget with zeros rather than hiding it
+          setData({ balance: 0, total_purchased: 0, total_consumed: 0, project_breakdown: [] })
         }
-      } catch {
-        /* silently ignore */
+      } catch (err) {
+        console.warn('TokenWidget fetch error:', err)
+        setData({ balance: 0, total_purchased: 0, total_consumed: 0, project_breakdown: [] })
       }
       setLoading(false)
     })
