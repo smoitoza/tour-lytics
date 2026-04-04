@@ -1,26 +1,45 @@
 -- =============================================================
--- Migration: Per-User Token Billing Model
--- Target: DEV Supabase instance (lpewsfzwjnlnqnludvwt) ONLY
--- DO NOT run on production or staging
+-- Migration: Per-User Token Billing Model (FINAL)
+-- Written against actual schema as of April 4, 2026
+-- Target: DEV Supabase (lpewsfzwjnlnqnludvwt) ONLY
+-- =============================================================
+--
+-- Current state (confirmed):
+--   token_balances: id, project_id (text, NOT NULL, UNIQUE),
+--     balance, total_purchased, total_consumed,
+--     low_balance_threshold, created_at, updated_at
+--   token_transactions: id, project_id (text, NOT NULL),
+--     action_type, amount, balance_after, user_email,
+--     reference_id, metadata, note, created_at
+--   Neither table has user_id yet.
 -- =============================================================
 
--- 1. Add user_id column to token_balances
--- --------------------------------------------------------
+BEGIN;
+
+-- 1. Add user_id to both tables
 ALTER TABLE token_balances
-  ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
+  ADD COLUMN user_id UUID REFERENCES auth.users(id);
 
--- 2. Add user_id column to token_transactions
--- --------------------------------------------------------
 ALTER TABLE token_transactions
-  ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
+  ADD COLUMN user_id UUID REFERENCES auth.users(id);
 
--- 3. Migrate existing project-level balances to user-level
--- --------------------------------------------------------
--- For each user, aggregate their project-level balances into a single user-level row.
--- We derive the user from project ownership (projects.owner_id -> auth.users.email -> auth.users.id).
--- If a user owns multiple projects, their balances are summed.
+-- 2. Make project_id nullable on both tables
+ALTER TABLE token_balances ALTER COLUMN project_id DROP NOT NULL;
+ALTER TABLE token_transactions ALTER COLUMN project_id DROP NOT NULL;
 
--- First, backfill user_id on existing token_balances rows using project ownership
+-- 3. Create indexes (before consolidation so ON CONFLICT works)
+CREATE UNIQUE INDEX idx_token_balances_user_level
+  ON token_balances (user_id)
+  WHERE project_id IS NULL;
+
+CREATE INDEX idx_token_balances_user_lookup
+  ON token_balances (user_id)
+  WHERE user_id IS NOT NULL;
+
+CREATE INDEX idx_token_transactions_user_id
+  ON token_transactions (user_id);
+
+-- 4. Backfill user_id on existing rows
 UPDATE token_balances tb
 SET user_id = u.id
 FROM projects p
@@ -28,7 +47,6 @@ JOIN auth.users u ON u.email = p.owner_id
 WHERE tb.project_id = p.id
   AND tb.user_id IS NULL;
 
--- Backfill user_id on existing token_transactions using the same mapping
 UPDATE token_transactions tt
 SET user_id = u.id
 FROM projects p
@@ -36,15 +54,14 @@ JOIN auth.users u ON u.email = p.owner_id
 WHERE tt.project_id = p.id
   AND tt.user_id IS NULL;
 
--- Now consolidate: for users who own multiple projects, create one user-level balance row
--- by aggregating all their project-level balances
+-- 5. Consolidate project balances into one user-level row per user
 INSERT INTO token_balances (user_id, balance, total_purchased, total_consumed, low_balance_threshold)
 SELECT
   user_id,
   SUM(balance),
   SUM(total_purchased),
   SUM(total_consumed),
-  10  -- default low-balance threshold
+  10
 FROM token_balances
 WHERE user_id IS NOT NULL
   AND project_id IS NOT NULL
@@ -55,42 +72,31 @@ DO UPDATE SET
   total_purchased = EXCLUDED.total_purchased,
   total_consumed = EXCLUDED.total_consumed;
 
--- 4. Add unique constraint for user-level balances (one row per user, project_id IS NULL)
--- --------------------------------------------------------
--- Make project_id nullable (it may already be, but ensure it)
-ALTER TABLE token_balances ALTER COLUMN project_id DROP NOT NULL;
-
--- Unique partial index: one user-level balance row per user
-CREATE UNIQUE INDEX IF NOT EXISTS idx_token_balances_user_id
-  ON token_balances (user_id)
-  WHERE project_id IS NULL;
-
--- Index for looking up user balances quickly
-CREATE INDEX IF NOT EXISTS idx_token_balances_user_lookup
-  ON token_balances (user_id)
-  WHERE user_id IS NOT NULL;
-
--- Index for looking up user transactions
-CREATE INDEX IF NOT EXISTS idx_token_transactions_user_id
-  ON token_transactions (user_id);
-
--- 5. Update the token_usage_summary view
--- --------------------------------------------------------
--- Supports both user-level (filter by user_id) and project-level (filter by project_id) queries
-CREATE OR REPLACE VIEW token_usage_summary AS
+-- 6. Drop and recreate token_usage_summary view (columns changed)
+DROP VIEW IF EXISTS token_usage_summary;
+CREATE VIEW token_usage_summary AS
 SELECT
-  user_id,
-  project_id,
-  action_type,
-  COUNT(*)::int AS usage_count,
-  SUM(token_cost)::int AS total_tokens,
-  MIN(created_at) AS first_used,
-  MAX(created_at) AS last_used
-FROM token_transactions
-GROUP BY user_id, project_id, action_type;
+  t.user_id,
+  t.project_id,
+  t.action_type,
+  p.display_name,
+  p.category,
+  COUNT(*) AS total_actions,
+  SUM(ABS(t.amount)) AS total_tokens,
+  MIN(t.created_at) AS first_used,
+  MAX(t.created_at) AS last_used,
+  COUNT(*) FILTER (WHERE t.created_at >= now() - interval '1 day') AS actions_today,
+  COUNT(*) FILTER (WHERE t.created_at >= now() - interval '7 days') AS actions_7d,
+  COUNT(*) FILTER (WHERE t.created_at >= now() - interval '30 days') AS actions_30d,
+  SUM(ABS(t.amount)) FILTER (WHERE t.created_at >= now() - interval '30 days') AS tokens_30d
+FROM token_transactions t
+JOIN token_pricing p ON p.action_type = t.action_type
+WHERE t.amount < 0
+GROUP BY t.user_id, t.project_id, t.action_type, p.display_name, p.category;
 
--- 6. Update debit_tokens RPC to work with user-level balances
--- --------------------------------------------------------
+GRANT SELECT ON token_usage_summary TO anon, authenticated;
+
+-- 7. Replace debit_tokens RPC
 CREATE OR REPLACE FUNCTION debit_tokens(
   p_project_id TEXT,
   p_action_type TEXT,
@@ -105,96 +111,95 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-  v_cost INT;
-  v_balance INT;
-  v_new_balance INT;
+  v_cost INTEGER;
+  v_balance INTEGER;
+  v_new_balance INTEGER;
   v_tx_id UUID;
+  v_display_name TEXT;
   v_resolved_user_id UUID;
 BEGIN
-  -- Resolve user_id: use provided, or look up from email, or from project owner
   v_resolved_user_id := p_user_id;
 
   IF v_resolved_user_id IS NULL AND p_user_email IS NOT NULL THEN
-    SELECT id INTO v_resolved_user_id
-    FROM auth.users
-    WHERE email = p_user_email;
+    SELECT id INTO v_resolved_user_id FROM auth.users WHERE email = p_user_email;
   END IF;
 
   IF v_resolved_user_id IS NULL AND p_project_id IS NOT NULL THEN
     SELECT u.id INTO v_resolved_user_id
-    FROM projects p
-    JOIN auth.users u ON u.email = p.owner_id
+    FROM projects p JOIN auth.users u ON u.email = p.owner_id
     WHERE p.id = p_project_id;
   END IF;
 
-  -- Look up the cost of this action
-  SELECT token_cost INTO v_cost
-  FROM token_pricing
-  WHERE action_type = p_action_type AND is_active = true;
+  SELECT token_cost, display_name INTO v_cost, v_display_name
+  FROM token_pricing WHERE action_type = p_action_type AND is_active = true;
 
   IF v_cost IS NULL THEN
-    RAISE EXCEPTION 'Unknown action type: %', p_action_type;
+    RAISE EXCEPTION 'Unknown or inactive action type: %', p_action_type;
   END IF;
 
-  -- Get user-level balance (row where project_id IS NULL)
+  -- Free actions
+  IF v_cost = 0 THEN
+    INSERT INTO token_transactions (project_id, user_id, action_type, amount, balance_after, user_email, reference_id, metadata, note)
+    SELECT p_project_id, v_resolved_user_id, p_action_type, 0,
+           COALESCE(
+             (SELECT balance FROM token_balances WHERE user_id = v_resolved_user_id AND project_id IS NULL),
+             (SELECT balance FROM token_balances WHERE project_id = p_project_id), 0
+           ),
+           p_user_email, p_reference_id, p_metadata, COALESCE(p_note, v_display_name)
+    RETURNING id INTO v_tx_id;
+
+    RETURN jsonb_build_object('success', true, 'transaction_id', v_tx_id, 'cost', 0, 'balance_after',
+      COALESCE(
+        (SELECT balance FROM token_balances WHERE user_id = v_resolved_user_id AND project_id IS NULL),
+        (SELECT balance FROM token_balances WHERE project_id = p_project_id), 0
+      ));
+  END IF;
+
+  -- Try user-level balance first
   IF v_resolved_user_id IS NOT NULL THEN
-    SELECT balance INTO v_balance
-    FROM token_balances
-    WHERE user_id = v_resolved_user_id AND project_id IS NULL
-    FOR UPDATE;
-  ELSE
-    -- Fallback to project-level balance for backward compatibility
-    SELECT balance INTO v_balance
-    FROM token_balances
-    WHERE project_id = p_project_id AND user_id IS NULL
-    FOR UPDATE;
+    SELECT balance INTO v_balance FROM token_balances
+    WHERE user_id = v_resolved_user_id AND project_id IS NULL FOR UPDATE;
   END IF;
 
-  IF v_balance IS NULL OR v_balance < v_cost THEN
-    RAISE EXCEPTION 'Insufficient token balance (have: %, need: %)', COALESCE(v_balance, 0), v_cost;
+  -- Fallback to project-level
+  IF v_balance IS NULL THEN
+    SELECT balance INTO v_balance FROM token_balances
+    WHERE project_id = p_project_id AND user_id IS NULL FOR UPDATE;
   END IF;
 
-  -- Deduct from user-level balance
+  IF v_balance IS NULL THEN
+    RAISE EXCEPTION 'No token balance found for user or project: %', COALESCE(p_project_id, 'unknown');
+  END IF;
+
+  IF v_balance < v_cost THEN
+    RAISE EXCEPTION 'Insufficient token balance. Required: %, Available: %', v_cost, v_balance;
+  END IF;
+
   v_new_balance := v_balance - v_cost;
 
-  IF v_resolved_user_id IS NOT NULL THEN
-    UPDATE token_balances
-    SET balance = v_new_balance,
-        total_consumed = total_consumed + v_cost,
-        updated_at = NOW()
+  IF v_resolved_user_id IS NOT NULL AND EXISTS (
+    SELECT 1 FROM token_balances WHERE user_id = v_resolved_user_id AND project_id IS NULL
+  ) THEN
+    UPDATE token_balances SET balance = v_new_balance, total_consumed = total_consumed + v_cost, updated_at = now()
     WHERE user_id = v_resolved_user_id AND project_id IS NULL;
   ELSE
-    UPDATE token_balances
-    SET balance = v_new_balance,
-        total_consumed = total_consumed + v_cost,
-        updated_at = NOW()
+    UPDATE token_balances SET balance = v_new_balance, total_consumed = total_consumed + v_cost, updated_at = now()
     WHERE project_id = p_project_id AND user_id IS NULL;
   END IF;
 
-  -- Record the transaction with both user_id and project_id
-  INSERT INTO token_transactions (
-    project_id, user_id, action_type, token_cost,
-    balance_after, user_email, reference_id, metadata, note
-  ) VALUES (
-    p_project_id, v_resolved_user_id, p_action_type, v_cost,
-    v_new_balance, p_user_email, p_reference_id, p_metadata, p_note
-  )
+  INSERT INTO token_transactions (project_id, user_id, action_type, amount, balance_after, user_email, reference_id, metadata, note)
+  VALUES (p_project_id, v_resolved_user_id, p_action_type, -v_cost, v_new_balance, p_user_email, p_reference_id, p_metadata,
+          COALESCE(p_note, v_display_name))
   RETURNING id INTO v_tx_id;
 
-  RETURN jsonb_build_object(
-    'success', true,
-    'cost', v_cost,
-    'balance_after', v_new_balance,
-    'transaction_id', v_tx_id
-  );
+  RETURN jsonb_build_object('success', true, 'transaction_id', v_tx_id, 'cost', v_cost, 'balance_after', v_new_balance);
 END;
 $$;
 
--- 7. Update credit_tokens RPC to work with user-level balances
--- --------------------------------------------------------
+-- 8. Replace credit_tokens RPC
 CREATE OR REPLACE FUNCTION credit_tokens(
   p_project_id TEXT DEFAULT NULL,
-  p_amount INT DEFAULT 0,
+  p_amount INTEGER DEFAULT 0,
   p_user_email TEXT DEFAULT NULL,
   p_note TEXT DEFAULT 'Token purchase',
   p_user_id UUID DEFAULT NULL
@@ -204,26 +209,26 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-  v_new_balance INT;
+  v_new_balance INTEGER;
+  v_tx_id UUID;
   v_resolved_user_id UUID;
 BEGIN
-  -- Resolve user_id
+  IF p_amount <= 0 THEN
+    RAISE EXCEPTION 'Credit amount must be positive';
+  END IF;
+
   v_resolved_user_id := p_user_id;
 
   IF v_resolved_user_id IS NULL AND p_user_email IS NOT NULL THEN
-    SELECT id INTO v_resolved_user_id
-    FROM auth.users
-    WHERE email = p_user_email;
+    SELECT id INTO v_resolved_user_id FROM auth.users WHERE email = p_user_email;
   END IF;
 
   IF v_resolved_user_id IS NULL AND p_project_id IS NOT NULL THEN
     SELECT u.id INTO v_resolved_user_id
-    FROM projects p
-    JOIN auth.users u ON u.email = p.owner_id
+    FROM projects p JOIN auth.users u ON u.email = p.owner_id
     WHERE p.id = p_project_id;
   END IF;
 
-  -- Credit user-level balance
   IF v_resolved_user_id IS NOT NULL THEN
     INSERT INTO token_balances (user_id, project_id, balance, total_purchased, total_consumed, low_balance_threshold)
     VALUES (v_resolved_user_id, NULL, p_amount, p_amount, 0, 10)
@@ -231,43 +236,31 @@ BEGIN
     DO UPDATE SET
       balance = token_balances.balance + p_amount,
       total_purchased = token_balances.total_purchased + p_amount,
-      updated_at = NOW();
+      updated_at = now();
 
-    SELECT balance INTO v_new_balance
-    FROM token_balances
+    SELECT balance INTO v_new_balance FROM token_balances
     WHERE user_id = v_resolved_user_id AND project_id IS NULL;
   ELSE
-    -- Fallback: credit by project_id for backward compatibility
-    UPDATE token_balances
-    SET balance = balance + p_amount,
-        total_purchased = total_purchased + p_amount,
-        updated_at = NOW()
-    WHERE project_id = p_project_id;
+    INSERT INTO token_balances (project_id, balance, total_purchased)
+    VALUES (p_project_id, p_amount, p_amount)
+    ON CONFLICT (project_id)
+    DO UPDATE SET
+      balance = token_balances.balance + p_amount,
+      total_purchased = token_balances.total_purchased + p_amount,
+      updated_at = now();
 
-    SELECT balance INTO v_new_balance
-    FROM token_balances
-    WHERE project_id = p_project_id;
+    SELECT balance INTO v_new_balance FROM token_balances WHERE project_id = p_project_id;
   END IF;
 
-  -- Record the credit transaction
-  INSERT INTO token_transactions (
-    project_id, user_id, action_type, token_cost,
-    balance_after, user_email, note
-  ) VALUES (
-    p_project_id, v_resolved_user_id, 'credit', p_amount,
-    v_new_balance, p_user_email, p_note
-  );
+  INSERT INTO token_transactions (project_id, user_id, action_type, amount, balance_after, user_email, note)
+  VALUES (p_project_id, v_resolved_user_id, 'purchase', p_amount, v_new_balance, p_user_email, p_note)
+  RETURNING id INTO v_tx_id;
 
-  RETURN jsonb_build_object(
-    'success', true,
-    'amount', p_amount,
-    'balance_after', v_new_balance
-  );
+  RETURN jsonb_build_object('success', true, 'transaction_id', v_tx_id, 'amount', p_amount, 'balance_after', v_new_balance);
 END;
 $$;
 
--- 8. Database trigger: seed 100 tokens for new users on signup
--- --------------------------------------------------------
+-- 9. Signup trigger: seed 100 tokens for new users
 CREATE OR REPLACE FUNCTION seed_tokens_for_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -277,22 +270,26 @@ BEGIN
   INSERT INTO token_balances (user_id, project_id, balance, total_purchased, total_consumed, low_balance_threshold)
   VALUES (NEW.id, NULL, 100, 100, 0, 10);
 
-  INSERT INTO token_transactions (user_id, project_id, action_type, token_cost, balance_after, user_email, note)
+  INSERT INTO token_transactions (user_id, project_id, action_type, amount, balance_after, user_email, note)
   VALUES (NEW.id, NULL, 'credit', 100, 100, NEW.email, 'Welcome bonus - 100 tokens');
 
   RETURN NEW;
 END;
 $$;
 
--- Drop trigger if it already exists, then create
 DROP TRIGGER IF EXISTS trg_seed_tokens_new_user ON auth.users;
 CREATE TRIGGER trg_seed_tokens_new_user
   AFTER INSERT ON auth.users
   FOR EACH ROW
   EXECUTE FUNCTION seed_tokens_for_new_user();
 
+COMMIT;
+
+-- Reload schema cache (must be outside transaction)
+NOTIFY pgrst, 'reload schema';
+
 -- ============================================================
--- DONE. Verify with:
+-- DONE. Verify:
 --   SELECT * FROM token_balances WHERE user_id IS NOT NULL AND project_id IS NULL;
 --   SELECT * FROM token_usage_summary WHERE user_id IS NOT NULL;
 -- ============================================================
