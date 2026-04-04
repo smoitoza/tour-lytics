@@ -18825,6 +18825,79 @@ function rfpExportExcel() {
       }
     }
 
+    // Internal Operating Costs (from Assumptions)
+    var exAsKey = getAssumptionsKey(address, compLabel);
+    var exAsData = window._rfpState.assumptionsMap[exAsKey] || window._rfpState.assumptionsMap[address] || {};
+    var exIntFB = parseFloat(exAsData.opex_food_beverage) || 0;
+    var exIntWPE = parseFloat(exAsData.opex_workplace_experience) || 0;
+    var exIntMaint = parseFloat(exAsData.opex_maintenance_security) || 0;
+    var exIntCustomItems = exAsData.opex_custom_items || [];
+    if (typeof exIntCustomItems === 'string') { try { exIntCustomItems = JSON.parse(exIntCustomItems); } catch(e) { exIntCustomItems = []; } }
+    var exIntCustomTotal = 0;
+    if (Array.isArray(exIntCustomItems)) exIntCustomItems.forEach(function(ci) { exIntCustomTotal += parseFloat(ci.amount) || 0; });
+    var exIntTotal = exIntFB + exIntWPE + exIntMaint + exIntCustomTotal;
+
+    if (exIntTotal > 0) {
+      smRow++;
+      setCell(slWS, smRow, 0, 'Internal Operating Costs', sectionStyle);
+      for (var ioc = 1; ioc < slCols; ioc++) setCell(slWS, smRow, ioc, '', sectionStyle);
+      smRow++;
+      if (exIntFB > 0) {
+        setCell(slWS, smRow, 0, 'Food & Beverage', metricLabelStyle);
+        setCell(slWS, smRow, 1, Math.round(exIntFB), Object.assign({}, formulaStyle));
+        setCell(slWS, smRow, 2, Math.round(exIntFB * 12), Object.assign({}, formulaStyle));
+        smRow++;
+      }
+      if (exIntWPE > 0) {
+        setCell(slWS, smRow, 0, 'Workplace Experience', metricLabelStyle);
+        setCell(slWS, smRow, 1, Math.round(exIntWPE), Object.assign({}, formulaStyle));
+        setCell(slWS, smRow, 2, Math.round(exIntWPE * 12), Object.assign({}, formulaStyle));
+        smRow++;
+      }
+      if (exIntMaint > 0) {
+        setCell(slWS, smRow, 0, 'Maintenance & Security', metricLabelStyle);
+        setCell(slWS, smRow, 1, Math.round(exIntMaint), Object.assign({}, formulaStyle));
+        setCell(slWS, smRow, 2, Math.round(exIntMaint * 12), Object.assign({}, formulaStyle));
+        smRow++;
+      }
+      if (Array.isArray(exIntCustomItems)) exIntCustomItems.forEach(function(ci) {
+        var ciAmt = parseFloat(ci.amount) || 0;
+        if (ciAmt > 0) {
+          setCell(slWS, smRow, 0, ci.label || 'Custom', metricLabelStyle);
+          setCell(slWS, smRow, 1, Math.round(ciAmt), Object.assign({}, formulaStyle));
+          setCell(slWS, smRow, 2, Math.round(ciAmt * 12), Object.assign({}, formulaStyle));
+          smRow++;
+        }
+      });
+      setCell(slWS, smRow, 0, 'Total Internal OpEx', Object.assign({}, metricLabelStyle, { font: { name: 'Calibri', sz: 11, bold: true } }));
+      setCell(slWS, smRow, 1, Math.round(exIntTotal), Object.assign({}, formulaStyle, { font: { name: 'Calibri', sz: 11, bold: true } }));
+      setCell(slWS, smRow, 2, Math.round(exIntTotal * 12), Object.assign({}, formulaStyle, { font: { name: 'Calibri', sz: 11, bold: true } }));
+      smRow++;
+    }
+
+    // Total Occupancy Cost
+    smRow++;
+    var tocSlRent = exportSlMonthlyRent;
+    var tocOpexMo = dtOpexMonthly;
+    var tocParkMo = dtParkingTotal;
+    var tocLHIMo = exportCapex.hasCapex ? exportCapex.monthlyDepreciation : 0;
+    var tocBrkMo = exportBrokerFee.hasBrokerFee ? exportBrokerFee.slMonthlyImpact : 0;
+    var tocTotalMo = tocSlRent + tocOpexMo + tocParkMo + tocLHIMo + tocBrkMo + exIntTotal;
+    setCell(slWS, smRow, 0, 'Total Occupancy Cost', Object.assign({}, sectionStyle));
+    for (var tocc = 1; tocc < slCols; tocc++) setCell(slWS, smRow, tocc, '', sectionStyle);
+    smRow++;
+    setCell(slWS, smRow, 0, 'Total Occupancy Cost (monthly)', Object.assign({}, metricLabelStyle, { font: { name: 'Calibri', sz: 11, bold: true } }));
+    setCell(slWS, smRow, 1, Math.round(tocTotalMo), Object.assign({}, formulaStyle, { font: { name: 'Calibri', sz: 11, bold: true } }));
+    smRow++;
+    setCell(slWS, smRow, 0, 'Total Occupancy Cost (annual)', Object.assign({}, metricLabelStyle, { font: { name: 'Calibri', sz: 11, bold: true } }));
+    setCell(slWS, smRow, 1, Math.round(tocTotalMo * 12), Object.assign({}, formulaStyle, { font: { name: 'Calibri', sz: 11, bold: true } }));
+    if (exportRSF > 0) {
+      smRow++;
+      setCell(slWS, smRow, 0, 'Total Occupancy Cost (per RSF/yr)', Object.assign({}, metricLabelStyle, { font: { name: 'Calibri', sz: 11, bold: true } }));
+      setCell(slWS, smRow, 1, Math.round(tocTotalMo * 12 / exportRSF * 100) / 100, Object.assign({}, { numFmt: getCurrencyExcelFmtDec() }, { font: { name: 'Calibri', sz: 11, bold: true } }));
+    }
+    smRow++;
+
     // NPV / Present Value Analysis
     smRow++;
     setCell(slWS, smRow, 0, 'Present Value Analysis', sectionStyle);
