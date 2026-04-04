@@ -8,7 +8,7 @@ interface TokenData {
   balance: number
   total_purchased: number
   total_consumed: number
-  project_breakdown: { project_id: string }[]
+  project_count: number
 }
 
 export default function TokenWidget() {
@@ -20,23 +20,27 @@ export default function TokenWidget() {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { setLoading(false); return }
       try {
-        const res = await fetch(`/api/tokens?userId=${user.id}&view=balance`)
-        const json = await res.json()
-        if (res.ok) {
+        // Fetch token balance and project count in parallel
+        const [tokenRes, projectsRes] = await Promise.all([
+          fetch(`/api/tokens?userId=${user.id}&view=balance`),
+          supabase.from('projects').select('id', { count: 'exact', head: true }).eq('owner_id', user.email),
+        ])
+        const json = await tokenRes.json()
+        const projectCount = projectsRes.count ?? 0
+        if (tokenRes.ok) {
           setData({
             balance: json.balance ?? 0,
             total_purchased: json.total_purchased ?? 0,
             total_consumed: json.total_consumed ?? 0,
-            project_breakdown: json.project_breakdown ?? [],
+            project_count: projectCount,
           })
         } else {
           console.warn('TokenWidget API error:', json)
-          // Show widget with zeros rather than hiding it
-          setData({ balance: 0, total_purchased: 0, total_consumed: 0, project_breakdown: [] })
+          setData({ balance: 0, total_purchased: 0, total_consumed: 0, project_count: projectCount })
         }
       } catch (err) {
         console.warn('TokenWidget fetch error:', err)
-        setData({ balance: 0, total_purchased: 0, total_consumed: 0, project_breakdown: [] })
+        setData({ balance: 0, total_purchased: 0, total_consumed: 0, project_count: 0 })
       }
       setLoading(false)
     })
@@ -44,8 +48,8 @@ export default function TokenWidget() {
 
   if (loading || !data) return null
 
-  const { balance, total_purchased, total_consumed, project_breakdown } = data
-  const activeProjects = project_breakdown?.length ?? 0
+  const { balance, total_purchased, total_consumed, project_count } = data
+  const activeProjects = project_count
   const consumedPct = total_purchased > 0 ? (total_consumed / total_purchased) * 100 : 0
 
   return (
@@ -105,7 +109,7 @@ export default function TokenWidget() {
         {[
           { value: total_purchased, label: 'purchased' },
           { value: total_consumed, label: 'consumed' },
-          { value: activeProjects, label: 'projects active' },
+          { value: activeProjects, label: 'projects' },
         ].map((stat) => (
           <div key={stat.label} style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', lineHeight: 1.3 }}>
