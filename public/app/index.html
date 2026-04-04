@@ -19269,6 +19269,14 @@ function rfpExportExcel() {
       { key: 'straightLineAnnualExpense', label: 'SL Annual Expense', type: 'curr', src: 'summary' },
       { key: 'totalAllInCost', label: 'Total All-in Cost', type: 'curr', src: 'summary' },
       { key: 'totalConcessions', label: 'Total Concessions', type: 'curr', src: 'summary' },
+      // Internal OpEx (from assumptions)
+      { key: 'intFB', label: 'F&B (monthly)', type: 'curr', src: 'computed_int' },
+      { key: 'intWPE', label: 'Workplace Experience (monthly)', type: 'curr', src: 'computed_int' },
+      { key: 'intMaint', label: 'Maintenance & Security (monthly)', type: 'curr', src: 'computed_int' },
+      { key: 'intTotal', label: 'Total Internal OpEx (monthly)', type: 'curr', src: 'computed_int' },
+      // Total Occupancy Cost
+      { key: 'totalOccupancyCostMo', label: 'Total Occupancy Cost (monthly)', type: 'curr', src: 'computed_toc' },
+      { key: 'totalOccupancyCostYr', label: 'Total Occupancy Cost (annual)', type: 'curr', src: 'computed_toc' },
     ];
 
     var vcCols = 1 + allSubs.length + 1; // label + versions + change
@@ -19307,6 +19315,41 @@ function rfpExportExcel() {
           } else if (f.key === 'fsgPerSFMo') {
             val = cRsf > 0 ? Math.round(((cCf.totalBaseRent || 0) + (cCf.totalOpex || 0)) / cTermMo / cRsf * 100) / 100 : 0;
           } else { val = 0; }
+        } else if (f.src === 'computed_int') {
+          // Internal OpEx from assumptions (same for all versions)
+          var intAKey = getAssumptionsKey(address, '');
+          var intAData = window._rfpState.assumptionsMap[intAKey] || window._rfpState.assumptionsMap[address] || {};
+          if (f.key === 'intFB') val = parseFloat(intAData.opex_food_beverage) || 0;
+          else if (f.key === 'intWPE') val = parseFloat(intAData.opex_workplace_experience) || 0;
+          else if (f.key === 'intMaint') val = parseFloat(intAData.opex_maintenance_security) || 0;
+          else if (f.key === 'intTotal') {
+            var intCI = intAData.opex_custom_items || [];
+            if (typeof intCI === 'string') { try { intCI = JSON.parse(intCI); } catch(e) { intCI = []; } }
+            var intCT = 0;
+            if (Array.isArray(intCI)) intCI.forEach(function(ci) { intCT += parseFloat(ci.amount) || 0; });
+            val = (parseFloat(intAData.opex_food_beverage) || 0) + (parseFloat(intAData.opex_workplace_experience) || 0) + (parseFloat(intAData.opex_maintenance_security) || 0) + intCT;
+          } else val = 0;
+        } else if (f.src === 'computed_toc') {
+          // Total Occupancy Cost
+          var tocSm = (s.analysis && s.analysis.summary) || {};
+          var tocCf = (s.analysis && s.analysis.cash_flow && s.analysis.cash_flow.totals) || {};
+          var tocTM = tocSm.termMonths || 1;
+          var tocSL = tocSm.straightLineMonthlyRent || 0;
+          var tocOp = (tocCf.totalOpex || 0) / tocTM;
+          var tocPk = (tocCf.totalParking || 0) / tocTM;
+          var tocCx = getCapexForBuilding(address, tocTM);
+          var tocBr = getBrokerFeeForBuilding(address, tocTM);
+          var tocLH = (tocCx && tocCx.hasCapex) ? (tocCx.monthlyDepreciation || 0) : 0;
+          var tocBF = (tocBr && tocBr.hasBrokerFee) ? (tocBr.slMonthlyImpact || 0) : 0;
+          var tocAK = getAssumptionsKey(address, '');
+          var tocAD = window._rfpState.assumptionsMap[tocAK] || window._rfpState.assumptionsMap[address] || {};
+          var tocIC = tocAD.opex_custom_items || [];
+          if (typeof tocIC === 'string') { try { tocIC = JSON.parse(tocIC); } catch(e) { tocIC = []; } }
+          var tocICT = 0;
+          if (Array.isArray(tocIC)) tocIC.forEach(function(ci) { tocICT += parseFloat(ci.amount) || 0; });
+          var tocInt = (parseFloat(tocAD.opex_food_beverage) || 0) + (parseFloat(tocAD.opex_workplace_experience) || 0) + (parseFloat(tocAD.opex_maintenance_security) || 0) + tocICT;
+          var tocMo = tocSL + tocOp + tocPk + tocLH + tocBF + tocInt;
+          val = f.key === 'totalOccupancyCostMo' ? Math.round(tocMo) : Math.round(tocMo * 12);
         } else {
           var t = s.deal_terms || s.dealTerms || {};
           val = t[f.key];
