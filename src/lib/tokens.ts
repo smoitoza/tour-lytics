@@ -39,10 +39,12 @@ export type TokenAction =
 
 // ============================================================
 // Debit tokens for an AI action
+// Deducts from the USER's account balance, records project_id for tracking
 // Returns { success, cost, balance_after } or throws on failure
 // ============================================================
 export async function debitTokens(opts: {
   projectId: string
+  userId?: string
   action: TokenAction
   userEmail?: string
   referenceId?: string
@@ -58,6 +60,7 @@ export async function debitTokens(opts: {
     p_reference_id: opts.referenceId || null,
     p_metadata: opts.metadata || {},
     p_note: opts.note || null,
+    p_user_id: opts.userId || null,
   })
 
   if (error) {
@@ -82,21 +85,23 @@ export async function debitTokens(opts: {
 }
 
 // ============================================================
-// Credit tokens (purchase, bonus, refund)
+// Credit tokens to a user's account (purchase, bonus, refund)
 // ============================================================
 export async function creditTokens(opts: {
-  projectId: string
+  userId?: string
   amount: number
   userEmail?: string
+  projectId?: string
   note?: string
 }): Promise<{ success: boolean; amount: number; balance_after: number }> {
   const supabase = getAdminClient()
 
   const { data, error } = await supabase.rpc('credit_tokens', {
-    p_project_id: opts.projectId,
+    p_project_id: opts.projectId || null,
     p_amount: opts.amount,
     p_user_email: opts.userEmail || null,
     p_note: opts.note || 'Token purchase',
+    p_user_id: opts.userId || null,
   })
 
   if (error) {
@@ -111,7 +116,29 @@ export async function creditTokens(opts: {
 }
 
 // ============================================================
-// Get current balance for a project
+// Get current balance for a user (account-level)
+// ============================================================
+export async function getUserTokenBalance(userId: string): Promise<{
+  balance: number
+  total_purchased: number
+  total_consumed: number
+  low_balance_threshold: number
+} | null> {
+  const supabase = getAdminClient()
+
+  const { data, error } = await supabase
+    .from('token_balances')
+    .select('balance, total_purchased, total_consumed, low_balance_threshold')
+    .eq('user_id', userId)
+    .is('project_id', null)
+    .single()
+
+  if (error) return null
+  return data
+}
+
+// ============================================================
+// Get current balance for a project (backward-compatible)
 // ============================================================
 export async function getTokenBalance(projectId: string): Promise<{
   balance: number
@@ -132,23 +159,40 @@ export async function getTokenBalance(projectId: string): Promise<{
 }
 
 // ============================================================
-// Get transaction history for a project (paginated)
+// Get per-project consumption breakdown for a user
+// ============================================================
+export async function getUserProjectBreakdown(userId: string): Promise<any[]> {
+  const supabase = getAdminClient()
+
+  const { data, error } = await supabase
+    .from('token_usage_summary')
+    .select('*')
+    .eq('user_id', userId)
+
+  if (error) throw new Error(`Failed to fetch user project breakdown: ${error.message}`)
+  return data || []
+}
+
+// ============================================================
+// Get transaction history (supports both user-level and project-level)
 // ============================================================
 export async function getTokenTransactions(opts: {
-  projectId: string
+  userId?: string
+  projectId?: string
   limit?: number
   offset?: number
   actionType?: string
   userEmail?: string
 }): Promise<any[]> {
-  const supabase = getAnonClient()
+  const supabase = getAdminClient()
 
   let query = supabase
     .from('token_transactions')
     .select('*')
-    .eq('project_id', opts.projectId)
     .order('created_at', { ascending: false })
 
+  if (opts.userId) query = query.eq('user_id', opts.userId)
+  if (opts.projectId) query = query.eq('project_id', opts.projectId)
   if (opts.actionType) query = query.eq('action_type', opts.actionType)
   if (opts.userEmail) query = query.eq('user_email', opts.userEmail)
   if (opts.limit) query = query.limit(opts.limit)
@@ -162,14 +206,20 @@ export async function getTokenTransactions(opts: {
 // ============================================================
 // Get usage summary (for dashboard charts)
 // ============================================================
-export async function getUsageSummary(projectId: string): Promise<any[]> {
-  const supabase = getAnonClient()
+export async function getUsageSummary(opts: {
+  userId?: string
+  projectId?: string
+}): Promise<any[]> {
+  const supabase = getAdminClient()
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('token_usage_summary')
     .select('*')
-    .eq('project_id', projectId)
 
+  if (opts.userId) query = query.eq('user_id', opts.userId)
+  if (opts.projectId) query = query.eq('project_id', opts.projectId)
+
+  const { data, error } = await query
   if (error) throw new Error(`Failed to fetch usage summary: ${error.message}`)
   return data || []
 }
@@ -191,15 +241,15 @@ export async function getTokenPricing(): Promise<any[]> {
 }
 
 // ============================================================
-// Check if project has enough tokens for an action
+// Check if a user has enough tokens for an action
 // (Read-only check, does NOT debit)
 // ============================================================
-export async function canAffordAction(projectId: string, action: TokenAction): Promise<{
+export async function canAffordAction(userId: string, action: TokenAction): Promise<{
   canAfford: boolean
   balance: number
   cost: number
 }> {
-  const supabase = getAnonClient()
+  const supabase = getAdminClient()
 
   // Get the cost
   const { data: pricing } = await supabase
@@ -211,11 +261,12 @@ export async function canAffordAction(projectId: string, action: TokenAction): P
 
   const cost = pricing?.token_cost ?? 0
 
-  // Get the balance
+  // Get the user's account balance
   const { data: bal } = await supabase
     .from('token_balances')
     .select('balance')
-    .eq('project_id', projectId)
+    .eq('user_id', userId)
+    .is('project_id', null)
     .single()
 
   const balance = bal?.balance ?? 0

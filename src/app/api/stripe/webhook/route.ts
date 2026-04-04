@@ -50,11 +50,12 @@ export async function POST(request: NextRequest) {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session
 
-      const projectId = session.metadata?.projectId
+      const userId = session.metadata?.userId
       const userEmail = session.metadata?.userEmail
       const tokenAmount = parseInt(session.metadata?.tokenAmount || '0')
+      const projectId = session.metadata?.projectId
 
-      if (!projectId || !tokenAmount) {
+      if (!tokenAmount || (!userId && !userEmail)) {
         console.error('Missing metadata in Stripe session:', session.id)
         return NextResponse.json({ received: true })
       }
@@ -72,12 +73,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true })
       }
 
-      // Credit the tokens
+      // Credit the tokens to the user's account balance
       try {
         await creditTokens({
-          projectId,
+          userId: userId || undefined,
           amount: tokenAmount,
           userEmail: userEmail || undefined,
+          projectId: projectId || undefined,
           note: `Stripe purchase: ${tokenAmount} tokens (${session.metadata?.packId || 'custom'})`,
         })
 
@@ -92,7 +94,7 @@ export async function POST(request: NextRequest) {
           })
           .eq('stripe_session_id', session.id)
 
-        console.log(`Credited ${tokenAmount} tokens to project ${projectId}`)
+        console.log(`Credited ${tokenAmount} tokens to user ${userId || userEmail}`)
       } catch (creditErr) {
         console.error('Failed to credit tokens:', creditErr)
 
