@@ -241,6 +241,21 @@ export async function getTokenPricing(): Promise<any[]> {
 }
 
 // ============================================================
+// Resolve userId from a projectId (via backfilled token_balances)
+// ============================================================
+export async function resolveUserIdFromProject(projectId: string): Promise<string | null> {
+  const supabase = getAdminClient()
+  const { data } = await supabase
+    .from('token_balances')
+    .select('user_id')
+    .eq('project_id', projectId)
+    .not('user_id', 'is', null)
+    .limit(1)
+    .single()
+  return data?.user_id || null
+}
+
+// ============================================================
 // Check if a user has enough tokens for an action
 // (Read-only check, does NOT debit)
 // ============================================================

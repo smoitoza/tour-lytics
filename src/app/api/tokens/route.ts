@@ -6,6 +6,7 @@ import {
   getUsageSummary,
   getTokenPricing,
   getUserProjectBreakdown,
+  resolveUserIdFromProject,
   creditTokens,
 } from '@/lib/tokens'
 
@@ -22,17 +23,7 @@ export async function GET(req: Request) {
         // Resolve userId: use provided, or look up from project's backfilled user_id
         let resolvedUserId = userId
         if (!resolvedUserId && projectId) {
-          // Check if this project has a backfilled user_id in token_balances
-          const { data: projBal } = await getAdminClient()
-            .from('token_balances')
-            .select('user_id')
-            .eq('project_id', projectId)
-            .not('user_id', 'is', null)
-            .limit(1)
-            .single()
-          if (projBal?.user_id) {
-            resolvedUserId = projBal.user_id
-          }
+          resolvedUserId = await resolveUserIdFromProject(projectId)
         }
 
         if (resolvedUserId) {
