@@ -19,16 +19,31 @@ export async function GET(req: Request) {
   try {
     switch (view) {
       case 'balance': {
-        // If userId is provided, return user's account balance + per-project breakdown
-        if (userId) {
-          const balance = await getUserTokenBalance(userId)
-          const breakdown = await getUserProjectBreakdown(userId)
+        // Resolve userId: use provided, or look up from project's backfilled user_id
+        let resolvedUserId = userId
+        if (!resolvedUserId && projectId) {
+          // Check if this project has a backfilled user_id in token_balances
+          const { data: projBal } = await getAdminClient()
+            .from('token_balances')
+            .select('user_id')
+            .eq('project_id', projectId)
+            .not('user_id', 'is', null)
+            .limit(1)
+            .single()
+          if (projBal?.user_id) {
+            resolvedUserId = projBal.user_id
+          }
+        }
+
+        if (resolvedUserId) {
+          const balance = await getUserTokenBalance(resolvedUserId)
+          const breakdown = await getUserProjectBreakdown(resolvedUserId)
           return NextResponse.json({
             ...(balance || { balance: 0, total_purchased: 0, total_consumed: 0 }),
             project_breakdown: breakdown,
           })
         }
-        // Fallback: project-level balance (backward compatible)
+        // Final fallback: project-level balance
         const balance = await getTokenBalance(projectId)
         if (!balance) {
           return NextResponse.json({ balance: 0, total_purchased: 0, total_consumed: 0 })
