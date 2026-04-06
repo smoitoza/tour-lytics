@@ -5,6 +5,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { User } from '@supabase/supabase-js'
+import TokenWidget from '@/components/TokenWidget'
 
 /* -- SVG Logo -- */
 function Logo({ size = 28 }: { size?: number }) {
@@ -770,6 +771,23 @@ export default function DashboardPage() {
               </div>
               <span className="hidden sm:inline" style={{ fontSize: '0.8125rem', color: '#475569', fontWeight: 500 }}>{user?.email}</span>
             </div>
+            <Link
+              href="/billing"
+              style={{
+                fontSize: '0.75rem',
+                color: '#94a3b8',
+                background: 'transparent',
+                textDecoration: 'none',
+                fontFamily: 'inherit',
+                fontWeight: 400,
+                padding: '0.25rem 0.5rem',
+                transition: 'color 0.15s',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#2563eb' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8' }}
+            >
+              Manage Billing
+            </Link>
             <button
               onClick={() => { setShowPasswordModal(true); setPasswordError(null); setPasswordSuccess(false); setCurrentPassword(''); setNewPassword(''); setConfirmPassword('') }}
               style={{
@@ -882,6 +900,11 @@ export default function DashboardPage() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* -- Token balance widget -- */}
+        <div className="dash-fade dash-fade-3">
+          <TokenWidget />
         </div>
 
         {/* -- Three-section layout: My Projects, Shared With Me, Clients -- */}

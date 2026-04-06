@@ -32,11 +32,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { packId, projectId, userEmail } = await request.json()
+    const { packId, userId, userEmail, projectId } = await request.json()
 
-    if (!packId || !projectId || !userEmail) {
+    if (!packId || !userEmail) {
       return NextResponse.json(
-        { error: 'packId, projectId, and userEmail are required' },
+        { error: 'packId and userEmail are required' },
         { status: 400 }
       )
     }
@@ -52,7 +52,15 @@ export async function POST(request: NextRequest) {
     // Determine the base URL for redirects
     const origin = request.headers.get('origin') || 'https://tourlytics.ai'
 
-    // Create Stripe Checkout Session
+    // Build success/cancel URLs — use projectId if provided for redirect context
+    const successUrl = projectId
+      ? `${origin}/project/${encodeURIComponent(projectId)}?tab=ai-usage&payment=success&tokens=${pack.tokens}`
+      : `${origin}/dashboard?payment=success&tokens=${pack.tokens}`
+    const cancelUrl = projectId
+      ? `${origin}/project/${encodeURIComponent(projectId)}?tab=ai-usage`
+      : `${origin}/dashboard?tab=ai-usage`
+
+    // Create Stripe Checkout Session — metadata uses userId for user-level crediting
     const stripe = getStripe()
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -64,7 +72,7 @@ export async function POST(request: NextRequest) {
             currency: 'usd',
             product_data: {
               name: `TourLytics ${pack.label} - ${pack.tokens} Tokens`,
-              description: `${pack.tokens} AI tokens for your TourLytics project`,
+              description: `${pack.tokens} AI tokens for your TourLytics account`,
             },
             unit_amount: pack.priceCents,
           },
@@ -72,19 +80,22 @@ export async function POST(request: NextRequest) {
         },
       ],
       metadata: {
-        projectId,
+        userId: userId || '',
         userEmail,
         packId,
         tokenAmount: pack.tokens.toString(),
+        // Keep projectId in metadata for tracking/redirect context, but it's not required
+        ...(projectId ? { projectId } : {}),
       },
-      success_url: `${origin}/project/${encodeURIComponent(projectId)}?tab=ai-usage&payment=success&tokens=${pack.tokens}`,
-      cancel_url: `${origin}/project/${encodeURIComponent(projectId)}?tab=ai-usage`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
     })
 
     // Record pending payment
     const supabase = getSupabase()
     await supabase.from('stripe_payments').insert({
-      project_id: projectId,
+      project_id: projectId || null,
+      user_id: userId || null,
       stripe_session_id: session.id,
       user_email: userEmail,
       token_amount: pack.tokens,

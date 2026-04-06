@@ -9620,81 +9620,45 @@ body {
   <div class="ai-usage-page">
     <div class="ai-usage-header">
       <div>
-        <h2 class="ai-usage-title">AI Usage Dashboard</h2>
-        <p class="ai-usage-subtitle">Track token consumption across all AI-powered features for this project.</p>
+        <h2 class="ai-usage-title">Project Token Usage</h2>
+        <p class="ai-usage-subtitle">Token consumption for this project — drawn from your account balance.</p>
       </div>
-      <button class="ai-usage-reseed-btn" id="aiUsageReseedBtn" onclick="aiUsageReseed()" style="display:none;">+ Add Tokens</button>
     </div>
 
     <!-- Payment success banner (shown after Stripe redirect) -->
     <div id="paymentSuccessBanner" style="display:none;"></div>
 
-    <!-- Balance cards -->
+    <!-- Stats cards (read-only, project-scoped) -->
     <div class="ai-usage-cards" id="aiUsageCards">
       <div class="ai-usage-card ai-usage-card-balance">
-        <div class="ai-usage-card-label">Current Balance</div>
+        <div class="ai-usage-card-label">Project Consumed</div>
         <div class="ai-usage-card-value" id="aiCardBalance">--</div>
-        <div class="ai-usage-card-sub" id="aiCardBalanceSub">tokens remaining</div>
+        <div class="ai-usage-card-sub">tokens used in this project</div>
       </div>
       <div class="ai-usage-card">
-        <div class="ai-usage-card-label">Total Purchased</div>
-        <div class="ai-usage-card-value" id="aiCardPurchased">--</div>
-        <div class="ai-usage-card-sub">lifetime tokens added</div>
+        <div class="ai-usage-card-label">Share of Account</div>
+        <div class="ai-usage-card-value" id="aiCardPurchased">--%</div>
+        <div class="ai-usage-card-sub" id="aiCardShareSub">of total consumed</div>
       </div>
       <div class="ai-usage-card">
-        <div class="ai-usage-card-label">Total Consumed</div>
+        <div class="ai-usage-card-label">Actions Performed</div>
         <div class="ai-usage-card-value" id="aiCardConsumed">--</div>
-        <div class="ai-usage-card-sub">tokens used to date</div>
-      </div>
-      <div class="ai-usage-card">
-        <div class="ai-usage-card-label">Utilization</div>
-        <div class="ai-usage-card-value" id="aiCardUtil">--%</div>
-        <div class="ai-usage-card-sub">of purchased tokens</div>
+        <div class="ai-usage-card-sub">AI actions in this project</div>
       </div>
     </div>
 
-    <!-- Reseed form (hidden by default) -->
-    <div class="ai-usage-reseed-form" id="aiUsageReseedForm" style="display:none;">
-      <h3 class="ai-usage-reseed-title">Add Tokens</h3>
-      <div class="ai-usage-reseed-fields">
-        <div class="ai-usage-reseed-field">
-          <label>Amount</label>
-          <input type="number" id="aiReseedAmount" value="100" min="1" max="10000" />
+    <!-- Account balance banner -->
+    <div id="aiUsageAccountBanner" style="background:#f5f3ff;border:1px solid #ede9fe;border-radius:10px;padding:14px 20px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:36px;height:36px;border-radius:8px;background:#ede9fe;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>
         </div>
-        <div class="ai-usage-reseed-field">
-          <label>Note</label>
-          <input type="text" id="aiReseedNote" value="Beta re-seed" placeholder="Reason for adding tokens" />
-        </div>
-        <button class="ai-usage-reseed-submit" onclick="aiUsageSubmitReseed()">Confirm</button>
-        <button class="ai-usage-reseed-cancel" onclick="document.getElementById('aiUsageReseedForm').style.display='none'">Cancel</button>
-      </div>
-    </div>
-
-    <!-- Token Purchase Packs -->
-    <div class="ai-usage-section">
-      <h3 class="ai-usage-section-title">Purchase Tokens</h3>
-      <div class="token-packs" id="tokenPacks">
-        <div class="token-pack" data-pack="starter">
-          <div class="token-pack-tokens">100</div>
-          <div class="token-pack-label">Starter Pack</div>
-          <div class="token-pack-desc">Great for getting started. Covers AI chat, photo analysis, and basic usage.</div>
-          <button class="token-pack-btn" onclick="purchaseTokenPack('starter', this)">Buy Tokens</button>
-        </div>
-        <div class="token-pack popular" data-pack="professional">
-          <div class="token-pack-badge">Most Popular</div>
-          <div class="token-pack-tokens">500</div>
-          <div class="token-pack-label">Professional Pack</div>
-          <div class="token-pack-desc">Best for active projects. Full financial analysis, survey uploads, and AI features.</div>
-          <button class="token-pack-btn" onclick="purchaseTokenPack('professional', this)">Buy Tokens</button>
-        </div>
-        <div class="token-pack" data-pack="enterprise">
-          <div class="token-pack-tokens">2,000</div>
-          <div class="token-pack-label">Enterprise Pack</div>
-          <div class="token-pack-desc">For teams managing multiple projects with heavy AI usage and analytics.</div>
-          <button class="token-pack-btn" onclick="purchaseTokenPack('enterprise', this)">Buy Tokens</button>
+        <div style="font-size:14px;color:#475569;line-height:1.4;">
+          Your account balance is <strong id="aiAccountBalance" style="color:#7c3aed;font-weight:700;">--</strong> tokens remaining across all projects.
+          Tokens are purchased at the account level.
         </div>
       </div>
-      <div class="token-purchase-note">Secure checkout powered by Stripe. Tokens are added instantly after purchase.</div>
+      <a href="/billing" target="_top" style="font-size:13px;font-weight:600;color:#7c3aed;text-decoration:none;padding:8px 16px;border-radius:8px;background:#fff;border:1px solid #ede9fe;white-space:nowrap;">Manage Billing →</a>
     </div>
 
     <!-- Usage by action -->
@@ -9720,29 +9684,9 @@ body {
       </div>
     </div>
 
-    <!-- Pricing reference -->
+    <!-- Recent transactions for this project -->
     <div class="ai-usage-section">
-      <h3 class="ai-usage-section-title">Token Pricing</h3>
-      <div class="ai-usage-table-wrap" id="aiUsagePricingWrap">
-        <table class="ai-usage-table ai-usage-pricing" id="aiUsagePricingTable">
-          <thead>
-            <tr>
-              <th>Action</th>
-              <th>Category</th>
-              <th>Cost</th>
-              <th class="hide-mobile">Description</th>
-            </tr>
-          </thead>
-          <tbody id="aiUsagePricingBody">
-            <tr><td colspan="4" style="text-align:center;color:var(--color-text-muted);padding:2rem;">Loading pricing...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Recent transactions -->
-    <div class="ai-usage-section">
-      <h3 class="ai-usage-section-title">Recent Transactions</h3>
+      <h3 class="ai-usage-section-title">Recent Activity</h3>
       <div class="ai-usage-table-wrap" id="aiUsageTxWrap">
         <table class="ai-usage-table" id="aiUsageTxTable">
           <thead>
@@ -9757,6 +9701,26 @@ body {
           </thead>
           <tbody id="aiUsageTxBody">
             <tr><td colspan="6" style="text-align:center;color:var(--color-text-muted);padding:2rem;">Loading transactions...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Token Pricing reference -->
+    <div class="ai-usage-section">
+      <h3 class="ai-usage-section-title">Token Pricing</h3>
+      <div class="ai-usage-table-wrap" id="aiUsagePricingWrap">
+        <table class="ai-usage-table ai-usage-pricing" id="aiUsagePricingTable">
+          <thead>
+            <tr>
+              <th>Action</th>
+              <th>Category</th>
+              <th>Cost</th>
+              <th class="hide-mobile">Description</th>
+            </tr>
+          </thead>
+          <tbody id="aiUsagePricingBody">
+            <tr><td colspan="4" style="text-align:center;color:var(--color-text-muted);padding:2rem;">Loading pricing...</td></tr>
           </tbody>
         </table>
       </div>
@@ -23321,27 +23285,40 @@ async function aiUsageLoad() {
   // Any authenticated user can view their project's token usage
   if (!getCurrentUserEmail()) return;
 
-  // Ghost mode: show reseed button only for super admin
-  if (getCurrentUserEmail() === ADMIN_EMAIL) {
-    var reseedBtn = document.getElementById('aiUsageReseedBtn');
-    if (reseedBtn) reseedBtn.style.display = '';
-  }
-
   try {
-    // Fetch all data in parallel
-    var [balanceRes, summaryRes, txRes, pricingRes] = await Promise.all([
-      fetch('/api/tokens?view=balance&projectId=' + getProjectId()),
+    // Fetch project-scoped usage + account balance in parallel
+    var [summaryRes, txRes, pricingRes, accountRes] = await Promise.all([
       fetch('/api/tokens?view=summary&projectId=' + getProjectId()),
-      fetch('/api/tokens?view=transactions&projectId=' + getProjectId() + '&limit=50'),
-      fetch('/api/tokens?view=pricing&projectId=' + getProjectId())
+      fetch('/api/tokens?view=transactions&projectId=' + getProjectId() + '&limit=20'),
+      fetch('/api/tokens?view=pricing&projectId=' + getProjectId()),
+      fetch('/api/tokens?view=balance&projectId=' + getProjectId())
     ]);
 
-    var balance = balanceRes.ok ? await balanceRes.json() : { balance: 0, total_purchased: 0, total_consumed: 0 };
     var summary = summaryRes.ok ? await summaryRes.json() : [];
     var transactions = txRes.ok ? await txRes.json() : [];
     var pricing = pricingRes.ok ? await pricingRes.json() : [];
+    var account = accountRes.ok ? await accountRes.json() : { balance: 0, total_consumed: 0 };
 
-    aiUsageRenderCards(balance);
+    // Calculate project-level stats from transactions
+    var projectConsumed = 0;
+    var actionCount = 0;
+    transactions.forEach(function(tx) {
+      if (tx.amount < 0) {
+        projectConsumed += Math.abs(tx.amount);
+        actionCount++;
+      }
+    });
+    // Also sum from summary if available (more complete than last 20 txns)
+    if (summary && summary.length > 0) {
+      projectConsumed = 0;
+      actionCount = 0;
+      summary.forEach(function(s) {
+        projectConsumed += (s.total_tokens || 0);
+        actionCount += (s.total_actions || 0);
+      });
+    }
+
+    aiUsageRenderCards(projectConsumed, actionCount, account);
     aiUsageRenderSummary(summary);
     aiUsageRenderTransactions(transactions);
     aiUsageRenderPricing(pricing);
@@ -23351,41 +23328,28 @@ async function aiUsageLoad() {
   }
 }
 
-function aiUsageRenderCards(b) {
+function aiUsageRenderCards(projectConsumed, actionCount, account) {
   var balEl = document.getElementById('aiCardBalance');
-  var purEl = document.getElementById('aiCardPurchased');
-  var conEl = document.getElementById('aiCardConsumed');
-  var utlEl = document.getElementById('aiCardUtil');
-  var subEl = document.getElementById('aiCardBalanceSub');
-  var cardEl = document.querySelector('.ai-usage-card-balance');
+  var shareEl = document.getElementById('aiCardPurchased');
+  var actionsEl = document.getElementById('aiCardConsumed');
+  var shareSub = document.getElementById('aiCardShareSub');
+  var accountBalEl = document.getElementById('aiAccountBalance');
 
-  balEl.textContent = (b.balance || 0).toLocaleString();
-  purEl.textContent = (b.total_purchased || 0).toLocaleString();
-  conEl.textContent = (b.total_consumed || 0).toLocaleString();
+  // Project Consumed card
+  balEl.textContent = projectConsumed.toLocaleString();
 
-  var util = b.total_purchased > 0 ? Math.round((b.total_consumed / b.total_purchased) * 100) : 0;
-  utlEl.textContent = util + '%';
+  // Share of Account card
+  var totalConsumed = account.total_consumed || 0;
+  var sharePct = totalConsumed > 0 ? Math.round((projectConsumed / totalConsumed) * 100) : 0;
+  shareEl.textContent = sharePct + '%';
+  shareSub.textContent = 'of ' + totalConsumed.toLocaleString() + ' total consumed';
 
-  // Low balance warning (under threshold or under 20)
-  var threshold = b.low_balance_threshold || 50;
-  if (b.balance <= threshold && b.balance > 0) {
-    subEl.textContent = 'Low balance - consider adding tokens';
-    if (cardEl) {
-      cardEl.classList.remove('ai-usage-card-balance');
-      cardEl.classList.add('ai-usage-card-low');
-    }
-  } else if (b.balance <= 0) {
-    subEl.textContent = 'No tokens remaining';
-    if (cardEl) {
-      cardEl.classList.remove('ai-usage-card-balance');
-      cardEl.classList.add('ai-usage-card-low');
-    }
-  } else {
-    subEl.textContent = 'tokens remaining';
-    if (cardEl) {
-      cardEl.classList.remove('ai-usage-card-low');
-      cardEl.classList.add('ai-usage-card-balance');
-    }
+  // Actions Performed card
+  actionsEl.textContent = actionCount.toLocaleString();
+
+  // Account balance banner
+  if (accountBalEl) {
+    accountBalEl.textContent = (account.balance || 0).toLocaleString();
   }
 }
 
