@@ -20844,7 +20844,25 @@ function rfpExportComparison(target) {
   var npvRow = -1;
   var npvPerRSFRow = -1;
   var rsfRow = -1;
+  var termRow = -1;
   var totalAllInRow = -1;
+  var rentSFMoRow = -1;
+  var opexSFMoRow = -1;
+  var fullServiceGrossRow = -1;
+  var freeRentRow = -1;
+  var tiValueRow = -1;
+  var totalConcessionsRow = -1;
+  var totalCapexRow = -1;
+  var capexPerRSFRow = -1;
+  var monthlyLHIRow = -1;
+  var brokerFeeAmountRow = -1;
+  var brokerFeeMonthlyRow = -1;
+  var slMonthlyAllInRow = -1;
+  var slAnnualAllInRow = -1;
+  var totalCommitmentRow = -1;
+  var internalOpexRow = -1;
+  var slTotalOccMonthlyRow = -1;
+  var slTotalOccAnnualRow = -1;
 
   // Row metadata: { label, isCurrency, isDecimalCurrency, isHighlight, isNum, isSection, isBest/isWorst per col }
   var rowMeta = [];
@@ -20871,12 +20889,27 @@ function rfpExportComparison(target) {
     var isCurr = !isNum && !isText;
 
     // Track row indices
+    if (label === 'RSF') rsfRow = data.length;
+    if (label === 'Term (months)') termRow = data.length;
+    if (label === 'Rent/SF/mo') rentSFMoRow = data.length;
+    if (label === 'OpEx/SF/mo') opexSFMoRow = data.length;
+    if (label === 'Full Service Gross/SF/mo') fullServiceGrossRow = data.length;
+    if (label === 'Total All-in Cost') totalAllInRow = data.length;
     if (label === 'SL Monthly Rent') slMonthlyRow = data.length;
     if (label === 'SL Annual Expense') slAnnualRow = data.length;
-    if (label === 'RSF') rsfRow = data.length;
-    if (label === 'Total All-in Cost') totalAllInRow = data.length;
+    if (label === 'Free Rent Value') freeRentRow = data.length;
+    if (label === 'TI Value') tiValueRow = data.length;
+    if (label === 'Total Concessions') totalConcessionsRow = data.length;
     if (label === 'NPV @ 8%') npvRow = data.length;
     if (label === 'NPV per RSF') npvPerRSFRow = data.length;
+    if (label === 'Total CAPEX') totalCapexRow = data.length;
+    if (label === 'CAPEX per RSF') capexPerRSFRow = data.length;
+    if (label === 'Monthly LHI Depreciation') monthlyLHIRow = data.length;
+    if (label === 'Broker Fee Amount') brokerFeeAmountRow = data.length;
+    if (label === 'Broker Fee Monthly Amort.') brokerFeeMonthlyRow = data.length;
+    if (label.indexOf('SL Monthly All-in') === 0) slMonthlyAllInRow = data.length;
+    if (label.indexOf('SL Annual All-in') === 0) slAnnualAllInRow = data.length;
+    if (label.indexOf('Total Commitment') === 0) totalCommitmentRow = data.length;
 
     var colBestWorst = [];
     values.forEach(function(v) {
@@ -20927,6 +20960,11 @@ function rfpExportComparison(target) {
         }
         colBestWorst.push(bw);
       });
+
+      // Track assumption row indices for formulas
+      if (label === 'Internal OpEx/mo') internalOpexRow = data.length;
+      if (label === 'SL Total Occupancy Cost (Monthly)') slTotalOccMonthlyRow = data.length;
+      if (label === 'SL Total Occupancy Cost (Annual)') slTotalOccAnnualRow = data.length;
 
       rowMeta.push({ label: label, isCurrency: true, isDecimalCurrency: false, isNum: false, isText: false, isHighlight: !!highlightLabels[label], colBestWorst: colBestWorst, isSection: false });
       data.push(row);
@@ -21051,29 +21089,100 @@ function rfpExportComparison(target) {
 
   // --- Formulas ---
 
-  // SL Annual formula: =SL_Monthly * 12
-  if (slMonthlyRow >= 0 && slAnnualRow >= 0) {
-    for (var c = 1; c <= bd.length; c++) {
-      var cl = colLetter(c);
-      var annualCell = cl + (slAnnualRow + 1);
-      var monthlyRef = cl + (slMonthlyRow + 1);
-      var existingStyle = (ws[annualCell] && ws[annualCell].s) ? ws[annualCell].s : {};
-      ws[annualCell] = { t: 'n', f: monthlyRef + '*12', v: data[slAnnualRow][c], s: existingStyle };
-      if (existingStyle.numFmt) ws[annualCell].z = existingStyle.numFmt;
-      else ws[annualCell].z = fmt;
+  // Helper: set a formula on a cell, preserving existing style and cached value
+  function setFormula(row, colIdx, formula, numFormat) {
+    var cl = colLetter(colIdx);
+    var ref = cl + (row + 1);
+    var existing = ws[ref] || {};
+    var existingStyle = existing.s || {};
+    ws[ref] = { t: 'n', f: formula, v: data[row] ? (data[row][colIdx] || 0) : 0, s: existingStyle };
+    ws[ref].z = numFormat || fmt;
+  }
+
+  // Full Service Gross/SF/mo = Rent/SF/mo + OpEx/SF/mo
+  if (fullServiceGrossRow >= 0 && rentSFMoRow >= 0 && opexSFMoRow >= 0) {
+    for (var fc = 1; fc <= bd.length; fc++) {
+      var fcl = colLetter(fc);
+      setFormula(fullServiceGrossRow, fc, fcl + (rentSFMoRow + 1) + '+' + fcl + (opexSFMoRow + 1), fmtDec);
     }
   }
 
-  // NPV per RSF formula: =NPV / RSF
+  // SL Annual Expense = SL Monthly Rent * 12
+  if (slMonthlyRow >= 0 && slAnnualRow >= 0) {
+    for (var c = 1; c <= bd.length; c++) {
+      setFormula(slAnnualRow, c, colLetter(c) + (slMonthlyRow + 1) + '*12');
+    }
+  }
+
+  // Total Concessions = Free Rent Value + TI Value
+  if (totalConcessionsRow >= 0 && freeRentRow >= 0 && tiValueRow >= 0) {
+    for (var tc = 1; tc <= bd.length; tc++) {
+      var tcl = colLetter(tc);
+      setFormula(totalConcessionsRow, tc, tcl + (freeRentRow + 1) + '+' + tcl + (tiValueRow + 1));
+    }
+  }
+
+  // NPV per RSF = NPV / RSF
   if (npvRow >= 0 && npvPerRSFRow >= 0 && rsfRow >= 0) {
     for (var c2 = 1; c2 <= bd.length; c2++) {
       var cl2 = colLetter(c2);
-      var perRSFCell = cl2 + (npvPerRSFRow + 1);
-      var npvRef = cl2 + (npvRow + 1);
-      var rsfRef = cl2 + (rsfRow + 1);
-      var existingStyle2 = (ws[perRSFCell] && ws[perRSFCell].s) ? ws[perRSFCell].s : {};
-      ws[perRSFCell] = { t: 'n', f: 'IF(' + rsfRef + '>0,' + npvRef + '/' + rsfRef + ',0)', v: data[npvPerRSFRow][c2], s: existingStyle2 };
-      ws[perRSFCell].z = fmtDec;
+      setFormula(npvPerRSFRow, c2, 'IF(' + cl2 + (rsfRow + 1) + '>0,' + cl2 + (npvRow + 1) + '/' + cl2 + (rsfRow + 1) + ',0)', fmtDec);
+    }
+  }
+
+  // CAPEX per RSF = Total CAPEX / RSF
+  if (capexPerRSFRow >= 0 && totalCapexRow >= 0 && rsfRow >= 0) {
+    for (var cp = 1; cp <= bd.length; cp++) {
+      var cpl = colLetter(cp);
+      setFormula(capexPerRSFRow, cp, 'IF(' + cpl + (rsfRow + 1) + '>0,' + cpl + (totalCapexRow + 1) + '/' + cpl + (rsfRow + 1) + ',0)', fmtDec);
+    }
+  }
+
+  // Monthly LHI Depreciation = Total CAPEX / Term (months)
+  if (monthlyLHIRow >= 0 && totalCapexRow >= 0 && termRow >= 0) {
+    for (var lh = 1; lh <= bd.length; lh++) {
+      var lhl = colLetter(lh);
+      setFormula(monthlyLHIRow, lh, 'IF(' + lhl + (termRow + 1) + '>0,' + lhl + (totalCapexRow + 1) + '/' + lhl + (termRow + 1) + ',0)');
+    }
+  }
+
+  // SL Monthly All-in + LHI (+ Fees): kept as hard value because it includes opex/mo and parking/mo
+  // which aren't separate rows in the sheet. The Annual derivative below is a live formula.
+
+  // SL Annual All-in = SL Monthly All-in * 12
+  if (slMonthlyAllInRow >= 0 && slAnnualAllInRow >= 0) {
+    for (var sa = 1; sa <= bd.length; sa++) {
+      setFormula(slAnnualAllInRow, sa, colLetter(sa) + (slMonthlyAllInRow + 1) + '*12');
+    }
+  }
+
+  // Total Commitment = Total All-in Cost + Total CAPEX + Broker Fee Amount
+  if (totalCommitmentRow >= 0 && totalAllInRow >= 0) {
+    for (var cm = 1; cm <= bd.length; cm++) {
+      var cml = colLetter(cm);
+      var commitFormula = cml + (totalAllInRow + 1);
+      if (totalCapexRow >= 0) commitFormula += '+' + cml + (totalCapexRow + 1);
+      if (brokerFeeAmountRow >= 0) commitFormula += '+' + cml + (brokerFeeAmountRow + 1);
+      setFormula(totalCommitmentRow, cm, commitFormula);
+    }
+  }
+
+  // --- Assumption formulas ---
+
+  // SL Total Occupancy Cost (Monthly) = SL Monthly All-in + Internal OpEx/mo
+  // Falls back to SL Monthly Rent if SL Monthly All-in row doesn't exist (no CAPEX/broker fees)
+  var occBaseRow = slMonthlyAllInRow >= 0 ? slMonthlyAllInRow : slMonthlyRow;
+  if (slTotalOccMonthlyRow >= 0 && internalOpexRow >= 0 && occBaseRow >= 0) {
+    for (var om = 1; om <= bd.length; om++) {
+      var oml = colLetter(om);
+      setFormula(slTotalOccMonthlyRow, om, oml + (occBaseRow + 1) + '+' + oml + (internalOpexRow + 1));
+    }
+  }
+
+  // SL Total Occupancy Cost (Annual) = SL Total Occupancy Cost (Monthly) * 12
+  if (slTotalOccAnnualRow >= 0 && slTotalOccMonthlyRow >= 0) {
+    for (var oa = 1; oa <= bd.length; oa++) {
+      setFormula(slTotalOccAnnualRow, oa, colLetter(oa) + (slTotalOccMonthlyRow + 1) + '*12');
     }
   }
 
