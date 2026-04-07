@@ -20565,8 +20565,8 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
     customItems.forEach(function(item) { customTotal += parseFloat(item.monthly) || 0; });
     var totalInternalOpex = fb + wpe + maint + customTotal;
     var slMonthly = summary.straightLineMonthlyRent || 0;
-    var allInMonthly = slMonthly + totalInternalOpex;
-    var allInAnnual = allInMonthly * 12;
+    // allInMonthly will be computed after we have LHI + parking below
+    var _totalInternalOpex = totalInternalOpex;
 
     // Compute NPV @ 8% from cash flow data (works for all submissions)
     var compCfMonthly = (latest.analysis && latest.analysis.cash_flow && latest.analysis.cash_flow.monthly) ? latest.analysis.cash_flow.monthly : [];
@@ -20594,6 +20594,9 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
     var opexMo = (cfTotals.totalOpex || 0) / (termMo || 1);
     var parkMo = (cfTotals.totalParking || 0) / (termMo || 1);
     var slMonthlyAllInLHI = slMonthly + opexMo + parkMo + (capex.hasCapex ? (capex.monthlyDepreciation || 0) : 0) + (brokerFee.hasBrokerFee ? (brokerFee.slMonthlyImpact || 0) : 0);
+    // True all-in: SL rent + OpEx + parking + LHI + broker fees + internal operating costs
+    var allInMonthly = Math.round(slMonthlyAllInLHI + _totalInternalOpex);
+    var allInAnnual = allInMonthly * 12;
 
     buildingData.push({ address: address, summary: summary, terms: terms, cfTotals: cfTotals, internalOpex: totalInternalOpex, allInMonthly: allInMonthly, allInAnnual: allInAnnual, capex: capex, brokerFee: brokerFee, slMonthlyAllInLHI: Math.round(slMonthlyAllInLHI), buildingKey: bNum, allSubs: subs, selectedSubId: latest.id });
   });
@@ -20665,8 +20668,8 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
 
   var assumptionMetrics = [
     ['Internal OpEx/mo', function(d) { return d.internalOpex; }, true],
-    ['All-In Monthly', function(d) { return d.allInMonthly; }, true],
-    ['All-In Annual', function(d) { return d.allInAnnual; }, true]
+    ['SL Total Occupancy Cost (Monthly)', function(d) { return d.allInMonthly; }, true],
+    ['SL Total Occupancy Cost (Annual)', function(d) { return d.allInAnnual; }, true]
   ];
 
   // Check if any building has assumptions entered
@@ -26858,8 +26861,8 @@ function shortlistShowCompare() {
       { label: 'Avg. Transit Time', key: 'avgTransit', best: 'lowest' }
     ]},
     { label: 'Financials', rows: [
-      { label: 'All-In Monthly', key: 'allInMonthly', best: 'lowest' },
-      { label: 'All-In Annual', key: 'allInAnnual', best: 'lowest' },
+      { label: 'SL Total Occupancy Cost (Monthly)', key: 'allInMonthly', best: 'lowest' },
+      { label: 'SL Total Occupancy Cost (Annual)', key: 'allInAnnual', best: 'lowest' },
       { label: 'All-In per RSF/yr', key: 'allInPerRSF', best: 'lowest' },
       { label: 'Straight-Line Monthly', key: 'slMonthly', best: 'lowest' },
       { label: 'Internal OpEx/mo', key: 'totalMonthlyOpex' },
