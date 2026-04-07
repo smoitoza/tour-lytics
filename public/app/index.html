@@ -20696,6 +20696,8 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
   });
   html += '</tr></thead><tbody>';
 
+  var highlightLabels = { 'Total All-in Cost': true, 'All-In Monthly': true, 'All-In Annual': true, 'NPV @ 8%': true };
+
   function renderMetricRow(label, getter, lowerIsBetter, isAssumption, fmt) {
     var values = buildingData.map(function(d) { return getter(d); });
     var numericValues = values.filter(function(v) { return v != null && !isNaN(v) && v !== 0; });
@@ -20713,7 +20715,9 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
       if (bestVal === worstVal) { bestVal = null; worstVal = null; }
     }
 
-    html += '<tr><td class="cell-label">' + label + '</td>';
+    var isHighlight = highlightLabels[label];
+    var trStyle = isHighlight ? ' style="font-weight:700;background:rgba(99,102,241,0.06)"' : '';
+    html += '<tr' + trStyle + '><td class="cell-label"' + (isHighlight ? ' style="font-weight:700"' : '') + '>' + label + '</td>';
     values.forEach(function(v) {
       var cls = 'cell-currency';
       if (v != null && !isNaN(v) && v !== 0 && bestVal !== null) {
@@ -20732,7 +20736,7 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
       } else {
         display = rfpFmtCurrency(v);
       }
-      html += '<td class="' + cls + '">' + display + '</td>';
+      html += '<td class="' + cls + '"' + (isHighlight ? ' style="font-weight:700"' : '') + '>' + display + '</td>';
     });
     html += '</tr>';
   }
@@ -20742,7 +20746,7 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
 
   // Assumptions section (separator + rows)
   if (hasAnyAssumptions) {
-    html += '<tr><td colspan="' + (buildingData.length + 1) + '" style="padding:var(--space-2) var(--space-3);font-weight:600;font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);background:var(--color-bg-alt);border-top:2px solid var(--color-border)">Your Assumptions</td></tr>';
+    html += '<tr><td colspan="' + (buildingData.length + 1) + '" style="padding:var(--space-2) var(--space-3);font-weight:700;font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);background:var(--color-bg-alt);border-top:2px solid var(--color-border)">Your Assumptions</td></tr>';
     assumptionMetrics.forEach(function(m) { renderMetricRow(m[0], m[1], m[2], true); });
   }
 
@@ -20767,17 +20771,7 @@ function rfpExportComparison(target) {
 
   var bd = cd.buildingData;
   var wb = XLSX.utils.book_new();
-
-  // Build the comparison sheet with formulas
-  var data = [];
-  var projectName = (typeof _projectMeta !== 'undefined' && _projectMeta.name) ? _projectMeta.name : (getProjectId() || 'Project');
-  data.push(['Building Comparison - ' + projectName]);
-  data.push([]);
-
-  // Header row
-  var hdr = ['Metric'];
-  bd.forEach(function(b) { hdr.push(b.address); });
-  data.push(hdr);
+  var numCols = bd.length + 1; // metric label + one col per building
 
   // Helper: column letter from index
   function colLetter(idx) {
@@ -20787,9 +20781,61 @@ function rfpExportComparison(target) {
     return s;
   }
 
-  var dataStartRow = 3; // 0-indexed row where data starts (after title + blank + header)
+  // Currency formats
+  var fmt = getCurrencyExcelFmt();
+  var fmtDec = getCurrencyExcelFmtDec();
 
-  // Track which rows have SL Monthly and SL Annual for formula linkage
+  // --- Style definitions ---
+  var borderThin = { style: 'thin', color: { rgb: 'E2E8F0' } };
+  var baseBorder = { top: borderThin, bottom: borderThin, left: borderThin, right: borderThin };
+
+  var titleStyle = { font: { bold: true, sz: 16, color: { rgb: '0F172A' } } };
+  var subtitleStyle = { font: { sz: 10, color: { rgb: '94A3B8' } } };
+  var colHeaderStyle = { font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1E293B' } }, alignment: { horizontal: 'center', vertical: 'center' }, border: baseBorder };
+  var colHeaderLeftStyle = Object.assign({}, colHeaderStyle, { alignment: { horizontal: 'left', vertical: 'center' } });
+  var sectionStyle = { font: { bold: true, sz: 10, color: { rgb: '64748B' } }, fill: { fgColor: { rgb: 'F1F5F9' } }, border: baseBorder };
+
+  // Row stripe colors
+  var whiteRow = 'FFFFFF';
+  var altRow = 'FAFBFC';
+  // Highlight row for key metrics (light indigo)
+  var highlightBg = 'EEF2FF';
+  // Best/worst cell backgrounds
+  var bestBg = 'F0FDF4';
+  var worstBg = 'FEF2F2';
+
+  function makeLabelStyle(bgRgb, bold) {
+    return { font: { sz: 10, color: { rgb: '334155' }, bold: !!bold }, fill: { fgColor: { rgb: bgRgb } }, border: baseBorder, alignment: { horizontal: 'left' } };
+  }
+  function makeValueStyle(bgRgb, bold, numFmt) {
+    var s = { font: { sz: 10, bold: !!bold }, fill: { fgColor: { rgb: bgRgb } }, border: baseBorder, alignment: { horizontal: 'right' } };
+    if (numFmt) s.numFmt = numFmt;
+    return s;
+  }
+
+  // Key metric labels that should be highlighted
+  var highlightLabels = { 'Total All-in Cost': true, 'All-In Monthly': true, 'All-In Annual': true, 'NPV @ 8%': true };
+
+  // Build raw data array for formulas, then apply styles
+  var data = [];
+  var projectName = (typeof _projectMeta !== 'undefined' && _projectMeta.name) ? _projectMeta.name : (getProjectId() || 'Project');
+
+  // Row 0: Title
+  data.push(['Building Comparison']);
+  // Row 1: Project name / date
+  data.push([projectName + '  |  ' + new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })]);
+  // Row 2: blank
+  data.push([]);
+
+  // Row 3: Column headers
+  var hdr = ['Metric'];
+  bd.forEach(function(b) { hdr.push(b.address); });
+  data.push(hdr);
+  var headerRow = 3;
+
+  var dataStartRow = 4; // 0-indexed row where metric data starts
+
+  // Track special rows for formulas
   var slMonthlyRow = -1;
   var slAnnualRow = -1;
   var npvRow = -1;
@@ -20797,95 +20843,241 @@ function rfpExportComparison(target) {
   var rsfRow = -1;
   var totalAllInRow = -1;
 
+  // Row metadata: { label, isCurrency, isDecimalCurrency, isHighlight, isNum, isSection, isBest/isWorst per col }
+  var rowMeta = [];
+
   // Deal metrics
   cd.dealMetrics.forEach(function(m) {
-    var row = [m[0]];
-    bd.forEach(function(d) { row.push(m[1](d) || 0); });
-    if (m[0] === 'SL Monthly Rent') slMonthlyRow = data.length;
-    if (m[0] === 'SL Annual Expense') slAnnualRow = data.length;
-    if (m[0] === 'RSF') rsfRow = data.length;
-    if (m[0] === 'Total All-in Cost') totalAllInRow = data.length;
-    if (m[0] === 'NPV @ 8%') npvRow = data.length;
-    if (m[0] === 'NPV per RSF') npvPerRSFRow = data.length;
+    var label = m[0];
+    var row = [label];
+    var values = [];
+    bd.forEach(function(d) { var v = m[1](d) || 0; row.push(v); values.push(v); });
+
+    // Best/worst per row
+    var numericVals = values.filter(function(v) { return v != null && !isNaN(v) && v !== 0; });
+    var bestVal = null, worstVal = null;
+    if (numericVals.length > 1 && m[2] !== undefined) {
+      if (m[2]) { bestVal = Math.min.apply(null, numericVals); worstVal = Math.max.apply(null, numericVals); }
+      else { bestVal = Math.max.apply(null, numericVals); worstVal = Math.min.apply(null, numericVals); }
+      if (bestVal === worstVal) { bestVal = null; worstVal = null; }
+    }
+
+    var isDecCurr = (label === 'NPV per RSF' || label === 'Effective Rent/RSF' || label === 'Base Rent/RSF/yr' || label === 'Rent/SF/mo' || label === 'OpEx/SF/mo' || label === 'Full Service Gross/SF/mo' || label === 'CAPEX per RSF');
+    var isNum = (label === 'RSF' || label === 'Term (months)');
+    var isText = (m[3] === 'text');
+    var isCurr = !isNum && !isText;
+
+    // Track row indices
+    if (label === 'SL Monthly Rent') slMonthlyRow = data.length;
+    if (label === 'SL Annual Expense') slAnnualRow = data.length;
+    if (label === 'RSF') rsfRow = data.length;
+    if (label === 'Total All-in Cost') totalAllInRow = data.length;
+    if (label === 'NPV @ 8%') npvRow = data.length;
+    if (label === 'NPV per RSF') npvPerRSFRow = data.length;
+
+    var colBestWorst = [];
+    values.forEach(function(v) {
+      var bw = '';
+      if (v != null && !isNaN(v) && v !== 0 && bestVal !== null) {
+        if (v === bestVal) bw = 'best';
+        else if (v === worstVal) bw = 'worst';
+      }
+      colBestWorst.push(bw);
+    });
+
+    rowMeta.push({ label: label, isCurrency: isCurr, isDecimalCurrency: isDecCurr, isNum: isNum, isText: isText, isHighlight: !!highlightLabels[label], colBestWorst: colBestWorst, isSection: false });
     data.push(row);
   });
 
-  // Assumptions
+  // Assumptions section
+  var assumptionSectionRow = -1;
   if (cd.hasAnyAssumptions) {
     data.push([]);
-    data.push(['YOUR ASSUMPTIONS']);
+    rowMeta.push({ isSection: false, isBlank: true });
+
+    assumptionSectionRow = data.length;
+    var sectionRow = ['YOUR ASSUMPTIONS'];
+    for (var si = 1; si < numCols; si++) sectionRow.push('');
+    data.push(sectionRow);
+    rowMeta.push({ label: 'YOUR ASSUMPTIONS', isSection: true });
+
     cd.assumptionMetrics.forEach(function(m) {
-      var row = [m[0]];
-      bd.forEach(function(d) { row.push(m[1](d) || 0); });
+      var label = m[0];
+      var row = [label];
+      var values = [];
+      bd.forEach(function(d) { var v = m[1](d) || 0; row.push(v); values.push(v); });
+
+      var numericVals = values.filter(function(v) { return v != null && !isNaN(v) && v !== 0; });
+      var bestVal = null, worstVal = null;
+      if (numericVals.length > 1) {
+        bestVal = Math.min.apply(null, numericVals);
+        worstVal = Math.max.apply(null, numericVals);
+        if (bestVal === worstVal) { bestVal = null; worstVal = null; }
+      }
+
+      var colBestWorst = [];
+      values.forEach(function(v) {
+        var bw = '';
+        if (v != null && !isNaN(v) && v !== 0 && bestVal !== null) {
+          if (v === bestVal) bw = 'best';
+          else if (v === worstVal) bw = 'worst';
+        }
+        colBestWorst.push(bw);
+      });
+
+      rowMeta.push({ label: label, isCurrency: true, isDecimalCurrency: false, isNum: false, isText: false, isHighlight: !!highlightLabels[label], colBestWorst: colBestWorst, isSection: false });
       data.push(row);
     });
   }
 
   // Discount Rate input row
   data.push([]);
+  rowMeta.push({ isSection: false, isBlank: true });
   var discountRateRow = data.length;
   data.push(['Discount Rate (input)', 0.08]);
+  rowMeta.push({ label: 'Discount Rate (input)', isDiscount: true });
 
-  // Branding
+  // Footer
   data.push([]);
+  rowMeta.push({ isSection: false, isBlank: true });
   data.push(['Generated by TourLytics | tourlytics.ai']);
+  rowMeta.push({ label: 'Generated', isFooter: true });
 
+  // Create worksheet from data
   var ws = XLSX.utils.aoa_to_sheet(data);
 
-  // Column widths
-  var colWidths = [{ wch: 22 }];
-  bd.forEach(function() { colWidths.push({ wch: 22 }); });
+  // --- Column widths ---
+  var colWidths = [{ wch: 28 }];
+  bd.forEach(function() { colWidths.push({ wch: 20 }); });
   ws['!cols'] = colWidths;
 
-  // Add SL Annual formula: =SL_Monthly * 12 (if both rows exist)
+  // --- Row heights ---
+  var rowHeights = {};
+  rowHeights[0] = { hpt: 28 }; // title
+  rowHeights[headerRow] = { hpt: 22 }; // column headers
+  ws['!rows'] = [];
+  for (var rh = 0; rh <= data.length; rh++) {
+    ws['!rows'][rh] = rowHeights[rh] || { hpt: 18 };
+  }
+
+  // --- Apply styles ---
+
+  // Title row
+  var titleRef = 'A1';
+  if (ws[titleRef]) ws[titleRef].s = titleStyle;
+
+  // Subtitle row
+  var subRef = 'A2';
+  if (ws[subRef]) ws[subRef].s = subtitleStyle;
+
+  // Column header row
+  for (var hi = 0; hi < numCols; hi++) {
+    var hRef = colLetter(hi) + (headerRow + 1);
+    if (ws[hRef]) ws[hRef].s = (hi === 0) ? colHeaderLeftStyle : colHeaderStyle;
+  }
+
+  // Metric rows styling
+  var dataRowIdx = 0; // alternating row counter
+  for (var r = dataStartRow; r < data.length; r++) {
+    var metaIdx = r - dataStartRow;
+    var meta = rowMeta[metaIdx];
+    if (!meta) continue;
+
+    if (meta.isBlank) { dataRowIdx++; continue; }
+
+    if (meta.isFooter) {
+      var fRef = 'A' + (r + 1);
+      if (ws[fRef]) ws[fRef].s = { font: { sz: 9, color: { rgb: '94A3B8' }, italic: true } };
+      continue;
+    }
+
+    if (meta.isDiscount) {
+      var drLbl = 'A' + (r + 1);
+      if (ws[drLbl]) ws[drLbl].s = { font: { bold: true, sz: 10, color: { rgb: '2563EB' } }, border: baseBorder };
+      var drVal = 'B' + (r + 1);
+      if (ws[drVal]) { ws[drVal].z = '0%'; ws[drVal].s = { font: { bold: true, sz: 10 }, fill: { fgColor: { rgb: 'FFF9E8' } }, border: baseBorder, numFmt: '0%' }; }
+      continue;
+    }
+
+    if (meta.isSection) {
+      for (var sc = 0; sc < numCols; sc++) {
+        var sRef = colLetter(sc) + (r + 1);
+        if (!ws[sRef]) ws[sRef] = { v: '', t: 's' };
+        ws[sRef].s = sectionStyle;
+      }
+      dataRowIdx = 0; // reset alternation after section
+      continue;
+    }
+
+    // Normal metric row
+    var isHighlight = meta.isHighlight;
+    var rowBg = isHighlight ? highlightBg : ((dataRowIdx % 2 === 0) ? whiteRow : altRow);
+    var isBold = isHighlight;
+
+    // Label cell
+    var lRef = colLetter(0) + (r + 1);
+    if (ws[lRef]) ws[lRef].s = makeLabelStyle(rowBg, isBold);
+
+    // Value cells
+    for (var vc = 0; vc < bd.length; vc++) {
+      var vRef = colLetter(vc + 1) + (r + 1);
+      if (!ws[vRef]) continue;
+
+      // Determine cell background (highlight > best/worst > alternating)
+      var cellBg = rowBg;
+      if (meta.colBestWorst && meta.colBestWorst[vc] === 'best') cellBg = isHighlight ? highlightBg : bestBg;
+      else if (meta.colBestWorst && meta.colBestWorst[vc] === 'worst') cellBg = isHighlight ? highlightBg : worstBg;
+
+      // Determine number format
+      var nf = null;
+      if (meta.isCurrency) nf = meta.isDecimalCurrency ? fmtDec : fmt;
+      else if (meta.isNum) nf = '#,##0';
+
+      var cellStyle = makeValueStyle(cellBg, isBold, nf);
+
+      // Best/worst font color
+      if (meta.colBestWorst && meta.colBestWorst[vc] === 'best') cellStyle.font = Object.assign({}, cellStyle.font, { color: { rgb: '059669' } });
+      else if (meta.colBestWorst && meta.colBestWorst[vc] === 'worst') cellStyle.font = Object.assign({}, cellStyle.font, { color: { rgb: 'DC2626' } });
+
+      ws[vRef].s = cellStyle;
+      if (nf) ws[vRef].z = nf;
+    }
+
+    dataRowIdx++;
+  }
+
+  // --- Formulas ---
+
+  // SL Annual formula: =SL_Monthly * 12
   if (slMonthlyRow >= 0 && slAnnualRow >= 0) {
     for (var c = 1; c <= bd.length; c++) {
       var cl = colLetter(c);
       var annualCell = cl + (slAnnualRow + 1);
       var monthlyRef = cl + (slMonthlyRow + 1);
-      ws[annualCell] = { t: 'n', f: monthlyRef + '*12', v: data[slAnnualRow][c] };
+      var existingStyle = (ws[annualCell] && ws[annualCell].s) ? ws[annualCell].s : {};
+      ws[annualCell] = { t: 'n', f: monthlyRef + '*12', v: data[slAnnualRow][c], s: existingStyle };
+      if (existingStyle.numFmt) ws[annualCell].z = existingStyle.numFmt;
+      else ws[annualCell].z = fmt;
     }
   }
 
-  // Format discount rate cell as percentage with yellow fill
-  var drCellRef = 'B' + (discountRateRow + 1);
-  if (ws[drCellRef]) {
-    ws[drCellRef].z = '0%';
-    ws[drCellRef].s = { fill: { fgColor: { rgb: 'FFF9E8' } }, font: { bold: true } };
-  }
-  // Label cell styling
-  var drLabelRef = 'A' + (discountRateRow + 1);
-  if (ws[drLabelRef]) {
-    ws[drLabelRef].s = { font: { bold: true, color: { rgb: '2563EB' } } };
-  }
-
-  // Add NPV per RSF formula: =NPV / RSF (if both rows exist)
+  // NPV per RSF formula: =NPV / RSF
   if (npvRow >= 0 && npvPerRSFRow >= 0 && rsfRow >= 0) {
     for (var c2 = 1; c2 <= bd.length; c2++) {
       var cl2 = colLetter(c2);
       var perRSFCell = cl2 + (npvPerRSFRow + 1);
       var npvRef = cl2 + (npvRow + 1);
       var rsfRef = cl2 + (rsfRow + 1);
-      ws[perRSFCell] = { t: 'n', f: 'IF(' + rsfRef + '>0,' + npvRef + '/' + rsfRef + ',0)', v: data[npvPerRSFRow][c2] };
+      var existingStyle2 = (ws[perRSFCell] && ws[perRSFCell].s) ? ws[perRSFCell].s : {};
+      ws[perRSFCell] = { t: 'n', f: 'IF(' + rsfRef + '>0,' + npvRef + '/' + rsfRef + ',0)', v: data[npvPerRSFRow][c2], s: existingStyle2 };
+      ws[perRSFCell].z = fmtDec;
     }
   }
 
-  // Style: currency format for metric rows
-  var fmt = getCurrencyExcelFmt();
-  var fmtDec = getCurrencyExcelFmtDec();
-  for (var r = dataStartRow; r < data.length; r++) {
-    var label = data[r] && data[r][0];
-    if (!label) continue;
-    var isDecimalCurrency = (label === 'NPV per RSF' || label === 'Effective Rent/RSF' || label === 'Base Rent per RSF');
-    var isDiscount = (label === 'Discount Rate (input)');
-    var isCurrency = !isDiscount && label !== 'RSF' && label !== 'Term (months)' && label !== 'YOUR ASSUMPTIONS' && label.indexOf('Generated') < 0;
-    if (isCurrency) {
-      for (var ci = 1; ci <= bd.length; ci++) {
-        var cellRef = colLetter(ci) + (r + 1);
-        if (ws[cellRef]) ws[cellRef].z = isDecimalCurrency ? fmtDec : fmt;
-      }
-    }
-  }
+  // --- Merge title across columns ---
+  if (!ws['!merges']) ws['!merges'] = [];
+  ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: numCols - 1 } });
+  ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: numCols - 1 } });
 
   XLSX.utils.book_append_sheet(wb, ws, 'Building Comparison');
   rfpAddBrandingSheet(wb);
