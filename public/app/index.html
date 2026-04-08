@@ -16570,6 +16570,7 @@ function rfpBuildDetailHtml(subs) {
       '<div style="display:flex;gap:var(--space-2);align-items:center">' +
         '<button class="rfp-btn-secondary rfp-export-btn" onclick="rfpExportExcel()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export Excel</button>' +
         '<button class="rfp-btn-secondary rfp-drive-btn" onclick="rfpExportGoogleDrive()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>Save to Drive</button>' +
+        '<button class="rfp-btn-secondary" onclick="rfpOpenVersionOnePager()" style="background:#0f172a;color:white;border-color:#0f172a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>One-Pager</button>' +
         (canDelete ? '<button class="rfp-btn-danger" onclick="rfpDeleteSubmission(\'' + selected.id + '\')">Delete</button>' : '') +
       '</div>' +
     '</div>';
@@ -17782,10 +17783,7 @@ function rfpShowVersionComparison(buildingAddress) {
   });
 
   html += '</tbody></table></div>';
-  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:var(--space-2);">';
-  html += '<button class="rfp-btn-secondary" onclick="rfpOpenVersionOnePager()" style="font-size:var(--text-xs);background:#0f172a;color:white;border-color:#0f172a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>One-Pager</button>';
-  html += '<button class="rfp-version-chip" onclick="document.getElementById(\'rfpVersionCompare\').style.display=\'none\'">Close Comparison</button>';
-  html += '</div>';
+  html += '<div style="text-align:right;margin-top:var(--space-2);"><button class="rfp-version-chip" onclick="document.getElementById(\'rfpVersionCompare\').style.display=\'none\'">Close Comparison</button></div>';
 
   // Store version data for the one-pager
   window._rfpVersionOnePagerData = {
