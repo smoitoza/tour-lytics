@@ -20776,7 +20776,7 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
     var allInMonthly = Math.round(slMonthlyAllInLHI + _totalInternalOpex);
     var allInAnnual = allInMonthly * 12;
 
-    buildingData.push({ address: address, versionLabel: latest.version_label || latest.versionLabel || '', summary: summary, terms: terms, cfTotals: cfTotals, internalOpex: totalInternalOpex, allInMonthly: allInMonthly, allInAnnual: allInAnnual, capex: capex, brokerFee: brokerFee, slMonthlyAllInLHI: Math.round(slMonthlyAllInLHI), buildingKey: bNum, allSubs: subs, selectedSubId: latest.id });
+    buildingData.push({ address: address, versionLabel: latest.version_label || latest.versionLabel || '', summary: summary, terms: terms, cfTotals: cfTotals, internalOpex: totalInternalOpex, intFB: fb, intWPE: wpe, intMaint: maint, allInMonthly: allInMonthly, allInAnnual: allInAnnual, capex: capex, brokerFee: brokerFee, slMonthlyAllInLHI: Math.round(slMonthlyAllInLHI), buildingKey: bNum, allSubs: subs, selectedSubId: latest.id });
   });
 
   var hasAnyCapex = buildingData.some(function(d) { return d.capex && d.capex.hasCapex; });
