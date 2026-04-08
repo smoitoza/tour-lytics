@@ -21556,14 +21556,15 @@ function rfpOpenOnePagerModal() {
     h += '<div style="display:flex;flex:1;overflow:hidden;">';
 
     // Left: metric picker
-    h += '<div style="width:320px;min-width:320px;padding:16px 20px;overflow-y:auto;border-right:1px solid #e2e8f0;">';
+    h += '<div class="op-left-panel" style="width:320px;min-width:320px;padding:16px 20px;overflow-y:auto;border-right:1px solid #e2e8f0;">';
     h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
     h += '<span style="font-size:13px;font-weight:600;color:#475569;">Metrics</span>';
-    h += '<span style="font-size:12px;font-weight:600;padding:2px 8px;border-radius:10px;' + (cnt >= _onePagerMaxMetrics ? 'background:#fef2f2;color:#dc2626;' : 'background:#f1f5f9;color:#475569;') + '">' + cnt + '/' + _onePagerMaxMetrics + ' selected</span>';
+    h += '<span class="op-counter" style="font-size:12px;font-weight:600;padding:2px 8px;border-radius:10px;' + (cnt >= _onePagerMaxMetrics ? 'background:#fef2f2;color:#dc2626;' : 'background:#f1f5f9;color:#475569;') + '">' + cnt + '/' + _onePagerMaxMetrics + ' selected</span>';
     h += '</div>';
 
     _onePagerGroups.forEach(function(group) {
-      h += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;margin:12px 0 4px;">' + group.label + '</div>';
+      var groupNote = group.label === 'Operating Costs' ? ' <span style="font-size:9px;color:#2563eb;font-weight:500;text-transform:none;letter-spacing:0;">(included in SL Total Occupancy)</span>' : '';
+      h += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;margin:12px 0 4px;">' + group.label + groupNote + '</div>';
       group.metrics.forEach(function(m) {
       var checked = !!selected[m.key];
       var disabled = !checked && cnt >= _onePagerMaxMetrics;
@@ -21576,7 +21577,7 @@ function rfpOpenOnePagerModal() {
     h += '</div>';
 
     // Right: live preview
-    h += '<div style="flex:1;padding:20px;overflow-y:auto;background:#f8fafc;">';
+    h += '<div class="op-preview-pane" style="flex:1;padding:20px;overflow-y:auto;background:#f8fafc;">';
     h += '<div style="font-size:12px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px;">Preview</div>';
     h += _opRenderCard(bd, selected);
     h += '</div>';
@@ -21595,13 +21596,50 @@ function rfpOpenOnePagerModal() {
 
   window._opSelected = selected;
   window._opToggleMetric = function(key) {
+    // Save scroll position before any DOM changes
+    var leftPanel = document.querySelector('#onePagerModal .op-left-panel');
+    var scrollTop = leftPanel ? leftPanel.scrollTop : 0;
+
     if (selected[key]) {
       delete selected[key];
     } else {
       if (countSelected() >= _onePagerMaxMetrics) return;
       selected[key] = true;
     }
-    renderModal();
+
+    var cnt = countSelected();
+
+    // Update counter badge without full re-render
+    var counter = document.querySelector('#onePagerModal .op-counter');
+    if (counter) {
+      counter.textContent = cnt + '/' + _onePagerMaxMetrics + ' selected';
+      counter.style.background = cnt >= _onePagerMaxMetrics ? '#fef2f2' : '#f1f5f9';
+      counter.style.color = cnt >= _onePagerMaxMetrics ? '#dc2626' : '#475569';
+    }
+
+    // Update each checkbox + row style
+    document.querySelectorAll('#onePagerModal [data-op-key]').forEach(function(input) {
+      var k = input.getAttribute('data-op-key');
+      var isChecked = !!selected[k];
+      var isDisabled = !isChecked && cnt >= _onePagerMaxMetrics;
+      input.checked = isChecked;
+      input.disabled = isDisabled;
+      var row = input.closest('label');
+      if (row) {
+        row.style.background = isChecked ? '#f0fdf4' : '';
+        row.style.opacity = isDisabled ? '0.4' : '1';
+        row.style.cursor = isDisabled ? 'not-allowed' : 'pointer';
+      }
+    });
+
+    // Re-render only the preview pane
+    var preview = document.querySelector('#onePagerModal .op-preview-pane');
+    if (preview && window._rfpComparisonData) {
+      preview.innerHTML = _opRenderCard(window._rfpComparisonData.buildingData, selected);
+    }
+
+    // Restore scroll position
+    if (leftPanel) leftPanel.scrollTop = scrollTop;
   };
 
   renderModal();
