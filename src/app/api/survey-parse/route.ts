@@ -385,10 +385,10 @@ Return ONLY the JSON array, no other text.`
         }
         pageAddrCounts[pt.page] = count
       }
-      // Pages with 3+ buildings are likely matrix/overview pages — exclude them
-      // Matrix pages typically list 3 buildings per page in a summary table;
-      // individual brochure pages (what we want) mention only 1-2 addresses.
-      const overviewThreshold = 2
+      // Matrix pages list 3 buildings per page — exclude pages with 3+ building addresses
+      const matrixThreshold = 3
+      // Also exclude broad overview pages (map/TOC) with many addresses
+      const overviewThreshold = Math.max(Math.ceil(buildings.length * 0.5), 5)
 
       // For each building, find which page contains its street address
       for (const b of buildings) {
@@ -396,6 +396,9 @@ Return ONLY the JSON array, no other text.`
         const addrClean = b.address.replace(/[.,]/g, '').toLowerCase()
         const addrWords = addrClean.split(/\s+/)
         const streetNum = addrWords[0] || ''
+        // AI-estimated page gives us a rough anchor — the real brochure page
+        // is typically within ~30 pages of the AI's guess
+        const aiGuess = b.estimatedPage || 0
 
         // Collect all pages that mention this address
         const matchingPages: number[] = []
@@ -406,15 +409,35 @@ Return ONLY the JSON array, no other text.`
           }
         }
 
-        // Prefer non-overview pages (content pages vs TOC/map)
+        // Filter: exclude map/TOC pages (too many addresses) and matrix pages (3+)
+        const isSingleBuildingPage = (p: number) => {
+          const cnt = pageAddrCounts[p] || 0
+          return cnt < matrixThreshold && cnt < overviewThreshold
+        }
+
         let bestPage = -1
-        const contentPages = matchingPages.filter(p => (pageAddrCounts[p] || 0) < overviewThreshold)
+        const contentPages = matchingPages.filter(p => isSingleBuildingPage(p))
+
         if (contentPages.length > 0) {
-          // Use the LAST content page — brochure pages come after matrix/summary pages
-          bestPage = contentPages[contentPages.length - 1]
+          if (aiGuess > 0) {
+            // Find the content page CLOSEST to the AI's estimated page
+            // This avoids jumping to appendix/back-matter pages that repeat addresses
+            bestPage = contentPages.reduce((best, p) => {
+              return Math.abs(p - aiGuess) < Math.abs(best - aiGuess) ? p : best
+            })
+          } else {
+            // No AI guess — take the first content page (comes after matrix)
+            bestPage = contentPages[0]
+          }
         } else if (matchingPages.length > 0) {
-          // All matching pages are overview pages - use the last one
-          bestPage = matchingPages[matchingPages.length - 1]
+          // All matching pages are overview/matrix — fall back to the one closest to AI guess
+          if (aiGuess > 0) {
+            bestPage = matchingPages.reduce((best, p) => {
+              return Math.abs(p - aiGuess) < Math.abs(best - aiGuess) ? p : best
+            })
+          } else {
+            bestPage = matchingPages[matchingPages.length - 1]
+          }
         }
 
         // Fallback: match street number + next word (handles "401 W" vs "401 W.")
@@ -427,11 +450,15 @@ Return ONLY the JSON array, no other text.`
               fallbackPages.push(pt.page)
             }
           }
-          const fbContent = fallbackPages.filter(p => (pageAddrCounts[p] || 0) < overviewThreshold)
+          const fbContent = fallbackPages.filter(p => isSingleBuildingPage(p))
           if (fbContent.length > 0) {
-            bestPage = fbContent[fbContent.length - 1]
+            bestPage = aiGuess > 0
+              ? fbContent.reduce((best, p) => Math.abs(p - aiGuess) < Math.abs(best - aiGuess) ? p : best)
+              : fbContent[0]
           } else if (fallbackPages.length > 0) {
-            bestPage = fallbackPages[fallbackPages.length - 1]
+            bestPage = aiGuess > 0
+              ? fallbackPages.reduce((best, p) => Math.abs(p - aiGuess) < Math.abs(best - aiGuess) ? p : best)
+              : fallbackPages[fallbackPages.length - 1]
           }
         }
 
