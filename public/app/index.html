@@ -13373,8 +13373,25 @@ function updateRankingSummary() {
 
 function renderTourBook() {
   const container = document.getElementById('tourbookContainer');
-  const list = getTourList();
   const data = getTourBookData();
+
+  // Auto-sort by date + time if any buildings have tour times set
+  var schedule = getTourSchedule();
+  var anyScheduled = Object.values(schedule).some(function(s) { return s.date || s.time; });
+  if (anyScheduled) {
+    var rawList = getTourList();
+    rawList.sort(function(a, b) {
+      var keyA = getBuildingKey(a);
+      var keyB = getBuildingKey(b);
+      var schedA = schedule[keyA] || {};
+      var schedB = schedule[keyB] || {};
+      var dtA = (schedA.date || '9999-99-99') + 'T' + (schedA.time || '99:99');
+      var dtB = (schedB.date || '9999-99-99') + 'T' + (schedB.time || '99:99');
+      return dtA < dtB ? -1 : dtA > dtB ? 1 : 0;
+    });
+    saveTourList(rawList);
+  }
+  const list = getTourList();
 
   // Remember which cards are currently expanded so we can restore state after re-render
   var expandedCards = {};
