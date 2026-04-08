@@ -12,7 +12,7 @@ export const maxDuration = 90
 type ExtractedLink = { type: string; label: string; url: string }
 type PageLinkData = {
   page: number
-  links: { url: string; y: number }[]
+  links: { url: string; y: number; x: number }[]
   textItems: { str: string; y: number; x: number }[]
   pageHeight: number
 }
@@ -84,6 +84,7 @@ async function extractPdfLinks(pdfUrl: string): Promise<PageLinkData[]> {
         .map((a: any) => ({
           url: a.url,
           y: pageHeight - a.rect[3], // Top of link box in top-down coords
+          x: a.rect[0],              // Left edge of link box (for column detection)
         }))
 
       if (links.length > 0) {
@@ -132,8 +133,8 @@ function mapLinksToBuildings(
     const pageBldgs = buildingsByPage[pd.page]
     if (!pageBldgs || pageBldgs.length === 0) continue
 
-    // Find each building's Y position on this page
-    const bldgPositions: { building: any; y: number }[] = []
+    // Find each building's Y and X position on this page
+    const bldgPositions: { building: any; y: number; x: number }[] = []
     for (const b of pageBldgs) {
       if (!b.address) continue
       const addrClean = b.address.replace(/[.,]/g, '').toLowerCase().trim()
@@ -192,34 +193,85 @@ function mapLinksToBuildings(
       }
 
       if (foundY >= 0) {
-        bldgPositions.push({ building: b, y: foundY })
+        // Also find X position of the address text for column detection
+        let foundX = 0
+        for (const variant of variants) {
+          for (const item of pd.textItems) {
+            const clean = item.str.replace(/[.,]/g, '').toLowerCase()
+            if (clean.length > 2 && clean.includes(variant)) {
+              foundX = item.x ?? 0
+              break
+            }
+          }
+          if (foundX > 0) break
+        }
+        bldgPositions.push({ building: b, y: foundY, x: foundX })
       }
     }
 
-    // Sort buildings by Y position (top to bottom)
-    bldgPositions.sort((a, b) => a.y - b.y)
+    // Sort buildings by Y position (top to bottom), then X (left to right)
+    bldgPositions.sort((a, b) => a.y - b.y || (a.x ?? 0) - (b.x ?? 0))
 
-    // Assign links to buildings based on Y-zone
-    for (let i = 0; i < bldgPositions.length; i++) {
-      const { building, y: bldgY } = bldgPositions[i]
-      const nextY = i + 1 < bldgPositions.length
-        ? bldgPositions[i + 1].y
-        : pd.pageHeight + 50 // allow some overflow for last building
+    // Detect if this is a multi-column matrix page (buildings at similar Y positions)
+    // If 2+ buildings share nearly the same Y coordinate, use X-axis column assignment
+    const isMatrixPage = bldgPositions.length > 1 &&
+      bldgPositions.some((bp, i) =>
+        i > 0 && Math.abs(bp.y - bldgPositions[i - 1].y) < 50
+      )
 
-      // Links in this building's zone: from 10px above the address to the next building
-      const zoneLinks = pd.links.filter(l => l.y >= bldgY - 10 && l.y < nextY)
+    if (isMatrixPage && bldgPositions.length > 1) {
+      // Multi-column layout: divide page width into equal columns
+      // Assign each link to the building whose X-column it falls in
+      const pageWidth = pd.pageHeight // approximate — use height as proxy if width not available
+      const colWidth = pageWidth / bldgPositions.length
 
-      if (zoneLinks.length > 0) {
-        building.links = zoneLinks.map(l => {
-          // Find nearby text (within 20px of the link) to help classify it
-          const nearbyText = pd.textItems
-            .filter(t => Math.abs(t.y - l.y) < 20)
-            .map(t => t.str)
-            .join(' ')
-          const { type, label } = classifyLink(l.url, nearbyText)
-          return { type, label, url: l.url }
-        })
-        console.log(`  Links mapped: ${building.address} -> ${building.links.length} links`)
+      // Sort buildings by X position to map column index
+      const colSorted = [...bldgPositions].sort((a, b) => (a.x ?? 0) - (b.x ?? 0))
+
+      for (const link of pd.links) {
+        // Find which column this link's X falls in
+        const colIndex = Math.min(
+          Math.floor((link.x ?? 0) / colWidth),
+          colSorted.length - 1
+        )
+        const targetBldg = colSorted[colIndex]?.building
+        if (!targetBldg) continue
+
+        if (!targetBldg.links) targetBldg.links = []
+        const nearbyText = pd.textItems
+          .filter(t => Math.abs(t.y - link.y) < 20)
+          .map(t => t.str)
+          .join(' ')
+        const { type, label } = classifyLink(link.url, nearbyText)
+        targetBldg.links.push({ type, label, url: link.url })
+      }
+
+      for (const { building } of bldgPositions) {
+        if (building.links?.length) {
+          console.log(`  Links (X-col): ${building.address} -> ${building.links.length} links`)
+        }
+      }
+    } else {
+      // Single-column layout: assign links by Y-zone (original logic)
+      for (let i = 0; i < bldgPositions.length; i++) {
+        const { building, y: bldgY } = bldgPositions[i]
+        const nextY = i + 1 < bldgPositions.length
+          ? bldgPositions[i + 1].y
+          : pd.pageHeight + 50
+
+        const zoneLinks = pd.links.filter(l => l.y >= bldgY - 10 && l.y < nextY)
+
+        if (zoneLinks.length > 0) {
+          building.links = zoneLinks.map(l => {
+            const nearbyText = pd.textItems
+              .filter(t => Math.abs(t.y - l.y) < 20)
+              .map(t => t.str)
+              .join(' ')
+            const { type, label } = classifyLink(l.url, nearbyText)
+            return { type, label, url: l.url }
+          })
+          console.log(`  Links (Y-zone): ${building.address} -> ${building.links.length} links`)
+        }
       }
     }
 
