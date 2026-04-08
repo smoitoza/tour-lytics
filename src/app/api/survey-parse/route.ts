@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { debitTokens } from '@/lib/tokens'
 
 // Allow up to 90s for AI parsing + geocoding + link extraction
-export const maxDuration = 90
+export const maxDuration = 300
 
 // ============================================================
 // PDF Link Extraction - Extracts hyperlink annotations from PDFs
