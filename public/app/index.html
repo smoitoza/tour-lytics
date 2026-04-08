@@ -13335,39 +13335,75 @@ async function loadTourBookPhotos(item) {
 }
 
 function updateRankingSummary() {
-  const container = document.getElementById('tourbook-ranking');
+  var container = document.getElementById('tourbook-ranking');
   if (!container) return;
-  
-  const list = getTourList();
-  if (list.length < 2) {
-    container.style.display = 'none';
-    return;
+
+  var list = getTourList();
+  if (list.length === 0) { container.style.display = 'none'; return; }
+
+  var schedule = getTourSchedule();
+
+  // Build schedule rows: buildings with times sorted earliest to latest,
+  // followed by buildings with no time set
+  var withTime = [];
+  var withoutTime = [];
+  list.forEach(function(item) {
+    var key = getBuildingKey(item);
+    var sched = schedule[key] || {};
+    if (sched.time || sched.date) {
+      withTime.push({ name: item.name, date: sched.date || '', time: sched.time || '' });
+    } else {
+      withoutTime.push({ name: item.name, date: '', time: '' });
+    }
+  });
+
+  withTime.sort(function(a, b) {
+    var dtA = (a.date || '9999-99-99') + 'T' + (a.time || '99:99');
+    var dtB = (b.date || '9999-99-99') + 'T' + (b.time || '99:99');
+    return dtA < dtB ? -1 : dtA > dtB ? 1 : 0;
+  });
+
+  var allRows = withTime.concat(withoutTime);
+  if (allRows.length === 0) { container.style.display = 'none'; return; }
+
+  // Format time for display: "10:30 AM"
+  function formatTime(t) {
+    if (!t) return '';
+    try {
+      var parts = t.split(':');
+      var h = parseInt(parts[0]), m = parts[1];
+      var ampm = h >= 12 ? 'PM' : 'AM';
+      h = h % 12 || 12;
+      return h + ':' + m + ' ' + ampm;
+    } catch(e) { return t; }
   }
-  
-  const ranked = list.map(item => {
-    const key = getBuildingKey(item);
-    return { name: item.name, score: getOverallScore(key), color: item.color || '#9ca3af' };
-  }).sort((a, b) => b.score - a.score);
-  
-  const hasScores = ranked.some(r => r.score > 0);
-  if (!hasScores) {
-    container.style.display = 'none';
-    return;
+
+  // Format date: "Wed Apr 8"
+  function formatDate(d) {
+    if (!d) return '';
+    try {
+      var dt = new Date(d + 'T12:00:00');
+      return dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    } catch(e) { return d; }
   }
-  
+
   container.style.display = 'block';
-  container.innerHTML = 
-    '<h3>Tour Ranking</h3>' +
-    '<div class="tourbook-rank-list">' +
-    ranked.map((r, i) => 
-      '<div class="tourbook-rank-item">' +
-        '<span class="tourbook-rank-pos">#' + (i + 1) + '</span>' +
-        '<span style="width:10px;height:10px;border-radius:50%;background:' + r.color + ';flex-shrink:0;"></span>' +
-        '<span class="tourbook-rank-name">' + r.name + '</span>' +
-        '<span class="tourbook-rank-score">' + (r.score > 0 ? r.score.toFixed(1) : '-') + '</span>' +
-        '<div class="tourbook-rank-bar-bg"><div class="tourbook-rank-bar-fill" style="width:' + (r.score / 5 * 100) + '%"></div></div>' +
-      '</div>'
-    ).join('') +
+  container.innerHTML =
+    '<h3 style="margin:0 0 12px;font-size:14px;font-weight:700;color:#0f172a;">Tour Schedule</h3>' +
+    '<div style="display:flex;flex-direction:column;gap:6px;">' +
+    allRows.map(function(r, i) {
+      var timeStr = formatTime(r.time);
+      var dateStr = formatDate(r.date);
+      var timeLabel = timeStr ? (dateStr ? dateStr + ' · ' + timeStr : timeStr) : (dateStr || '');
+      return '<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #f1f5f9;">' +
+        '<span style="flex-shrink:0;font-size:12px;font-weight:700;color:' + (timeStr ? '#ea580c' : '#94a3b8') + ';min-width:90px;">' +
+          (timeLabel || '— No time set') +
+        '</span>' +
+        '<span style="font-size:13px;color:#0f172a;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' +
+          (r.name || 'Unknown') +
+        '</span>' +
+      '</div>';
+    }).join('') +
     '</div>';
 }
 
