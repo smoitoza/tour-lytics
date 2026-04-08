@@ -21694,8 +21694,9 @@ function _opRenderCard(bd, selected) {
       if (groupSelected.length === 0) return;
 
       // Group header row
+      var groupNote = group.label === 'Operating Costs' ? '<span style="font-size:9px;color:#2563eb;font-weight:500;text-transform:none;letter-spacing:0;margin-left:6px;">(included in SL Total Occupancy)</span>' : '';
       h += '<div style="display:grid;grid-template-columns:200px ' + bd.map(function() { return '1fr'; }).join(' ') + ';background:#f1f5f9;">';
-      h += '<div style="padding:6px 16px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;" colspan="1">' + group.label + '</div>';
+      h += '<div style="padding:6px 16px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;">' + group.label + groupNote + '</div>';
       bd.forEach(function() { h += '<div style="padding:6px 16px;"></div>'; });
       h += '</div>';
 
