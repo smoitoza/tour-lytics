@@ -8926,6 +8926,16 @@ body {
   }
 }
 
+/* ===== ONE-PAGER PRINT STYLES ===== */
+@media print {
+  body > *:not(#onePagerOverlay) { display: none !important; }
+  #onePagerOverlay { position: static !important; z-index: auto !important; overflow: visible !important; background: white !important; }
+  #onePagerOverlay .op-no-print { display: none !important; }
+  #onePagerOverlay .op-card { box-shadow: none !important; max-width: 100% !important; margin: 0 !important; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+  @page { margin: 0.5in; }
+}
+
 </style>
 </head>
 <body>
@@ -20703,7 +20713,7 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
     var allInMonthly = Math.round(slMonthlyAllInLHI + _totalInternalOpex);
     var allInAnnual = allInMonthly * 12;
 
-    buildingData.push({ address: address, summary: summary, terms: terms, cfTotals: cfTotals, internalOpex: totalInternalOpex, allInMonthly: allInMonthly, allInAnnual: allInAnnual, capex: capex, brokerFee: brokerFee, slMonthlyAllInLHI: Math.round(slMonthlyAllInLHI), buildingKey: bNum, allSubs: subs, selectedSubId: latest.id });
+    buildingData.push({ address: address, versionLabel: latest.version_label || latest.versionLabel || '', summary: summary, terms: terms, cfTotals: cfTotals, internalOpex: totalInternalOpex, allInMonthly: allInMonthly, allInAnnual: allInAnnual, capex: capex, brokerFee: brokerFee, slMonthlyAllInLHI: Math.round(slMonthlyAllInLHI), buildingKey: bNum, allSubs: subs, selectedSubId: latest.id });
   });
 
   var hasAnyCapex = buildingData.some(function(d) { return d.capex && d.capex.hasCapex; });
@@ -20864,6 +20874,7 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
   html += '<div style="display:flex;gap:var(--space-2);margin-top:var(--space-3);justify-content:flex-end;">';
   html += '<button class="rfp-btn-secondary rfp-export-btn" onclick="rfpExportComparison(\'excel\')" style="font-size:var(--text-xs);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export Comparison to Excel</button>';
   html += '<button class="rfp-btn-secondary rfp-drive-btn" onclick="rfpExportComparison(\'drive\')" style="font-size:var(--text-xs);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>Save to Drive</button>';
+  html += '<button class="rfp-btn-secondary" onclick="rfpOpenOnePagerModal()" style="font-size:var(--text-xs);background:#0f172a;color:white;border-color:#0f172a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>One-Pager</button>';
   html += '</div>';
 
   // Store comparison data for export
@@ -21359,6 +21370,279 @@ function rfpExportComparisonToDrive(wb, fileName) {
       initAndRequest();
     });
   }
+}
+
+// ===== FINANCIAL ONE-PAGER =====
+// Grouped metric definitions for the one-pager picker
+var _onePagerGroups = [
+  {
+    label: 'Lease Basics',
+    metrics: [
+      { key: 'rsf', label: 'RSF', getter: function(d) { return d.summary.rsf; }, lowerIsBetter: false, fmt: 'num' },
+      { key: 'term', label: 'Term (months)', getter: function(d) { return d.summary.termMonths; }, lowerIsBetter: true, fmt: 'num' },
+    ]
+  },
+  {
+    label: 'Rent & Rate',
+    metrics: [
+      { key: 'baseRent', label: 'Base Rent/RSF/yr', getter: function(d) { return d.terms.base_rent_rsf || d.terms.baseRent; }, lowerIsBetter: true, fmt: 'curr_dec' },
+      { key: 'rentSfMo', label: 'Rent/SF/mo', getter: function(d) { var rsf = d.summary.rsf || 0; var tm = d.summary.termMonths || 1; var t = (d.cfTotals || {}).totalBaseRent || 0; return rsf > 0 ? Math.round(t / tm / rsf * 100) / 100 : 0; }, lowerIsBetter: true, fmt: 'curr_dec' },
+      { key: 'effRent', label: 'Effective Rent/RSF', getter: function(d) { return d.summary.effectiveRentRSF; }, lowerIsBetter: true, fmt: 'curr_dec' },
+      { key: 'opex', label: 'OpEx/SF/mo', getter: function(d) { var rsf = d.summary.rsf || 0; var tm = d.summary.termMonths || 1; var t = (d.cfTotals || {}).totalOpex || 0; return rsf > 0 ? Math.round(t / tm / rsf * 100) / 100 : 0; }, lowerIsBetter: true, fmt: 'curr_dec' },
+      { key: 'fsg', label: 'Full Service Gross/SF/mo', getter: function(d) { var rsf = d.summary.rsf || 0; var tm = d.summary.termMonths || 1; var ct = d.cfTotals || {}; return rsf > 0 ? Math.round(((ct.totalBaseRent || 0) + (ct.totalOpex || 0)) / tm / rsf * 100) / 100 : 0; }, lowerIsBetter: true, fmt: 'curr_dec' },
+    ]
+  },
+  {
+    label: 'Total Cost',
+    metrics: [
+      { key: 'totalAllIn', label: 'Total All-in Cost', getter: function(d) { return d.summary.totalAllInCost; }, lowerIsBetter: true, fmt: 'curr' },
+      { key: 'slMonthly', label: 'SL Monthly Rent', getter: function(d) { return d.summary.straightLineMonthlyRent; }, lowerIsBetter: true, fmt: 'curr' },
+      { key: 'slAnnual', label: 'SL Annual Expense', getter: function(d) { return d.summary.straightLineAnnualExpense; }, lowerIsBetter: true, fmt: 'curr' },
+      { key: 'slAllInLHI', label: 'SL Monthly All-in + LHI', getter: function(d) { return d.slMonthlyAllInLHI || 0; }, lowerIsBetter: true, fmt: 'curr' },
+      { key: 'slTotalOccMo', label: 'SL Total Occupancy (Monthly)', getter: function(d) { return (d.slMonthlyAllInLHI || 0) + (d.internalOpex || 0); }, lowerIsBetter: true, fmt: 'curr' },
+      { key: 'slTotalOccAn', label: 'SL Total Occupancy (Annual)', getter: function(d) { return ((d.slMonthlyAllInLHI || 0) + (d.internalOpex || 0)) * 12; }, lowerIsBetter: true, fmt: 'curr' },
+    ]
+  },
+  {
+    label: 'Concessions & Value',
+    metrics: [
+      { key: 'freeRent', label: 'Free Rent Value', getter: function(d) { return d.summary.freeRentValue; }, lowerIsBetter: false, fmt: 'curr' },
+      { key: 'tiValue', label: 'TI Value', getter: function(d) { return d.summary.tiValue; }, lowerIsBetter: false, fmt: 'curr' },
+      { key: 'totalConc', label: 'Total Concessions', getter: function(d) { return d.summary.totalConcessions; }, lowerIsBetter: false, fmt: 'curr' },
+    ]
+  },
+  {
+    label: 'NPV & CAPEX',
+    metrics: [
+      { key: 'npv', label: 'NPV @ 8%', getter: function(d) { return d.summary.npv; }, lowerIsBetter: true, fmt: 'curr' },
+      { key: 'npvRsf', label: 'NPV per RSF', getter: function(d) { return d.summary.npvPerRSF; }, lowerIsBetter: true, fmt: 'curr_dec' },
+      { key: 'totalCapex', label: 'Total CAPEX', getter: function(d) { return (d.capex && d.capex.hasCapex) ? d.capex.grandTotal : 0; }, lowerIsBetter: true, fmt: 'curr' },
+      { key: 'capexRsf', label: 'CAPEX per RSF', getter: function(d) { var rsf = d.summary.rsf || 0; return (d.capex && d.capex.hasCapex && rsf > 0) ? Math.round(d.capex.grandTotal / rsf * 100) / 100 : 0; }, lowerIsBetter: true, fmt: 'curr_dec' },
+      { key: 'lhi', label: 'Monthly LHI Depreciation', getter: function(d) { return (d.capex && d.capex.hasCapex) ? Math.round(d.capex.monthlyDepreciation || 0) : 0; }, lowerIsBetter: true, fmt: 'curr' },
+    ]
+  },
+];
+// Flat list for lookups
+var _onePagerMetrics = _onePagerGroups.reduce(function(acc, g) { return acc.concat(g.metrics); }, []);
+
+var _onePagerDefaults = ['totalAllIn', 'effRent', 'term', 'rsf', 'totalConc', 'npv'];
+var _onePagerMaxMetrics = 8;
+
+function _opFmtVal(v, fmt) {
+  if (v == null || isNaN(v) || v === 0) return '--';
+  var sym = getCurrencySymbol();
+  if (fmt === 'curr') return sym + Math.abs(Math.round(v)).toLocaleString('en-US');
+  if (fmt === 'curr_dec') return sym + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (fmt === 'num') return Number(v).toLocaleString('en-US');
+  return String(v);
+}
+
+function _opGetProjectName() {
+  var el = document.getElementById('projectTitleText');
+  if (el && el.textContent && el.textContent.trim()) return el.textContent.trim();
+  return document.title || getProjectId() || 'Project';
+}
+
+function rfpOpenOnePagerModal() {
+  var cd = window._rfpComparisonData;
+  if (!cd || !cd.buildingData || cd.buildingData.length === 0) { alert('No comparison data available.'); return; }
+
+  var existing = document.getElementById('onePagerModal');
+  if (existing) existing.remove();
+
+  var selected = {};
+  _onePagerDefaults.forEach(function(k) { selected[k] = true; });
+
+  var overlay = document.createElement('div');
+  overlay.id = 'onePagerModal';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;font-family:inherit;';
+
+  function countSelected() { return Object.keys(selected).filter(function(k) { return selected[k]; }).length; }
+
+  function renderModal() {
+    var cnt = countSelected();
+    var bd = cd.buildingData;
+
+    var h = '<div style="background:white;border-radius:12px;max-width:1100px;width:95vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 25px 50px rgba(0,0,0,0.25);">';
+
+    // Modal header
+    h += '<div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid #e2e8f0;">';
+    h += '<div><div style="font-size:18px;font-weight:700;color:#0f172a;">Financial One-Pager</div><div style="font-size:13px;color:#64748b;margin-top:2px;">Select up to 8 metrics for your summary</div></div>';
+    h += '<button onclick="document.getElementById(\'onePagerModal\').remove()" style="background:none;border:none;cursor:pointer;padding:4px;color:#94a3b8;font-size:24px;line-height:1;">&times;</button>';
+    h += '</div>';
+
+    // Body: two columns
+    h += '<div style="display:flex;flex:1;overflow:hidden;">';
+
+    // Left: metric picker
+    h += '<div style="width:320px;min-width:320px;padding:16px 20px;overflow-y:auto;border-right:1px solid #e2e8f0;">';
+    h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
+    h += '<span style="font-size:13px;font-weight:600;color:#475569;">Metrics</span>';
+    h += '<span style="font-size:12px;font-weight:600;padding:2px 8px;border-radius:10px;' + (cnt >= _onePagerMaxMetrics ? 'background:#fef2f2;color:#dc2626;' : 'background:#f1f5f9;color:#475569;') + '">' + cnt + '/' + _onePagerMaxMetrics + ' selected</span>';
+    h += '</div>';
+
+    _onePagerGroups.forEach(function(group) {
+      h += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;margin:12px 0 4px;">' + group.label + '</div>';
+      group.metrics.forEach(function(m) {
+      var checked = !!selected[m.key];
+      var disabled = !checked && cnt >= _onePagerMaxMetrics;
+      h += '<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:' + (disabled ? 'not-allowed' : 'pointer') + ';margin-bottom:2px;' + (checked ? 'background:#f0fdf4;' : '') + (disabled ? 'opacity:0.4;' : '') + '">';
+      h += '<input type="checkbox" ' + (checked ? 'checked' : '') + ' ' + (disabled ? 'disabled' : '') + ' data-op-key="' + m.key + '" onchange="window._opToggleMetric(\'' + m.key + '\')" style="accent-color:#16a34a;width:16px;height:16px;">';
+      h += '<span style="font-size:13px;color:#334155;">' + m.label + '</span>';
+      h += '</label>';
+      }); // end group.metrics.forEach
+    }); // end _onePagerGroups.forEach
+    h += '</div>';
+
+    // Right: live preview
+    h += '<div style="flex:1;padding:20px;overflow-y:auto;background:#f8fafc;">';
+    h += '<div style="font-size:12px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px;">Preview</div>';
+    h += _opRenderCard(bd, selected);
+    h += '</div>';
+
+    h += '</div>';
+
+    // Footer
+    h += '<div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:16px 24px;border-top:1px solid #e2e8f0;">';
+    h += '<button onclick="document.getElementById(\'onePagerModal\').remove()" style="padding:8px 16px;border-radius:6px;border:1px solid #d1d5db;background:white;color:#475569;cursor:pointer;font-size:13px;font-weight:500;">Cancel</button>';
+    h += '<button onclick="rfpGenerateOnePager()" style="padding:8px 20px;border-radius:6px;border:none;background:#0f172a;color:white;cursor:pointer;font-size:13px;font-weight:600;">Generate</button>';
+    h += '</div>';
+
+    h += '</div>';
+    overlay.innerHTML = h;
+  }
+
+  window._opSelected = selected;
+  window._opToggleMetric = function(key) {
+    if (selected[key]) {
+      delete selected[key];
+    } else {
+      if (countSelected() >= _onePagerMaxMetrics) return;
+      selected[key] = true;
+    }
+    renderModal();
+  };
+
+  renderModal();
+  document.body.appendChild(overlay);
+
+  // Close on backdrop click
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) overlay.remove();
+  });
+}
+
+function _opRenderCard(bd, selected) {
+  var selKeys = Object.keys(selected).filter(function(k) { return selected[k]; });
+  var selMetrics = selKeys.map(function(k) { return _onePagerMetrics.find(function(m) { return m.key === k; }); }).filter(Boolean);
+  var projName = _opGetProjectName();
+  var dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  // Assign a distinct accent color per building column (print-safe, avoids background)
+  var colAccents = ['#2563eb', '#ea580c', '#7c3aed', '#0891b2'];
+
+  h = '<div style="background:white;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);font-family:\'DM Sans\',system-ui,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;">';
+
+  // Header bar — dark navy, force printed via inline style + print-color-adjust
+  h += '<div style="background:#0f172a;color:white;padding:18px 24px;display:flex;align-items:center;justify-content:space-between;-webkit-print-color-adjust:exact;print-color-adjust:exact;">';
+  h += '<div>';
+  h += '<div style="font-size:18px;font-weight:800;letter-spacing:-0.3px;">' + esc(projName) + '</div>';
+  h += '</div>';
+  h += '<div style="text-align:right;">';
+  h += '<div style="font-size:12px;color:#94a3b8;">' + dateStr + '</div>';
+  h += '</div>';
+  h += '</div>';
+
+  // Column headers — accent border top per building, soft background
+  h += '<div style="display:grid;grid-template-columns:200px ' + bd.map(function() { return '1fr'; }).join(' ') + ';border-bottom:2px solid #e2e8f0;">';
+  h += '<div style="padding:14px 16px;background:#f8fafc;"></div>';
+  bd.forEach(function(b, ci) {
+    var accent = colAccents[ci % colAccents.length];
+    h += '<div style="padding:14px 16px;text-align:right;background:#f8fafc;border-top:4px solid ' + accent + ';-webkit-print-color-adjust:exact;print-color-adjust:exact;">';
+    h += '<div style="font-size:15px;font-weight:700;color:#0f172a;">' + esc(b.address) + '</div>';
+    if (b.versionLabel) h += '<div style="font-size:11px;color:#64748b;margin-top:3px;font-weight:500;">' + esc(b.versionLabel) + '</div>';
+    h += '</div>';
+  });
+  h += '</div>';
+
+  // Metric rows grouped
+  if (selMetrics.length === 0) {
+    h += '<div style="padding:24px;text-align:center;color:#94a3b8;font-size:13px;">Select metrics from the left panel</div>';
+  } else {
+    // Group selected metrics by their group
+    _onePagerGroups.forEach(function(group) {
+      var groupSelected = group.metrics.filter(function(m) { return selMetrics.some(function(s) { return s.key === m.key; }); });
+      if (groupSelected.length === 0) return;
+
+      // Group header row
+      h += '<div style="display:grid;grid-template-columns:200px ' + bd.map(function() { return '1fr'; }).join(' ') + ';background:#f1f5f9;">';
+      h += '<div style="padding:6px 16px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;" colspan="1">' + group.label + '</div>';
+      bd.forEach(function() { h += '<div style="padding:6px 16px;"></div>'; });
+      h += '</div>';
+
+      groupSelected.forEach(function(m) {
+        var values = bd.map(function(d) { return m.getter(d); });
+
+        h += '<div style="display:grid;grid-template-columns:200px ' + bd.map(function() { return '1fr'; }).join(' ') + ';border-bottom:1px solid #f1f5f9;">';
+        h += '<div style="padding:12px 16px;font-size:13px;color:#64748b;display:flex;align-items:center;">' + m.label + '</div>';
+        values.forEach(function(v) {
+          h += '<div style="padding:12px 16px;text-align:right;font-size:17px;font-weight:700;color:#0f172a;">';
+          h += _opFmtVal(v, m.fmt);
+          h += '</div>';
+        });
+        h += '</div>';
+      });
+    });
+  }
+
+  // Building color key
+  h += '<div style="padding:10px 16px;font-size:11px;color:#94a3b8;border-top:1px solid #e2e8f0;display:flex;align-items:center;gap:16px;">';
+  bd.forEach(function(b, ci) {
+    var accent = colAccents[ci % colAccents.length];
+    h += '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:50%;background:' + accent + ';display:inline-block;-webkit-print-color-adjust:exact;print-color-adjust:exact;"></span><span>' + esc(b.address) + '</span></span>';
+  });
+  h += '</div>';
+
+  h += '</div>';
+  return h;
+}
+
+function rfpGenerateOnePager() {
+  var cd = window._rfpComparisonData;
+  if (!cd || !cd.buildingData || cd.buildingData.length === 0) return;
+
+  var selected = window._opSelected || {};
+  var selKeys = Object.keys(selected).filter(function(k) { return selected[k]; });
+  if (selKeys.length === 0) { alert('Please select at least one metric.'); return; }
+
+  // Close the modal
+  var modal = document.getElementById('onePagerModal');
+  if (modal) modal.remove();
+
+  // Remove existing overlay if any
+  var existing = document.getElementById('onePagerOverlay');
+  if (existing) existing.remove();
+
+  var overlay = document.createElement('div');
+  overlay.id = 'onePagerOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:10001;background:#f1f5f9;overflow-y:auto;font-family:\'DM Sans\',system-ui,sans-serif;';
+
+  var h = '<div style="max-width:800px;margin:0 auto;padding:32px 24px;">';
+
+  // Action bar
+  h += '<div class="op-no-print" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">';
+  h += '<button onclick="document.getElementById(\'onePagerOverlay\').remove();rfpOpenOnePagerModal();" style="display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:6px;border:1px solid #d1d5db;background:white;color:#475569;cursor:pointer;font-size:13px;font-weight:500;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Back</button>';
+  h += '<button onclick="window.print()" style="display:flex;align-items:center;gap:6px;padding:8px 20px;border-radius:6px;border:none;background:#0f172a;color:white;cursor:pointer;font-size:13px;font-weight:600;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Print / Save as PDF</button>';
+  h += '</div>';
+
+  // The card
+  h += '<div class="op-card">';
+  h += _opRenderCard(cd.buildingData, selected);
+  h += '</div>';
+
+  h += '</div>';
+  overlay.innerHTML = h;
+  document.body.appendChild(overlay);
 }
 
 // ===== RENDER ANALYSIS (for one submission) =====
