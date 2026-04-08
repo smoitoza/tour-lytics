@@ -11221,6 +11221,9 @@ var CITY_GROUP_COLORS = [
 ];
 var _cityColorMap = {};    // { 'Menlo Park': '#dc2626', ... }
 var _cityBuildingNums = {}; // { 'Menlo Park': [1,2,...], 'Palo Alto': [3,4,5,...] }
+var _typeColorMap = {};    // { 'Office': '#1e3a5f', ... }
+var _typeBuildingNums = {}; // { 'Office': [1,2,...], 'Advanced Manufacturing': [10,11,...] }
+var _legendGrouping = 'city'; // 'city' or 'type'
 
 // Build the city-to-color mapping from current SURVEY_BUILDINGS
 function buildCityColorMap() {
@@ -11239,10 +11242,31 @@ function buildCityColorMap() {
     }
     _cityBuildingNums[city].push(b.num);
   });
+
+  // Also build type color map
+  _typeColorMap = {};
+  _typeBuildingNums = {};
+  var typeColorIdx = 0;
+  var typeSeen = {};
+  SURVEY_BUILDINGS.forEach(function(b) {
+    var ptype = (b.property_type || '').trim();
+    if (!ptype) return;
+    if (!typeSeen[ptype]) {
+      typeSeen[ptype] = true;
+      _typeColorMap[ptype] = CITY_GROUP_COLORS[typeColorIdx % CITY_GROUP_COLORS.length];
+      _typeBuildingNums[ptype] = [];
+      typeColorIdx++;
+    }
+    _typeBuildingNums[ptype].push(b.num);
+  });
 }
 
-// Get the color for a building based on its neighborhood
+// Get the color for a building based on current legend grouping
 function getSurveyMarkerColor(b) {
+  if (_legendGrouping === 'type') {
+    var ptype = (b.property_type || '').trim();
+    if (ptype && _typeColorMap[ptype]) return _typeColorMap[ptype];
+  }
   var city = (b.neighborhood || '').trim();
   if (city && _cityColorMap[city]) return _cityColorMap[city];
   return MARKER_COLOR_SURVEY; // fallback blue
@@ -11492,21 +11516,42 @@ function buildLegendHTML() {
     html += '</div>';
   }
 
-  // Survey buildings - show by city group if we have neighborhoods, otherwise single blue
+  // Survey buildings - show by city or type group
   var cityKeys = Object.keys(_cityColorMap);
-  if (cityKeys.length >= 2 && surveyCount > 0) {
+  var typeKeys = Object.keys(_typeColorMap);
+  var hasTypes = typeKeys.length >= 2;
+  var hasCities = cityKeys.length >= 2;
+  var canToggle = hasTypes && hasCities;
+
+  if ((hasCities || hasTypes) && surveyCount > 0) {
     html += '<div class="legend-section">';
-    html += '<div class="legend-section-label">Survey by City</div>';
-    cityKeys.forEach(function(city) {
-      var nums = _cityBuildingNums[city] || [];
-      // Count how many are unclassified (not on tour, shortlist, or not-interested)
-      var cityCount = nums.filter(function(num) {
-        var key = 'survey-' + num;
-        return !onTourIds.has(key) && !onShortlistIds.has(key) && !isNotInterested('survey', num);
-      }).length;
-      var totalInCity = nums.length;
-      html += '<div class="legend-item"><div class="legend-dot" style="background:' + _cityColorMap[city] + '"></div><span class="legend-label">' + city + ' (' + totalInCity + ')</span></div>';
-    });
+
+    // Grouping toggle (only if both options available)
+    if (canToggle) {
+      var cityActive = _legendGrouping === 'city';
+      var typeActive = _legendGrouping === 'type';
+      html += '<div style="display:flex;align-items:center;gap:4px;margin-bottom:4px;">';
+      html += '<span class="legend-section-label" style="margin:0;font-size:0.65rem;">Group by:</span>';
+      html += '<span class="legend-toggle-btn' + (cityActive ? ' active' : '') + '" data-grouping="city" style="font-size:0.6rem;padding:1px 6px;border-radius:3px;cursor:pointer;border:1px solid #cbd5e1;' + (cityActive ? 'background:#1e3a5f;color:white;' : 'background:white;color:#64748b;') + '">City</span>';
+      html += '<span class="legend-toggle-btn' + (typeActive ? ' active' : '') + '" data-grouping="type" style="font-size:0.6rem;padding:1px 6px;border-radius:3px;cursor:pointer;border:1px solid #cbd5e1;' + (typeActive ? 'background:#1e3a5f;color:white;' : 'background:white;color:#64748b;') + '">Type</span>';
+      html += '</div>';
+    }
+
+    if (_legendGrouping === 'type' && hasTypes) {
+      html += '<div class="legend-section-label">Survey by Type</div>';
+      typeKeys.forEach(function(ptype) {
+        var nums = _typeBuildingNums[ptype] || [];
+        var totalInType = nums.length;
+        html += '<div class="legend-item"><div class="legend-dot" style="background:' + _typeColorMap[ptype] + '"></div><span class="legend-label">' + ptype + ' (' + totalInType + ')</span></div>';
+      });
+    } else if (hasCities) {
+      html += '<div class="legend-section-label">Survey by City</div>';
+      cityKeys.forEach(function(city) {
+        var nums = _cityBuildingNums[city] || [];
+        var totalInCity = nums.length;
+        html += '<div class="legend-item"><div class="legend-dot" style="background:' + _cityColorMap[city] + '"></div><span class="legend-label">' + city + ' (' + totalInCity + ')</span></div>';
+      });
+    }
     html += '</div>';
   } else if (surveyCount > 0) {
     html += '<div class="legend-section">';
@@ -11543,6 +11588,15 @@ legend.onAdd = function(map) {
   div.addEventListener('click', function(e) {
     var title = div.querySelector('.legend-title');
     if (e.target === title) div.classList.toggle('open');
+
+    // Legend grouping toggle (City / Type)
+    var btn = e.target.closest ? e.target.closest('.legend-toggle-btn') : null;
+    if (!btn) btn = (e.target.className || '').indexOf('legend-toggle-btn') >= 0 ? e.target : null;
+    if (btn && btn.dataset && btn.dataset.grouping) {
+      _legendGrouping = btn.dataset.grouping;
+      refreshLegend();
+      if (typeof refreshMarkerColors === 'function') refreshMarkerColors();
+    }
   });
   
   return div;

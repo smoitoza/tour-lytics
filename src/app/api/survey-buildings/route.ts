@@ -44,6 +44,7 @@ export async function GET(req: NextRequest) {
     surveyPdfUrl: row.survey_pdf_url || '',
     estimatedPage: row.survey_pdf_page || null,
     links: row.links || [],
+    property_type: row.property_type || '',
   }))
 
   return NextResponse.json(buildings)
@@ -103,6 +104,7 @@ export async function POST(req: NextRequest) {
       survey_pdf_url: b.surveyPdfUrl || null,
       survey_pdf_page: b.estimatedPage || null,
       links: b.links || [],
+      property_type: b.property_type || '',
     }))
 
     const { data, error } = await supabase

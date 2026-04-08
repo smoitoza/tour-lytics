@@ -305,6 +305,7 @@ For EACH building found, extract these fields (use null if not found):
 - rentalRate: The rental rate (e.g., "Mid $70's FSG")
 - directSublease: "Direct", "Sublease", or "Both"
 - estimatedPage: The estimated page number in the original document where this building's detailed listing begins (integer, starting from 1). Look at the document structure - typically a cover/intro page, then a location map, then individual building pages. If the document follows a pattern of one building per page, count accordingly.
+- property_type: The building category based on the survey section it appears in. Common values: "Office", "R&D", "Industrial", "Advanced Manufacturing", "Life Science", "Mixed Use". Look for section divider pages with headers like "ADVANCED MANUFACTURING", "INDUSTRIAL", "LIFE SCIENCE" that precede groups of buildings. If no clear section header, infer from building class info (e.g., "Class A Office" → "Office").
 
 IMPORTANT: 
 - Extract ALL buildings listed, not just a few
@@ -326,6 +327,7 @@ Return a JSON array. Example format:
     "rentalRate": "Upper $70's FSG",
     "directSublease": "Direct",
     "estimatedPage": 3,
+    "property_type": "Office",
     "floors": [
       { "floor": "14th Floor", "suite": "1400", "rsf": "12,500 SF", "available": "Now" }
     ]
@@ -383,8 +385,10 @@ Return ONLY the JSON array, no other text.`
         }
         pageAddrCounts[pt.page] = count
       }
-      // Pages with more than half the buildings are likely TOC/map overview pages
-      const overviewThreshold = Math.max(Math.ceil(buildings.length * 0.5), 5)
+      // Pages with 3+ buildings are likely matrix/overview pages — exclude them
+      // Matrix pages typically list 3 buildings per page in a summary table;
+      // individual brochure pages (what we want) mention only 1-2 addresses.
+      const overviewThreshold = 2
 
       // For each building, find which page contains its street address
       for (const b of buildings) {
@@ -406,8 +410,8 @@ Return ONLY the JSON array, no other text.`
         let bestPage = -1
         const contentPages = matchingPages.filter(p => (pageAddrCounts[p] || 0) < overviewThreshold)
         if (contentPages.length > 0) {
-          // Use the FIRST content page (the building's listing page)
-          bestPage = contentPages[0]
+          // Use the LAST content page — brochure pages come after matrix/summary pages
+          bestPage = contentPages[contentPages.length - 1]
         } else if (matchingPages.length > 0) {
           // All matching pages are overview pages - use the last one
           bestPage = matchingPages[matchingPages.length - 1]
@@ -425,7 +429,7 @@ Return ONLY the JSON array, no other text.`
           }
           const fbContent = fallbackPages.filter(p => (pageAddrCounts[p] || 0) < overviewThreshold)
           if (fbContent.length > 0) {
-            bestPage = fbContent[0]
+            bestPage = fbContent[fbContent.length - 1]
           } else if (fallbackPages.length > 0) {
             bestPage = fallbackPages[fallbackPages.length - 1]
           }
