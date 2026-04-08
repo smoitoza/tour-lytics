@@ -22601,8 +22601,11 @@ async function surveySubmitUpload() {
   try {
     // Step 1: Upload PDF directly to Supabase Storage (no serverless middleman)
     // This avoids file size limits and timeout issues with Vercel functions
-    statusEl.innerHTML = '<div style="display:flex;align-items:center;gap:0.5rem;">' + spinnerHTML + ' Uploading survey document...</div>';
+    var fileSize = _surveyUploadFile.size;
+    var fileSizeMB = (fileSize / (1024 * 1024)).toFixed(1);
+    statusEl.innerHTML = '<div style="display:flex;align-items:center;gap:0.5rem;">' + spinnerHTML + ' Uploading survey document (' + fileSizeMB + ' MB)...</div>';
     var pdfUrl = '';
+    var uploadSucceeded = false;
     try {
       // 1a: Get a signed upload URL from our lightweight API
       var signRes = await fetch('/api/survey-upload', {
@@ -22616,28 +22619,48 @@ async function surveySubmitUpload() {
       });
       if (signRes.ok) {
         var signData = await signRes.json();
+        // Always construct the expected public URL from the storage path,
+        // so buildings get a PDF link even if the upload is slow or uncertain
+        var expectedPublicUrl = signData.publicUrl || '';
+        pdfUrl = expectedPublicUrl;
+
         // 1b: Upload the file directly to Supabase Storage using the signed URL
-        var directRes = await fetch(signData.signedUrl, {
-          method: 'PUT',
-          headers: { 'Content-Type': _surveyUploadFile.type || 'application/pdf' },
-          body: _surveyUploadFile
-        });
-        if (directRes.ok) {
-          pdfUrl = signData.publicUrl || '';
-          console.log('PDF uploaded directly to storage:', pdfUrl);
-        } else {
-          console.warn('Direct upload failed:', directRes.status, await directRes.text().catch(function() { return ''; }));
+        try {
+          var directRes = await fetch(signData.signedUrl, {
+            method: 'PUT',
+            headers: { 'Content-Type': _surveyUploadFile.type || 'application/pdf' },
+            body: _surveyUploadFile
+          });
+          if (directRes.ok) {
+            uploadSucceeded = true;
+            console.log('PDF uploaded directly to storage:', pdfUrl);
+          } else {
+            var uploadErrText = await directRes.text().catch(function() { return ''; });
+            console.error('Direct upload failed:', directRes.status, uploadErrText);
+            // Show warning but don't block — parsing can still proceed
+            statusEl.innerHTML = '<div style="display:flex;flex-direction:column;gap:0.5rem;">' +
+              '<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:0.5rem 0.75rem;color:#92400e;font-size:0.85rem;">' +
+              '⚠ PDF upload failed (file may be too large at ' + fileSizeMB + ' MB). Survey parsing will continue, but direct PDF links from map tooltips may not work.</div>' +
+              '<div style="display:flex;align-items:center;gap:0.5rem;">' + spinnerHTML + ' Continuing with survey parsing...</div></div>';
+          }
+        } catch (putErr) {
+          console.error('Direct upload network error:', putErr);
+          statusEl.innerHTML = '<div style="display:flex;flex-direction:column;gap:0.5rem;">' +
+            '<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:0.5rem 0.75rem;color:#92400e;font-size:0.85rem;">' +
+            '⚠ PDF upload timed out or failed (' + fileSizeMB + ' MB). Survey parsing will continue, but direct PDF links from map tooltips may not work.</div>' +
+            '<div style="display:flex;align-items:center;gap:0.5rem;">' + spinnerHTML + ' Continuing with survey parsing...</div></div>';
         }
       } else {
         var errText = await signRes.text().catch(function() { return ''; });
-        console.warn('Signed URL request failed:', signRes.status, errText);
+        console.error('Signed URL request failed:', signRes.status, errText);
       }
     } catch (uploadErr) {
-      console.warn('PDF upload skipped:', uploadErr);
+      console.error('PDF upload skipped:', uploadErr);
     }
 
     // Step 2: Parse the document client-side to extract text
-    statusEl.innerHTML = '<div style="display:flex;align-items:center;gap:0.5rem;">' + spinnerHTML + ' Extracting text from document...</div>';
+    var uploadWarningHTML = !uploadSucceeded && pdfUrl ? '<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:0.5rem 0.75rem;color:#92400e;font-size:0.85rem;margin-bottom:0.5rem;">⚠ PDF upload incomplete — direct PDF links from map tooltips may not work for this survey.</div>' : '';
+    statusEl.innerHTML = uploadWarningHTML + '<div style="display:flex;align-items:center;gap:0.5rem;">' + spinnerHTML + ' Extracting text from document...</div>';
     var text = await rfpParseDocument(_surveyUploadFile);
 
     if (!text || text.trim().length < 50) {
@@ -22646,7 +22669,7 @@ async function surveySubmitUpload() {
       return;
     }
 
-    statusEl.innerHTML = '<div style="display:flex;align-items:center;gap:0.5rem;">' + spinnerHTML + ' AI is parsing ' + text.length.toLocaleString() + ' characters of survey data... This may take a moment.</div>';
+    statusEl.innerHTML = uploadWarningHTML + '<div style="display:flex;align-items:center;gap:0.5rem;">' + spinnerHTML + ' AI is parsing ' + text.length.toLocaleString() + ' characters of survey data... This may take a moment.</div>';
 
     // Step 3: Send to AI for structured extraction + geocoding
     var marketText = (document.getElementById('footerInfo') ? document.getElementById('footerInfo').textContent : '') || '';
