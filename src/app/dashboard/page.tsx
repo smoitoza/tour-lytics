@@ -171,6 +171,7 @@ export default function DashboardPage() {
 
   /* ---- Create project modal state ---- */
   const [searchQuery, setSearchQuery] = useState('')
+  const [projectSort, setProjectSort] = useState<'recent' | 'name'>('recent')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newProjectName, setNewProjectName] = useState('')
   const [newProjectMarket, setNewProjectMarket] = useState('')
@@ -847,8 +848,9 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        {/* -- Project search bar -- */}
-        <div className="dash-fade dash-fade-3" style={{ marginBottom: '1.5rem', position: 'relative' }}>
+        {/* -- Project search bar + sort toggle -- */}
+        <div className="dash-fade dash-fade-3" style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+        <div style={{ position: 'relative', flex: 1 }}>
           <div style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -885,6 +887,32 @@ export default function DashboardPage() {
           )}
         </div>
 
+        {/* Sort toggle */}
+        <div style={{ display: 'flex', gap: '0.25rem', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '0.625rem', padding: '0.25rem', flexShrink: 0 }}>
+          {(['recent', 'name'] as const).map(opt => (
+            <button
+              key={opt}
+              onClick={() => setProjectSort(opt)}
+              style={{
+                padding: '0.375rem 0.875rem',
+                borderRadius: '0.375rem',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '0.8125rem',
+                fontWeight: 500,
+                fontFamily: 'inherit',
+                transition: 'all 0.15s',
+                background: projectSort === opt ? '#0f172a' : 'transparent',
+                color: projectSort === opt ? '#ffffff' : '#64748b',
+              }}
+            >
+              {opt === 'recent' ? 'Recent' : 'A – Z'}
+            </button>
+          ))}
+        </div>
+
+        </div>
+
         {/* -- Three-section layout: My Projects, Shared With Me, Clients -- */}
         {(() => {
           const q = searchQuery.toLowerCase().trim()
@@ -898,9 +926,18 @@ export default function DashboardPage() {
           const sharedProjects = projects.filter(p => p.user_role !== 'owner' && p.owner_id !== user?.email && p.created_by !== user?.email)
           // Fallback: if no role data, treat all as "my projects"
           const statusOrder: Record<string, number> = { active: 0, on_hold: 1, complete: 2 }
-          const sortByStatus = (a: Project, b: Project) => (statusOrder[a.status] ?? 1) - (statusOrder[b.status] ?? 1)
-          const effectiveMy = (projects.some(p => p.user_role) ? myProjects : projects).filter(filterProject).sort(sortByStatus)
-          const effectiveShared = (projects.some(p => p.user_role) ? sharedProjects : []).filter(filterProject).sort(sortByStatus)
+          const sortProjects = (a: Project, b: Project) => {
+            if (projectSort === 'name') {
+              return (a.name || '').localeCompare(b.name || '')
+            }
+            // recent: sort by updated_at descending, fall back to status order
+            const aTime = a.updated_at ? new Date(a.updated_at).getTime() : 0
+            const bTime = b.updated_at ? new Date(b.updated_at).getTime() : 0
+            if (bTime !== aTime) return bTime - aTime
+            return (statusOrder[a.status] ?? 1) - (statusOrder[b.status] ?? 1)
+          }
+          const effectiveMy = (projects.some(p => p.user_role) ? myProjects : projects).filter(filterProject).sort(sortProjects)
+          const effectiveShared = (projects.some(p => p.user_role) ? sharedProjects : []).filter(filterProject).sort(sortProjects)
 
           // Build client list from all projects that have a client_name
           const clientMap = new Map<string, { name: string; projectCount: number; totalBuildings: number; markets: string[] }>()
