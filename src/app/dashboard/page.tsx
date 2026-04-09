@@ -847,11 +847,6 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        {/* -- Token balance widget -- */}
-        <div className="dash-fade dash-fade-3">
-          <TokenWidget />
-        </div>
-
         {/* -- Project search bar -- */}
         <div className="dash-fade dash-fade-3" style={{ marginBottom: '1.5rem', position: 'relative' }}>
           <div style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
@@ -1095,62 +1090,7 @@ export default function DashboardPage() {
           </>)
         })()}
 
-        {/* --- Recent Activity --- */}
-        <div style={{ marginBottom: '2rem' }}>
-          <div className="dash-fade dash-fade-6">
-            <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
-              Recent Activity
-            </div>
-            <div style={{
-              background: '#ffffff',
-              borderRadius: '1rem',
-              border: '1px solid #e2e8f0',
-              overflow: 'hidden',
-            }}>
-              {recentActivity.map((item, i) => {
-                const typeConfig = {
-                  feature: { bg: 'rgba(37,99,235,0.08)', color: '#2563eb', icon: '✦' },
-                  milestone: { bg: 'rgba(34,197,94,0.08)', color: '#16a34a', icon: '◆' },
-                  update: { bg: 'rgba(244,121,32,0.08)', color: '#f47920', icon: '●' },
-                  data: { bg: 'rgba(100,116,139,0.08)', color: '#64748b', icon: '◇' },
-                }[item.type]
 
-                return (
-                  <div
-                    key={i}
-                    style={{
-                      padding: '0.875rem 1.25rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      borderBottom: i < recentActivity.length - 1 ? '1px solid #f1f5f9' : 'none',
-                      transition: 'background 0.15s',
-                    }}
-                  >
-                    <div style={{
-                      width: '1.75rem',
-                      height: '1.75rem',
-                      borderRadius: '0.5rem',
-                      background: typeConfig.bg,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.625rem',
-                      color: typeConfig.color,
-                      flexShrink: 0,
-                    }}>
-                      {typeConfig.icon}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: '0.8125rem', color: '#334155', fontWeight: 500, lineHeight: 1.4 }}>{item.action}</p>
-                    </div>
-                    <span style={{ fontSize: '0.6875rem', color: '#94a3b8', whiteSpace: 'nowrap', flexShrink: 0 }}>{item.time}</span>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
 
 
 
