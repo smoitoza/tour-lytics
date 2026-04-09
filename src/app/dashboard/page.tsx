@@ -170,6 +170,8 @@ export default function DashboardPage() {
   const [projectsLoading, setProjectsLoading] = useState(true)
 
   /* ---- Create project modal state ---- */
+  const [searchQuery, setSearchQuery] = useState('')
+  const [projectSort, setProjectSort] = useState<'recent' | 'name'>('recent')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newProjectName, setNewProjectName] = useState('')
   const [newProjectMarket, setNewProjectMarket] = useState('')
@@ -846,76 +848,96 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        {/* -- Overview stats row -- */}
-        <div className="dash-fade dash-fade-2" style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: '1rem',
-          marginBottom: '2rem',
-        }}>
-          {(() => {
-            const b = dashStats?.buildings ?? projects.reduce((sum, p) => sum + (p.buildings_count || 0), 0)
-            const sq = dashStats?.sqft ?? 0
-            const sl = dashStats?.shortlisted ?? projects.reduce((sum, p) => sum + (p.shortlisted_count || 0), 0)
-            const lv = dashStats?.leaseValue ?? 0
-            const fmtSqft = sq >= 1000000 ? (sq / 1000000).toFixed(1) + 'M' : sq >= 1000 ? Math.round(sq / 1000).toLocaleString() + 'K' : String(sq)
-            const fmtLease = lv >= 1000000 ? '$' + (lv / 1000000).toFixed(1) + 'M' : lv >= 1000 ? '$' + Math.round(lv / 1000).toLocaleString() + 'K' : '$' + lv.toLocaleString()
-            return [
-              { value: b, suffix: '', label: 'Buildings Surveyed', color: '#0f172a' },
-              { value: sq, suffix: '', label: 'Total Sq Ft', color: '#0f172a', display: fmtSqft },
-              { value: sl, suffix: '', label: 'Shortlisted', color: '#2563eb' },
-              { value: lv, suffix: '', label: 'Lease Value Analyzed', color: '#0f172a', display: fmtLease },
-            ]
-          })().map((stat, i) => (
-            <div key={i} style={{
-              background: '#ffffff',
+        {/* -- Project search bar + sort toggle -- */}
+        <div className="dash-fade dash-fade-3" style={{ marginBottom: '1.5rem', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+        <div style={{ position: 'relative', flex: 1 }}>
+          <div style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            placeholder="Search projects by name, location, or client..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '0.75rem 1rem 0.75rem 2.75rem',
               borderRadius: '0.75rem',
               border: '1px solid #e2e8f0',
-              padding: '1.25rem 1rem',
-              textAlign: 'center',
-            }}>
-              <div style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 'clamp(1.25rem, 1rem + 1vw, 1.75rem)',
-                fontWeight: 800,
-                color: stat.color,
-                letterSpacing: '-0.02em',
-                lineHeight: 1.2,
-              }}>
-                {'display' in stat && stat.display ? (
-                  <>{stat.display}</>
-                ) : (
-                  <Counter end={stat.value} suffix={stat.suffix} />
-                )}
-              </div>
-              <div style={{
-                fontSize: '0.6875rem',
-                color: '#94a3b8',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
+              background: '#ffffff',
+              fontSize: '0.9375rem',
+              color: '#0f172a',
+              outline: 'none',
+              boxSizing: 'border-box',
+              fontFamily: 'inherit',
+              transition: 'border-color 0.15s, box-shadow 0.15s',
+            }}
+            onFocus={e => { e.currentTarget.style.borderColor = '#2563eb'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.1)' }}
+            onBlur={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none' }}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '0.25rem', lineHeight: 1 }}
+            >
+              &times;
+            </button>
+          )}
+        </div>
+
+        {/* Sort toggle */}
+        <div style={{ display: 'flex', gap: '0.25rem', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '0.625rem', padding: '0.25rem', flexShrink: 0 }}>
+          {(['recent', 'name'] as const).map(opt => (
+            <button
+              key={opt}
+              onClick={() => setProjectSort(opt)}
+              style={{
+                padding: '0.375rem 0.875rem',
+                borderRadius: '0.375rem',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '0.8125rem',
                 fontWeight: 500,
-                marginTop: '0.375rem',
-              }}>
-                {stat.label}
-              </div>
-            </div>
+                fontFamily: 'inherit',
+                transition: 'all 0.15s',
+                background: projectSort === opt ? '#0f172a' : 'transparent',
+                color: projectSort === opt ? '#ffffff' : '#64748b',
+              }}
+            >
+              {opt === 'recent' ? 'Recent' : 'A – Z'}
+            </button>
           ))}
         </div>
 
-        {/* -- Token balance widget -- */}
-        <div className="dash-fade dash-fade-3">
-          <TokenWidget />
         </div>
 
         {/* -- Three-section layout: My Projects, Shared With Me, Clients -- */}
         {(() => {
+          const q = searchQuery.toLowerCase().trim()
+          const filterProject = (p: Project) => !q ||
+            (p.name || '').toLowerCase().includes(q) ||
+            (p.market || '').toLowerCase().includes(q) ||
+            (p.client_name || '').toLowerCase().includes(q) ||
+            (p.market || '').toLowerCase().includes(q)
+
           const myProjects = projects.filter(p => p.user_role === 'owner' || p.owner_id === user?.email || p.created_by === user?.email)
           const sharedProjects = projects.filter(p => p.user_role !== 'owner' && p.owner_id !== user?.email && p.created_by !== user?.email)
           // Fallback: if no role data, treat all as "my projects"
           const statusOrder: Record<string, number> = { active: 0, on_hold: 1, complete: 2 }
-          const sortByStatus = (a: Project, b: Project) => (statusOrder[a.status] ?? 1) - (statusOrder[b.status] ?? 1)
-          const effectiveMy = (projects.some(p => p.user_role) ? myProjects : projects).sort(sortByStatus)
-          const effectiveShared = (projects.some(p => p.user_role) ? sharedProjects : []).sort(sortByStatus)
+          const sortProjects = (a: Project, b: Project) => {
+            if (projectSort === 'name') {
+              return (a.name || '').localeCompare(b.name || '')
+            }
+            // recent: sort by updated_at descending, fall back to status order
+            const aTime = a.updated_at ? new Date(a.updated_at).getTime() : 0
+            const bTime = b.updated_at ? new Date(b.updated_at).getTime() : 0
+            if (bTime !== aTime) return bTime - aTime
+            return (statusOrder[a.status] ?? 1) - (statusOrder[b.status] ?? 1)
+          }
+          const effectiveMy = (projects.some(p => p.user_role) ? myProjects : projects).filter(filterProject).sort(sortProjects)
+          const effectiveShared = (projects.some(p => p.user_role) ? sharedProjects : []).filter(filterProject).sort(sortProjects)
 
           // Build client list from all projects that have a client_name
           const clientMap = new Map<string, { name: string; projectCount: number; totalBuildings: number; markets: string[] }>()
@@ -939,15 +961,18 @@ export default function DashboardPage() {
           const clients = Array.from(clientMap.values()).sort((a, b) => a.name.localeCompare(b.name))
 
           return (<>
-        {/* --- My Projects --- */}
-        <div className="dash-fade dash-fade-3" style={{ marginBottom: '2rem' }}>
+        {/* --- Two-column layout: My Projects | Shared With Me --- */}
+        <div className="dash-fade dash-fade-3" style={{ display: 'grid', gridTemplateColumns: effectiveShared.length > 0 ? '1fr 1fr' : '1fr', gap: '1.5rem', marginBottom: '2rem', alignItems: 'start' }}>
+
+        {/* -- My Projects column -- */}
+        <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
             <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               My Projects
             </div>
             <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{effectiveMy.length} project{effectiveMy.length !== 1 ? 's' : ''}</div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {effectiveMy.map((project) => {
               const updatedDate = project.updated_at ? new Date(project.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
               const canDelete = (project.owner_id === user?.email || project.created_by === user?.email) && project.id !== 'sf-office-search'
@@ -997,16 +1022,16 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* --- Shared With Me --- */}
+        {/* -- Shared With Me column -- */}
         {effectiveShared.length > 0 && (
-          <div className="dash-fade dash-fade-4" style={{ marginBottom: '2rem' }}>
+          <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
               <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 Shared With Me
               </div>
               <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{effectiveShared.length} project{effectiveShared.length !== 1 ? 's' : ''}</div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {effectiveShared.map((project) => {
                 const updatedDate = project.updated_at ? new Date(project.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
                 return renderProjectCard(project, updatedDate, false)
@@ -1014,6 +1039,8 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
+
+        </div> {/* end two-column grid */}
 
         {/* --- Clients --- */}
         <div className="dash-fade dash-fade-5" style={{ marginBottom: '2rem' }}>
@@ -1100,62 +1127,7 @@ export default function DashboardPage() {
           </>)
         })()}
 
-        {/* --- Recent Activity --- */}
-        <div style={{ marginBottom: '2rem' }}>
-          <div className="dash-fade dash-fade-6">
-            <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
-              Recent Activity
-            </div>
-            <div style={{
-              background: '#ffffff',
-              borderRadius: '1rem',
-              border: '1px solid #e2e8f0',
-              overflow: 'hidden',
-            }}>
-              {recentActivity.map((item, i) => {
-                const typeConfig = {
-                  feature: { bg: 'rgba(37,99,235,0.08)', color: '#2563eb', icon: '✦' },
-                  milestone: { bg: 'rgba(34,197,94,0.08)', color: '#16a34a', icon: '◆' },
-                  update: { bg: 'rgba(244,121,32,0.08)', color: '#f47920', icon: '●' },
-                  data: { bg: 'rgba(100,116,139,0.08)', color: '#64748b', icon: '◇' },
-                }[item.type]
 
-                return (
-                  <div
-                    key={i}
-                    style={{
-                      padding: '0.875rem 1.25rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      borderBottom: i < recentActivity.length - 1 ? '1px solid #f1f5f9' : 'none',
-                      transition: 'background 0.15s',
-                    }}
-                  >
-                    <div style={{
-                      width: '1.75rem',
-                      height: '1.75rem',
-                      borderRadius: '0.5rem',
-                      background: typeConfig.bg,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.625rem',
-                      color: typeConfig.color,
-                      flexShrink: 0,
-                    }}>
-                      {typeConfig.icon}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: '0.8125rem', color: '#334155', fontWeight: 500, lineHeight: 1.4 }}>{item.action}</p>
-                    </div>
-                    <span style={{ fontSize: '0.6875rem', color: '#94a3b8', whiteSpace: 'nowrap', flexShrink: 0 }}>{item.time}</span>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
 
 
 
