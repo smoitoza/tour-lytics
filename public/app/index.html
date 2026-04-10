@@ -20330,6 +20330,249 @@ function capexSave() {
   });
 }
 
+// ===== BROKER FEE CALCULATOR =====
+// In-memory store for calculator periods keyed by building address
+if (!window._rfpBrokerCalc) window._rfpBrokerCalc = {};
+
+function rfpBrokerCalcGetKey(address) {
+  return address || '_default';
+}
+
+function rfpBrokerCalcGetPeriods(address) {
+  var key = rfpBrokerCalcGetKey(address);
+  if (!window._rfpBrokerCalc[key]) {
+    // Try loading from localStorage
+    try {
+      var stored = localStorage.getItem('brokerCalcPeriods_' + key);
+      if (stored) {
+        window._rfpBrokerCalc[key] = JSON.parse(stored);
+      }
+    } catch (e) { /* ignore */ }
+    if (!window._rfpBrokerCalc[key]) {
+      window._rfpBrokerCalc[key] = [
+        { fromMonth: 1, toMonth: 60, rate: 5.00 },
+        { fromMonth: 61, toMonth: 120, rate: 2.50 }
+      ];
+    }
+  }
+  return window._rfpBrokerCalc[key];
+}
+
+function rfpBrokerCalcSavePeriods(address) {
+  var key = rfpBrokerCalcGetKey(address);
+  var periods = window._rfpBrokerCalc[key] || [];
+  try {
+    localStorage.setItem('brokerCalcPeriods_' + key, JSON.stringify(periods));
+  } catch (e) { /* ignore */ }
+}
+
+function rfpBrokerCalcAddPeriod(address) {
+  var periods = rfpBrokerCalcGetPeriods(address);
+  var lastTo = periods.length > 0 ? periods[periods.length - 1].toMonth : 0;
+  periods.push({ fromMonth: lastTo + 1, toMonth: lastTo + 60, rate: 2.50 });
+  rfpBrokerCalcSavePeriods(address);
+  rfpBrokerCalcRerender();
+}
+
+function rfpBrokerCalcRemovePeriod(address, idx) {
+  var periods = rfpBrokerCalcGetPeriods(address);
+  periods.splice(idx, 1);
+  rfpBrokerCalcSavePeriods(address);
+  rfpBrokerCalcRerender();
+}
+
+function rfpBrokerCalcUpdatePeriod(address, idx, field, value) {
+  var periods = rfpBrokerCalcGetPeriods(address);
+  if (periods[idx]) {
+    periods[idx][field] = parseFloat(value) || 0;
+    rfpBrokerCalcSavePeriods(address);
+    rfpBrokerCalcRerender();
+  }
+}
+
+function rfpBrokerCalcSetComponent(value) {
+  window._rfpBrokerCalcComponent = value;
+  // Reset version selection when component changes
+  window._rfpBrokerCalcVersion = null;
+  rfpBrokerCalcRerender();
+}
+
+function rfpBrokerCalcSetVersion(value) {
+  window._rfpBrokerCalcVersion = value;
+  rfpBrokerCalcRerender();
+}
+
+function rfpBrokerCalcRerender() {
+  var selected = rfpGetCurrentSubmission();
+  if (!selected) return;
+  var el = document.getElementById('broker-fee-calculator-section');
+  if (el) el.innerHTML = rfpBuildBrokerFeeCalculatorInner(selected);
+}
+
+function rfpBrokerCalcGetSubmission(allSubs, address) {
+  // Get the submissions for this building
+  var buildingSubs = allSubs.filter(function(s) {
+    return (s.building_address || s.buildingAddress || '') === address;
+  });
+  if (buildingSubs.length === 0) return null;
+
+  // Group by component
+  var componentMap = {};
+  buildingSubs.forEach(function(s) {
+    var cl = s.component_label || '';
+    if (!componentMap[cl]) componentMap[cl] = [];
+    componentMap[cl].push(s);
+  });
+  var componentKeys = Object.keys(componentMap).filter(function(k) { return k !== ''; });
+  var isMultiComponent = componentKeys.length > 1;
+
+  // Determine selected component
+  var selectedComp = window._rfpBrokerCalcComponent || '';
+  if (isMultiComponent && !componentMap[selectedComp]) {
+    selectedComp = componentKeys[0] || '';
+    window._rfpBrokerCalcComponent = selectedComp;
+  }
+  if (!isMultiComponent) {
+    selectedComp = componentKeys[0] || '';
+  }
+
+  // Filter to selected component
+  var compSubs = componentMap[selectedComp] || buildingSubs;
+  compSubs = rfpSortVersions(compSubs);
+
+  // Determine selected version
+  var selectedVersion = window._rfpBrokerCalcVersion;
+  var versionSub = null;
+  if (selectedVersion) {
+    versionSub = compSubs.find(function(s) { return s.id === selectedVersion; });
+  }
+  if (!versionSub) {
+    versionSub = compSubs[0];
+    if (versionSub) window._rfpBrokerCalcVersion = versionSub.id;
+  }
+
+  return {
+    submission: versionSub,
+    componentMap: componentMap,
+    componentKeys: componentKeys,
+    isMultiComponent: isMultiComponent,
+    selectedComp: selectedComp,
+    compSubs: compSubs
+  };
+}
+
+function rfpBuildBrokerFeeCalculatorInner(selected) {
+  var address = selected.building_address || selected.buildingAddress || '';
+  var allSubs = window._rfpState.submissions || [];
+
+  var info = rfpBrokerCalcGetSubmission(allSubs, address);
+  if (!info || !info.submission) {
+    return '<div style="color:var(--color-text-muted);font-size:var(--text-sm);">No submissions with analysis data available.</div>';
+  }
+
+  var versionSub = info.submission;
+  var html = '';
+
+  // Component dropdown (only if multi-component)
+  if (info.isMultiComponent) {
+    html += '<div style="display:flex;gap:var(--space-3);margin-bottom:var(--space-3);align-items:flex-end;">';
+    html += '<div>';
+    html += '<label style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);display:block;margin-bottom:4px">Component</label>';
+    html += '<select onchange="rfpBrokerCalcSetComponent(this.value)" class="rfp-form-input" style="font-size:var(--text-sm);padding:6px 10px;min-width:160px;">';
+    info.componentKeys.forEach(function(k) {
+      html += '<option value="' + esc(k) + '"' + (k === info.selectedComp ? ' selected' : '') + '>' + esc(k) + '</option>';
+    });
+    html += '</select>';
+    html += '</div>';
+  } else {
+    html += '<div style="display:flex;gap:var(--space-3);margin-bottom:var(--space-3);align-items:flex-end;">';
+  }
+
+  // Version dropdown
+  html += '<div>';
+  html += '<label style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);display:block;margin-bottom:4px">Version</label>';
+  html += '<select onchange="rfpBrokerCalcSetVersion(this.value)" class="rfp-form-input" style="font-size:var(--text-sm);padding:6px 10px;min-width:180px;">';
+  info.compSubs.forEach(function(s, idx) {
+    var lbl = s.version_label || (s.doc_type || s.docType || 'RFP') + ' #' + (idx + 1);
+    html += '<option value="' + s.id + '"' + (s.id === versionSub.id ? ' selected' : '') + '>' + esc(lbl) + '</option>';
+  });
+  html += '</select>';
+  html += '</div>';
+  html += '</div>';
+
+  // Fee basis label
+  html += '<div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-3);text-transform:uppercase;letter-spacing:0.05em;">Fee Basis: % of Base Rent</div>';
+
+  // Get monthly cash flow for the selected version
+  var monthly = (versionSub.analysis && versionSub.analysis.cash_flow && versionSub.analysis.cash_flow.monthly) ? versionSub.analysis.cash_flow.monthly : [];
+
+  // Commission periods table
+  var periods = rfpBrokerCalcGetPeriods(address);
+  var totalCommission = 0;
+
+  html += '<div style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);margin-bottom:var(--space-2);font-weight:600;">Commission Periods</div>';
+  html += '<table style="width:100%;border-collapse:collapse;font-size:var(--text-sm);">';
+  html += '<thead><tr style="border-bottom:2px solid var(--color-border);">';
+  html += '<th style="text-align:left;padding:6px 8px;font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.04em;color:var(--color-text-muted);font-weight:600;">Period</th>';
+  html += '<th style="text-align:left;padding:6px 8px;font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.04em;color:var(--color-text-muted);font-weight:600;">From Month</th>';
+  html += '<th style="text-align:left;padding:6px 8px;font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.04em;color:var(--color-text-muted);font-weight:600;">To Month</th>';
+  html += '<th style="text-align:left;padding:6px 8px;font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.04em;color:var(--color-text-muted);font-weight:600;">Rate (%)</th>';
+  html += '<th style="text-align:right;padding:6px 8px;font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.04em;color:var(--color-text-muted);font-weight:600;">Calculated Fee</th>';
+  html += '<th style="width:36px;"></th>';
+  html += '</tr></thead><tbody>';
+
+  var addrEsc = address.replace(/'/g, "\\'");
+  periods.forEach(function(p, idx) {
+    // Calculate fee for this period
+    var baseRentSum = 0;
+    var from = Math.max(1, Math.round(p.fromMonth));
+    var to = Math.round(p.toMonth);
+    for (var m = from; m <= to; m++) {
+      var row = monthly[m - 1]; // monthly array is 0-indexed, months are 1-indexed
+      if (row) {
+        baseRentSum += (row.monthlyBaseRent || 0);
+      }
+    }
+    var fee = baseRentSum * (p.rate / 100);
+    totalCommission += fee;
+
+    html += '<tr style="border-bottom:1px solid var(--color-border);">';
+    html += '<td style="padding:6px 8px;font-weight:600;color:var(--color-text-muted);">' + (idx + 1) + '</td>';
+    html += '<td style="padding:6px 8px;"><input type="number" min="1" value="' + from + '" onchange="rfpBrokerCalcUpdatePeriod(\'' + addrEsc + '\',' + idx + ',\'fromMonth\',this.value)" class="rfp-form-input" style="width:72px;padding:4px 8px;font-size:var(--text-sm);text-align:center;" /></td>';
+    html += '<td style="padding:6px 8px;"><input type="number" min="1" value="' + to + '" onchange="rfpBrokerCalcUpdatePeriod(\'' + addrEsc + '\',' + idx + ',\'toMonth\',this.value)" class="rfp-form-input" style="width:72px;padding:4px 8px;font-size:var(--text-sm);text-align:center;" /></td>';
+    html += '<td style="padding:6px 8px;"><input type="number" step="0.01" min="0" value="' + p.rate + '" onchange="rfpBrokerCalcUpdatePeriod(\'' + addrEsc + '\',' + idx + ',\'rate\',this.value)" class="rfp-form-input" style="width:80px;padding:4px 8px;font-size:var(--text-sm);text-align:center;" /></td>';
+    html += '<td style="padding:6px 8px;text-align:right;font-weight:600;">' + rfpFmtCurrencyPlain(Math.round(fee)) + '</td>';
+    html += '<td style="padding:6px 4px;text-align:center;"><button onclick="rfpBrokerCalcRemovePeriod(\'' + addrEsc + '\',' + idx + ')" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:16px;padding:2px 6px;border-radius:4px;line-height:1;" title="Remove period">&times;</button></td>';
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+
+  // Add period button
+  html += '<button onclick="rfpBrokerCalcAddPeriod(\'' + addrEsc + '\')" style="margin-top:var(--space-2);padding:4px 12px;font-size:var(--text-sm);color:#2563eb;background:none;border:1px dashed #2563eb;border-radius:6px;cursor:pointer;">+ Add Period</button>';
+
+  // Total commission
+  html += '<div style="margin-top:var(--space-4);text-align:right;padding-top:var(--space-3);border-top:2px solid var(--color-border);">';
+  html += '<span style="font-size:var(--text-sm);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);margin-right:var(--space-3);">Total Commission:</span>';
+  html += '<span style="font-size:var(--text-lg);font-weight:700;color:#7c3aed;">' + rfpFmtCurrencyPlain(Math.round(totalCommission)) + '</span>';
+  html += '</div>';
+
+  return html;
+}
+
+function rfpBuildBrokerFeeCalculator(selected) {
+  if (!selected) return '';
+  var html = '<div style="padding:var(--space-4);max-width:700px;margin-bottom:var(--space-4);background:#eff6ff;border-radius:var(--radius-lg);border:1px solid #bfdbfe;">';
+  html += '<div style="font-weight:600;font-size:var(--text-sm);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);margin-bottom:var(--space-1)">Broker Fee Calculator</div>';
+  html += '<div style="font-size:var(--text-sm);color:var(--color-text-muted);margin-bottom:var(--space-3);">Calculate estimated broker commissions based on deal cash flow.</div>';
+  html += '<div id="broker-fee-calculator-section">';
+  html += rfpBuildBrokerFeeCalculatorInner(selected);
+  html += '</div>';
+  html += '<div style="margin-top:var(--space-3);font-size:var(--text-xs);color:#6b7280;font-style:italic;">For reference only — does not affect deal financials below.</div>';
+  html += '</div>';
+  return html;
+}
+
 // ===== BROKER FEES PANEL =====
 function rfpBuildBrokerFeesPanel(selected) {
   if (!selected) return '';
@@ -20343,8 +20586,12 @@ function rfpBuildBrokerFeesPanel(selected) {
   var notes = a.broker_fee_notes || '';
   var canEdit = hasAdminAccess();
 
-  var html = '<div style="padding:var(--space-4);max-width:600px;">';
-  html += '<div style="font-weight:600;font-size:var(--text-sm);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);margin-bottom:var(--space-3)">Broker Fees</div>';
+  // Start with the calculator section
+  var html = rfpBuildBrokerFeeCalculator(selected);
+
+  // Existing broker fees section
+  html += '<div style="padding:var(--space-4);max-width:600px;">';
+  html += '<div style="font-weight:600;font-size:var(--text-sm);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);margin-bottom:var(--space-3)">Broker Fees Included in the Deal</div>';
   html += '<div style="font-size:var(--text-sm);color:var(--color-text-muted);margin-bottom:var(--space-4);">Commission paid by tenant (EMEA/international) or rebate received from broker (US). Cash impact in month 1; amortized over the lease term for straight-line and GAAP accounting (ASC 842).</div>';
 
   // Fee type selector
