@@ -391,11 +391,23 @@ function generateFinancialAnalysis(terms: DealTerms) {
       if (currentRentRSF === 0) {
         const sorted = [...rentPeriods!].sort((a, b) => a.from_month - b.from_month)
         const firstPaidPeriod = sorted.find(p => p.rent_rsf_yr > 0)
-        const shadowRent = firstPaidPeriod ? firstPaidPeriod.rent_rsf_yr : baseRentRSF
         const shadowRSF = firstPaidPeriod?.billable_rsf || rsf
+        // De-escalate the first paid period's rate back to what year 1 rate would be.
+        // The first paid period starts at firstPaidPeriod.from_month; figure out how many
+        // escalation years separate the current free month from that paid period.
+        let shadowRent = baseRentRSF
+        if (firstPaidPeriod && escalation > 0) {
+          const freeYear = Math.ceil(m / 12) // which lease year this free month is in
+          const paidYear = Math.ceil(firstPaidPeriod.from_month / 12) // lease year of first paid period
+          // De-escalate from the paid period's rate back to the free month's lease year
+          const yearsBack = paidYear - freeYear
+          shadowRent = firstPaidPeriod.rent_rsf_yr / Math.pow(1 + escalation, yearsBack)
+        } else if (firstPaidPeriod) {
+          shadowRent = firstPaidPeriod.rent_rsf_yr
+        }
         // Show the contractual rent as base rent (what would be owed)
-        currentRentRSF = shadowRent
-        monthlyBaseRent = (shadowRent * shadowRSF) / 12
+        currentRentRSF = Math.round(shadowRent * 100) / 100
+        monthlyBaseRent = (currentRentRSF * shadowRSF) / 12
         // Free rent credit offsets it fully so net cash rent = $0
         freeRentCredit = monthlyBaseRent
       }
