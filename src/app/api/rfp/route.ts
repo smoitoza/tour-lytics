@@ -345,13 +345,18 @@ function generateFinancialAnalysis(terms: DealTerms) {
       billableRSF = result.billableRSF
       // Use billable RSF (not full premises RSF) for rent calculation
       monthlyBaseRent = (currentRentRSF * billableRSF) / 12
-      // In stepped mode, $0 periods are the "free rent" -- no separate free rent credit
+      // In stepped mode, $0 periods are "free rent" -- show the shadow rent as base
+      // and an equal free rent credit so Net Cash Rent = $0
       if (currentRentRSF === 0) {
         const sorted = [...rentPeriods!].sort((a, b) => a.from_month - b.from_month)
         const firstPaidPeriod = sorted.find(p => p.rent_rsf_yr > 0)
         const shadowRent = firstPaidPeriod ? firstPaidPeriod.rent_rsf_yr : baseRentRSF
         const shadowRSF = firstPaidPeriod?.billable_rsf || rsf
-        freeRentCredit = (shadowRent * shadowRSF) / 12
+        // Show the contractual rent as base rent (what would be owed)
+        currentRentRSF = shadowRent
+        monthlyBaseRent = (shadowRent * shadowRSF) / 12
+        // Free rent credit offsets it fully so net cash rent = $0
+        freeRentCredit = monthlyBaseRent
       }
     } else {
       // Legacy mode: single base rent + escalation
