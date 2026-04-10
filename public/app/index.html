@@ -17618,9 +17618,10 @@ function rfpShowVersionComparison(buildingAddress) {
       var termMo2 = sm2.termMonths || 1;
       if (rsf2 === 0) return 0;
       if (field.computed === 'rentPerSFMo') {
-        // Use base_rent_rsf / 12 (initial rate) to match Deal Terms page
-        var baseRentRSF = parseFloat(dt2.base_rent_rsf) || parseFloat(dt2.baseRent) || 0;
-        if (baseRentRSF > 0) return Math.round(baseRentRSF / 12 * 100) / 100;
+        // Use the same base rent logic as the Base Rent/RSF/yr row (handles stepped rent)
+        var brField = { key: 'baseRent' };
+        var baseRentYr = getTermVal(sub, brField);
+        if (baseRentYr > 0) return Math.round(baseRentYr / 12 * 100) / 100;
         // Fallback: blended average from cash flow
         return Math.round((cf2.totalBaseRent || 0) / termMo2 / rsf2 * 100) / 100;
       }
