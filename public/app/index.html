@@ -18533,6 +18533,7 @@ function rfpExportExcel() {
   var freeRentRowFill = { fgColor: { rgb: GREEN_LT } };
   var altRowFill = { fgColor: { rgb: GRAY_LT } };
   var greenCurrStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: GREEN } }, numFmt: _cFmt, alignment: { horizontal: 'right' } };
+  var greenCurrParenStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: GREEN } }, numFmt: _cFmt + ';(' + _cFmt + ')', alignment: { horizontal: 'right' } };
   var metricLabelStyle = { font: { name: 'Calibri', sz: 10, color: { rgb: '6B7280' } }, alignment: { horizontal: 'left' }, border: { bottom: { style: 'hair', color: { rgb: BORDER_CLR } } } };
   var metricValStyle = { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: BRAND } }, numFmt: _cFmt, alignment: { horizontal: 'right' }, border: { bottom: { style: 'hair', color: { rgb: BORDER_CLR } } } };
   var metricValDecStyle = { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: BRAND } }, numFmt: _cFmtDec, alignment: { horizontal: 'right' }, border: { bottom: { style: 'hair', color: { rgb: BORDER_CLR } } } };
@@ -18896,15 +18897,15 @@ function rfpExportExcel() {
       var hasFreeRentAmort = slAmortFreeRent > 0;
       setCell(slWS, r, slColIdx.freeRent, slAmortFreeRent, Object.assign({}, (hasFreeRentAmort ? greenCurrStyle : currStyle), rowFill));
 
-      // TI Credit (straight-line amortized over lease term)
+      // TI Credit (straight-line amortized over lease term, shown as negative with parens)
       if (slHasTIEx) {
         var slExTICreditYr = Math.round(slExTIMonthly * row.months);
-        setCell(slWS, r, slColIdx.tiCredit, slExTICreditYr, Object.assign({}, greenCurrStyle, rowFill));
+        setCell(slWS, r, slColIdx.tiCredit, -slExTICreditYr, Object.assign({}, greenCurrParenStyle, rowFill));
       }
 
-      // Net Rent = Base Rent - Free Rent [- TI Credit]
+      // Net Rent = Base Rent - Free Rent [+ TI Credit] (TI Credit is stored as negative)
       var netRentFormula = slCol('baseRent') + excelRow + '-' + slCol('freeRent') + excelRow;
-      if (slHasTIEx) netRentFormula += '-' + slCol('tiCredit') + excelRow;
+      if (slHasTIEx) netRentFormula += '+' + slCol('tiCredit') + excelRow;
       setFormula(slWS, r, slColIdx.netRent, netRentFormula, Object.assign({}, formulaStyle, rowFill));
 
       // OpEx = Monthly OpEx * Months
