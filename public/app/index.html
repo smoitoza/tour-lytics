@@ -17613,10 +17613,17 @@ function rfpShowVersionComparison(buildingAddress) {
     if (field.computed === 'rentPerSFMo' || field.computed === 'opexPerSFMo' || field.computed === 'fsgPerSFMo') {
       var sm2 = (sub.analysis && sub.analysis.summary) || {};
       var cf2 = (sub.analysis && sub.analysis.cash_flow && sub.analysis.cash_flow.totals) || {};
+      var dt2 = sub.deal_terms || sub.dealTerms || {};
       var rsf2 = sm2.rsf || 0;
       var termMo2 = sm2.termMonths || 1;
       if (rsf2 === 0) return 0;
-      if (field.computed === 'rentPerSFMo') return Math.round((cf2.totalBaseRent || 0) / termMo2 / rsf2 * 100) / 100;
+      if (field.computed === 'rentPerSFMo') {
+        // Use base_rent_rsf / 12 (initial rate) to match Deal Terms page
+        var baseRentRSF = parseFloat(dt2.base_rent_rsf) || parseFloat(dt2.baseRent) || 0;
+        if (baseRentRSF > 0) return Math.round(baseRentRSF / 12 * 100) / 100;
+        // Fallback: blended average from cash flow
+        return Math.round((cf2.totalBaseRent || 0) / termMo2 / rsf2 * 100) / 100;
+      }
       if (field.computed === 'opexPerSFMo') return Math.round((cf2.totalOpex || 0) / termMo2 / rsf2 * 100) / 100;
       if (field.computed === 'fsgPerSFMo') return Math.round(((cf2.totalBaseRent || 0) + (cf2.totalOpex || 0)) / termMo2 / rsf2 * 100) / 100;
       return 0;
