@@ -18804,11 +18804,10 @@ function rfpExportExcel() {
     var slTermMonths = (analysis.summary && analysis.summary.termMonths) ? analysis.summary.termMonths : 0;
     // Pre-check broker fee for column count
     var slBF = getBrokerFeeForBuilding(address, slTermMonths, compLabel);
-    var slHasTIExport = (totals.tiAllowanceTotal || 0) > 0;
-    var slCols = 8 + (slHasTIExport ? 1 : 0) + (slBF.hasBrokerFee ? 1 : 0);
+    var slCols = 8 + (((totals.tiAllowanceTotal || 0) > 0) ? 1 : 0) + (slBF.hasBrokerFee ? 1 : 0);
     var slWS = XLSX.utils.aoa_to_sheet([['']]);
     var slColWidths = [{ wch: 12 }, { wch: 10 }, { wch: 16 }, { wch: 16 }];
-    if (slHasTIExport) slColWidths.push({ wch: 16 });
+    if ((totals.tiAllowanceTotal || 0) > 0) slColWidths.push({ wch: 16 });
     slColWidths.push({ wch: 16 }, { wch: 14 }, { wch: 14 });
     if (slBF.hasBrokerFee) slColWidths.push({ wch: 16 });
     slColWidths.push({ wch: 18 });
@@ -18819,9 +18818,9 @@ function rfpExportExcel() {
     for (var tc = 1; tc < slCols; tc++) setCell(slWS, 0, tc, '', titleStyle);
 
     var slBrokerLabel = slBF.hasBrokerFee ? (slBF.type === 'credit' ? 'Broker Credit' : 'Broker Fee') : '';
-    var slHasTI = (totals.tiAllowanceTotal || 0) > 0;
+    var slHasTIEx = (totals.tiAllowanceTotal || 0) > 0;
     var slHeaders = ['Year', 'Months', 'Base Rent', 'Free Rent'];
-    if (slHasTI) slHeaders.push('TI Credit');
+    if (slHasTIEx) slHeaders.push('TI Credit');
     slHeaders.push('Net Rent', 'OpEx', 'Parking');
     if (slBF.hasBrokerFee) slHeaders.push(slBrokerLabel);
     slHeaders.push('Total Cost');
@@ -18875,7 +18874,7 @@ function rfpExportExcel() {
       var colOff = 4; // next column after Free Rent
 
       // Col E (if TI): TI Credit (straight-line amortized)
-      if (slHasTI) {
+      if (slHasTIEx) {
         var slAmortTI = (slTermMonths > 0) ? Math.round((totals.tiAllowanceTotal || 0) / slTermMonths * row.months) : 0;
         setCell(slWS, r, colOff, -slAmortTI, Object.assign({}, greenCurrStyle, rowFill));
         colOff++;
@@ -18883,7 +18882,7 @@ function rfpExportExcel() {
 
       // Net Rent = Base Rent - Free Rent [- TI Credit]
       var netRentFormula = 'C' + excelRow + '-D' + excelRow;
-      if (slHasTI) netRentFormula += '+E' + excelRow; // TI is stored as negative
+      if (slHasTIEx) netRentFormula += '+E' + excelRow; // TI is stored as negative
       var netCol = colOff;
       setFormula(slWS, r, colOff, netRentFormula, Object.assign({}, formulaStyle, rowFill));
       colOff++;
