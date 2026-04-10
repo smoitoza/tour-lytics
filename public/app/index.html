@@ -17583,8 +17583,8 @@ function rfpShowVersionComparison(buildingAddress) {
     { key: 'capexTotal', label: 'Total CAPEX', fmt: 'currency', computed: 'capexTotal' },
     { key: 'capexPerRSF', label: 'CAPEX per RSF', fmt: 'currency', computed: 'capexPerRSF' },
     { key: 'lhiMonthlyDep', label: 'Monthly LHI Dep.', fmt: 'currency', computed: 'lhiMonthlyDep' },
-    { key: 'totalOccupancyCost', label: 'Total Occupancy Cost (monthly)', fmt: 'currency', computed: 'totalOccupancyCost' },
-    { key: 'totalOccupancyCostAnnual', label: 'Total Occupancy Cost (annual)', fmt: 'currency', computed: 'totalOccupancyCostAnnual' },
+    { key: 'totalOccupancyCost', label: 'SL Total Occupancy Cost (monthly)', fmt: 'currency', computed: 'totalOccupancyCost' },
+    { key: 'totalOccupancyCostAnnual', label: 'SL Total Occupancy Cost (annual)', fmt: 'currency', computed: 'totalOccupancyCostAnnual' },
   ];
 
   function getTermVal(sub, field) {
@@ -19076,10 +19076,10 @@ function rfpExportExcel() {
     smRow++;
     var boldMetricLabel = Object.assign({}, metricLabelStyle, { font: { name: 'Calibri', sz: 11, bold: true } });
     var boldMetricVal = Object.assign({}, formulaStyle, { font: { name: 'Calibri', sz: 11, bold: true } });
-    setCell(slWS, smRow, 0, 'Total Occupancy Cost (monthly)', boldMetricLabel);
+    setCell(slWS, smRow, 0, 'SL Total Occupancy Cost (monthly)', boldMetricLabel);
     setCell(slWS, smRow, 1, Math.round(tocTotalMo), boldMetricVal);
     smRow++;
-    setCell(slWS, smRow, 0, 'Total Occupancy Cost (annual)', boldMetricLabel);
+    setCell(slWS, smRow, 0, 'SL Total Occupancy Cost (annual)', boldMetricLabel);
     setCell(slWS, smRow, 1, Math.round(tocTotalMo * 12), boldMetricVal);
     if (tocRSF > 0) {
       smRow++;
@@ -19538,8 +19538,8 @@ function rfpExportExcel() {
       { key: 'intMaint', label: 'Maintenance & Security (monthly)', type: 'curr', src: 'computed_int' },
       { key: 'intTotal', label: 'Total Internal OpEx (monthly)', type: 'curr', src: 'computed_int' },
       // Total Occupancy Cost
-      { key: 'totalOccupancyCostMo', label: 'Total Occupancy Cost (monthly)', type: 'curr', src: 'computed_toc' },
-      { key: 'totalOccupancyCostYr', label: 'Total Occupancy Cost (annual)', type: 'curr', src: 'computed_toc' },
+      { key: 'totalOccupancyCostMo', label: 'SL Total Occupancy Cost (monthly)', type: 'curr', src: 'computed_toc' },
+      { key: 'totalOccupancyCostYr', label: 'SL Total Occupancy Cost (annual)', type: 'curr', src: 'computed_toc' },
     ];
 
     var vcCols = 1 + allSubs.length + 1; // label + versions + change
