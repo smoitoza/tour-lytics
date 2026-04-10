@@ -19549,11 +19549,15 @@ function rfpExportExcel() {
     var hdr = ['Deal Term'];
     allSubs.forEach(function(s, i) {
       var dt = s.doc_type || s.docType || 'RFP';
-      var submitted = s.submitted_at ? new Date(s.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
       var vLabel = s.version_label || (dt.toUpperCase() + ' #' + (i + 1));
-      hdr.push(vLabel + (submitted ? ' (' + submitted + ')' : ''));
+      hdr.push(vLabel);
     });
-    hdr.push('Change (First to Last)');
+    // Use the same compare indices as the on-screen view
+    var expFromIdx = window._rfpCompareFromIdx != null ? window._rfpCompareFromIdx : 0;
+    var expToIdx = window._rfpCompareToIdx != null ? window._rfpCompareToIdx : allSubs.length - 1;
+    var fromLabel = allSubs[expFromIdx] ? (allSubs[expFromIdx].version_label || 'Version ' + (expFromIdx + 1)) : 'First';
+    var toLabel = allSubs[expToIdx] ? (allSubs[expToIdx].version_label || 'Version ' + (expToIdx + 1)) : 'Last';
+    hdr.push('Change (' + fromLabel + ' vs ' + toLabel + ')');
     vcData.push(hdr);
 
     // Data rows
@@ -19572,7 +19576,15 @@ function rfpExportExcel() {
           var cRsf = cSm.rsf || 0;
           var cTermMo = cSm.termMonths || 1;
           if (f.key === 'rentPerSFMo') {
-            val = cRsf > 0 ? Math.round((cCf.totalBaseRent || 0) / cTermMo / cRsf * 100) / 100 : 0;
+            // Use base rent / 12 (matches on-screen Compare Versions)
+            var expTerms = s.deal_terms || s.dealTerms || {};
+            var expBaseRent = parseFloat(expTerms.base_rent_rsf) || parseFloat(expTerms.baseRent) || 0;
+            var expRp = expTerms.rent_periods || expTerms.rentPeriods;
+            if (expRp && Array.isArray(expRp) && expRp.length > 0) {
+              var expFirstPaid = expRp.find(function(p) { return p.rent_rsf_yr > 0; });
+              if (expFirstPaid) expBaseRent = expFirstPaid.rent_rsf_yr;
+            }
+            val = expBaseRent > 0 ? Math.round(expBaseRent / 12 * 100) / 100 : (cRsf > 0 ? Math.round((cCf.totalBaseRent || 0) / cTermMo / cRsf * 100) / 100 : 0);
           } else if (f.key === 'opexPerSFMo') {
             val = cRsf > 0 ? Math.round((cCf.totalOpex || 0) / cTermMo / cRsf * 100) / 100 : 0;
           } else if (f.key === 'fsgPerSFMo') {
@@ -19647,9 +19659,9 @@ function rfpExportExcel() {
         vals.push(val);
         row.push(f.type === 'text' ? (val || '') : n(val));
       });
-      // Change column
-      var first = n(vals[0]);
-      var last = n(vals[vals.length - 1]);
+      // Change column (uses selected compare indices)
+      var first = n(vals[expFromIdx]);
+      var last = n(vals[expToIdx]);
       var diff = last - first;
       if (f.type !== 'text' && first > 0 && diff !== 0) {
         var pctChg = ((diff / first) * 100).toFixed(1);
