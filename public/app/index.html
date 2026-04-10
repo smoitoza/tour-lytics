@@ -15250,17 +15250,24 @@ function getCurrencyExcelFmtDec() { return getProjectCurrency().excelFmtDec; }
 // Load project currency from API
 (async function loadProjectCurrency() {
   try {
-    var pid = (new URLSearchParams(window.location.search)).get('projectId') || 'sf-office-search';
-    var res = await fetch('/api/projects?projectId=' + encodeURIComponent(pid));
+    var pid = (new URLSearchParams(window.location.search)).get('projectId');
+    if (!pid) { _projectCurrency = 'USD'; return; }
+    // Fetch ALL projects, then find the matching one by ID
+    var res = await fetch('/api/projects');
     if (res.ok) {
       var data = await res.json();
-      if (data && data.length > 0 && data[0].currency) {
-        _projectCurrency = data[0].currency;
+      if (data && Array.isArray(data)) {
+        var match = data.find(function(p) { return p.id === pid; });
+        if (match && match.currency) {
+          _projectCurrency = match.currency;
+        } else {
+          _projectCurrency = 'USD';
+        }
       } else if (data && data.currency) {
         _projectCurrency = data.currency;
       }
     }
-  } catch(e) { /* default to USD */ }
+  } catch(e) { _projectCurrency = 'USD'; }
 })();
 
 // Currency formatting
