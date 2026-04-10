@@ -21573,7 +21573,7 @@ var _onePagerGroups = [
 var _onePagerMetrics = _onePagerGroups.reduce(function(acc, g) { return acc.concat(g.metrics); }, []);
 
 var _onePagerDefaults = ['totalAllIn', 'effRent', 'term', 'rsf', 'totalConc', 'npv'];
-var _onePagerMaxMetrics = 8;
+var _onePagerMaxMetrics = 12;
 
 function _opFmtVal(v, fmt) {
   if (v == null || isNaN(v) || v === 0) return '--';
@@ -21615,7 +21615,7 @@ function rfpOpenOnePagerModal() {
 
     // Modal header
     h += '<div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid #e2e8f0;">';
-    h += '<div><div style="font-size:18px;font-weight:700;color:#0f172a;">Financial One-Pager</div><div style="font-size:13px;color:#64748b;margin-top:2px;">Select up to 8 metrics for your summary</div></div>';
+    h += '<div><div style="font-size:18px;font-weight:700;color:#0f172a;">Financial One-Pager</div><div style="font-size:13px;color:#64748b;margin-top:2px;">Select up to 12 metrics for your summary</div></div>';
     h += '<button onclick="document.getElementById(\'onePagerModal\').remove()" style="background:none;border:none;cursor:pointer;padding:4px;color:#94a3b8;font-size:24px;line-height:1;">&times;</button>';
     h += '</div>';
 
