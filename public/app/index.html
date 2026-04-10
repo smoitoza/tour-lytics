@@ -18928,9 +18928,10 @@ function rfpExportExcel() {
     for (var smc = 1; smc < slCols; smc++) setCell(slWS, smRow, smc, '', sectionStyle);
     smRow++;
     // Summary metrics with formulas referencing the totals above
-    var slTotalCostCol = slBF.hasBrokerFee ? 8 : 7;
+    var slTotalCostCol = slHeaders.length - 1; // Total Cost is always the last column
+    var slNetRentCol = slHeaders.indexOf('Net Rent');
     var totalH = XLSX.utils.encode_cell({ r: 0, c: slTotalCostCol }).replace(/\d+/, ''); // Total Cost column
-    var totalE = XLSX.utils.encode_cell({ r: 0, c: 4 }).replace(/\d+/, ''); // E column (Net Rent)
+    var totalE = XLSX.utils.encode_cell({ r: 0, c: slNetRentCol }).replace(/\d+/, ''); // Net Rent column
     var totalHRef = totalH + (slTotalRow + 1); // Total Cost cell
     var totalERef = totalE + (slTotalRow + 1); // Net Rent total
 
