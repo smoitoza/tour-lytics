@@ -21685,28 +21685,45 @@ function _opRenderCard(bd, selected) {
   // Assign a distinct accent color per building column (print-safe, avoids background)
   var colAccents = ['#2563eb', '#ea580c', '#7c3aed', '#0891b2'];
 
+  // Detect version comparison (all same address = comparing versions of one building)
+  var isVersionCompare = bd.length > 1 && bd.every(function(b) { return b.address === bd[0].address; });
+  var changeFromIdx = isVersionCompare ? (window._rfpCompareFromIdx != null ? window._rfpCompareFromIdx : 0) : -1;
+  var changeToIdx = isVersionCompare ? (window._rfpCompareToIdx != null ? window._rfpCompareToIdx : bd.length - 1) : -1;
+  var showChangeCol = isVersionCompare && changeFromIdx >= 0 && changeToIdx >= 0 && changeFromIdx !== changeToIdx;
+  var changeCols = showChangeCol ? ' 100px' : '';
+
   h = '<div style="background:white;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);font-family:\'DM Sans\',system-ui,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;">';
 
-  // Header bar — dark navy, force printed via inline style + print-color-adjust
+  // Header bar
   h += '<div style="background:#0f172a;color:white;padding:18px 24px;display:flex;align-items:center;justify-content:space-between;-webkit-print-color-adjust:exact;print-color-adjust:exact;">';
   h += '<div>';
   h += '<div style="font-size:18px;font-weight:800;letter-spacing:-0.3px;">' + esc(projName) + '</div>';
+  if (isVersionCompare) h += '<div style="font-size:12px;color:#94a3b8;margin-top:2px;">' + esc(bd[0].address) + '</div>';
   h += '</div>';
   h += '<div style="text-align:right;">';
   h += '<div style="font-size:12px;color:#94a3b8;">' + dateStr + '</div>';
   h += '</div>';
   h += '</div>';
 
-  // Column headers — accent border top per building, soft background
-  h += '<div style="display:grid;grid-template-columns:200px ' + bd.map(function() { return '1fr'; }).join(' ') + ';border-bottom:2px solid #e2e8f0;">';
+  // Column headers
+  h += '<div style="display:grid;grid-template-columns:200px ' + bd.map(function() { return '1fr'; }).join(' ') + changeCols + ';border-bottom:2px solid #e2e8f0;">';
   h += '<div style="padding:14px 16px;background:#f8fafc;"></div>';
   bd.forEach(function(b, ci) {
     var accent = colAccents[ci % colAccents.length];
     h += '<div style="padding:14px 16px;text-align:right;background:#f8fafc;border-top:4px solid ' + accent + ';-webkit-print-color-adjust:exact;print-color-adjust:exact;">';
-    h += '<div style="font-size:15px;font-weight:700;color:#0f172a;">' + esc(b.address) + '</div>';
-    if (b.versionLabel) h += '<div style="font-size:11px;color:#64748b;margin-top:3px;font-weight:500;">' + esc(b.versionLabel) + '</div>';
+    if (isVersionCompare) {
+      h += '<div style="font-size:13px;font-weight:700;color:#0f172a;">' + esc(b.versionLabel || 'Version ' + (ci + 1)) + '</div>';
+    } else {
+      h += '<div style="font-size:15px;font-weight:700;color:#0f172a;">' + esc(b.address) + '</div>';
+      if (b.versionLabel) h += '<div style="font-size:11px;color:#64748b;margin-top:3px;font-weight:500;">' + esc(b.versionLabel) + '</div>';
+    }
     h += '</div>';
   });
+  if (showChangeCol) {
+    h += '<div style="padding:14px 10px;text-align:right;background:#f8fafc;border-top:4px solid #2563eb;-webkit-print-color-adjust:exact;print-color-adjust:exact;">';
+    h += '<div style="font-size:11px;font-weight:700;color:#2563eb;">Change</div>';
+    h += '</div>';
+  }
   h += '</div>';
 
   // Metric rows grouped
@@ -21720,32 +21737,61 @@ function _opRenderCard(bd, selected) {
 
       // Group header row
       var groupNote = group.label === 'Operating Costs' ? '<span style="font-size:9px;color:#2563eb;font-weight:500;text-transform:none;letter-spacing:0;margin-left:6px;">(included in SL Total Occupancy)</span>' : '';
-      h += '<div style="display:grid;grid-template-columns:200px ' + bd.map(function() { return '1fr'; }).join(' ') + ';background:#f1f5f9;">';
+      h += '<div style="display:grid;grid-template-columns:200px ' + bd.map(function() { return '1fr'; }).join(' ') + changeCols + ';background:#f1f5f9;">';
       h += '<div style="padding:6px 16px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;">' + group.label + groupNote + '</div>';
       bd.forEach(function() { h += '<div style="padding:6px 16px;"></div>'; });
+      if (showChangeCol) h += '<div style="padding:6px 16px;"></div>';
       h += '</div>';
 
       groupSelected.forEach(function(m) {
         var values = bd.map(function(d) { return m.getter(d); });
 
-        h += '<div style="display:grid;grid-template-columns:200px ' + bd.map(function() { return '1fr'; }).join(' ') + ';border-bottom:1px solid #f1f5f9;">';
+        h += '<div style="display:grid;grid-template-columns:200px ' + bd.map(function() { return '1fr'; }).join(' ') + changeCols + ';border-bottom:1px solid #f1f5f9;">';
         h += '<div style="padding:12px 16px;font-size:13px;color:#64748b;display:flex;align-items:center;">' + m.label + '</div>';
         values.forEach(function(v) {
           h += '<div style="padding:12px 16px;text-align:right;font-size:17px;font-weight:700;color:#0f172a;">';
           h += _opFmtVal(v, m.fmt);
           h += '</div>';
         });
+        // Change column
+        if (showChangeCol) {
+          var fromVal = Number(values[changeFromIdx]) || 0;
+          var toVal = Number(values[changeToIdx]) || 0;
+          var diff = toVal - fromVal;
+          var changeHTML = '<span style="color:#94a3b8;">--</span>';
+          if (fromVal > 0 && diff !== 0) {
+            var pct = ((diff / fromVal) * 100).toFixed(1);
+            var color = diff > 0 ? '#dc2626' : '#16a34a';
+            // For concessions/TI: higher is better
+            var higherIsBetter = ['freeRent', 'tiValue', 'totalConc', 'tiTotal', 'tiPerRSF', 'freeRentMo', 'parkSpots'].indexOf(m.key) >= 0;
+            if (higherIsBetter) color = diff > 0 ? '#16a34a' : '#dc2626';
+            // For non-cost metrics like RSF, term: neutral
+            var neutral = ['rsf', 'term', 'annEsc', 'parkSpots'].indexOf(m.key) >= 0;
+            if (neutral) color = '#2563eb';
+            var arrow = diff > 0 ? '\u2191' : '\u2193';
+            changeHTML = '<span style="color:' + color + ';font-weight:600;">' + arrow + ' ' + (diff > 0 ? '+' : '') + pct + '%</span>';
+          }
+          h += '<div style="padding:12px 8px;text-align:right;font-size:12px;display:flex;align-items:center;justify-content:flex-end;">' + changeHTML + '</div>';
+        }
         h += '</div>';
       });
     });
   }
 
-  // Building color key
-  h += '<div style="padding:10px 16px;font-size:11px;color:#94a3b8;border-top:1px solid #e2e8f0;display:flex;align-items:center;gap:16px;">';
+  // Footer: color key + change comparison note
+  h += '<div style="padding:10px 16px;font-size:11px;color:#94a3b8;border-top:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">';
+  h += '<div style="display:flex;align-items:center;gap:12px;">';
   bd.forEach(function(b, ci) {
     var accent = colAccents[ci % colAccents.length];
-    h += '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:50%;background:' + accent + ';display:inline-block;-webkit-print-color-adjust:exact;print-color-adjust:exact;"></span><span>' + esc(b.address) + '</span></span>';
+    var label = isVersionCompare ? (b.versionLabel || 'Version ' + (ci + 1)) : b.address;
+    h += '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:50%;background:' + accent + ';display:inline-block;-webkit-print-color-adjust:exact;print-color-adjust:exact;"></span><span>' + esc(label) + '</span></span>';
   });
+  h += '</div>';
+  if (showChangeCol) {
+    var fromLabel = bd[changeFromIdx]?.versionLabel || ('Version ' + (changeFromIdx + 1));
+    var toLabel = bd[changeToIdx]?.versionLabel || ('Version ' + (changeToIdx + 1));
+    h += '<div style="font-size:10px;color:#2563eb;font-weight:500;">Change: ' + esc(fromLabel) + ' vs ' + esc(toLabel) + '</div>';
+  }
   h += '</div>';
 
   h += '</div>';
