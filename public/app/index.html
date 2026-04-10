@@ -18184,12 +18184,18 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
   annual.forEach(function(row) { totalFreeRent += (row.freeRent || 0); });
   var slMonthlyFreeRent = slTermMonths > 0 ? totalFreeRent / slTermMonths : 0;
 
+  // TI Allowance Credit: amortized evenly across lease term
+  var slTITotal = (totals.tiAllowanceTotal || 0);
+  var slHasTI = slTITotal > 0;
+  var slTIMonthly = (totals.monthlyTIAmortization || 0);
+
   var html = '<div class="fin-table-wrap"><table class="fin-table">';
   html += '<thead><tr>' +
     '<th class="cell-label">Year</th>' +
     '<th>Months</th>' +
     '<th class="cell-currency">Base Rent</th>' +
     '<th class="cell-currency">Free Rent</th>' +
+    (slHasTI ? '<th class="cell-currency" style="color:#16a34a">TI Credit</th>' : '') +
     '<th class="cell-currency">Net Rent</th>' +
     '<th class="cell-currency">OpEx</th>' +
     '<th class="cell-currency">Parking</th>' +
@@ -18202,7 +18208,9 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
     var months = row.months || 12;
     // Straight-line free rent for this year (evenly amortized)
     var slFreeRentYr = Math.round(slMonthlyFreeRent * months);
-    var slNetRent = Math.round(row.baseRent - slFreeRentYr);
+    // TI Credit for this year (evenly amortized)
+    var slTICreditYr = slHasTI ? Math.round(slTIMonthly * months) : 0;
+    var slNetRent = Math.round(row.baseRent - slFreeRentYr - slTICreditYr);
     var slTotalCost = slNetRent + (row.opex || 0) + (row.parking || 0);
     var lhiDep = capex.hasCapex ? capex.monthlyDepreciation * months : 0;
     var brokerAmort = slBrokerFee.hasBrokerFee ? slBrokerFee.slMonthlyImpact * months : 0;
@@ -18212,6 +18220,7 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
       '<td>' + months + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.baseRent) + '</td>' +
       '<td class="cell-currency" style="color:#16a34a">' + (slFreeRentYr ? '(' + rfpFmtCurrency(slFreeRentYr) + ')' : '') + '</td>' +
+      (slHasTI ? '<td class="cell-currency" style="color:#16a34a">(' + rfpFmtCurrency(slTICreditYr) + ')</td>' : '') +
       '<td class="cell-currency">' + rfpFmtCurrency(slNetRent) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.opex) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.parking) + '</td>' +
@@ -18797,13 +18806,22 @@ function rfpExportExcel() {
     var slTotalFreeRent = 0;
     slData.forEach(function(yr) { slTotalFreeRent += (yr.freeRent || 0); });
     var slTermMonths = (analysis.summary && analysis.summary.termMonths) ? analysis.summary.termMonths : 0;
-    // Pre-check broker fee for column count
+    // Pre-check broker fee and TI for column count
     var slBF = getBrokerFeeForBuilding(address, slTermMonths, compLabel);
-    var slCols = slBF.hasBrokerFee ? 9 : 8;
+    var slExTITotal = (slTotals.tiAllowanceTotal || 0);
+    var slHasTIEx = slExTITotal > 0;
+    var slExTIMonthly = (slTotals.monthlyTIAmortization || 0);
+    var slCols = 8; // Base: Year, Months, Base Rent, Free Rent, Net Rent, OpEx, Parking, Total Cost
+    if (slHasTIEx) slCols++;
+    if (slBF.hasBrokerFee) slCols++;
     var slWS = XLSX.utils.aoa_to_sheet([['']]);
-    var slColWidths = [{ wch: 12 }, { wch: 10 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 14 }];
+    var slColWidths = [{ wch: 12 }, { wch: 10 }, { wch: 16 }, { wch: 16 }];
+    if (slHasTIEx) slColWidths.push({ wch: 16 }); // TI Credit
+    slColWidths.push({ wch: 16 }); // Net Rent
+    slColWidths.push({ wch: 14 }); // OpEx
+    slColWidths.push({ wch: 14 }); // Parking
     if (slBF.hasBrokerFee) slColWidths.push({ wch: 16 });
-    slColWidths.push({ wch: 18 });
+    slColWidths.push({ wch: 18 }); // Total Cost
     slWS['!cols'] = slColWidths;
     slWS['!rows'] = [{ hpt: 32 }];
     slWS['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: slCols - 1 } }];
@@ -18811,10 +18829,29 @@ function rfpExportExcel() {
     for (var tc = 1; tc < slCols; tc++) setCell(slWS, 0, tc, '', titleStyle);
 
     var slBrokerLabel = slBF.hasBrokerFee ? (slBF.type === 'credit' ? 'Broker Credit' : 'Broker Fee') : '';
-    var slHeaders = ['Year', 'Months', 'Base Rent', 'Free Rent', 'Net Rent', 'OpEx', 'Parking'];
+    var slHeaders = ['Year', 'Months', 'Base Rent', 'Free Rent'];
+    if (slHasTIEx) slHeaders.push('TI Credit');
+    slHeaders.push('Net Rent', 'OpEx', 'Parking');
     if (slBF.hasBrokerFee) slHeaders.push(slBrokerLabel);
     slHeaders.push('Total Cost');
     slHeaders.forEach(function(h, i) { setCell(slWS, 2, i, h, i === 0 ? headerLeftStyle : headerStyle); });
+
+    // Dynamic column indices based on which optional columns are present
+    var slColIdx = {
+      year: 0, months: 1, baseRent: 2, freeRent: 3
+    };
+    var slNextCol = 4;
+    if (slHasTIEx) { slColIdx.tiCredit = slNextCol; slNextCol++; }
+    slColIdx.netRent = slNextCol; slNextCol++;
+    slColIdx.opex = slNextCol; slNextCol++;
+    slColIdx.parking = slNextCol; slNextCol++;
+    if (slBF.hasBrokerFee) { slColIdx.broker = slNextCol; slNextCol++; }
+    slColIdx.totalCost = slNextCol;
+
+    // Helper to get column letter from index
+    function slCol(key) {
+      return XLSX.utils.encode_cell({ r: 0, c: slColIdx[key] }).replace(/\d+/, '');
+    }
 
     // Cross-tab references to Deal Terms inputs
     var DT = "'Deal Terms'!";
@@ -18836,52 +18873,57 @@ function rfpExportExcel() {
       var hasFreeRent = row.freeRent && row.freeRent > 0;
       if (hasFreeRent) rowFill = { fill: freeRentRowFill };
 
-      // Col A: Year label
-      setCell(slWS, r, 0, 'Year ' + row.year, Object.assign({}, labelStyle, rowFill));
-      // Col B: Months (static)
-      setCell(slWS, r, 1, row.months, Object.assign({}, centerStyle, rowFill));
+      // Year label
+      setCell(slWS, r, slColIdx.year, 'Year ' + row.year, Object.assign({}, labelStyle, rowFill));
+      // Months (static)
+      setCell(slWS, r, slColIdx.months, row.months, Object.assign({}, centerStyle, rowFill));
 
-      // Col C: Base Rent = RSF * Base_Rent/RSF * (1+escalation)^(year-1) * (months/12)
+      // Base Rent = RSF * Base_Rent/RSF * (1+escalation)^(year-1) * (months/12)
       if (exHasRentPeriods) {
-        // Stepped rent: use pre-calculated annual base rent values
-        setCell(slWS, r, 2, n(row.baseRent), Object.assign({}, formulaStyle, rowFill));
+        setCell(slWS, r, slColIdx.baseRent, n(row.baseRent), Object.assign({}, formulaStyle, rowFill));
       } else {
         var rentFormula;
         if (i === 0) {
-          rentFormula = dtRSF + '*' + dtBaseRent + '*B' + excelRow + '/12';
+          rentFormula = dtRSF + '*' + dtBaseRent + '*' + slCol('months') + excelRow + '/12';
         } else {
-          rentFormula = dtRSF + '*' + dtBaseRent + '*(1+' + dtEscalation + ')^' + i + '*B' + excelRow + '/12';
+          rentFormula = dtRSF + '*' + dtBaseRent + '*(1+' + dtEscalation + ')^' + i + '*' + slCol('months') + excelRow + '/12';
         }
-        setFormula(slWS, r, 2, rentFormula, Object.assign({}, formulaStyle, rowFill));
+        setFormula(slWS, r, slColIdx.baseRent, rentFormula, Object.assign({}, formulaStyle, rowFill));
       }
 
-      // Col D: Free Rent (straight-line amortized: total free rent / term months * months in year)
+      // Free Rent (straight-line amortized: total free rent / term months * months in year)
       var slAmortFreeRent = (slTermMonths > 0 && slTotalFreeRent > 0) ? Math.round(slTotalFreeRent / slTermMonths * row.months) : n(row.freeRent);
       var hasFreeRentAmort = slAmortFreeRent > 0;
-      setCell(slWS, r, 3, slAmortFreeRent, Object.assign({}, (hasFreeRentAmort ? greenCurrStyle : currStyle), rowFill));
+      setCell(slWS, r, slColIdx.freeRent, slAmortFreeRent, Object.assign({}, (hasFreeRentAmort ? greenCurrStyle : currStyle), rowFill));
 
-      // Col E: Net Rent = Base Rent - Free Rent
-      setFormula(slWS, r, 4, 'C' + excelRow + '-D' + excelRow, Object.assign({}, formulaStyle, rowFill));
+      // TI Credit (straight-line amortized over lease term)
+      if (slHasTIEx) {
+        var slExTICreditYr = Math.round(slExTIMonthly * row.months);
+        setCell(slWS, r, slColIdx.tiCredit, slExTICreditYr, Object.assign({}, greenCurrStyle, rowFill));
+      }
 
-      // Col F: OpEx = Monthly OpEx * Months
-      setFormula(slWS, r, 5, dtOpexMonthly + '*B' + excelRow, Object.assign({}, formulaStyle, rowFill));
+      // Net Rent = Base Rent - Free Rent [- TI Credit]
+      var netRentFormula = slCol('baseRent') + excelRow + '-' + slCol('freeRent') + excelRow;
+      if (slHasTIEx) netRentFormula += '-' + slCol('tiCredit') + excelRow;
+      setFormula(slWS, r, slColIdx.netRent, netRentFormula, Object.assign({}, formulaStyle, rowFill));
 
-      // Col G: Parking = Spots * Rate * Months
-      setFormula(slWS, r, 6, dtParkingSpots + '*' + dtParkingRate + '*B' + excelRow, Object.assign({}, formulaStyle, rowFill));
+      // OpEx = Monthly OpEx * Months
+      setFormula(slWS, r, slColIdx.opex, dtOpexMonthly + '*' + slCol('months') + excelRow, Object.assign({}, formulaStyle, rowFill));
 
-      // Col H (or Total): Broker Fee amortization if applicable
-      var slTotalCol = 7;
+      // Parking = Spots * Rate * Months
+      setFormula(slWS, r, slColIdx.parking, dtParkingSpots + '*' + dtParkingRate + '*' + slCol('months') + excelRow, Object.assign({}, formulaStyle, rowFill));
+
+      // Broker Fee amortization if applicable
       if (slBF.hasBrokerFee) {
         var bfAmortVal = Math.round(slBF.monthlyAmortization * row.months);
         var bfStyle = Object.assign({}, currStyle, rowFill, { font: { name: 'Calibri', sz: 10, color: { rgb: 'B45309' } } });
-        setCell(slWS, r, 7, slBF.type === 'credit' ? -bfAmortVal : bfAmortVal, bfStyle);
-        slTotalCol = 8;
+        setCell(slWS, r, slColIdx.broker, slBF.type === 'credit' ? -bfAmortVal : bfAmortVal, bfStyle);
       }
 
       // Total Cost = Net Rent + OpEx + Parking [+ Broker Fee if exists]
-      var slTotalFormula = 'E' + excelRow + '+F' + excelRow + '+G' + excelRow;
-      if (slBF.hasBrokerFee) slTotalFormula += '+H' + excelRow;
-      setFormula(slWS, r, slTotalCol, slTotalFormula, Object.assign({}, currBoldStyle, rowFill));
+      var slTotalFormula = slCol('netRent') + excelRow + '+' + slCol('opex') + excelRow + '+' + slCol('parking') + excelRow;
+      if (slBF.hasBrokerFee) slTotalFormula += '+' + slCol('broker') + excelRow;
+      setFormula(slWS, r, slColIdx.totalCost, slTotalFormula, Object.assign({}, currBoldStyle, rowFill));
     });
 
     // Totals row with SUM formulas
@@ -18898,10 +18940,9 @@ function rfpExportExcel() {
     setCell(slWS, smRow, 0, 'Summary Metrics', sectionStyle);
     for (var smc = 1; smc < slCols; smc++) setCell(slWS, smRow, smc, '', sectionStyle);
     smRow++;
-    // Summary metrics with formulas referencing the totals above
-    var slTotalCostCol = slBF.hasBrokerFee ? 8 : 7;
-    var totalH = XLSX.utils.encode_cell({ r: 0, c: slTotalCostCol }).replace(/\d+/, ''); // Total Cost column
-    var totalE = XLSX.utils.encode_cell({ r: 0, c: 4 }).replace(/\d+/, ''); // E column (Net Rent)
+    // Summary metrics with formulas referencing the totals above (dynamic column refs)
+    var totalH = slCol('totalCost'); // Total Cost column letter
+    var totalE = slCol('netRent'); // Net Rent column letter
     var totalHRef = totalH + (slTotalRow + 1); // Total Cost cell
     var totalERef = totalE + (slTotalRow + 1); // Net Rent total
 
@@ -18916,7 +18957,8 @@ function rfpExportExcel() {
     smRow++;
 
     setCell(slWS, smRow, 0, 'Straight-Line Monthly Rent (after TI credit)', metricLabelStyle);
-    setFormula(slWS, smRow, 1, totalERef + '/' + DT + dtRefs.lease_term + '-' + tiMonthlyRef, metricValStyle);
+    // Net Rent total already includes TI credit subtraction, so just divide by term
+    setFormula(slWS, smRow, 1, totalERef + '/' + DT + dtRefs.lease_term, metricValStyle);
     var slMonthlyRentRef = 'B' + (smRow + 1);
     smRow++;
 
