@@ -22007,9 +22007,10 @@ function _opRenderCard(bd, selected) {
 
   // Detect version comparison (all same address = comparing versions of one building)
   var isVersionCompare = bd.length > 1 && bd.every(function(b) { return b.address === bd[0].address; });
-  var changeFromIdx = isVersionCompare ? (window._rfpCompareFromIdx != null ? window._rfpCompareFromIdx : 0) : -1;
-  var changeToIdx = isVersionCompare ? (window._rfpCompareToIdx != null ? window._rfpCompareToIdx : bd.length - 1) : -1;
-  var showChangeCol = isVersionCompare && changeFromIdx >= 0 && changeToIdx >= 0 && changeFromIdx !== changeToIdx;
+  // For Change column: always use first and last of the DISPLAYED versions
+  var changeFromIdx = isVersionCompare ? 0 : -1;
+  var changeToIdx = isVersionCompare ? bd.length - 1 : -1;
+  var showChangeCol = isVersionCompare && bd.length >= 2 && changeFromIdx !== changeToIdx;
   var changeCols = showChangeCol ? ' minmax(160px, 200px)' : '';
 
   h = '<div style="background:white;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);font-family:\'DM Sans\',system-ui,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;">';
