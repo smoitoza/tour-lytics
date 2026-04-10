@@ -189,6 +189,47 @@ export async function PATCH(req: Request) {
   return NextResponse.json(data)
 }
 
+// PUT - bulk re-analyze all submissions (regenerates cash flow from stored deal_terms)
+export async function PUT(req: Request) {
+  const { searchParams } = new URL(req.url)
+  const secret = searchParams.get('secret')
+  if (secret !== 'reanalyze2026') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Fetch all active submissions with deal_terms
+  const { data: subs, error } = await supabase
+    .from('rfp_submissions')
+    .select('id, deal_terms, building_address')
+    .neq('status', 'archived')
+    .not('deal_terms', 'is', null)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (!subs || subs.length === 0) return NextResponse.json({ message: 'No submissions found', updated: 0 })
+
+  let updated = 0
+  const errors: string[] = []
+  for (const sub of subs) {
+    try {
+      const terms = sub.deal_terms as DealTerms
+      const analysis = generateFinancialAnalysis(terms)
+      const { error: updateErr } = await supabase
+        .from('rfp_submissions')
+        .update({ analysis, updated_at: new Date().toISOString() })
+        .eq('id', sub.id)
+      if (updateErr) {
+        errors.push(`${sub.id}: ${updateErr.message}`)
+      } else {
+        updated++
+      }
+    } catch (e) {
+      errors.push(`${sub.id}: ${(e as Error).message}`)
+    }
+  }
+
+  return NextResponse.json({ message: `Re-analyzed ${updated} of ${subs.length} submissions`, updated, errors })
+}
+
 // DELETE - archive an RFP submission
 export async function DELETE(req: Request) {
   const { searchParams } = new URL(req.url)
