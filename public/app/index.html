@@ -17802,14 +17802,8 @@ function rfpShowVersionComparison(buildingAddress) {
       var pct = ((diff / first) * 100).toFixed(1);
       var color = '';
       // For costs: lower is better (green). For concessions/TI: higher is better (green).
-      var lowerIsBetter = ['baseRent', 'totalBaseRent', 'opex', 'parkingRate', 'effectiveRentRSF', 'straightLineAnnualExpense', 'totalAllInCost', 'npv', 'npvPerRSF', 'capexPerRSF', 'lhiMonthlyDep', 'slMonthlyWithLHI', 'totalAllInWithCapex'].includes(f.key);
-      if (lowerIsBetter) {
-        color = diff < 0 ? '#16a34a' : '#dc2626';
-      } else {
-        color = diff > 0 ? '#16a34a' : '#dc2626';
-      }
       var arrow = diff > 0 ? '&uarr;' : '&darr;';
-      changeHTML = '<span style="color:' + color + ';font-weight:600;">' + arrow + ' ' + fmtVal(Math.abs(diff), f.fmt) + ' (' + (diff > 0 ? '+' : '') + pct + '%)</span>';
+      changeHTML = '<span style="color:#2563eb;font-weight:600;">' + arrow + ' ' + fmtVal(Math.abs(diff), f.fmt) + ' (' + (diff > 0 ? '+' : '') + pct + '%)</span>';
     }
     html += '<td style="padding:8px 14px;text-align:right;">' + changeHTML + '</td>';
     html += '</tr>';
@@ -21710,7 +21704,7 @@ function _opRenderCard(bd, selected) {
   var changeFromIdx = isVersionCompare ? (window._rfpCompareFromIdx != null ? window._rfpCompareFromIdx : 0) : -1;
   var changeToIdx = isVersionCompare ? (window._rfpCompareToIdx != null ? window._rfpCompareToIdx : bd.length - 1) : -1;
   var showChangeCol = isVersionCompare && changeFromIdx >= 0 && changeToIdx >= 0 && changeFromIdx !== changeToIdx;
-  var changeCols = showChangeCol ? ' 100px' : '';
+  var changeCols = showChangeCol ? ' 140px' : '';
 
   h = '<div style="background:white;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);font-family:\'DM Sans\',system-ui,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;">';
 
@@ -21781,17 +21775,10 @@ function _opRenderCard(bd, selected) {
           var changeHTML = '<span style="color:#94a3b8;">--</span>';
           if (fromVal > 0 && diff !== 0) {
             var pct = ((diff / fromVal) * 100).toFixed(1);
-            var color = diff > 0 ? '#dc2626' : '#16a34a';
-            // For concessions/TI: higher is better
-            var higherIsBetter = ['freeRent', 'tiValue', 'totalConc', 'tiTotal', 'tiPerRSF', 'freeRentMo', 'parkSpots'].indexOf(m.key) >= 0;
-            if (higherIsBetter) color = diff > 0 ? '#16a34a' : '#dc2626';
-            // For non-cost metrics like RSF, term: neutral
-            var neutral = ['rsf', 'term', 'annEsc', 'parkSpots'].indexOf(m.key) >= 0;
-            if (neutral) color = '#2563eb';
             var arrow = diff > 0 ? '\u2191' : '\u2193';
-            changeHTML = '<span style="color:' + color + ';font-weight:600;">' + arrow + ' ' + (diff > 0 ? '+' : '') + pct + '%</span>';
+            changeHTML = '<span style="color:#2563eb;font-weight:600;">' + arrow + ' ' + _opFmtVal(Math.abs(diff), m.fmt) + ' (' + (diff > 0 ? '+' : '') + pct + '%)</span>';
           }
-          h += '<div style="padding:12px 8px;text-align:right;font-size:12px;display:flex;align-items:center;justify-content:flex-end;">' + changeHTML + '</div>';
+          h += '<div style="padding:12px 10px;text-align:right;font-size:11px;display:flex;align-items:center;justify-content:flex-end;">' + changeHTML + '</div>';
         }
         h += '</div>';
       });
