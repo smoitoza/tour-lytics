@@ -241,18 +241,35 @@ export async function getTokenPricing(): Promise<any[]> {
 }
 
 // ============================================================
-// Resolve userId from a projectId (via backfilled token_balances)
+// Resolve userId from a projectId
+// 1. Check token_balances (backfilled projects)
+// 2. Fallback: look up project owner email -> auth.users
 // ============================================================
 export async function resolveUserIdFromProject(projectId: string): Promise<string | null> {
   const supabase = getAdminClient()
-  const { data } = await supabase
+
+  // Try token_balances first (fast path for projects that have consumed tokens)
+  const { data: balRow } = await supabase
     .from('token_balances')
     .select('user_id')
     .eq('project_id', projectId)
     .not('user_id', 'is', null)
     .limit(1)
     .single()
-  return data?.user_id || null
+  if (balRow?.user_id) return balRow.user_id
+
+  // Fallback: resolve via project owner email -> auth user id
+  const { data: project } = await supabase
+    .from('projects')
+    .select('owner_id, created_by')
+    .eq('id', projectId)
+    .single()
+  const ownerEmail = project?.owner_id || project?.created_by
+  if (!ownerEmail) return null
+
+  const { data: authUsers } = await supabase.auth.admin.listUsers({ perPage: 1000 })
+  const match = authUsers?.users?.find((u) => u.email?.toLowerCase() === ownerEmail.toLowerCase())
+  return match?.id || null
 }
 
 // ============================================================
