@@ -17856,7 +17856,7 @@ function rfpOpenVersionOnePager() {
   if (Array.isArray(intCustom)) intCustom.forEach(function(ci) { intCTotal += parseFloat(ci.amount) || 0; });
   var totalInternalOpex = intFB + intWPE + intMaint + intCTotal;
 
-  var bd = vd.subs.map(function(sub) {
+  var allBd = vd.subs.map(function(sub, idx) {
     var summary = (sub.analysis && sub.analysis.summary) || {};
     var cfTotals = (sub.analysis && sub.analysis.cash_flow && sub.analysis.cash_flow.totals) || {};
     var capexData = (sub.analysis && sub.analysis.capex) || {};
@@ -17869,9 +17869,18 @@ function rfpOpenVersionOnePager() {
     var lhiMo = capexData.hasCapex ? (capexData.monthlyDepreciation || 0) : 0;
     var bfMo = brokerFee.hasBrokerFee ? (brokerFee.slMonthlyImpact || 0) : 0;
     var slAllIn = Math.round(slMo + opexMo + parkMo + lhiMo + bfMo);
+    // Stepped-rent-aware base rent per month
+    var effectiveBaseRent = parseFloat(terms.base_rent_rsf) || parseFloat(terms.baseRent) || 0;
+    var rp = terms.rent_periods || terms.rentPeriods;
+    if (rp && Array.isArray(rp) && rp.length > 0) {
+      var firstPaid = rp.find(function(p) { return p.rent_rsf_yr > 0; });
+      if (firstPaid) effectiveBaseRent = firstPaid.rent_rsf_yr;
+    }
+    var baseRentPerMo = effectiveBaseRent > 0 ? Math.round(effectiveBaseRent / 12 * 100) / 100 : 0;
     return {
       address: vd.address,
       versionLabel: sub.version_label || sub.versionLabel || sub.doc_type || 'Version',
+      versionIdx: idx,
       summary: summary,
       terms: terms,
       cfTotals: cfTotals,
@@ -17883,14 +17892,17 @@ function rfpOpenVersionOnePager() {
       brokerFee: brokerFee,
       slMonthlyAllInLHI: slAllIn,
       allInMonthly: Math.round(slAllIn + totalInternalOpex),
-      allInAnnual: Math.round((slAllIn + totalInternalOpex) * 12)
+      allInAnnual: Math.round((slAllIn + totalInternalOpex) * 12),
+      baseRentPerMo: baseRentPerMo,
     };
   });
 
-  // Store for one-pager to use
-  window._rfpComparisonData = { buildingData: bd };
+  // Store ALL versions — the modal will let users pick which ones to show
+  window._rfpAllVersionBd = allBd;
+  window._opSelectedVersions = null; // reset for fresh modal
+  window._rfpComparisonData = { buildingData: allBd };
 
-  // Open the metric picker modal (reuses existing one-pager flow)
+  // Open the metric picker modal
   rfpOpenOnePagerModal();
 }
 
@@ -21508,7 +21520,7 @@ var _onePagerGroups = [
     label: 'Rent & Rate',
     metrics: [
       { key: 'baseRent',  label: 'Base Rent/RSF/yr',        getter: function(d) { return (d.terms && (d.terms.base_rent_rsf || d.terms.baseRent)) || (d.summary.baseRent) || 0; }, fmt: 'curr_dec' },
-      { key: 'rentSfMo',  label: 'Rent/SF/mo',              getter: function(d) { var rsf = d.summary.rsf || 0; var tm = d.summary.termMonths || 1; var t = (d.cfTotals || {}).totalBaseRent || 0; return rsf > 0 ? Math.round(t / tm / rsf * 100) / 100 : 0; }, fmt: 'curr_dec' },
+      { key: 'rentSfMo',  label: 'Rent/SF/mo',              getter: function(d) { if (d.baseRentPerMo) return d.baseRentPerMo; var rsf = d.summary.rsf || 0; var tm = d.summary.termMonths || 1; var t = (d.cfTotals || {}).totalBaseRent || 0; return rsf > 0 ? Math.round(t / tm / rsf * 100) / 100 : 0; }, fmt: 'curr_dec' },
       { key: 'effRent',   label: 'Effective Rent/RSF',      getter: function(d) { return d.summary.effectiveRentRSF || 0; }, fmt: 'curr_dec' },
       { key: 'opexSfMo',  label: 'OpEx/SF/mo',              getter: function(d) { var rsf = d.summary.rsf || 0; var tm = d.summary.termMonths || 1; var t = (d.cfTotals || {}).totalOpex || 0; return rsf > 0 ? Math.round(t / tm / rsf * 100) / 100 : 0; }, fmt: 'curr_dec' },
       { key: 'opexRSFyr', label: 'OpEx/Tax/CAM (RSF/yr)',   getter: function(d) { return (d.terms && (d.terms.opex_rsf_yr || d.terms.opexRSF)) || 0; }, fmt: 'curr_dec' },
@@ -21612,6 +21624,25 @@ function rfpOpenOnePagerModal() {
 
     // Left: metric picker
     h += '<div class="op-left-panel" style="width:320px;min-width:320px;padding:16px 20px;overflow-y:auto;border-right:1px solid #e2e8f0;">';
+
+    // Version selector (only for version comparisons)
+    if (window._rfpAllVersionBd && window._rfpAllVersionBd.length > 1 && bd.length > 1 && bd.every(function(b) { return b.address === bd[0].address; })) {
+      if (!window._opSelectedVersions) {
+        window._opSelectedVersions = {};
+        bd.forEach(function(b, i) { window._opSelectedVersions[i] = true; });
+      }
+      h += '<div style="margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #e2e8f0;">';
+      h += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;margin-bottom:8px;">Versions to Show</div>';
+      window._rfpAllVersionBd.forEach(function(b, i) {
+        var checked = window._opSelectedVersions[i] !== false;
+        h += '<label style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:6px;cursor:pointer;margin-bottom:2px;' + (checked ? 'background:#eff6ff;' : '') + '">';
+        h += '<input type="checkbox" ' + (checked ? 'checked' : '') + ' onchange="window._opSelectedVersions[' + i + ']=this.checked;window._opApplyVersionFilter()" style="accent-color:#2563eb;width:14px;height:14px;">';
+        h += '<span style="font-size:12px;color:#334155;">' + esc(b.versionLabel || 'Version ' + (i + 1)) + '</span>';
+        h += '</label>';
+      });
+      h += '</div>';
+    }
+
     h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
     h += '<span style="font-size:13px;font-weight:600;color:#475569;">Metrics</span>';
     h += '<span class="op-counter" style="font-size:12px;font-weight:600;padding:2px 8px;border-radius:10px;' + (cnt >= _onePagerMaxMetrics ? 'background:#fef2f2;color:#dc2626;' : 'background:#f1f5f9;color:#475569;') + '">' + cnt + '/' + _onePagerMaxMetrics + ' selected</span>';
@@ -21650,6 +21681,18 @@ function rfpOpenOnePagerModal() {
   }
 
   window._opSelected = selected;
+
+  // Version filter: update buildingData to only include selected versions
+  window._opApplyVersionFilter = function() {
+    if (!window._rfpAllVersionBd) return;
+    var filtered = window._rfpAllVersionBd.filter(function(b, i) {
+      return window._opSelectedVersions[i] !== false;
+    });
+    if (filtered.length === 0) filtered = window._rfpAllVersionBd; // don't allow empty
+    window._rfpComparisonData = { buildingData: filtered };
+    renderModal();
+  };
+
   window._opToggleMetric = function(key) {
     // Save scroll position before any DOM changes
     var leftPanel = document.querySelector('#onePagerModal .op-left-panel');
@@ -21720,7 +21763,7 @@ function _opRenderCard(bd, selected) {
   var changeFromIdx = isVersionCompare ? (window._rfpCompareFromIdx != null ? window._rfpCompareFromIdx : 0) : -1;
   var changeToIdx = isVersionCompare ? (window._rfpCompareToIdx != null ? window._rfpCompareToIdx : bd.length - 1) : -1;
   var showChangeCol = isVersionCompare && changeFromIdx >= 0 && changeToIdx >= 0 && changeFromIdx !== changeToIdx;
-  var changeCols = showChangeCol ? ' 140px' : '';
+  var changeCols = showChangeCol ? ' minmax(160px, 200px)' : '';
 
   h = '<div style="background:white;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);font-family:\'DM Sans\',system-ui,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;">';
 
