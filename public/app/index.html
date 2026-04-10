@@ -19725,12 +19725,24 @@ function rfpExportExcel() {
         row.push(f.type === 'text' ? (val || '') : n(val));
       });
       // Change column (uses selected compare indices)
-      var first = n(vals[expFromIdx]);
-      var last = n(vals[expToIdx]);
-      var diff = last - first;
-      if (f.type !== 'text' && first > 0 && diff !== 0) {
-        var pctChg = ((diff / first) * 100).toFixed(1);
-        row.push((diff > 0 ? '+' : '') + (f.type === 'curr' || f.type === 'curr_dec' ? getCurrencySymbol() : '') + Math.round(Math.abs(diff)).toLocaleString() + ' (' + (diff > 0 ? '+' : '') + pctChg + '%)');
+      // Use the actual cell values from the row (columns 1..allSubs.length) to ensure
+      // the Change column matches the displayed values, not raw deal_terms
+      var firstVal = n(row[expFromIdx + 1]); // +1 because row[0] is the label
+      var lastVal = n(row[expToIdx + 1]);
+      var diff = lastVal - firstVal;
+      if (f.type !== 'text' && firstVal > 0 && diff !== 0) {
+        var pctChg = ((diff / firstVal) * 100).toFixed(1);
+        // Preserve decimal precision for curr_dec fields
+        var absDiff = Math.abs(diff);
+        var diffStr;
+        if (f.type === 'curr_dec') {
+          diffStr = getCurrencySymbol() + absDiff.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        } else if (f.type === 'curr') {
+          diffStr = getCurrencySymbol() + Math.round(absDiff).toLocaleString();
+        } else {
+          diffStr = Math.round(absDiff).toLocaleString();
+        }
+        row.push((diff > 0 ? '+' : '-') + diffStr + ' (' + (diff > 0 ? '+' : '') + pctChg + '%)');
       } else {
         row.push('');
       }
