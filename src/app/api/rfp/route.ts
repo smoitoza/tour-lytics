@@ -79,6 +79,9 @@ export async function POST(req: Request) {
     parking_rate_monthly: rawTerms.parking_rate_monthly ?? rawTerms.parkingRate ?? 0,
     parking_escalation_pct: rawTerms.parking_escalation_pct ?? rawTerms.parkingEscalation ?? 0,
     security_deposit: rawTerms.security_deposit ?? rawTerms.securityDeposit ?? 0,
+    amortized_ti_rsf: rawTerms.amortized_ti_rsf ?? rawTerms.amortizedTIRSF ?? 0,
+    amortized_ti_rate: rawTerms.amortized_ti_rate ?? rawTerms.amortizedTIRate ?? 0,
+    amortized_ti_term_months: rawTerms.amortized_ti_term_months ?? rawTerms.amortizedTITermMonths ?? 0,
     rent_basis: rawTerms.rent_basis ?? rawTerms.rentBasis ?? '',
     structure: rawTerms.structure ?? '',
     landlord: rawTerms.landlord ?? '',
@@ -274,6 +277,9 @@ interface DealTerms {
   parking_rate_monthly?: number
   parking_escalation_pct?: number
   security_deposit?: number
+  amortized_ti_rsf?: number
+  amortized_ti_rate?: number
+  amortized_ti_term_months?: number
   rent_basis?: string
   structure?: string
   landlord?: string
@@ -340,6 +346,21 @@ function generateFinancialAnalysis(terms: DealTerms) {
   const parkingSpots = terms.parking_spots || 0
   const parkingRate = terms.parking_rate_monthly || 0
   const parkingEsc = (terms.parking_escalation_pct || 0) / 100
+  const amortTIRSF = terms.amortized_ti_rsf || 0
+  const amortTIRate = (terms.amortized_ti_rate || 0) / 100
+  const amortTITermMonths = (terms.amortized_ti_term_months || 0) > 0 ? terms.amortized_ti_term_months! : termMonths
+  const amortTIPrincipal = amortTIRSF * rsf
+  let amortTIMonthlyPayment = 0
+  if (amortTIPrincipal > 0) {
+    if (amortTIRate === 0) {
+      amortTIMonthlyPayment = amortTIPrincipal / amortTITermMonths
+    } else {
+      const monthlyRate = amortTIRate / 12
+      amortTIMonthlyPayment = amortTIPrincipal * (monthlyRate * Math.pow(1 + monthlyRate, amortTITermMonths)) / (Math.pow(1 + monthlyRate, amortTITermMonths) - 1)
+    }
+  }
+  const hasAmortTI = amortTIPrincipal > 0
+
   const commDate = terms.commencement_date ? new Date(terms.commencement_date + 'T00:00:00') : new Date()
   const leaseEndDate = terms.lease_end_date ? new Date(terms.lease_end_date + 'T00:00:00') : null
 
@@ -364,6 +385,7 @@ function generateFinancialAnalysis(terms: DealTerms) {
   let totalFreeRentValue = 0
   let totalOpex = 0
   let totalParking = 0
+  let totalAmortTI = 0
 
   for (let m = 1; m <= termMonths; m++) {
     const leaseYear = Math.ceil(m / 12)
@@ -436,14 +458,18 @@ function generateFinancialAnalysis(terms: DealTerms) {
     const parkYearMultiplier = m <= 12 ? 1 : Math.pow(1 + parkingEsc, leaseYear - 1)
     const monthlyParking = parkingSpots * parkingRate * parkYearMultiplier * proration
 
+    // Amortized TI: fixed monthly payment, starts month 1, stops after amort term
+    const amortTI = hasAmortTI && m <= amortTITermMonths ? amortTIMonthlyPayment : 0
+
     // Total monthly cost
-    const totalMonthlyCost = netCashRent + opex + monthlyParking
+    const totalMonthlyCost = netCashRent + opex + monthlyParking + amortTI
     cumulativeCash += totalMonthlyCost
 
     totalBaseRent += monthlyBaseRent
     totalFreeRentValue += freeRentCredit
     totalOpex += opex
     totalParking += monthlyParking
+    totalAmortTI += amortTI
 
     monthly.push({
       month: m,
@@ -457,6 +483,7 @@ function generateFinancialAnalysis(terms: DealTerms) {
       netCashRent: Math.round(netCashRent),
       opex: Math.round(opex),
       parking: Math.round(monthlyParking),
+      amortizedTI: Math.round(amortTI),
       totalMonthlyCost: Math.round(totalMonthlyCost),
       cumulativeCash: Math.round(cumulativeCash),
     })
@@ -475,6 +502,7 @@ function generateFinancialAnalysis(terms: DealTerms) {
         netRent: 0,
         opex: 0,
         parking: 0,
+        amortizedTI: 0,
         totalCost: 0,
       }
     }
@@ -485,6 +513,7 @@ function generateFinancialAnalysis(terms: DealTerms) {
     yr.netRent += m.netCashRent
     yr.opex += m.opex
     yr.parking += m.parking
+    yr.amortizedTI += m.amortizedTI
     yr.totalCost += m.totalMonthlyCost
   })
   const annual = Object.values(annualMap).map((yr: any) => ({
@@ -494,6 +523,7 @@ function generateFinancialAnalysis(terms: DealTerms) {
     netRent: Math.round(yr.netRent),
     opex: Math.round(yr.opex),
     parking: Math.round(yr.parking),
+    amortizedTI: Math.round(yr.amortizedTI),
     totalCost: Math.round(yr.totalCost),
   }))
 
@@ -601,6 +631,10 @@ function generateFinancialAnalysis(terms: DealTerms) {
         totalNetRent: Math.round(totalNetRent),
         totalOpex: Math.round(totalOpex),
         totalParking: Math.round(totalParking),
+        totalAmortizedTI: Math.round(totalAmortTI),
+        amortizedTIPrincipal: Math.round(amortTIPrincipal),
+        amortizedTIInterest: Math.round(totalAmortTI - amortTIPrincipal),
+        amortizedTIMonthlyPayment: Math.round(amortTIMonthlyPayment),
         totalAllInCost: totalAllIn,
         termMonths,
       }
@@ -615,6 +649,11 @@ function generateFinancialAnalysis(terms: DealTerms) {
         tiAllowanceTotal: tiTotal,
         monthlyTIAmortization: Math.round(monthlyTIAmortization),
         annualTIAmortization: Math.round(monthlyTIAmortization * 12),
+        amortizedTIMonthlyPayment: Math.round(amortTIMonthlyPayment),
+        totalAmortizedTI: Math.round(totalAmortTI),
+        amortizedTIPrincipal: Math.round(amortTIPrincipal),
+        amortizedTIRate: terms.amortized_ti_rate || 0,
+        amortizedTITermMonths: amortTIPrincipal > 0 ? amortTITermMonths : 0,
       }
     },
     gaap: {
@@ -624,6 +663,14 @@ function generateFinancialAnalysis(terms: DealTerms) {
         rouAsset,
         totalLeasePayments: Math.round(totalLeasePayments),
         tiAllowance: tiTotal,
+        amortizedTIPrincipal: Math.round(amortTIPrincipal),
+        amortizedTIRate: terms.amortized_ti_rate || 0,
+        amortizedTITermMonths: amortTIPrincipal > 0 ? amortTITermMonths : 0,
+        amortizedTIMonthlyPayment: Math.round(amortTIMonthlyPayment),
+        amortizedTIAnnualPayment: Math.round(amortTIMonthlyPayment * 12),
+        amortizedTITotalInterest: Math.round(totalAmortTI - amortTIPrincipal),
+        amortizedTITotalPaid: Math.round(totalAmortTI),
+        amortizedTIImpactPerRSFYr: rsf > 0 && termMonths > 0 ? Math.round((totalAmortTI / (termMonths / 12)) / rsf * 100) / 100 : 0,
       },
       schedule: gaapSchedule,
     },
