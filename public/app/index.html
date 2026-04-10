@@ -17521,15 +17521,31 @@ function rfpRenameVersion(submissionId, chipEl, defaultLabel) {
 }
 
 // ===== VERSION COMPARISON =====
+// Lightweight re-render: stays on page, just updates the comparison table HTML
+function rfpRefreshVersionComparison() {
+  var addr = window._rfpLastCompareAddress;
+  if (!addr) return;
+  // Force re-render by calling rfpShowVersionComparison with the address
+  // It won't toggle off because we pass the address
+  var container = document.getElementById('rfpVersionCompare');
+  if (!container) return;
+  // Temporarily hide so the toggle check doesn't close it
+  container.style.display = 'none';
+  rfpShowVersionComparison(addr);
+}
+
 function rfpShowVersionComparison(buildingAddress) {
   var container = document.getElementById('rfpVersionCompare');
   if (!container) return;
 
   // Toggle visibility
-  if (container.style.display !== 'none') {
+  if (container.style.display !== 'none' && !buildingAddress) {
     container.style.display = 'none';
     return;
   }
+
+  // Store the address for refresh calls
+  window._rfpLastCompareAddress = buildingAddress;
 
   // Get submissions for this building, filtered to selected component if applicable
   var selectedComp = window._rfpState.selectedComponent || '';
@@ -17767,14 +17783,14 @@ function rfpShowVersionComparison(buildingAddress) {
   var changeToIdx = window._rfpCompareToIdx != null ? window._rfpCompareToIdx : subs.length - 1;
   html += '<th style="padding:6px 10px;text-align:center;font-weight:600;border-bottom:1px solid var(--color-border);min-width:140px;color:#2563eb;vertical-align:top;">';
   html += '<div style="font-size:var(--text-xs);color:#2563eb;margin-bottom:4px;">Change</div>';
-  html += '<select id="rfpCompareFrom" onchange="window._rfpCompareFromIdx=parseInt(this.value);rfpShowVersionComparison()" style="font-size:10px;padding:2px 4px;border:1px solid #e2e8f0;border-radius:4px;color:#475569;max-width:130px;font-family:inherit;margin-bottom:2px;display:block;width:100%;">';
+  html += '<select id="rfpCompareFrom" onchange="window._rfpCompareFromIdx=parseInt(this.value);rfpRefreshVersionComparison()" style="font-size:10px;padding:2px 4px;border:1px solid #e2e8f0;border-radius:4px;color:#475569;max-width:130px;font-family:inherit;margin-bottom:2px;display:block;width:100%;">';
   subs.forEach(function(s, i) {
     var lbl = s.version_label || ('Version ' + (i + 1));
     html += '<option value="' + i + '"' + (i === changeFromIdx ? ' selected' : '') + '>' + esc(lbl) + '</option>';
   });
   html += '</select>';
   html += '<div style="font-size:9px;color:#94a3b8;margin:1px 0;">vs</div>';
-  html += '<select id="rfpCompareTo" onchange="window._rfpCompareToIdx=parseInt(this.value);rfpShowVersionComparison()" style="font-size:10px;padding:2px 4px;border:1px solid #e2e8f0;border-radius:4px;color:#475569;max-width:130px;font-family:inherit;display:block;width:100%;">';
+  html += '<select id="rfpCompareTo" onchange="window._rfpCompareToIdx=parseInt(this.value);rfpRefreshVersionComparison()" style="font-size:10px;padding:2px 4px;border:1px solid #e2e8f0;border-radius:4px;color:#475569;max-width:130px;font-family:inherit;display:block;width:100%;">';
   subs.forEach(function(s, i) {
     var lbl = s.version_label || ('Version ' + (i + 1));
     html += '<option value="' + i + '"' + (i === changeToIdx ? ' selected' : '') + '>' + esc(lbl) + '</option>';
