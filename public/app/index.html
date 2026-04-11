@@ -15934,7 +15934,11 @@ function rfpMapTerms(raw) {
     securityDeposit: raw.security_deposit || raw.securityDeposit || '',
     structure: raw.structure || '',
     landlord: raw.landlord || '',
-    notes: raw.notes || ''
+    notes: raw.notes || '',
+    tiDisbursementType: raw.ti_disbursement_type || raw.tiDisbursementType || '',
+    tiDisbursementMonth: raw.ti_disbursement_month || raw.tiDisbursementMonth || '',
+    tiMilestones: raw.ti_milestones || raw.tiMilestones || null,
+    tiConstructionCost: raw.ti_construction_cost || raw.tiConstructionCost || ''
   };
 }
 
@@ -16155,6 +16159,50 @@ function rfpCollectRentPeriods() {
   return periods.length > 0 ? periods : null;
 }
 
+// ===== TI MILESTONE HELPERS =====
+function rfpBuildMilestoneRow(month, pct, idx) {
+  return '<div class="rfp-ti-milestone-row" style="display:flex;gap:8px;align-items:center;margin-bottom:4px">' +
+    '<input class="rfp-form-input" data-field="milestone_month" type="number" value="' + (month || '') + '" placeholder="Month" style="width:80px" />' +
+    '<input class="rfp-form-input" data-field="milestone_pct" type="number" value="' + (pct || '') + '" placeholder="%" step="1" style="width:80px" />' +
+    '<span style="font-size:var(--text-xs);color:var(--color-text-muted)">%</span>' +
+    '<button type="button" onclick="this.parentElement.remove()" style="font-size:var(--text-xs);color:#dc2626;background:none;border:none;cursor:pointer;padding:2px 6px">x</button>' +
+  '</div>';
+}
+
+function rfpAddMilestone() {
+  var list = document.getElementById('rfp-ti-milestones-list');
+  if (!list) return;
+  var count = list.querySelectorAll('.rfp-ti-milestone-row').length;
+  list.insertAdjacentHTML('beforeend', rfpBuildMilestoneRow('', '', count));
+}
+
+function rfpTIDisbTypeChanged() {
+  var sel = document.getElementById('rfp-field-tiDisbursementType');
+  if (!sel) return;
+  var type = sel.value;
+  var monthCont = document.getElementById('rfp-ti-disb-month-container');
+  var msCont = document.getElementById('rfp-ti-milestones-container');
+  if (monthCont) monthCont.style.display = type === 'specific_month' ? '' : 'none';
+  if (msCont) msCont.style.display = type === 'milestones' ? '' : 'none';
+}
+
+function rfpCollectTIMilestones() {
+  var list = document.getElementById('rfp-ti-milestones-list');
+  if (!list) return null;
+  var milestones = [];
+  var rows = list.querySelectorAll('.rfp-ti-milestone-row');
+  rows.forEach(function(row) {
+    var monthEl = row.querySelector('[data-field="milestone_month"]');
+    var pctEl = row.querySelector('[data-field="milestone_pct"]');
+    var month = monthEl ? parseInt(monthEl.value) : 0;
+    var pct = pctEl ? parseFloat(pctEl.value) : 0;
+    if (month > 0 && pct > 0) {
+      milestones.push({ month: month, pct: pct });
+    }
+  });
+  return milestones.length > 0 ? milestones : null;
+}
+
 // ===== REVIEW FORM =====
 function rfpShowReviewForm(terms, meta) {
   if (_rfpModal) { _rfpModal.remove(); _rfpModal = null; }
@@ -16174,6 +16222,7 @@ function rfpShowReviewForm(terms, meta) {
     { key: 'amortizedTIRSF', label: 'Amortized TI (per RSF)', type: 'number', step: '0.01' },
     { key: 'amortizedTIRate', label: 'Amortized TI Interest Rate (%)', type: 'number', step: '0.01' },
     { key: 'amortizedTITermMonths', label: 'Amortized TI Term (months)', type: 'number', placeholder: 'Defaults to lease term' },
+    { key: 'tiConstructionCost', label: 'Est. Construction Cost (optional)', type: 'number', placeholder: 'Total buildout cost estimate' },
     { key: 'opexRSF', label: 'OpEx/Tax/CAM (per RSF/yr)', type: 'number', step: '0.01', placeholder: 'e.g. 18.00' },
     { key: 'opex', label: 'OpEx (monthly override)', type: 'number', placeholder: 'Auto-calculated if per RSF entered' },
     { key: 'parkingSpots', label: 'Parking Spots', type: 'number' },
@@ -16205,6 +16254,49 @@ function rfpShowReviewForm(terms, meta) {
         (f.placeholder ? ' placeholder="' + f.placeholder + '"' : '') + ' />';
     }
     formHtml += '</div>';
+
+    // Insert TI Disbursement section after tiConstructionCost field
+    if (f.key === 'tiConstructionCost') {
+      var currentDisbType = terms.tiDisbursementType || '';
+      var currentDisbMonth = terms.tiDisbursementMonth || '';
+      var currentMilestones = terms.tiMilestones || null;
+      var hasMilestones = currentMilestones && Array.isArray(currentMilestones) && currentMilestones.length > 0;
+
+      formHtml += '<div class="full-width" style="grid-column:1/-1;margin:4px 0 8px">';
+      formHtml += '<label class="rfp-form-label" style="margin:0 0 8px;font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-accent)">TI Disbursement</label>';
+
+      // Dropdown
+      formHtml += '<div style="margin-bottom:8px">';
+      formHtml += '<select class="rfp-form-input" id="rfp-field-tiDisbursementType" onchange="rfpTIDisbTypeChanged()" style="max-width:300px">';
+      formHtml += '<option value="commencement"' + (currentDisbType === 'commencement' || !currentDisbType ? ' selected' : '') + '>At Commencement (Month 1)</option>';
+      formHtml += '<option value="specific_month"' + (currentDisbType === 'specific_month' ? ' selected' : '') + '>Specific Month</option>';
+      formHtml += '<option value="milestones"' + (currentDisbType === 'milestones' ? ' selected' : '') + '>Milestones</option>';
+      formHtml += '</select>';
+      formHtml += '</div>';
+
+      // Specific month input
+      formHtml += '<div id="rfp-ti-disb-month-container" style="margin-bottom:8px;' + (currentDisbType === 'specific_month' ? '' : 'display:none') + '">';
+      formHtml += '<label class="rfp-form-label">Disbursement Month</label>';
+      formHtml += '<input class="rfp-form-input" id="rfp-field-tiDisbursementMonth" type="number" value="' + (currentDisbMonth || '') + '" style="max-width:150px" />';
+      formHtml += '</div>';
+
+      // Milestones UI
+      formHtml += '<div id="rfp-ti-milestones-container" style="' + (currentDisbType === 'milestones' ? '' : 'display:none') + '">';
+      formHtml += '<div id="rfp-ti-milestones-list">';
+      if (hasMilestones) {
+        currentMilestones.forEach(function(ms, idx) {
+          formHtml += rfpBuildMilestoneRow(ms.month || '', ms.pct || '', idx);
+        });
+      } else {
+        formHtml += rfpBuildMilestoneRow('1', '50', 0);
+        formHtml += rfpBuildMilestoneRow('6', '50', 1);
+      }
+      formHtml += '</div>';
+      formHtml += '<button type="button" onclick="rfpAddMilestone()" style="font-size:var(--text-xs);color:var(--color-accent);background:none;border:none;cursor:pointer;padding:4px 0;text-decoration:underline">+ Add Milestone</button>';
+      formHtml += '</div>';
+
+      formHtml += '</div>';
+    }
 
     // Insert Rent Schedule section after freeRent field
     if (f.key === 'freeRent') {
@@ -16347,6 +16439,20 @@ function rfpConfirmFromForm() {
     terms.rentPeriods = rentPeriods;
     // When stepped rent is active, clear legacy base rent / free rent to avoid confusion
     // The engine will use rent_periods exclusively
+  }
+
+  // Collect TI disbursement settings
+  var tiDisbEl = document.getElementById('rfp-field-tiDisbursementType');
+  if (tiDisbEl) {
+    terms.tiDisbursementType = tiDisbEl.value || 'commencement';
+  }
+  var tiDisbMonthEl = document.getElementById('rfp-field-tiDisbursementMonth');
+  if (tiDisbMonthEl && tiDisbMonthEl.value) {
+    terms.tiDisbursementMonth = parseInt(tiDisbMonthEl.value);
+  }
+  var tiMilestones = rfpCollectTIMilestones();
+  if (tiMilestones) {
+    terms.tiMilestones = tiMilestones;
   }
 
   // If totalAnnualRent is set and baseRent is not, compute base rent per RSF
@@ -16667,6 +16773,7 @@ function rfpBuildDetailHtml(subs) {
       '<button class="fin-sheet-tab" data-sheet="straight-line" onclick="switchFinSheet(\'straight-line\')">Straight-Line P&amp;L</button>' +
       '<button class="fin-sheet-tab" data-sheet="gaap" onclick="switchFinSheet(\'gaap\')">GAAP Analysis</button>' +
       '<button class="fin-sheet-tab" data-sheet="capex" onclick="switchFinSheet(\'capex\')">CAPEX</button>' +
+      (function() { var _tiA = selected.analysis || {}; var _tiCfT = (_tiA.cash_flow && _tiA.cash_flow.totals) ? _tiA.cash_flow.totals : {}; var _tiS = _tiA.summary || {}; return ((_tiS.tiValue || 0) > 0 || (_tiCfT.amortizedTIPrincipal || 0) > 0) ? '<button class="fin-sheet-tab" data-sheet="ti-allowance" onclick="switchFinSheet(\'ti-allowance\')">TI Allowance</button>' : ''; })() +
       '<button class="fin-sheet-tab" data-sheet="broker-fees" onclick="switchFinSheet(\'broker-fees\')">Broker Fees</button>' +
       '<button class="fin-sheet-tab" data-sheet="assumptions" onclick="switchFinSheet(\'assumptions\')">Assumptions</button>' +
     '</div>';
@@ -16691,6 +16798,13 @@ function rfpBuildDetailHtml(subs) {
 
   // CAPEX tab
   html += '<div class="fin-sheet-content" id="fin-capex">' + rfpBuildCapexPanel(selected) + '</div>';
+
+  // TI Allowance tab (conditionally shown)
+  var tiTabAnalysis = selected.analysis || {};
+  var tiTabCfTotals = (tiTabAnalysis.cash_flow && tiTabAnalysis.cash_flow.totals) ? tiTabAnalysis.cash_flow.totals : {};
+  var tiTabSummary = tiTabAnalysis.summary || {};
+  var tiTabShow = (tiTabSummary.tiValue || 0) > 0 || (tiTabCfTotals.amortizedTIPrincipal || 0) > 0;
+  html += '<div class="fin-sheet-content" id="fin-ti-allowance">' + rfpBuildTIAllowanceTab(tiTabAnalysis, bAddr, bComp) + '</div>';
 
   // Broker Fees tab
   html += '<div class="fin-sheet-content" id="fin-broker-fees">' + rfpBuildBrokerFeesPanel(selected) + '</div>';
@@ -18116,6 +18230,7 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
   // Check if billable RSF varies across months (phased RSF)
   var hasPhasedRSF = monthly.some(function(r) { return r.billableRSF && r.usableRSF && r.billableRSF !== r.usableRSF; });
   var hasAmortTI = (totals.totalAmortizedTI || 0) > 0;
+  var hasTIReceived = ((totals.totalTIReceived || 0) + (totals.totalAmortTIReceived || 0)) > 0;
 
   var html = '<div class="fin-table-wrap"><table class="fin-table">';
   html += '<thead><tr>' +
@@ -18126,6 +18241,7 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
     '<th class="cell-currency">Rent/RSF</th>' +
     '<th class="cell-currency">Monthly Base Rent</th>' +
     '<th class="cell-currency">Free Rent Credit</th>' +
+    (hasTIReceived ? '<th class="cell-currency" style="color:#16a34a">TI Received</th>' : '') +
     '<th class="cell-currency">Net Cash Rent</th>' +
     '<th class="cell-currency">OpEx</th>' +
     '<th class="cell-currency">Parking</th>' +
@@ -18159,6 +18275,7 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
       '<td class="cell-currency">' + rfpFmtCurrencyDecimals(row.rentRSF) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.monthlyBaseRent) + '</td>' +
       '<td class="cell-currency">' + (row.freeRentCredit ? rfpFmtCurrency(row.freeRentCredit) : '') + '</td>' +
+      (hasTIReceived ? '<td class="cell-currency" style="color:#16a34a">' + (((row.tiReceived || 0) + (row.amortTIReceived || 0)) > 0 ? rfpFmtCurrency((row.tiReceived || 0) + (row.amortTIReceived || 0)) : '') + '</td>' : '') +
       '<td class="cell-currency">' + rfpFmtCurrency(row.netCashRent) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.opex) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.parking) + '</td>' +
@@ -18178,6 +18295,7 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
     '<td colspan="' + cfColSpan + '"></td>' +
     '<td class="cell-currency">' + rfpFmtCurrency(totals.totalBaseRent) + '</td>' +
     '<td class="cell-currency cell-savings">' + rfpFmtCurrency(totals.totalFreeRentValue) + '</td>' +
+    (hasTIReceived ? '<td class="cell-currency" style="color:#16a34a">' + rfpFmtCurrency((totals.totalTIReceived || 0) + (totals.totalAmortTIReceived || 0)) + '</td>' : '') +
     '<td class="cell-currency">' + rfpFmtCurrency(totals.totalNetRent) + '</td>' +
     '<td class="cell-currency">' + rfpFmtCurrency(totals.totalOpex) + '</td>' +
     '<td class="cell-currency">' + rfpFmtCurrency(totals.totalParking) + '</td>' +
@@ -18189,6 +18307,157 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
   '</tr>';
 
   html += '</tbody></table></div>';
+  return html;
+}
+
+// ===== TI ALLOWANCE TAB =====
+function rfpBuildTIAllowanceTab(analysis, buildingAddr, componentLabel) {
+  if (!analysis || !analysis.summary) {
+    return '<div style="padding:var(--space-4);color:var(--color-text-muted)">No TI data available.</div>';
+  }
+  var summary = analysis.summary || {};
+  var cfTotals = (analysis.cash_flow && analysis.cash_flow.totals) ? analysis.cash_flow.totals : {};
+  var slTotals = (analysis.straight_line_pl && analysis.straight_line_pl.totals) ? analysis.straight_line_pl.totals : {};
+  var gaapSummary = (analysis.gaap && analysis.gaap.summary) ? analysis.gaap.summary : {};
+  var rsf = summary.rsf || 0;
+  var termMonths = summary.termMonths || 0;
+  var tiTotal = summary.tiValue || 0;
+  var tiRSF = rsf > 0 ? Math.round(tiTotal / rsf * 100) / 100 : 0;
+  var amortPrincipal = cfTotals.amortizedTIPrincipal || gaapSummary.amortizedTIPrincipal || 0;
+  var amortRSF = rsf > 0 ? Math.round(amortPrincipal / rsf * 100) / 100 : 0;
+  var amortRate = slTotals.amortizedTIRate || gaapSummary.amortizedTIRate || 0;
+  var amortMonthly = cfTotals.amortizedTIMonthlyPayment || gaapSummary.amortizedTIMonthlyPayment || 0;
+  var amortTotalPaid = cfTotals.totalAmortizedTI || gaapSummary.amortizedTITotalPaid || 0;
+  var amortInterest = cfTotals.amortizedTIInterest || gaapSummary.amortizedTITotalInterest || 0;
+  var hasAmort = amortPrincipal > 0;
+  var totalTIPackage = tiTotal + amortPrincipal;
+  var totalTIRSF = rsf > 0 ? Math.round(totalTIPackage / rsf * 100) / 100 : 0;
+  var tiConstructionCost = summary.tiConstructionCost || 0;
+  var disbType = summary.tiDisbursementType || 'commencement';
+  var disbSchedule = summary.tiDisbursementSchedule || [];
+  var monthly = (analysis.cash_flow && analysis.cash_flow.monthly) ? analysis.cash_flow.monthly : [];
+
+  if (tiTotal <= 0 && amortPrincipal <= 0) {
+    return '<div style="padding:var(--space-4);color:var(--color-text-muted)">No TI allowance for this deal.</div>';
+  }
+
+  var sectionStyle = 'font-weight:600;font-size:var(--text-sm);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);margin-bottom:var(--space-3)';
+
+  var html = '<div style="padding:var(--space-4)">';
+
+  // ===== SUMMARY CARDS =====
+  html += '<div style="margin-bottom:var(--space-5)">';
+  html += '<div style="' + sectionStyle + '">TI Allowance Summary</div>';
+  html += '<div class="rfp-summary-metrics">';
+
+  // Standard TI card
+  if (tiTotal > 0) {
+    html += '<div class="rfp-metric"><div class="rfp-metric-value" style="color:#16a34a">' + rfpFmtCurrencyPlain(tiTotal) + '</div><div class="rfp-metric-label">Standard TI (' + rfpFmtCurrencyDecimals(tiRSF) + '/RSF)</div></div>';
+  }
+
+  // Amortized TI card
+  if (hasAmort) {
+    html += '<div class="rfp-metric"><div class="rfp-metric-value" style="color:#dc2626">' + rfpFmtCurrencyPlain(amortPrincipal) + '</div><div class="rfp-metric-label">Amortized TI (' + rfpFmtCurrencyDecimals(amortRSF) + '/RSF at ' + amortRate + '%)</div></div>';
+  }
+
+  // Total TI Package card
+  if (hasAmort && tiTotal > 0) {
+    html += '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(totalTIPackage) + '</div><div class="rfp-metric-label">Total TI Package (' + rfpFmtCurrencyDecimals(totalTIRSF) + '/RSF)</div></div>';
+  }
+
+  // Construction Cost card
+  if (tiConstructionCost > 0) {
+    var coveragePct = totalTIPackage > 0 ? Math.round(totalTIPackage / tiConstructionCost * 100) : 0;
+    html += '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(tiConstructionCost) + '</div><div class="rfp-metric-label">Est. Construction Cost (' + coveragePct + '% covered by TI)</div></div>';
+  }
+
+  html += '</div></div>';
+
+  // ===== DISBURSEMENT SCHEDULE =====
+  if (disbSchedule.length > 0) {
+    html += '<hr style="border:none;border-top:1px solid var(--color-border);margin:var(--space-4) 0">';
+    html += '<div style="' + sectionStyle + '">Disbursement Schedule</div>';
+    var disbLabel = disbType === 'commencement' ? 'At Commencement (Month 1)' : (disbType === 'specific_month' ? 'Specific Month' : (disbType === 'milestones' ? 'Milestone Payments' : 'At Commencement'));
+    html += '<div style="font-size:var(--text-sm);color:var(--color-text-muted);margin-bottom:var(--space-3)">Type: ' + disbLabel + '</div>';
+
+    html += '<div class="fin-table-wrap"><table class="fin-table"><thead><tr>';
+    html += '<th class="cell-label">Month</th>';
+    html += '<th>Period</th>';
+    if (tiTotal > 0) html += '<th class="cell-currency" style="color:#16a34a">Standard TI Received</th>';
+    if (hasAmort) html += '<th class="cell-currency" style="color:#dc2626">Amortized TI Received</th>';
+    html += '<th class="cell-currency">Total Received</th>';
+    html += '<th class="cell-currency">Cumulative</th>';
+    html += '</tr></thead><tbody>';
+
+    var disbCumulative = 0;
+    disbSchedule.forEach(function(d) {
+      var periodLabel = '';
+      var matchRow = monthly.find(function(r) { return r.month === d.month; });
+      if (matchRow) periodLabel = matchRow.period || '';
+      disbCumulative += d.total;
+      html += '<tr>';
+      html += '<td class="cell-label">' + d.month + '</td>';
+      html += '<td>' + periodLabel + '</td>';
+      if (tiTotal > 0) html += '<td class="cell-currency" style="color:#16a34a">' + rfpFmtCurrency(d.standardTI) + '</td>';
+      if (hasAmort) html += '<td class="cell-currency" style="color:#dc2626">' + rfpFmtCurrency(d.amortTI) + '</td>';
+      html += '<td class="cell-currency">' + rfpFmtCurrency(d.total) + '</td>';
+      html += '<td class="cell-currency">' + rfpFmtCurrency(disbCumulative) + '</td>';
+      html += '</tr>';
+    });
+
+    // Totals row
+    var totalStd = 0, totalAmt = 0;
+    disbSchedule.forEach(function(d) { totalStd += d.standardTI; totalAmt += d.amortTI; });
+    html += '<tr class="row-bold">';
+    html += '<td class="cell-label">TOTAL</td><td></td>';
+    if (tiTotal > 0) html += '<td class="cell-currency" style="color:#16a34a">' + rfpFmtCurrency(totalStd) + '</td>';
+    if (hasAmort) html += '<td class="cell-currency" style="color:#dc2626">' + rfpFmtCurrency(totalAmt) + '</td>';
+    html += '<td class="cell-currency">' + rfpFmtCurrency(totalStd + totalAmt) + '</td>';
+    html += '<td class="cell-currency">' + rfpFmtCurrency(disbCumulative) + '</td>';
+    html += '</tr>';
+
+    html += '</tbody></table></div>';
+  }
+
+  // ===== TI ANALYSIS =====
+  html += '<hr style="border:none;border-top:1px solid var(--color-border);margin:var(--space-4) 0">';
+  html += '<div style="' + sectionStyle + '">TI Analysis</div>';
+  html += '<div class="fin-table-wrap"><table class="fin-table"><thead><tr>';
+  html += '<th class="cell-label">Metric</th><th class="cell-currency">Value</th>';
+  html += '</tr></thead><tbody>';
+
+  function tiRow(label, value, color) {
+    var style = color ? ' style="color:' + color + '"' : '';
+    html += '<tr><td class="cell-label">' + label + '</td><td class="cell-currency"' + style + '>' + value + '</td></tr>';
+  }
+
+  if (tiTotal > 0) {
+    tiRow('TI per RSF (standard)', rfpFmtCurrencyDecimals(tiRSF), '#16a34a');
+    tiRow('Standard TI Total', rfpFmtCurrency(tiTotal), '#16a34a');
+  }
+  if (hasAmort) {
+    tiRow('TI per RSF (amortized)', rfpFmtCurrencyDecimals(amortRSF), '#dc2626');
+    tiRow('Amortized TI Principal', rfpFmtCurrency(amortPrincipal), '#dc2626');
+    tiRow('Amortized TI Interest Rate', amortRate + '%', '#dc2626');
+    tiRow('Amortized TI Monthly Payment', rfpFmtCurrency(amortMonthly), '#dc2626');
+    tiRow('Amortized TI Total Interest', rfpFmtCurrency(amortInterest), '#dc2626');
+    tiRow('Amortized TI Total Repayment', rfpFmtCurrency(amortTotalPaid), '#dc2626');
+  }
+  if (hasAmort && tiTotal > 0) {
+    tiRow('Total TI per RSF', rfpFmtCurrencyDecimals(totalTIRSF));
+    tiRow('Total TI Package', rfpFmtCurrency(totalTIPackage));
+    var netBenefit = tiTotal - amortInterest;
+    tiRow('Net TI Benefit (Standard TI - Amort. Interest)', rfpFmtCurrency(netBenefit), netBenefit >= 0 ? '#16a34a' : '#dc2626');
+  }
+  if (tiConstructionCost > 0) {
+    var outOfPocket = Math.max(0, tiConstructionCost - totalTIPackage);
+    tiRow('Estimated Construction Cost', rfpFmtCurrency(tiConstructionCost));
+    tiRow('TI Coverage', Math.round(totalTIPackage / tiConstructionCost * 100) + '%');
+    tiRow('Out-of-Pocket', rfpFmtCurrency(outOfPocket), outOfPocket > 0 ? '#dc2626' : '#16a34a');
+  }
+
+  html += '</tbody></table></div>';
+  html += '</div>';
   return html;
 }
 
@@ -19312,14 +19581,18 @@ function rfpExportExcel() {
     var cfHasAmortTI = (cfTotals.totalAmortizedTI || 0) > 0;
     var cfAmortTIMonthly = (cfTotals.amortizedTIMonthlyPayment || 0);
     var cfAmortTITermMonths = (analysis.straight_line_pl && analysis.straight_line_pl.totals) ? (analysis.straight_line_pl.totals.amortizedTITermMonths || 0) : 0;
+    var cfHasTIReceived = ((cfTotals.totalTIReceived || 0) + (cfTotals.totalAmortTIReceived || 0)) > 0;
     var cfBaseCols = exHasPhasedRSF ? 12 : 11;
     var cfCols = cfBaseCols;
+    if (cfHasTIReceived) cfCols++;
     if (cfHasAmortTI) cfCols++;
     if (cfBF.hasBrokerFee) cfCols++;
     var cfWS = XLSX.utils.aoa_to_sheet([['']]);
     var cfColWidths = [{ wch: 8 }, { wch: 12 }, { wch: 10 }];
     if (exHasPhasedRSF) cfColWidths.push({ wch: 14 });
-    cfColWidths = cfColWidths.concat([{ wch: 12 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 12 }, { wch: 12 }]);
+    cfColWidths = cfColWidths.concat([{ wch: 12 }, { wch: 16 }, { wch: 16 }]);
+    if (cfHasTIReceived) cfColWidths.push({ wch: 16 });
+    cfColWidths = cfColWidths.concat([{ wch: 16 }, { wch: 12 }, { wch: 12 }]);
     if (cfHasAmortTI) cfColWidths.push({ wch: 16 });
     if (cfBF.hasBrokerFee) cfColWidths.push({ wch: 16 });
     cfColWidths = cfColWidths.concat([{ wch: 16 }, { wch: 18 }]);
@@ -19330,11 +19603,14 @@ function rfpExportExcel() {
     for (var cft = 1; cft < cfCols; cft++) setCell(cfWS, 0, cft, '', titleStyle);
     var cfHeaders = ['Mo', 'Period', 'Year'];
     if (exHasPhasedRSF) cfHeaders.push('Billable RSF');
-    cfHeaders = cfHeaders.concat(['Rent/RSF', 'Base Rent', 'Free Rent', 'Net Cash Rent', 'OpEx', 'Parking']);
+    cfHeaders = cfHeaders.concat(['Rent/RSF', 'Base Rent', 'Free Rent']);
+    if (cfHasTIReceived) cfHeaders.push('TI Received');
+    cfHeaders = cfHeaders.concat(['Net Cash Rent', 'OpEx', 'Parking']);
     if (cfHasAmortTI) cfHeaders.push('Amort. TI');
     if (cfBF.hasBrokerFee) cfHeaders.push(cfBF.type === 'credit' ? 'Broker Credit' : 'Broker Fee');
     cfHeaders = cfHeaders.concat(['Total Monthly', 'Cumulative']);
     var cfO = exHasPhasedRSF ? 1 : 0; // column offset for Billable RSF column
+    var cfTRO = cfHasTIReceived ? 1 : 0; // column offset for TI Received column
     var cfATO = cfHasAmortTI ? 1 : 0; // column offset for amortized TI column
     var cfBFO = cfBF.hasBrokerFee ? 1 : 0; // column offset for broker fee column
     cfHeaders.forEach(function(h, i) { setCell(cfWS, 2, i, h, (i < 3 + cfO) ? headerLeftStyle : headerStyle); });
@@ -19386,53 +19662,64 @@ function rfpExportExcel() {
         setFormula(cfWS, r, 5 + cfO, 'IF(A' + er + '<=' + cfDT + dtRefs.free_rent + ',' + baseCol + er + ',0)', Object.assign({}, (isFreeRent ? greenCurrStyle : formulaStyle), rowFill));
       }
 
-      // Col G+cfO: Net Cash Rent = Base Rent - Free Rent Credit
+      // TI Received column (after Free Rent, before Net Cash Rent)
+      if (cfHasTIReceived) {
+        var tiRecVal = (row.tiReceived || 0) + (row.amortTIReceived || 0);
+        var tiRecStyle = Object.assign({}, currStyle, rowFill, { font: { name: 'Calibri', sz: 10, color: { rgb: '16A34A' } } });
+        setCell(cfWS, r, 6 + cfO, tiRecVal > 0 ? tiRecVal : 0, tiRecStyle);
+      }
+
+      // Col G+cfO+cfTRO: Net Cash Rent = Base Rent - Free Rent Credit
       var baseColL = XLSX.utils.encode_col(4 + cfO);
       var freeColL = XLSX.utils.encode_col(5 + cfO);
-      setFormula(cfWS, r, 6 + cfO, baseColL + er + '-' + freeColL + er, Object.assign({}, formulaStyle, rowFill));
+      setFormula(cfWS, r, 6 + cfO + cfTRO, baseColL + er + '-' + freeColL + er, Object.assign({}, formulaStyle, rowFill));
 
-      // Col H+cfO: OpEx
-      setFormula(cfWS, r, 7 + cfO, cfDT + dtRefs.opex_monthly, Object.assign({}, formulaStyle, rowFill));
+      // Col H+cfO+cfTRO: OpEx
+      setFormula(cfWS, r, 7 + cfO + cfTRO, cfDT + dtRefs.opex_monthly, Object.assign({}, formulaStyle, rowFill));
 
-      // Col I+cfO: Parking = Spots * Rate
-      setFormula(cfWS, r, 8 + cfO, cfDT + dtRefs.parking_spots + '*' + cfDT + dtRefs.parking_rate, Object.assign({}, formulaStyle, rowFill));
+      // Col I+cfO+cfTRO: Parking = Spots * Rate
+      setFormula(cfWS, r, 8 + cfO + cfTRO, cfDT + dtRefs.parking_spots + '*' + cfDT + dtRefs.parking_rate, Object.assign({}, formulaStyle, rowFill));
 
       // Amortized TI column: fixed monthly payment, stops after amort term
       if (cfHasAmortTI) {
         var atVal = (row.month <= cfAmortTITermMonths) ? cfAmortTIMonthly : 0;
         var atStyle = Object.assign({}, currStyle, rowFill, { font: { name: 'Calibri', sz: 10, color: { rgb: 'DC2626' } } });
-        setCell(cfWS, r, 9 + cfO, Math.round(atVal), atStyle);
+        setCell(cfWS, r, 9 + cfO + cfTRO, Math.round(atVal), atStyle);
       }
 
       // Broker fee column: lump sum in month 1 only
       if (cfBF.hasBrokerFee) {
         var bfCFVal = (i === 0) ? cfBF.cashFlowImpact : 0;
         var bfCFStyle = Object.assign({}, currStyle, rowFill, { font: { name: 'Calibri', sz: 10, color: { rgb: 'B45309' } } });
-        setCell(cfWS, r, 9 + cfO + cfATO, bfCFVal, bfCFStyle);
+        setCell(cfWS, r, 9 + cfO + cfTRO + cfATO, bfCFVal, bfCFStyle);
       }
 
-      // Total Monthly = Net Rent + OpEx + Parking [+ Amort TI] [+ Broker Fee if month 1]
-      var netCol = XLSX.utils.encode_col(6 + cfO);
-      var opexCol = XLSX.utils.encode_col(7 + cfO);
-      var parkCol = XLSX.utils.encode_col(8 + cfO);
+      // Total Monthly = Net Rent + OpEx + Parking [+ Amort TI] [+ Broker Fee] [- TI Received]
+      var netCol = XLSX.utils.encode_col(6 + cfO + cfTRO);
+      var opexCol = XLSX.utils.encode_col(7 + cfO + cfTRO);
+      var parkCol = XLSX.utils.encode_col(8 + cfO + cfTRO);
       var cfTotalFormula = netCol + er + '+' + opexCol + er + '+' + parkCol + er;
       if (cfHasAmortTI) {
-        var atCol = XLSX.utils.encode_col(9 + cfO);
+        var atCol = XLSX.utils.encode_col(9 + cfO + cfTRO);
         cfTotalFormula += '+' + atCol + er;
       }
       if (cfBF.hasBrokerFee) {
-        var bfCol = XLSX.utils.encode_col(9 + cfO + cfATO);
+        var bfCol = XLSX.utils.encode_col(9 + cfO + cfTRO + cfATO);
         cfTotalFormula += '+' + bfCol + er;
       }
-      setFormula(cfWS, r, 9 + cfO + cfATO + cfBFO, cfTotalFormula, Object.assign({}, currBoldStyle, rowFill));
+      if (cfHasTIReceived) {
+        var tiRecCol = XLSX.utils.encode_col(6 + cfO);
+        cfTotalFormula += '-' + tiRecCol + er;
+      }
+      setFormula(cfWS, r, 9 + cfO + cfTRO + cfATO + cfBFO, cfTotalFormula, Object.assign({}, currBoldStyle, rowFill));
 
       // Cumulative = previous cumulative + this month total
-      var totalCol = XLSX.utils.encode_col(9 + cfO + cfATO + cfBFO);
-      var cumCol = XLSX.utils.encode_col(10 + cfO + cfATO + cfBFO);
+      var totalCol = XLSX.utils.encode_col(9 + cfO + cfTRO + cfATO + cfBFO);
+      var cumCol = XLSX.utils.encode_col(10 + cfO + cfTRO + cfATO + cfBFO);
       if (i === 0) {
-        setFormula(cfWS, r, 10 + cfO + cfATO + cfBFO, totalCol + er, Object.assign({}, formulaStyle, rowFill));
+        setFormula(cfWS, r, 10 + cfO + cfTRO + cfATO + cfBFO, totalCol + er, Object.assign({}, formulaStyle, rowFill));
       } else {
-        setFormula(cfWS, r, 10 + cfO + cfATO + cfBFO, cumCol + (er - 1) + '+' + totalCol + er, Object.assign({}, formulaStyle, rowFill));
+        setFormula(cfWS, r, 10 + cfO + cfTRO + cfATO + cfBFO, cumCol + (er - 1) + '+' + totalCol + er, Object.assign({}, formulaStyle, rowFill));
       }
     });
 
@@ -19440,14 +19727,20 @@ function rfpExportExcel() {
     var cfTotalRow = cfStartRow + cfData.length;
     setCell(cfWS, cfTotalRow, 0, 'TOTALS', totalLabelStyle);
     for (var cfPad = 1; cfPad <= 3 + cfO; cfPad++) setCell(cfWS, cfTotalRow, cfPad, '', totalLabelStyle);
-    for (var cc = 4 + cfO; cc <= 9 + cfO + cfATO + cfBFO; cc++) {
+    for (var cc = 4 + cfO; cc <= 9 + cfO + cfTRO + cfATO + cfBFO; cc++) {
       var cLetter = XLSX.utils.encode_cell({ r: 0, c: cc }).replace(/\d+/, '');
       setFormula(cfWS, cfTotalRow, cc, 'SUM(' + cLetter + (cfStartRow + 1) + ':' + cLetter + cfTotalRow + ')', totalRowStyle);
     }
-    setCell(cfWS, cfTotalRow, 10 + cfO + cfATO + cfBFO, '', totalLabelStyle);
+    setCell(cfWS, cfTotalRow, 10 + cfO + cfTRO + cfATO + cfBFO, '', totalLabelStyle);
 
     cfWS['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: cfTotalRow, c: cfCols - 1 } });
     cfWS['!freeze'] = { xSplit: 0, ySplit: 3 };
+    // Style TI Received header in green
+    if (cfHasTIReceived) {
+      var tiRecHdrCol = 6 + cfO;
+      var tiRecHdrRef = cellRef(2, tiRecHdrCol);
+      if (cfWS[tiRecHdrRef]) cfWS[tiRecHdrRef].s = Object.assign({}, headerStyle, { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '16A34A' } }, fill: { fgColor: { rgb: 'F0FDF4' } } });
+    }
     XLSX.utils.book_append_sheet(wb, cfWS, 'Cash Flow');
   }
 

@@ -86,6 +86,10 @@ export async function POST(req: Request) {
     structure: rawTerms.structure ?? '',
     landlord: rawTerms.landlord ?? '',
     notes: rawTerms.notes ?? '',
+    ti_disbursement_type: rawTerms.ti_disbursement_type ?? rawTerms.tiDisbursementType ?? undefined,
+    ti_disbursement_month: rawTerms.ti_disbursement_month ?? rawTerms.tiDisbursementMonth ?? undefined,
+    ti_milestones: rawTerms.ti_milestones ?? rawTerms.tiMilestones ?? undefined,
+    ti_construction_cost: rawTerms.ti_construction_cost ?? rawTerms.tiConstructionCost ?? undefined,
   }
 
   // Generate financial analysis from deal terms
@@ -284,6 +288,10 @@ interface DealTerms {
   structure?: string
   landlord?: string
   notes?: string
+  ti_disbursement_type?: string
+  ti_disbursement_month?: number
+  ti_milestones?: { month: number; pct: number }[]
+  ti_construction_cost?: number
 }
 
 // Helper: determine rent/RSF/yr and billable RSF for a given month
@@ -361,6 +369,27 @@ function generateFinancialAnalysis(terms: DealTerms) {
   }
   const hasAmortTI = amortTIPrincipal > 0
 
+  // TI Disbursement schedule
+  const tiDisbType = terms.ti_disbursement_type || 'commencement'
+  const tiDisbMonth = terms.ti_disbursement_month || 1
+  const tiMilestones = terms.ti_milestones || []
+  const tiConstructionCost = terms.ti_construction_cost || 0
+
+  function getTIReceivedForMonth(month: number, totalAmount: number): number {
+    if (totalAmount <= 0) return 0
+    if (tiDisbType === 'commencement') {
+      return month === 1 ? totalAmount : 0
+    }
+    if (tiDisbType === 'specific_month') {
+      return month === tiDisbMonth ? totalAmount : 0
+    }
+    if (tiDisbType === 'milestones') {
+      const milestone = tiMilestones.find((m: { month: number; pct: number }) => m.month === month)
+      return milestone ? Math.round(totalAmount * milestone.pct / 100) : 0
+    }
+    return month === 1 ? totalAmount : 0
+  }
+
   const commDate = terms.commencement_date ? new Date(terms.commencement_date + 'T00:00:00') : new Date()
   const leaseEndDate = terms.lease_end_date ? new Date(terms.lease_end_date + 'T00:00:00') : null
 
@@ -386,6 +415,8 @@ function generateFinancialAnalysis(terms: DealTerms) {
   let totalOpex = 0
   let totalParking = 0
   let totalAmortTI = 0
+  let totalTIReceived = 0
+  let totalAmortTIReceived = 0
 
   for (let m = 1; m <= termMonths; m++) {
     const leaseYear = Math.ceil(m / 12)
@@ -461,8 +492,12 @@ function generateFinancialAnalysis(terms: DealTerms) {
     // Amortized TI: fixed monthly payment, starts month 1, stops after amort term
     const amortTI = hasAmortTI && m <= amortTITermMonths ? amortTIMonthlyPayment : 0
 
-    // Total monthly cost
-    const totalMonthlyCost = netCashRent + opex + monthlyParking + amortTI
+    // TI Received: cash inflow from landlord (positive = cash in)
+    const tiReceived = getTIReceivedForMonth(m, tiTotal)
+    const amortTIReceived = getTIReceivedForMonth(m, amortTIPrincipal)
+
+    // Total monthly cost: TI received REDUCES net cash out
+    const totalMonthlyCost = netCashRent + opex + monthlyParking + amortTI - tiReceived - amortTIReceived
     cumulativeCash += totalMonthlyCost
 
     totalBaseRent += monthlyBaseRent
@@ -470,6 +505,8 @@ function generateFinancialAnalysis(terms: DealTerms) {
     totalOpex += opex
     totalParking += monthlyParking
     totalAmortTI += amortTI
+    totalTIReceived += tiReceived
+    totalAmortTIReceived += amortTIReceived
 
     monthly.push({
       month: m,
@@ -484,6 +521,8 @@ function generateFinancialAnalysis(terms: DealTerms) {
       opex: Math.round(opex),
       parking: Math.round(monthlyParking),
       amortizedTI: Math.round(amortTI),
+      tiReceived: Math.round(tiReceived),
+      amortTIReceived: Math.round(amortTIReceived),
       totalMonthlyCost: Math.round(totalMonthlyCost),
       cumulativeCash: Math.round(cumulativeCash),
     })
@@ -503,6 +542,8 @@ function generateFinancialAnalysis(terms: DealTerms) {
         opex: 0,
         parking: 0,
         amortizedTI: 0,
+        tiReceived: 0,
+        amortTIReceived: 0,
         totalCost: 0,
       }
     }
@@ -514,6 +555,8 @@ function generateFinancialAnalysis(terms: DealTerms) {
     yr.opex += m.opex
     yr.parking += m.parking
     yr.amortizedTI += m.amortizedTI
+    yr.tiReceived += m.tiReceived
+    yr.amortTIReceived += m.amortTIReceived
     yr.totalCost += m.totalMonthlyCost
   })
   const annual = Object.values(annualMap).map((yr: any) => ({
@@ -524,6 +567,8 @@ function generateFinancialAnalysis(terms: DealTerms) {
     opex: Math.round(yr.opex),
     parking: Math.round(yr.parking),
     amortizedTI: Math.round(yr.amortizedTI),
+    tiReceived: Math.round(yr.tiReceived),
+    amortTIReceived: Math.round(yr.amortTIReceived),
     totalCost: Math.round(yr.totalCost),
   }))
 
@@ -593,6 +638,16 @@ function generateFinancialAnalysis(terms: DealTerms) {
   const effectiveRentRSF = rsf > 0 ? Math.round((netRentAfterTI / (termMonths / 12)) / rsf * 100) / 100 : 0
   const totalCostPerRSFPerYear = rsf > 0 ? Math.round(((totalAllIn - tiTotal) / (termMonths / 12)) / rsf * 100) / 100 : 0
 
+  // Build TI disbursement schedule (only non-zero months)
+  const tiDisbursementSchedule: { month: number; standardTI: number; amortTI: number; total: number }[] = []
+  for (let dm = 1; dm <= termMonths; dm++) {
+    const stdTI = getTIReceivedForMonth(dm, tiTotal)
+    const amtTI = getTIReceivedForMonth(dm, amortTIPrincipal)
+    if (stdTI > 0 || amtTI > 0) {
+      tiDisbursementSchedule.push({ month: dm, standardTI: Math.round(stdTI), amortTI: Math.round(amtTI), total: Math.round(stdTI + amtTI) })
+    }
+  }
+
   // ===== 4. NPV / PRESENT VALUE ANALYSIS =====
   // Compute NPV of total lease obligation at multiple discount rates
   // Uses monthly cash flows (totalMonthlyCost) which include rent + opex + parking
@@ -635,6 +690,8 @@ function generateFinancialAnalysis(terms: DealTerms) {
         amortizedTIPrincipal: Math.round(amortTIPrincipal),
         amortizedTIInterest: Math.round(totalAmortTI - amortTIPrincipal),
         amortizedTIMonthlyPayment: Math.round(amortTIMonthlyPayment),
+        totalTIReceived: Math.round(totalTIReceived),
+        totalAmortTIReceived: Math.round(totalAmortTIReceived),
         totalAllInCost: totalAllIn,
         termMonths,
       }
@@ -693,6 +750,9 @@ function generateFinancialAnalysis(terms: DealTerms) {
       npv: npvDefault?.npv || 0,
       npvPerRSF: npvDefault?.npvPerRSF || 0,
       npvRate: 0.08,
+      tiDisbursementType: tiDisbType,
+      tiDisbursementSchedule,
+      tiConstructionCost,
     }
   }
 }
