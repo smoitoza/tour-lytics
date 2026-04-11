@@ -145,10 +145,9 @@ export default function LandingPage() {
           <div className="hidden md:flex items-center" style={{ gap: '2rem' }}>
             <a href="#demo" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Map Demo</a>
             <a href="#tourbook-demo" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Tour Book</a>
-            <a href="#ai-chat" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Scout</a>
+            <a href="#analysis" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Financials</a>
+            <a href="#ai-chat" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Agentic Insights</a>
             <a href="#commute-demo" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Commute</a>
-            <a href="#problem" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>The Problem</a>
-            <a href="#analysis" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Analysis</a>
             <a href="#features" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Features</a>
             <Link href="/investors" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }}>Investors</Link>
             <Link
@@ -195,10 +194,9 @@ export default function LandingPage() {
             <div className="flex flex-col" style={{ gap: '1rem' }}>
               <a href="#demo" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Map Demo</a>
               <a href="#tourbook-demo" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Tour Book</a>
-              <a href="#ai-chat" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Scout</a>
+              <a href="#analysis" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Financials</a>
+              <a href="#ai-chat" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Agentic Insights</a>
               <a href="#commute-demo" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Commute</a>
-              <a href="#problem" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>The Problem</a>
-              <a href="#analysis" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Analysis</a>
               <a href="#features" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Features</a>
               <Link href="/investors" className="text-base no-underline" style={{ color: '#475569' }}>Investors</Link>
               <Link href="/login?signup=true" className="text-center font-semibold text-sm no-underline" style={{ backgroundColor: '#ffffff', color: '#0f172a', padding: '0.75rem 1.5rem', borderRadius: '0.75rem', marginTop: '0.5rem' }}>Create Account</Link>
@@ -797,17 +795,17 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* == AI INTELLIGENCE SUITE == */}
+      {/* == AGENTIC INSIGHTS == */}
       <section id="ai-chat" style={{ padding: '5rem 0', background: '#ffffff' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
           <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
-            AI Intelligence Suite
+            Agentic Insights
           </span>
           <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3.5rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.75rem' }}>
-            Executive summaries, briefs, and real-time Q&amp;A
+            Summaries, briefs, and real-time deal intelligence
           </h2>
           <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', marginBottom: '2.5rem', maxWidth: '680px', lineHeight: 1.6 }}>
-            Every project comes with a full AI layer that knows your buildings, deal terms, financials, and tour schedule. Generate executive summaries for leadership, draft emails to brokers, create presentation outlines, or ask Scout anything about your deal in real time.
+            Every project comes with intelligent agents that know your buildings, deal terms, financials, and tour schedule. Generate executive summaries for leadership, draft emails to brokers, create presentation outlines, or get real-time answers about any aspect of your deal.
           </p>
 
           {/* AI Capabilities Grid */}
@@ -827,9 +825,9 @@ export default function LandingPage() {
               },
               {
                 icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
-                title: 'Scout - Real-Time Intelligence',
-                desc: 'Real-time conversational access to everything in your project. Compare buildings on cost, find coffee shops near your tour, calculate walking times, analyze lease terms, or explore nearby companies and labor data.',
-                tag: 'Scout Chat'
+                title: 'Real-Time Deal Intelligence',
+                desc: 'Conversational access to everything in your project. Compare buildings on cost, find coffee shops near your tour, calculate walking times, analyze lease terms, or explore nearby companies and labor data.',
+                tag: 'Scout'
               },
               {
                 icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>,
@@ -1418,8 +1416,8 @@ export default function LandingPage() {
               },
               {
                 icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" /></svg>,
-                title: 'AI Intelligence Suite',
-                desc: 'Executive summaries for leadership, briefs for drafting emails and deck outlines, and Scout for real-time Q&A about your buildings, deal terms, financials, tour schedule, and local market data.',
+                title: 'Agentic Insights',
+                desc: 'Executive summaries for leadership, briefs for drafting emails and deck outlines, and real-time Q&A about your buildings, deal terms, financials, tour schedule, and local market data.',
               },
               {
                 icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
