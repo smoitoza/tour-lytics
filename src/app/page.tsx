@@ -797,18 +797,57 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* == SCOUT - MARKET INTELLIGENCE == */}
+      {/* == AI INTELLIGENCE SUITE == */}
       <section id="ai-chat" style={{ padding: '5rem 0', background: '#ffffff' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
           <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
-            Meet Scout
+            AI Intelligence Suite
           </span>
           <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3.5rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.75rem' }}>
-            Your deal intelligence at your fingertips
+            Executive summaries, briefs, and real-time Q&amp;A
           </h2>
-          <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', marginBottom: '2.5rem', maxWidth: '600px', lineHeight: 1.6 }}>
-            Every project comes with a built-in intelligence layer with deep knowledge of all your buildings, deal terms, financials, and tour schedule. Ask it to compare buildings, find nearby restaurants, calculate walking times between tours, or break down your lease costs.
+          <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', marginBottom: '2.5rem', maxWidth: '680px', lineHeight: 1.6 }}>
+            Every project comes with a full AI layer that knows your buildings, deal terms, financials, and tour schedule. Generate executive summaries for leadership, draft emails to brokers, create presentation outlines, or ask Scout anything about your deal in real time.
           </p>
+
+          {/* AI Capabilities Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: '1.25rem', marginBottom: '2.5rem' }}>
+            {[
+              {
+                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>,
+                title: 'Executive Summary',
+                desc: 'One-click summary of the entire project: building shortlist, key deal terms, financial rankings, and recommended next steps. Ready to share with your C-suite or steering committee.',
+                tag: 'Exec Summary Tab'
+              },
+              {
+                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>,
+                title: 'Brief / Q&A',
+                desc: 'Ask questions about your project and get answers grounded in your actual data. Draft emails to brokers, generate presentation outlines, compare deal structures, or get talking points for a negotiation call.',
+                tag: 'Brief Tab'
+              },
+              {
+                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+                title: 'Scout - Real-Time Intelligence',
+                desc: 'Real-time conversational access to everything in your project. Compare buildings on cost, find coffee shops near your tour, calculate walking times, analyze lease terms, or explore nearby companies and labor data.',
+                tag: 'Scout Chat'
+              },
+              {
+                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>,
+                title: 'Deck & Email Generation',
+                desc: 'Generate presentation deck outlines for leadership reviews, draft counter-proposal emails, or create project status updates. All grounded in your live project data and financials.',
+                tag: 'Brief Tab'
+              },
+            ].map((f, i) => (
+              <div key={i} style={{ padding: '1.25rem 1.5rem', borderRadius: '0.75rem', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                  <div style={{ color: '#2563eb' }}>{f.icon}</div>
+                  <span style={{ fontSize: '0.625rem', fontWeight: 600, color: '#94a3b8', background: '#f1f5f9', padding: '0.2rem 0.5rem', borderRadius: '0.25rem', border: '1px solid #e2e8f0' }}>{f.tag}</span>
+                </div>
+                <h3 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: '0.95rem', color: '#0f172a', marginBottom: '0.5rem' }}>{f.title}</h3>
+                <p style={{ fontSize: '0.8125rem', color: '#64748b', lineHeight: 1.55, margin: 0 }}>{f.desc}</p>
+              </div>
+            ))}  
+          </div>
 
           {/* Chat mockup */}
           <div className="bg-white overflow-hidden" style={{ borderRadius: '1.25rem', boxShadow: '0 24px 48px rgba(0,0,0,0.16)', border: '1px solid #e2e8f0', maxWidth: '720px' }}>
@@ -878,7 +917,7 @@ export default function LandingPage() {
 
           {/* Capability chips */}
           <div className="flex flex-wrap" style={{ gap: '0.5rem', marginTop: '1.5rem' }}>
-            {['Financial comparisons', 'Nearby places (Google Places)', 'Walking & driving times', 'Tour schedule awareness', 'Lease term breakdowns', 'Building specifications', 'Commute analysis', 'Smart photo tagging'].map((cap) => (
+            {['Executive summaries', 'Email drafting', 'Deck outlines', 'Financial comparisons', 'Lease term breakdowns', 'Nearby places (Google Places)', 'Walking & driving times', 'Tour schedule awareness', 'Building specifications', 'Commute analysis'].map((cap) => (
               <span key={cap} className="text-xs font-medium" style={{ padding: '0.375rem 0.75rem', background: '#f1f5f9', color: '#475569', borderRadius: '1.25rem', border: '1px solid #e2e8f0' }}>
                 {cap}
               </span>
@@ -1379,8 +1418,8 @@ export default function LandingPage() {
               },
               {
                 icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" /></svg>,
-                title: 'Scout - Market Intelligence',
-                desc: 'Ask your project anything. Compare buildings, break down lease costs, find nearby restaurants, calculate walking times between tours. Connected to Google Maps and Places for real-time local data.',
+                title: 'AI Intelligence Suite',
+                desc: 'Executive summaries for leadership, briefs for drafting emails and deck outlines, and Scout for real-time Q&A about your buildings, deal terms, financials, tour schedule, and local market data.',
               },
               {
                 icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
