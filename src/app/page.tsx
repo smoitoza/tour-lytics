@@ -555,6 +555,124 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* == FINANCIAL ANALYSIS ENGINE == */}
+      <section id="analysis" style={{ padding: '6rem 0', background: '#ffffff' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
+          <div className="text-center" style={{ marginBottom: '3rem' }}>
+            <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
+              Enterprise Financial Engine
+            </span>
+            <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3.5rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.75rem' }}>
+              Drop in a proposal. Get a complete financial model.
+            </h2>
+            <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', maxWidth: '720px', margin: '0 auto', lineHeight: 1.6 }}>
+              Upload any RFP, LOI, or lease abstract. Tour-Lytics extracts every deal term and builds cash flows, straight-line P&amp;L, GAAP analysis, TI schedules, and CAPEX models automatically. No spreadsheets. No manual entry. CFO-ready in seconds.
+            </p>
+          </div>
+
+          {/* Feature Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3" style={{ gap: '1.25rem', marginBottom: '3.5rem' }}>
+            {[
+              { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="9" x2="9" y2="21"/></svg>, title: 'Monthly Cash Flow', desc: 'Month-by-month schedule: base rent, free rent credits, TI disbursements, OpEx, parking, CAPEX payouts, and amortized TI payments. Every dollar, every month.' },
+              { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>, title: 'Straight-Line P&L', desc: 'Annual straight-line rent with TI credits, free rent amortization, LHI depreciation, and broker fee amortization. ASC 842 ready for your accounting team.' },
+              { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>, title: 'GAAP Analysis', desc: 'Lease liability, ROU asset, monthly GAAP schedule, and present value calculations. Amortized TI and broker fee impact broken out separately.' },
+              { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 20h20"/><path d="M5 20V9l3-3 3 3 3-6 3 3 3-3v17"/></svg>, title: 'TI Allowance Modeling', desc: 'Model standard TI concessions and landlord-financed TI loans side by side. Configure disbursement schedules: lump sum, milestones, or custom timing.' },
+              { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>, title: 'CAPEX + Depreciation', desc: 'Construction, FF&E, and IT with configurable payout schedules, in-service dates, and depreciation periods. Payments flow to cash flow; depreciation flows to P&L.' },
+              { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>, title: 'Version Comparison', desc: 'Compare multiple proposals for the same building. Change column on every metric. One-pager export with up to 12 selectable metrics for executive review.' },
+              { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>, title: 'Amortized TI / Landlord Loans', desc: 'When a landlord offers additional TI at an interest rate, model the full loan: principal, rate, term, monthly payment, total interest, and occupancy cost impact.' },
+              { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>, title: 'Broker Fee Calculator', desc: 'Period-based commission calculations. Amortized over the lease term for straight-line and GAAP accounting. Flows to all financial tabs automatically.' },
+              { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>, title: 'One-Click Export', desc: 'Export to Excel or Google Sheets with live formulas and styled formatting. Every tab included. Or generate a one-pager PDF for the C-suite.' },
+            ].map((f, i) => (
+              <div key={i} style={{ padding: '1.25rem 1.5rem', borderRadius: '0.75rem', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
+                <div style={{ color: '#2563eb', marginBottom: '0.75rem' }}>{f.icon}</div>
+                <h3 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: '0.95rem', color: '#0f172a', marginBottom: '0.5rem' }}>{f.title}</h3>
+                <p style={{ fontSize: '0.8125rem', color: '#64748b', lineHeight: 1.55, margin: 0 }}>{f.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Example Project Demo */}
+          <div style={{ borderRadius: '1rem', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}>
+            {/* Header */}
+            <div style={{ background: '#0f172a', padding: '1.5rem 2rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                  <div className="font-bold" style={{ fontFamily: 'var(--font-display)', color: '#ffffff', fontSize: '1.25rem' }}>500 Market Street, San Francisco</div>
+                  <div style={{ color: '#94a3b8', fontSize: '0.8125rem', marginTop: '0.25rem' }}>Sample RFP Analysis | 75,000 RSF | 84-Month NNN Lease</div>
+                </div>
+                <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#2563eb', background: 'rgba(37,99,235,0.12)', padding: '0.25rem 0.75rem', borderRadius: '1rem', letterSpacing: '0.03em' }}>EXAMPLE PROJECT</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '1.5rem', marginTop: '1.25rem' }}>
+                {[
+                  { l: 'Effective Rent', v: '$62', u: '/RSF' },
+                  { l: 'SL Annual Expense', v: '$6.8M', u: '/yr' },
+                  { l: 'Total All-in Cost', v: '$47.9M', u: '' },
+                  { l: 'Total Concessions', v: '$6.2M', u: '' },
+                  { l: 'NPV @ 8%', v: '$35.1M', u: '' },
+                ].map((s, i) => (
+                  <div key={i}>
+                    <div style={{ fontSize: '0.625rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{s.l}</div>
+                    <div className="font-bold" style={{ color: '#fff', fontSize: '1.125rem', fontFamily: 'var(--font-display)' }}>{s.v}<span style={{ fontSize: '0.6875rem', color: '#94a3b8', fontWeight: 400 }}>{s.u}</span></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Tabs Label Row */}
+            <div style={{ display: 'flex', gap: '0', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', overflowX: 'auto' }}>
+              {['Deal Terms', 'Cash Flow', 'Straight-Line P&L', 'GAAP Analysis', 'TI Allowance', 'CAPEX', 'Broker Fees', 'Assumptions'].map((t, i) => (
+                <div key={i} style={{ padding: '0.625rem 1rem', fontSize: '0.75rem', fontWeight: i === 1 ? 700 : 400, color: i === 1 ? '#2563eb' : '#94a3b8', borderBottom: i === 1 ? '2px solid #2563eb' : 'none', whiteSpace: 'nowrap', marginBottom: '-1px' }}>{t}</div>
+              ))}
+            </div>
+            {/* Sample Cash Flow Table */}
+            <div style={{ padding: '1.25rem 1.5rem', overflowX: 'auto' }}>
+              <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>Monthly Cash Flow</div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem', minWidth: '800px' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                    {['Month', 'Period', 'Rent/RSF', 'Base Rent', 'Free Rent Credit', 'TI Received', 'Net Cash Rent', 'OpEx', 'Total Monthly', 'Cumulative'].map(h => (
+                      <th key={h} style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: '#94a3b8', fontWeight: 600, fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { m: '1', p: 'Jan 2027', r: '$72.00', br: '$450,000', frc: '$450,000', ti: '$5,250,000', nc: '$0', ox: '$118,750', tot: '$5,368,750', cum: '$5,368,750', free: true, hasTI: true },
+                    { m: '2', p: 'Feb 2027', r: '$72.00', br: '$450,000', frc: '$450,000', ti: '', nc: '$0', ox: '$118,750', tot: '$118,750', cum: '$5,487,500', free: true, hasTI: false },
+                    { m: '3', p: 'Mar 2027', r: '$72.00', br: '$450,000', frc: '$450,000', ti: '', nc: '$0', ox: '$118,750', tot: '$118,750', cum: '$5,606,250', free: true, hasTI: false },
+                    { m: '4', p: 'Apr 2027', r: '$72.00', br: '$450,000', frc: '$450,000', ti: '', nc: '$0', ox: '$118,750', tot: '$118,750', cum: '$5,725,000', free: true, hasTI: false },
+                    { m: '5', p: 'May 2027', r: '$72.00', br: '$450,000', frc: '$450,000', ti: '', nc: '$0', ox: '$118,750', tot: '$118,750', cum: '$5,843,750', free: true, hasTI: false },
+                    { m: '6', p: 'Jun 2027', r: '$72.00', br: '$450,000', frc: '$450,000', ti: '', nc: '$0', ox: '$118,750', tot: '$118,750', cum: '$5,962,500', free: true, hasTI: false },
+                    { m: '...', p: '', r: '', br: '', frc: '', ti: '', nc: '', ox: '', tot: '', cum: '', free: false, hasTI: false },
+                    { m: '7', p: 'Jul 2027', r: '$72.00', br: '$450,000', frc: '', ti: '', nc: '$450,000', ox: '$118,750', tot: '$568,750', cum: '$6,531,250', free: false, hasTI: false },
+                    { m: '8', p: 'Aug 2027', r: '$72.00', br: '$450,000', frc: '', ti: '', nc: '$450,000', ox: '$118,750', tot: '$568,750', cum: '$7,100,000', free: false, hasTI: false },
+                  ].map((row, i) => (
+                    <tr key={i} style={{ borderBottom: '1px solid #f1f5f9', background: row.free ? '#f0fdf4' : (i % 2 === 0 ? '#f8fafc' : '#fff') }}>
+                      <td style={{ padding: '0.5rem', color: row.m === '...' ? '#94a3b8' : '#334155', fontWeight: 500, textAlign: row.m === '...' ? 'center' : 'right' }}>{row.m}</td>
+                      <td style={{ padding: '0.5rem', color: '#64748b' }}>{row.p}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right', color: '#334155' }}>{row.r}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right', color: '#334155' }}>{row.br}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right', color: '#16a34a', fontWeight: 500 }}>{row.frc}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right', color: row.hasTI ? '#16a34a' : '#94a3b8', fontWeight: row.hasTI ? 600 : 400 }}>{row.ti || (row.m === '...' ? '' : '-')}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right', color: '#334155' }}>{row.nc}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right', color: '#334155' }}>{row.ox}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right', color: '#0f172a', fontWeight: 600 }}>{row.tot}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right', color: '#0f172a', fontWeight: 600 }}>{row.cum}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p style={{ fontSize: '0.6875rem', color: '#94a3b8', marginTop: '0.75rem', lineHeight: 1.5 }}>Auto-generated from uploaded RFP. Free rent months show base rent offset by equal credit. TI disbursement flows as cash inflow in month 1. All 84 months generated automatically with escalations, OpEx, parking, CAPEX, and depreciation.</p>
+            </div>
+          </div>
+
+          {/* Bottom tagline */}
+          <p className="text-center" style={{ fontSize: '0.875rem', color: '#94a3b8', marginTop: '2rem', maxWidth: '600px', margin: '2rem auto 0' }}>
+            Every financial tab, formula, and export built automatically from uploaded proposals. Zero manual spreadsheet entry.
+          </p>
+
+        </div>
+      </section>
+
       {/* == SCOUT - MARKET INTELLIGENCE == */}
       <section id="ai-chat" style={{ padding: '5rem 0', background: '#ffffff' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
@@ -1035,50 +1153,6 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* == FINANCIAL ANALYSIS ENGINE == */}
-      <section id="analysis" style={{ padding: '6rem 0', background: '#ffffff' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
-          <div className="text-center" style={{ marginBottom: '3rem' }}>
-            <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
-              Enterprise Financial Engine
-            </span>
-            <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3.5rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.75rem' }}>
-              Drop in a proposal. Get a complete financial model.
-            </h2>
-            <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', maxWidth: '720px', margin: '0 auto', lineHeight: 1.6 }}>
-              Upload any RFP, LOI, or lease abstract. Tour-Lytics extracts every deal term and builds cash flows, straight-line P&amp;L, GAAP analysis, TI schedules, and CAPEX models automatically. No spreadsheets. No manual entry. CFO-ready in seconds.
-            </p>
-          </div>
-
-          {/* Feature Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3" style={{ gap: '1.25rem', marginBottom: '3.5rem' }}>
-            {[
-              { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="9" x2="9" y2="21"/></svg>, title: 'Monthly Cash Flow', desc: 'Month-by-month schedule: base rent, free rent credits, TI disbursements, OpEx, parking, CAPEX payouts, and amortized TI payments. Every dollar, every month.' },
-              { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>, title: 'Straight-Line P&L', desc: 'Annual straight-line rent with TI credits, free rent amortization, LHI depreciation, and broker fee amortization. ASC 842 ready for your accounting team.' },
-              { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>, title: 'GAAP Analysis', desc: 'Lease liability, ROU asset, monthly GAAP schedule, and present value calculations. Amortized TI and broker fee impact broken out separately.' },
-              { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 20h20"/><path d="M5 20V9l3-3 3 3 3-6 3 3 3-3v17"/></svg>, title: 'TI Allowance Modeling', desc: 'Model standard TI concessions and landlord-financed TI loans side by side. Configure disbursement schedules: lump sum, milestones, or custom timing.' },
-              { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>, title: 'CAPEX + Depreciation', desc: 'Construction, FF&E, and IT with configurable payout schedules, in-service dates, and depreciation periods. Payments flow to cash flow; depreciation flows to P&L.' },
-              { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>, title: 'Version Comparison', desc: 'Compare multiple proposals for the same building. Change column on every metric. One-pager export with up to 12 selectable metrics for executive review.' },
-              { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>, title: 'Amortized TI / Landlord Loans', desc: 'When a landlord offers additional TI at an interest rate, model the full loan: principal, rate, term, monthly payment, total interest, and occupancy cost impact.' },
-              { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>, title: 'Broker Fee Calculator', desc: 'Period-based commission calculations. Amortized over the lease term for straight-line and GAAP accounting. Flows to all financial tabs automatically.' },
-              { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>, title: 'One-Click Export', desc: 'Export to Excel or Google Sheets with live formulas and styled formatting. Every tab included. Or generate a one-pager PDF for the C-suite.' },
-            ].map((f, i) => (
-              <div key={i} style={{ padding: '1.25rem 1.5rem', borderRadius: '0.75rem', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
-                <div style={{ color: '#2563eb', marginBottom: '0.75rem' }}>{f.icon}</div>
-                <h3 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: '0.95rem', color: '#0f172a', marginBottom: '0.5rem' }}>{f.title}</h3>
-                <p style={{ fontSize: '0.8125rem', color: '#64748b', lineHeight: 1.55, margin: 0 }}>{f.desc}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Bottom tagline */}
-          <p className="text-center" style={{ fontSize: '0.875rem', color: '#94a3b8', marginTop: '2rem', maxWidth: '600px', margin: '2rem auto 0' }}>
-            Every financial tab, formula, and export built automatically from uploaded proposals. Zero manual spreadsheet entry.
-          </p>
-
         </div>
       </section>
 
