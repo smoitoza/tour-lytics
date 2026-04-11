@@ -17886,6 +17886,8 @@ function rfpShowVersionComparison(buildingAddress) {
       opex: t.opex_monthly || t.opex || 0,
       parkingSpots: t.parking_spots || t.parkingSpots || 0,
       parkingRate: t.parking_rate_monthly || t.parkingRate || 0,
+      amortizedTIRSF: t.amortized_ti_rsf || t.amortizedTIRSF || 0,
+      amortizedTIRate: t.amortized_ti_rate || t.amortizedTIRate || 0,
     };
     return map[field.key] || 0;
   }
