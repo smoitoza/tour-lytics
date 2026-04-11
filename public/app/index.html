@@ -17696,6 +17696,12 @@ function rfpShowVersionComparison(buildingAddress) {
     { key: 'freeRent', label: 'Free Rent (mo)', fmt: 'num' },
     { key: 'tiAllowancePerRSF', label: 'TI Allowance/RSF', fmt: 'currency_dec' },
     { key: 'tiAllowanceTotal', label: 'TI Total', fmt: 'currency' },
+    { key: 'amortizedTIRSF', label: 'Amortized TI/RSF', fmt: 'currency_dec' },
+    { key: 'amortizedTIRate', label: 'Amortized TI Rate', fmt: 'pct' },
+    { key: 'amortizedTIPrincipal', label: 'Amortized TI Principal', fmt: 'currency', computed: 'amortTIPrincipal' },
+    { key: 'amortizedTIMonthly', label: 'Amortized TI Monthly Payment', fmt: 'currency', computed: 'amortTIMonthly' },
+    { key: 'amortizedTITotalRepayment', label: 'Amortized TI Total Repayment', fmt: 'currency', computed: 'amortTITotalRepay' },
+    { key: 'totalTIPackage', label: 'Total TI Package', fmt: 'currency', computed: 'totalTIPackage' },
     // OpEx: year then month together
     { key: 'opexRSF', label: 'OpEx/Tax/CAM (per RSF/yr)', fmt: 'currency_dec' },
     { key: 'opexPerSFMo', label: 'OpEx/SF/mo', fmt: 'currency_dec', computed: 'opexPerSFMo' },
@@ -17764,6 +17770,15 @@ function rfpShowVersionComparison(buildingAddress) {
       if (field.computed === 'opexPerSFMo') return Math.round((cf2.totalOpex || 0) / termMo2 / rsf2 * 100) / 100;
       if (field.computed === 'fsgPerSFMo') return Math.round(((cf2.totalBaseRent || 0) + (cf2.totalOpex || 0)) / termMo2 / rsf2 * 100) / 100;
       return 0;
+    }
+    // Amortized TI computed fields
+    if (field.computed === 'amortTIPrincipal' || field.computed === 'amortTIMonthly' || field.computed === 'amortTITotalRepay' || field.computed === 'totalTIPackage') {
+      var atCf = (sub.analysis && sub.analysis.cash_flow && sub.analysis.cash_flow.totals) || {};
+      var atSm = (sub.analysis && sub.analysis.summary) || {};
+      if (field.computed === 'amortTIPrincipal') return atCf.amortizedTIPrincipal || 0;
+      if (field.computed === 'amortTIMonthly') return atCf.amortizedTIMonthlyPayment || 0;
+      if (field.computed === 'amortTITotalRepay') return atCf.totalAmortizedTI || 0;
+      if (field.computed === 'totalTIPackage') return (atSm.tiValue || 0) + (atCf.amortizedTIPrincipal || 0);
     }
     // Total Occupancy Cost (rent + OpEx + parking + LHI + broker + internal)
     if (field.computed === 'totalOccupancyCost' || field.computed === 'totalOccupancyCostAnnual') {
@@ -20322,6 +20337,12 @@ function rfpExportExcel() {
       { key: 'free_rent_months', label: 'Free Rent (months)', type: 'num', src: 'terms' },
       { key: 'ti_allowance_rsf', label: 'TI Allowance (per RSF)', type: 'curr_dec', src: 'terms' },
       { key: 'ti_allowance_total', label: 'TI Total', type: 'curr', src: 'terms' },
+      { key: 'amortized_ti_rsf', label: 'Amortized TI/RSF', type: 'curr_dec', src: 'terms' },
+      { key: 'amortized_ti_rate', label: 'Amortized TI Rate (%)', type: 'pct', src: 'terms' },
+      { key: 'amortTIPrincipal', label: 'Amortized TI Principal', type: 'curr', src: 'computed_amortTI' },
+      { key: 'amortTIMonthly', label: 'Amortized TI Monthly Payment', type: 'curr', src: 'computed_amortTI' },
+      { key: 'amortTITotalRepay', label: 'Amortized TI Total Repayment', type: 'curr', src: 'computed_amortTI' },
+      { key: 'totalTIPackage', label: 'Total TI Package', type: 'curr', src: 'computed_amortTI' },
       // OpEx: year then month together
       { key: 'opex_rsf_yr', label: 'OpEx/Tax/CAM (per RSF/yr)', type: 'curr_dec', src: 'terms' },
       { key: 'opexPerSFMo', label: 'OpEx/SF/mo', type: 'curr_dec', src: 'computed' },
@@ -20408,6 +20429,15 @@ function rfpExportExcel() {
             if (Array.isArray(intCI)) intCI.forEach(function(ci) { intCT += parseFloat(ci.amount) || 0; });
             val = (parseFloat(intAData.opex_food_beverage) || 0) + (parseFloat(intAData.opex_workplace_experience) || 0) + (parseFloat(intAData.opex_maintenance_security) || 0) + intCT;
           } else val = 0;
+        } else if (f.src === 'computed_amortTI') {
+          // Amortized TI computed fields
+          var atCfEx = (s.analysis && s.analysis.cash_flow && s.analysis.cash_flow.totals) || {};
+          var atSmEx = (s.analysis && s.analysis.summary) || {};
+          if (f.key === 'amortTIPrincipal') val = atCfEx.amortizedTIPrincipal || 0;
+          else if (f.key === 'amortTIMonthly') val = atCfEx.amortizedTIMonthlyPayment || 0;
+          else if (f.key === 'amortTITotalRepay') val = atCfEx.totalAmortizedTI || 0;
+          else if (f.key === 'totalTIPackage') val = (atSmEx.tiValue || 0) + (atCfEx.amortizedTIPrincipal || 0);
+          else val = 0;
         } else if (f.src === 'computed_toc') {
           // Total Occupancy Cost
           var tocSm = (s.analysis && s.analysis.summary) || {};
@@ -22770,6 +22800,12 @@ var _onePagerGroups = [
       { key: 'fsg',       label: 'Full Service Gross/SF/mo',getter: function(d) { var rsf = d.summary.rsf || 0; var tm = d.summary.termMonths || 1; var ct = d.cfTotals || {}; return rsf > 0 ? Math.round(((ct.totalBaseRent || 0) + (ct.totalOpex || 0)) / tm / rsf * 100) / 100 : 0; }, fmt: 'curr_dec' },
       { key: 'tiPerRSF',  label: 'TI Allowance/RSF',        getter: function(d) { return (d.terms && (d.terms.ti_allowance_rsf || d.terms.tiAllowancePerRSF)) || 0; }, fmt: 'curr_dec' },
       { key: 'tiTotal',   label: 'TI Total',                getter: function(d) { return d.summary.tiValue || (d.terms && (d.terms.ti_allowance_total || d.terms.tiAllowanceTotal)) || 0; }, fmt: 'curr' },
+      { key: 'amortTIRSF', label: 'Amortized TI/RSF',       getter: function(d) { return (d.terms && (d.terms.amortized_ti_rsf || d.terms.amortizedTIRSF)) || 0; }, fmt: 'curr_dec' },
+      { key: 'amortTIRate', label: 'Amortized TI Rate',      getter: function(d) { return (d.terms && (d.terms.amortized_ti_rate || d.terms.amortizedTIRate)) || 0; }, fmt: 'pct' },
+      { key: 'amortTIPrincipal', label: 'Amortized TI Principal', getter: function(d) { return (d.cfTotals && d.cfTotals.amortizedTIPrincipal) || 0; }, fmt: 'curr' },
+      { key: 'amortTIMonthly', label: 'Amortized TI Monthly', getter: function(d) { return (d.cfTotals && d.cfTotals.amortizedTIMonthlyPayment) || 0; }, fmt: 'curr' },
+      { key: 'amortTIRepay', label: 'Amortized TI Total Repayment', getter: function(d) { return (d.cfTotals && d.cfTotals.totalAmortizedTI) || 0; }, fmt: 'curr' },
+      { key: 'totalTIPkg', label: 'Total TI Package',        getter: function(d) { return (d.summary.tiValue || 0) + ((d.cfTotals && d.cfTotals.amortizedTIPrincipal) || 0); }, fmt: 'curr' },
     ]
   },
   {
