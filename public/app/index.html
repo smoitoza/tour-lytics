@@ -20791,10 +20791,18 @@ function capexSave() {
     if (data.error) throw new Error(data.error);
     window._rfpState.assumptionsMap[assumKey] = data;
     if (status) { status.textContent = 'Saved'; status.style.color = '#16a34a'; }
-    // Re-render CAPEX panel to update summary
+    // Re-render CAPEX panel and all dependent tabs
     var selected = rfpGetCurrentSubmission();
     if (selected) {
+      var bAddr = selected.building_address || selected.buildingAddress || '';
+      var bComp = selected.component_label || '';
       document.getElementById('fin-capex').innerHTML = rfpBuildCapexPanel(selected);
+      var cfPanel = document.getElementById('fin-cash-flow');
+      if (cfPanel) cfPanel.innerHTML = rfpBuildCashFlowTable(selected.analysis, bAddr, bComp);
+      var slPanel = document.getElementById('fin-straight-line');
+      if (slPanel) slPanel.innerHTML = rfpBuildStraightLineTable(selected.analysis, bAddr, bComp);
+      var gaapPanel = document.getElementById('fin-gaap');
+      if (gaapPanel) gaapPanel.innerHTML = rfpBuildGAAPTable(selected.analysis, bAddr, bComp);
     }
   })
   .catch(function(err) {
