@@ -591,77 +591,97 @@ export default function LandingPage() {
             ))}
           </div>
 
-          {/* Example Project Demo */}
+          {/* Example Project - SL P&L */}
           <div style={{ borderRadius: '1rem', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}>
             {/* Header */}
             <div style={{ background: '#0f172a', padding: '1.5rem 2rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
                   <div className="font-bold" style={{ fontFamily: 'var(--font-display)', color: '#ffffff', fontSize: '1.25rem' }}>500 Market Street, San Francisco</div>
-                  <div style={{ color: '#94a3b8', fontSize: '0.8125rem', marginTop: '0.25rem' }}>Sample RFP Analysis | 75,000 RSF | 84-Month NNN Lease</div>
+                  <div style={{ color: '#94a3b8', fontSize: '0.8125rem', marginTop: '0.25rem' }}>Sample Analysis | 16,032 RSF | 58-Month NNN Lease | $200K CAPEX</div>
                 </div>
                 <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#2563eb', background: 'rgba(37,99,235,0.12)', padding: '0.25rem 0.75rem', borderRadius: '1rem', letterSpacing: '0.03em' }}>EXAMPLE PROJECT</span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '1.5rem', marginTop: '1.25rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '1.25rem', marginTop: '1.25rem' }}>
                 {[
-                  { l: 'Effective Rent', v: '$62', u: '/RSF' },
-                  { l: 'SL Annual Expense', v: '$6.8M', u: '/yr' },
-                  { l: 'Total All-in Cost', v: '$47.9M', u: '' },
-                  { l: 'Total Concessions', v: '$6.2M', u: '' },
-                  { l: 'NPV @ 8%', v: '$35.1M', u: '' },
+                  { l: 'Effective Rent', v: '$48', u: '/RSF' },
+                  { l: 'SL Annual Expense', v: '$702K', u: '/yr' },
+                  { l: 'All-in Cost', v: '$81.93', u: '/RSF/yr' },
+                  { l: 'Total Concessions', v: '$331K', u: '' },
+                  { l: 'CAPEX', v: '$200K', u: '' },
+                  { l: 'LHI Dep.', v: '$3,448', u: '/mo' },
                 ].map((s, i) => (
                   <div key={i}>
                     <div style={{ fontSize: '0.625rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{s.l}</div>
-                    <div className="font-bold" style={{ color: '#fff', fontSize: '1.125rem', fontFamily: 'var(--font-display)' }}>{s.v}<span style={{ fontSize: '0.6875rem', color: '#94a3b8', fontWeight: 400 }}>{s.u}</span></div>
+                    <div className="font-bold" style={{ color: '#fff', fontSize: '1.05rem', fontFamily: 'var(--font-display)' }}>{s.v}<span style={{ fontSize: '0.6875rem', color: '#94a3b8', fontWeight: 400 }}>{s.u}</span></div>
                   </div>
                 ))}
               </div>
             </div>
-            {/* Tabs Label Row */}
+            {/* Tabs */}
             <div style={{ display: 'flex', gap: '0', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', overflowX: 'auto' }}>
               {['Deal Terms', 'Cash Flow', 'Straight-Line P&L', 'GAAP Analysis', 'TI Allowance', 'CAPEX', 'Broker Fees', 'Assumptions'].map((t, i) => (
-                <div key={i} style={{ padding: '0.625rem 1rem', fontSize: '0.75rem', fontWeight: i === 1 ? 700 : 400, color: i === 1 ? '#2563eb' : '#94a3b8', borderBottom: i === 1 ? '2px solid #2563eb' : 'none', whiteSpace: 'nowrap', marginBottom: '-1px' }}>{t}</div>
+                <div key={i} style={{ padding: '0.625rem 1rem', fontSize: '0.75rem', fontWeight: i === 2 ? 700 : 400, color: i === 2 ? '#2563eb' : '#94a3b8', borderBottom: i === 2 ? '2px solid #2563eb' : 'none', whiteSpace: 'nowrap', marginBottom: '-1px' }}>{t}</div>
               ))}
             </div>
-            {/* Sample Cash Flow Table */}
+            {/* SL P&L Table */}
             <div style={{ padding: '1.25rem 1.5rem', overflowX: 'auto' }}>
-              <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>Monthly Cash Flow</div>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem', minWidth: '800px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem', minWidth: '740px' }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
-                    {['Month', 'Period', 'Rent/RSF', 'Base Rent', 'Free Rent Credit', 'TI Received', 'Net Cash Rent', 'OpEx', 'Total Monthly', 'Cumulative'].map(h => (
-                      <th key={h} style={{ padding: '0.4rem 0.5rem', textAlign: 'right', color: '#94a3b8', fontWeight: 600, fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>{h}</th>
+                    {['Year', 'Months', 'Base Rent', 'Free Rent', 'Net Rent', 'OpEx', 'Parking', 'LHI Dep.', 'Total Cost'].map((h, i) => (
+                      <th key={h} style={{ padding: '0.4rem 0.6rem', textAlign: i === 0 ? 'left' : 'right', color: '#94a3b8', fontWeight: 600, fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {[
-                    { m: '1', p: 'Jan 2027', r: '$72.00', br: '$450,000', frc: '$450,000', ti: '$5,250,000', nc: '$0', ox: '$118,750', tot: '$5,368,750', cum: '$5,368,750', free: true, hasTI: true },
-                    { m: '2', p: 'Feb 2027', r: '$72.00', br: '$450,000', frc: '$450,000', ti: '', nc: '$0', ox: '$118,750', tot: '$118,750', cum: '$5,487,500', free: true, hasTI: false },
-                    { m: '3', p: 'Mar 2027', r: '$72.00', br: '$450,000', frc: '$450,000', ti: '', nc: '$0', ox: '$118,750', tot: '$118,750', cum: '$5,606,250', free: true, hasTI: false },
-                    { m: '4', p: 'Apr 2027', r: '$72.00', br: '$450,000', frc: '$450,000', ti: '', nc: '$0', ox: '$118,750', tot: '$118,750', cum: '$5,725,000', free: true, hasTI: false },
-                    { m: '5', p: 'May 2027', r: '$72.00', br: '$450,000', frc: '$450,000', ti: '', nc: '$0', ox: '$118,750', tot: '$118,750', cum: '$5,843,750', free: true, hasTI: false },
-                    { m: '6', p: 'Jun 2027', r: '$72.00', br: '$450,000', frc: '$450,000', ti: '', nc: '$0', ox: '$118,750', tot: '$118,750', cum: '$5,962,500', free: true, hasTI: false },
-                    { m: '...', p: '', r: '', br: '', frc: '', ti: '', nc: '', ox: '', tot: '', cum: '', free: false, hasTI: false },
-                    { m: '7', p: 'Jul 2027', r: '$72.00', br: '$450,000', frc: '', ti: '', nc: '$450,000', ox: '$118,750', tot: '$568,750', cum: '$6,531,250', free: false, hasTI: false },
-                    { m: '8', p: 'Aug 2027', r: '$72.00', br: '$450,000', frc: '', ti: '', nc: '$450,000', ox: '$118,750', tot: '$568,750', cum: '$7,100,000', free: false, hasTI: false },
+                    { y: 'Year 1', m: '12', br: '$768,000', fr: '($66,207)', nr: '$701,793', ox: '$0', pk: '$26,220', lhi: '$41,376', tc: '$769,389' },
+                    { y: 'Year 2', m: '12', br: '$768,000', fr: '($66,207)', nr: '$701,793', ox: '$0', pk: '$27,012', lhi: '$41,376', tc: '$770,181' },
+                    { y: 'Year 3', m: '12', br: '$768,000', fr: '($66,207)', nr: '$701,793', ox: '$0', pk: '$27,816', lhi: '$41,376', tc: '$770,985' },
+                    { y: 'Year 4', m: '12', br: '$768,000', fr: '($66,207)', nr: '$701,793', ox: '$0', pk: '$28,656', lhi: '$41,376', tc: '$771,825' },
+                    { y: 'Year 5', m: '10', br: '$640,000', fr: '($55,172)', nr: '$584,828', ox: '$0', pk: '$24,590', lhi: '$34,480', tc: '$643,898' },
                   ].map((row, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid #f1f5f9', background: row.free ? '#f0fdf4' : (i % 2 === 0 ? '#f8fafc' : '#fff') }}>
-                      <td style={{ padding: '0.5rem', color: row.m === '...' ? '#94a3b8' : '#334155', fontWeight: 500, textAlign: row.m === '...' ? 'center' : 'right' }}>{row.m}</td>
-                      <td style={{ padding: '0.5rem', color: '#64748b' }}>{row.p}</td>
-                      <td style={{ padding: '0.5rem', textAlign: 'right', color: '#334155' }}>{row.r}</td>
-                      <td style={{ padding: '0.5rem', textAlign: 'right', color: '#334155' }}>{row.br}</td>
-                      <td style={{ padding: '0.5rem', textAlign: 'right', color: '#16a34a', fontWeight: 500 }}>{row.frc}</td>
-                      <td style={{ padding: '0.5rem', textAlign: 'right', color: row.hasTI ? '#16a34a' : '#94a3b8', fontWeight: row.hasTI ? 600 : 400 }}>{row.ti || (row.m === '...' ? '' : '-')}</td>
-                      <td style={{ padding: '0.5rem', textAlign: 'right', color: '#334155' }}>{row.nc}</td>
-                      <td style={{ padding: '0.5rem', textAlign: 'right', color: '#334155' }}>{row.ox}</td>
-                      <td style={{ padding: '0.5rem', textAlign: 'right', color: '#0f172a', fontWeight: 600 }}>{row.tot}</td>
-                      <td style={{ padding: '0.5rem', textAlign: 'right', color: '#0f172a', fontWeight: 600 }}>{row.cum}</td>
+                    <tr key={i} style={{ borderBottom: '1px solid #f1f5f9', background: i % 2 === 0 ? '#f8fafc' : '#fff' }}>
+                      <td style={{ padding: '0.5rem 0.6rem', color: '#334155', fontWeight: 500 }}>{row.y}</td>
+                      <td style={{ padding: '0.5rem 0.6rem', textAlign: 'right', color: '#64748b' }}>{row.m}</td>
+                      <td style={{ padding: '0.5rem 0.6rem', textAlign: 'right', color: '#334155' }}>{row.br}</td>
+                      <td style={{ padding: '0.5rem 0.6rem', textAlign: 'right', color: '#16a34a' }}>{row.fr}</td>
+                      <td style={{ padding: '0.5rem 0.6rem', textAlign: 'right', color: '#334155' }}>{row.nr}</td>
+                      <td style={{ padding: '0.5rem 0.6rem', textAlign: 'right', color: '#334155' }}>{row.ox}</td>
+                      <td style={{ padding: '0.5rem 0.6rem', textAlign: 'right', color: '#334155' }}>{row.pk}</td>
+                      <td style={{ padding: '0.5rem 0.6rem', textAlign: 'right', color: '#7c3aed', fontWeight: 500 }}>{row.lhi}</td>
+                      <td style={{ padding: '0.5rem 0.6rem', textAlign: 'right', color: '#0f172a', fontWeight: 600 }}>{row.tc}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              <p style={{ fontSize: '0.6875rem', color: '#94a3b8', marginTop: '0.75rem', lineHeight: 1.5 }}>Auto-generated from uploaded RFP. Free rent months show base rent offset by equal credit. TI disbursement flows as cash inflow in month 1. All 84 months generated automatically with escalations, OpEx, parking, CAPEX, and depreciation.</p>
+              {/* All-in Summary */}
+              <div style={{ marginTop: '1rem', padding: '1rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', gap: '2.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+                  <div><span style={{ fontSize: '0.6875rem', color: '#64748b', display: 'block' }}>SL Monthly All-in</span><span className="font-bold" style={{ fontSize: '1.125rem', color: '#0f172a' }}>$109,246</span></div>
+                  <div><span style={{ fontSize: '0.6875rem', color: '#64748b', display: 'block' }}>SL Annual All-in</span><span className="font-bold" style={{ fontSize: '1.125rem', color: '#0f172a' }}>$1,310,956</span></div>
+                  <div><span style={{ fontSize: '0.6875rem', color: '#64748b', display: 'block' }}>RSF/yr All-in</span><span className="font-bold" style={{ fontSize: '1.125rem', color: '#0f172a' }}>$81.93</span></div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.5rem', fontSize: '0.75rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.75rem' }}>
+                  {[
+                    { l: 'Base Rent', v: '$64,000/mo', v2: '$48.00/RSF' },
+                    { l: 'Free Rent Credit', v: '($5,517)/mo', v2: '($4.14)/RSF', green: true },
+                    { l: 'Net SL Rent (after TI credit)', v: '$58,483/mo', v2: '$43.86/RSF' },
+                    { l: 'Parking', v: '$2,315/mo', v2: '$1.74/RSF' },
+                    { l: 'LHI Depreciation', v: '$3,448/mo', v2: '$2.59/RSF', purple: true },
+                    { l: 'Food & Beverage', v: '$30,000/mo', v2: '$22.50/RSF' },
+                    { l: 'Workplace Experience', v: '$10,000/mo', v2: '$7.50/RSF' },
+                    { l: 'Maintenance & Security', v: '$5,000/mo', v2: '$3.75/RSF' },
+                  ].map((item, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', color: item.green ? '#16a34a' : item.purple ? '#7c3aed' : '#334155' }}>
+                      <span style={{ color: '#64748b' }}>{item.l}</span>
+                      <span style={{ fontWeight: 500 }}>{item.v} <span style={{ color: '#94a3b8', fontWeight: 400 }}>{item.v2}</span></span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <p style={{ fontSize: '0.6875rem', color: '#94a3b8', marginTop: '0.75rem', lineHeight: 1.5 }}>Auto-generated from uploaded proposal. Includes straight-line rent, TI credits, parking escalation, LHI depreciation, and internal operating costs. All 58 months modeled with escalations. One-click export to Excel or Google Sheets.</p>
             </div>
           </div>
 
