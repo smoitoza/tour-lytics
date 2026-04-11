@@ -714,9 +714,84 @@ export default function LandingPage() {
             </div>
           </div>
 
+          {/* One-Pager Comparison Example */}
+          <div style={{ marginTop: '2rem', borderRadius: '1rem', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}>
+            {/* Dark Header */}
+            <div style={{ background: '#0f172a', padding: '1.25rem 2rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div>
+                  <div className="font-bold" style={{ fontFamily: 'var(--font-display)', color: '#ffffff', fontSize: '1.125rem' }}>500 Market Street, San Francisco</div>
+                  <div style={{ color: '#94a3b8', fontSize: '0.75rem', marginTop: '0.125rem' }}>Financial One-Pager | Version Comparison</div>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#2563eb', background: 'rgba(37,99,235,0.12)', padding: '0.25rem 0.75rem', borderRadius: '1rem' }}>EXAMPLE</span>
+                </div>
+              </div>
+              {/* Color bar */}
+              <div style={{ display: 'flex', height: '4px', borderRadius: '2px', overflow: 'hidden', marginTop: '1rem' }}>
+                <div style={{ flex: 1, background: '#2563eb' }} />
+                <div style={{ flex: 1, background: '#ea580c' }} />
+                <div style={{ flex: 1, background: '#7c3aed' }} />
+              </div>
+            </div>
+
+            {/* One-Pager Table */}
+            <div style={{ padding: '0 2rem 1.5rem', overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem', minWidth: '680px' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                    <th style={{ padding: '1rem 0.5rem 0.75rem', textAlign: 'left', color: '#64748b', fontWeight: 400, fontSize: '0.75rem', width: '30%' }}></th>
+                    <th style={{ padding: '1rem 0.5rem 0.75rem', textAlign: 'right', fontWeight: 700, color: '#0f172a', fontSize: '0.75rem' }}>Landlord<br/>Initial Offer</th>
+                    <th style={{ padding: '1rem 0.5rem 0.75rem', textAlign: 'right', fontWeight: 700, color: '#0f172a', fontSize: '0.75rem' }}>Tenant<br/>Counter</th>
+                    <th style={{ padding: '1rem 0.5rem 0.75rem', textAlign: 'right', fontWeight: 700, color: '#0f172a', fontSize: '0.75rem' }}>Landlord<br/>Final Response</th>
+                    <th style={{ padding: '1rem 0.5rem 0.75rem', textAlign: 'right', fontWeight: 600, color: '#2563eb', fontSize: '0.75rem' }}>Change</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { section: 'LEASE BASICS' },
+                    { l: 'RSF', a: '16,032', b: '16,032', c: '16,032', ch: '' },
+                    { l: 'Term (months)', a: '63', b: '62', c: '58', ch: '\u2193 5 (-7.9%)' },
+                    { l: 'Free Rent (months)', a: '3', b: '5', c: '5', ch: '\u2191 2 (+66.7%)', chUp: true },
+                    { section: 'RENT & RATE' },
+                    { l: 'Base Rent/RSF/yr', a: '$49.50', b: '$43.00', c: '$48.00', ch: '\u2193 $1.50 (-3.0%)' },
+                    { l: 'Effective Rent/RSF', a: '$50.43', b: '$42.33', c: '$43.86', ch: '\u2193 $6.57 (-13.0%)' },
+                    { section: 'TOTAL COST' },
+                    { l: 'SL Total Occupancy (Monthly)', a: '$114,574', b: '$103,620', c: '$105,798', ch: '\u2193 $8,776 (-7.7%)' },
+                    { l: 'SL Total Occupancy (Annual)', a: '$1,374,888', b: '$1,243,440', c: '$1,269,576', ch: '\u2193 $105,312 (-7.7%)' },
+                    { section: 'CONCESSIONS & VALUE' },
+                    { l: 'Total Concessions', a: '$198,000', b: '$286,667', c: '$320,000', ch: '\u2191 $122,000 (+61.6%)', chUp: true },
+                    { section: 'NPV & CAPEX' },
+                    { l: 'NPV @ 8%', a: '$3,515,609', b: '$2,906,295', c: '$2,867,060', ch: '\u2193 $648,549 (-18.4%)' },
+                  ].map((row, i) => {
+                    if (row.section) return (
+                      <tr key={i}><td colSpan={5} style={{ padding: '0.75rem 0.5rem 0.25rem', fontSize: '0.625rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: 'none' }}>{row.section}</td></tr>
+                    );
+                    return (
+                      <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '0.625rem 0.5rem', color: '#334155', fontWeight: 400 }}>{row.l}</td>
+                        <td style={{ padding: '0.625rem 0.5rem', textAlign: 'right', color: '#334155', fontWeight: 500 }}>{row.a}</td>
+                        <td style={{ padding: '0.625rem 0.5rem', textAlign: 'right', color: '#334155', fontWeight: 500 }}>{row.b}</td>
+                        <td style={{ padding: '0.625rem 0.5rem', textAlign: 'right', color: '#334155', fontWeight: 500 }}>{row.c}</td>
+                        <td style={{ padding: '0.625rem 0.5rem', textAlign: 'right', color: row.chUp ? '#16a34a' : (row.ch ? '#2563eb' : '#94a3b8'), fontWeight: row.ch ? 600 : 400, fontSize: '0.75rem', whiteSpace: 'nowrap' }}>{row.ch || '--'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {/* Legend */}
+              <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', padding: '0.75rem 0 0', fontSize: '0.6875rem', color: '#94a3b8', flexWrap: 'wrap' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#2563eb', display: 'inline-block' }} /> Landlord Initial Offer</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ea580c', display: 'inline-block' }} /> Tenant Counter</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#7c3aed', display: 'inline-block' }} /> Landlord Final Response</span>
+              </div>
+              <div style={{ fontSize: '0.6875rem', color: '#94a3b8', marginTop: '0.25rem' }}>Change: Landlord Initial Offer vs Landlord Final Response</div>
+            </div>
+          </div>
+
           {/* Bottom tagline */}
-          <p className="text-center" style={{ fontSize: '0.875rem', color: '#94a3b8', marginTop: '2rem', maxWidth: '600px', margin: '2rem auto 0' }}>
-            Every financial tab, formula, and export built automatically from uploaded proposals. Zero manual spreadsheet entry.
+          <p className="text-center" style={{ fontSize: '0.875rem', color: '#94a3b8', marginTop: '2rem', maxWidth: '700px', margin: '2rem auto 0' }}>
+            Every financial tab, formula, and export built automatically from uploaded proposals. Track every RFP exchange, compare versions side by side, and generate one-pager summaries for leadership review. Zero manual spreadsheet entry.
           </p>
 
         </div>
