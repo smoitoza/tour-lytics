@@ -75,7 +75,7 @@ function StarRating({ filled, total = 5 }: { filled: number; total?: number }) {
 export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [activeFinTab, setActiveFinTab] = useState<'comparison' | 'cashflow' | 'straightline'>('comparison')
+  const [activeFinTab, setActiveFinTab] = useState<'cashflow' | 'straightline' | 'ti' | 'compare'>('cashflow')
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [formState, setFormState] = useState<'idle' | 'sending' | 'success' | 'error'>('idle')
   const [formData, setFormData] = useState({ name: '', email: '', company: '', message: '' })
@@ -1039,246 +1039,261 @@ export default function LandingPage() {
       </section>
 
       {/* == FINANCIAL ANALYSIS ENGINE == */}
-      <section id="analysis" style={{ padding: '6rem 0', background: '#f8fafc' }}>
+      <section id="analysis" style={{ padding: '6rem 0', background: '#ffffff' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
-          <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
-            Financial Analysis Engine
-          </span>
-          <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3.5rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.75rem' }}>
-            Upload an RFP. Get CFO-ready financials.
-          </h2>
-          <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', marginBottom: '2.5rem', maxWidth: '640px', lineHeight: 1.6 }}>
-            Drop in any broker proposal, RFP, or LOI. Tour-Lytics builds the full financial model automatically - cash flow, straight-line P&amp;L, GAAP format, deal comparisons. Set independent assumptions per building, factor in TI allowances, and model different OpEx scenarios. The spreadsheet your finance team has been building by hand.
-          </p>
+          <div className="text-center" style={{ marginBottom: '3rem' }}>
+            <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
+              Enterprise Financial Engine
+            </span>
+            <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3.5rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.75rem' }}>
+              Drop in a proposal. Get a complete financial model.
+            </h2>
+            <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', maxWidth: '720px', margin: '0 auto', lineHeight: 1.6 }}>
+              Upload any RFP, LOI, or lease abstract. Tour-Lytics extracts every deal term and builds cash flows, straight-line P&amp;L, GAAP analysis, TI schedules, and CAPEX models automatically. No spreadsheets. No manual entry. CFO-ready in seconds.
+            </p>
+          </div>
 
-          {/* Financial Demo Card */}
+          {/* Feature Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3" style={{ gap: '1.25rem', marginBottom: '3.5rem' }}>
+            {[
+              { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="9" x2="9" y2="21"/></svg>, title: 'Monthly Cash Flow', desc: 'Month-by-month schedule: base rent, free rent credits, TI disbursements, OpEx, parking, CAPEX payouts, and amortized TI payments. Every dollar, every month.' },
+              { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>, title: 'Straight-Line P&L', desc: 'Annual straight-line rent with TI credits, free rent amortization, LHI depreciation, and broker fee amortization. ASC 842 ready for your accounting team.' },
+              { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>, title: 'GAAP Analysis', desc: 'Lease liability, ROU asset, monthly GAAP schedule, and present value calculations. Amortized TI and broker fee impact broken out separately.' },
+              { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 20h20"/><path d="M5 20V9l3-3 3 3 3-6 3 3 3-3v17"/></svg>, title: 'TI Allowance Modeling', desc: 'Model standard TI concessions and landlord-financed TI loans side by side. Configure disbursement schedules: lump sum, milestones, or custom timing.' },
+              { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>, title: 'CAPEX + Depreciation', desc: 'Construction, FF&E, and IT with configurable payout schedules, in-service dates, and depreciation periods. Payments flow to cash flow; depreciation flows to P&L.' },
+              { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>, title: 'Version Comparison', desc: 'Compare multiple proposals for the same building. Change column on every metric. One-pager export with up to 12 selectable metrics for executive review.' },
+              { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>, title: 'Amortized TI / Landlord Loans', desc: 'When a landlord offers additional TI at an interest rate, model the full loan: principal, rate, term, monthly payment, total interest, and occupancy cost impact.' },
+              { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>, title: 'Broker Fee Calculator', desc: 'Period-based commission calculations. Amortized over the lease term for straight-line and GAAP accounting. Flows to all financial tabs automatically.' },
+              { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>, title: 'One-Click Export', desc: 'Export to Excel or Google Sheets with live formulas and styled formatting. Every tab included. Or generate a one-pager PDF for the C-suite.' },
+            ].map((f, i) => (
+              <div key={i} style={{ padding: '1.25rem 1.5rem', borderRadius: '0.75rem', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
+                <div style={{ color: '#2563eb', marginBottom: '0.75rem' }}>{f.icon}</div>
+                <h3 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: '0.95rem', color: '#0f172a', marginBottom: '0.5rem' }}>{f.title}</h3>
+                <p style={{ fontSize: '0.8125rem', color: '#64748b', lineHeight: 1.55, margin: 0 }}>{f.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Interactive Demo Card */}
           <div className="bg-white overflow-hidden" style={{ borderRadius: '1.25rem', boxShadow: '0 12px 32px rgba(0,0,0,0.12)', border: '1px solid #e2e8f0' }}>
             {/* Dark Header */}
-            <div className="flex items-start justify-between flex-wrap" style={{ background: '#0f172a', padding: '1.5rem 2rem', gap: '1rem' }}>
-              <div>
-                <div className="font-bold text-white" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.125rem, 1rem + 0.75vw, 1.5rem)' }}>250 Brannan Street - Lease Analysis</div>
-                <div className="text-sm" style={{ color: '#94a3b8', marginTop: '0.25rem' }}>Sample Client | 16,000 RSF | 63-Month Sublease | Modified Gross</div>
-              </div>
-              <div className="flex items-center font-semibold" style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', padding: '0.25rem 0.75rem', borderRadius: '1.25rem', fontSize: 'clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem)', gap: '0.25rem' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg>
-                Best Value
+            <div style={{ background: '#0f172a', padding: '1.5rem 2rem' }}>
+              <div className="font-bold text-white" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.125rem, 1rem + 0.75vw, 1.5rem)' }}>1160 N. Mathilda Avenue</div>
+              <div className="text-sm" style={{ color: '#94a3b8', marginTop: '0.25rem' }}>Enterprise HQ Requirement | 320,000 RSF | 132-Month Direct Lease | NNN</div>
+              {/* Summary Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-5" style={{ gap: '1.5rem', marginTop: '1.25rem' }}>
+                {[
+                  { label: 'Effective Rent', value: '$45', unit: '/RSF/yr' },
+                  { label: 'SL Annual Expense', value: '$20.3M', unit: '/yr' },
+                  { label: 'Total All-in Cost', value: '$244M', unit: '' },
+                  { label: 'Total Concessions', value: '$38M', unit: '' },
+                  { label: 'TI Package', value: '$105', unit: '/RSF' },
+                ].map((s, i) => (
+                  <div key={i}>
+                    <div className="text-xs uppercase" style={{ color: '#64748b', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>{s.label}</div>
+                    <div className="font-bold" style={{ color: '#ffffff', fontSize: '1.25rem', fontFamily: 'var(--font-display)' }}>{s.value}<span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 400 }}>{s.unit}</span></div>
+                  </div>
+                ))}
               </div>
             </div>
 
-            {/* Tabs */}
-            <div className="flex" style={{ borderBottom: '2px solid #e2e8f0', padding: '0 1.5rem' }}>
+            {/* Tab Navigation */}
+            <div style={{ display: 'flex', gap: '0.25rem', padding: '0.75rem 2rem 0', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', overflowX: 'auto' }}>
               {[
-                { key: 'comparison' as const, label: 'Deal Comparison' },
                 { key: 'cashflow' as const, label: 'Cash Flow' },
                 { key: 'straightline' as const, label: 'Straight-Line P&L' },
+                { key: 'ti' as const, label: 'TI Allowance' },
+                { key: 'compare' as const, label: 'Compare Versions' },
               ].map((tab) => (
                 <button
                   key={tab.key}
                   onClick={() => setActiveFinTab(tab.key)}
-                  className="font-semibold cursor-pointer relative"
                   style={{
-                    padding: '0.75rem 1.25rem',
-                    fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)',
+                    padding: '0.5rem 1rem',
+                    fontSize: '0.8125rem',
+                    fontWeight: activeFinTab === tab.key ? 600 : 400,
                     color: activeFinTab === tab.key ? '#2563eb' : '#94a3b8',
-                    background: 'none',
+                    background: 'transparent',
                     border: 'none',
+                    cursor: 'pointer',
+                    borderBottom: activeFinTab === tab.key ? '2px solid #2563eb' : '2px solid transparent',
+                    marginBottom: '-1px',
                     whiteSpace: 'nowrap',
                   }}
                 >
                   {tab.label}
-                  {activeFinTab === tab.key && (
-                    <span className="absolute" style={{ bottom: '-2px', left: 0, right: 0, height: '2px', background: '#2563eb' }} />
-                  )}
                 </button>
               ))}
             </div>
 
-            {/* Tab: Deal Comparison */}
-            {activeFinTab === 'comparison' && (
-              <div>
-                {/* KPI Row */}
-                <div className="grid grid-cols-2 md:grid-cols-4" style={{ borderBottom: '1px solid #e2e8f0' }}>
-                  {[
-                    { label: 'Base Rent', value: '$43', unit: '/RSF/yr' },
-                    { label: 'Effective Rent (GAAP)', value: '$42.45', unit: '/RSF/yr' },
-                    { label: 'All-In Occupancy', value: '$79.95', unit: '/RSF/yr' },
-                    { label: 'Free Rent Value', value: '$287K', unit: '' },
-                  ].map((kpi, i) => (
-                    <div key={kpi.label} className="text-center" style={{ padding: '1.25rem 1.5rem', borderRight: i < 3 ? '1px solid #e2e8f0' : 'none' }}>
-                      <div className="text-xs font-medium uppercase" style={{ color: '#94a3b8', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>{kpi.label}</div>
-                      <div className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem)', color: '#0f172a' }}>
-                        {kpi.value}{kpi.unit && <span style={{ fontSize: '0.5em', fontWeight: 400, color: '#64748b' }}>{kpi.unit}</span>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            {/* Tab Content */}
+            <div style={{ padding: '1.5rem 2rem', overflowX: 'auto' }}>
 
-                {/* Comparison Table */}
-                <div style={{ padding: '1.5rem 2rem', overflowX: 'auto' }}>
-                  <h4 className="font-bold uppercase" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', color: '#0f172a', marginBottom: '1rem', letterSpacing: '0.04em' }}>
-                    Deal Comparison - 5-Year Total Occupancy Cost
-                  </h4>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)' }}>
+              {/* Cash Flow Tab */}
+              {activeFinTab === 'cashflow' && (
+                <div>
+                  <div className="text-xs font-semibold uppercase" style={{ color: '#64748b', letterSpacing: '0.05em', marginBottom: '1rem' }}>Monthly Cash Flow (First 6 Months)</div>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
                     <thead>
-                      <tr>
-                        <th className="text-left font-semibold uppercase text-xs" style={{ padding: '0.75rem 1rem', color: '#64748b', letterSpacing: '0.04em', borderBottom: '2px solid #e2e8f0', width: '25%' }}>Metric</th>
-                        <th className="text-left font-semibold uppercase text-xs" style={{ padding: '0.75rem 1rem', color: '#2563eb', letterSpacing: '0.04em', borderBottom: '2px solid #2563eb', width: '25%', background: 'rgba(37,99,235,0.04)' }}>Option A - Sublease ($43)</th>
-                        <th className="text-left font-semibold uppercase text-xs" style={{ padding: '0.75rem 1rem', color: '#64748b', letterSpacing: '0.04em', borderBottom: '2px solid #e2e8f0', width: '25%' }}>Option B - Sublease ($49.50)</th>
-                        <th className="text-left font-semibold uppercase text-xs" style={{ padding: '0.75rem 1rem', color: '#64748b', letterSpacing: '0.04em', borderBottom: '2px solid #e2e8f0', width: '25%' }}>Option C - Direct ($64)</th>
+                      <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                        {['Month', 'Period', 'Rent/RSF', 'Base Rent', 'Free Rent Credit', 'TI Received', 'Net Cash Rent', 'OpEx', 'Total Monthly', 'Cumulative'].map(h => (
+                          <th key={h} style={{ padding: '0.5rem 0.75rem', textAlign: 'right', color: '#64748b', fontWeight: 600, fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>{h}</th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody>
                       {[
-                        { metric: 'Structure', a: 'Sublease', b: 'Sublease', c: 'Direct Lease' },
-                        { metric: 'Premises (RSF)', a: '16,000', b: '16,000', c: '23,031' },
-                        { metric: 'Free Rent', a: '5 months', b: '3 months', c: '5 mo + 3.75 TI' },
-                        { metric: 'TI Allowance', a: 'None (turnkey)', b: 'None (turnkey)', c: '$20/RSF ($461K)' },
-                        { metric: 'Escalation', a: '3%/yr', b: '3%/yr', c: '3%/yr' },
-                        { metric: 'Total Rent (63 mo)', a: '$3.57M', b: '$4.24M', c: '$7.40M', bold: true },
-                        { metric: 'Total Occupancy', a: '$6.67M', b: '$7.34M', c: '$10.50M', bold: true },
-                        { metric: 'All-In $/RSF/yr', a: '$79.35', b: '$87.34', c: '$84.18', bold: true },
+                        { m: 1, p: 'Oct 2027', r: '$54.00', br: '$1,440,000', frc: '$1,440,000', ti: '$20,800,000', ncr: '$0', ox: '$499,200', tot: '$20,300,800', cum: '$20,300,800', isFree: true, hasTI: true },
+                        { m: 2, p: 'Nov 2027', r: '$54.00', br: '$1,440,000', frc: '$1,440,000', ti: '', ncr: '$0', ox: '$499,200', tot: '$499,200', cum: '$20,800,000', isFree: true, hasTI: false },
+                        { m: 3, p: 'Dec 2027', r: '$54.00', br: '$1,440,000', frc: '$1,440,000', ti: '', ncr: '$0', ox: '$499,200', tot: '$499,200', cum: '$21,299,200', isFree: true, hasTI: false },
+                        { m: 4, p: 'Jan 2028', r: '$54.00', br: '$1,440,000', frc: '$1,440,000', ti: '', ncr: '$0', ox: '$499,200', tot: '$499,200', cum: '$21,798,400', isFree: true, hasTI: false },
+                        { m: 5, p: 'Feb 2028', r: '$54.00', br: '$1,440,000', frc: '$1,440,000', ti: '', ncr: '$0', ox: '$499,200', tot: '$499,200', cum: '$22,297,600', isFree: true, hasTI: false },
+                        { m: 6, p: 'Mar 2028', r: '$54.00', br: '$1,440,000', frc: '$1,440,000', ti: '', ncr: '$0', ox: '$499,200', tot: '$499,200', cum: '$22,796,800', isFree: true, hasTI: false },
                       ].map((row, i) => (
-                        <tr key={i}>
-                          <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>{row.metric}</td>
-                          <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', background: 'rgba(37,99,235,0.04)', fontWeight: row.bold ? 600 : 400 }}>{row.a}</td>
-                          <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>{row.b}</td>
-                          <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>{row.c}</td>
+                        <tr key={i} style={{ borderBottom: '1px solid #f1f5f9', background: row.isFree ? '#f0fdf4' : (i % 2 === 0 ? '#f8fafc' : '#ffffff') }}>
+                          <td style={{ padding: '0.6rem 0.75rem', color: '#334155', fontWeight: 500 }}>{row.m}</td>
+                          <td style={{ padding: '0.6rem 0.75rem', color: '#64748b' }}>{row.p}</td>
+                          <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: '#334155' }}>{row.r}</td>
+                          <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: '#334155' }}>{row.br}</td>
+                          <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: '#16a34a', fontWeight: 500 }}>{row.frc}</td>
+                          <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: row.hasTI ? '#16a34a' : '#94a3b8', fontWeight: row.hasTI ? 600 : 400 }}>{row.ti || '-'}</td>
+                          <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: '#334155' }}>{row.ncr}</td>
+                          <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: '#334155' }}>{row.ox}</td>
+                          <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: '#0f172a', fontWeight: 600 }}>{row.tot}</td>
+                          <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: '#0f172a', fontWeight: 600 }}>{row.cum}</td>
                         </tr>
                       ))}
-                      {/* Savings row */}
-                      <tr>
-                        <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#334155', background: '#dcfce7' }}>Savings vs. Option C</td>
-                        <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#22c55e', background: '#dcfce7' }}>$3.84M (36.5%)</td>
-                        <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#22c55e', background: '#dcfce7' }}>$3.16M (30.1%)</td>
-                        <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#22c55e', background: '#dcfce7' }}>-</td>
-                      </tr>
                     </tbody>
                   </table>
+                  <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.75rem' }}>Auto-generated from uploaded RFP. Free rent months show base rent offset by equal credit. TI disbursement flows as cash inflow in month 1.</p>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Tab: Cash Flow */}
-            {activeFinTab === 'cashflow' && (
-              <div style={{ padding: '1.5rem 2rem', overflowX: 'auto', position: 'relative' }}>
-                <h4 className="font-bold uppercase" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', color: '#0f172a', marginBottom: '1rem', letterSpacing: '0.04em' }}>
-                  Monthly Cash Flow Schedule (First 18 Months)
-                </h4>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)' }}>
-                  <thead>
-                    <tr>
-                      {['Period', 'Yr', 'Base Rent', 'Free Rent', 'Net Cash Rent', 'Cumulative'].map((h) => (
-                        <th key={h} className="text-left font-semibold uppercase text-xs" style={{ padding: '0.75rem 1rem', color: '#64748b', letterSpacing: '0.04em', borderBottom: '2px solid #e2e8f0' }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[
-                      { period: 'Jun 2026', yr: '1', base: '$57,333', free: '($57,333)', net: '$0', cum: '$0', freeRent: true },
-                      { period: 'Jul 2026', yr: '1', base: '$57,333', free: '($57,333)', net: '$0', cum: '$0', freeRent: true },
-                      { period: 'Aug 2026', yr: '1', base: '$57,333', free: '($57,333)', net: '$0', cum: '$0', freeRent: true },
-                      { period: 'Sep 2026', yr: '1', base: '$57,333', free: '($57,333)', net: '$0', cum: '$0', freeRent: true },
-                      { period: 'Oct 2026', yr: '1', base: '$57,333', free: '($57,333)', net: '$0', cum: '$0', freeRent: true },
-                      { period: 'Nov 2026', yr: '1', base: '$57,333', free: '-', net: '$57,333', cum: '$57,333', highlight: true },
-                      { period: 'Dec 2026', yr: '1', base: '$57,333', free: '-', net: '$57,333', cum: '$114,667' },
-                      { period: 'Jan 2027', yr: '1', base: '$57,333', free: '-', net: '$57,333', cum: '$172,000' },
-                      { period: 'Feb 2027', yr: '1', base: '$57,333', free: '-', net: '$57,333', cum: '$229,333' },
-                      { period: 'Mar 2027', yr: '1', base: '$57,333', free: '-', net: '$57,333', cum: '$286,667' },
-                      { period: 'Apr 2027', yr: '1', base: '$57,333', free: '-', net: '$57,333', cum: '$344,000' },
-                      { period: 'May 2027', yr: '1', base: '$57,333', free: '-', net: '$57,333', cum: '$401,333' },
-                      { period: 'Jun 2027', yr: '2', base: '$59,053', free: '-', net: '$59,053', cum: '$460,387', yr2start: true },
-                      { period: 'Jul 2027', yr: '2', base: '$59,053', free: '-', net: '$59,053', cum: '$519,440' },
-                      { period: 'Aug 2027', yr: '2', base: '$59,053', free: '-', net: '$59,053', cum: '$578,493' },
-                      { period: 'Sep 2027', yr: '2', base: '$59,053', free: '-', net: '$59,053', cum: '$637,547' },
-                      { period: 'Oct 2027', yr: '2', base: '$59,053', free: '-', net: '$59,053', cum: '$696,600' },
-                      { period: 'Nov 2027', yr: '2', base: '$59,053', free: '-', net: '$59,053', cum: '$755,653' },
-                    ].map((row) => (
-                      <tr key={row.period} style={{ background: row.yr2start ? '#dbeafe' : row.highlight ? '#f8fafc' : 'transparent' }}>
-                        <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', fontVariantNumeric: 'tabular-nums' }}>{row.period}</td>
-                        <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>{row.yr}</td>
-                        <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', fontVariantNumeric: 'tabular-nums' }}>{row.base}</td>
-                        <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: row.freeRent ? '#22c55e' : '#334155', fontVariantNumeric: 'tabular-nums' }}>{row.free}</td>
-                        <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{row.net}</td>
-                        <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', fontVariantNumeric: 'tabular-nums' }}>{row.cum}</td>
+              {/* Straight-Line P&L Tab */}
+              {activeFinTab === 'straightline' && (
+                <div>
+                  <div className="text-xs font-semibold uppercase" style={{ color: '#64748b', letterSpacing: '0.05em', marginBottom: '1rem' }}>Annual Straight-Line P&amp;L</div>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                        {['Year', 'Months', 'Base Rent', 'Free Rent', 'TI Credit', 'Net Rent', 'OpEx', 'Total Cost'].map(h => (
+                          <th key={h} style={{ padding: '0.5rem 0.75rem', textAlign: h === 'Year' ? 'left' : 'right', color: '#64748b', fontWeight: 600, fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>{h}</th>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {/* Fade overlay */}
-                <div className="pointer-events-none" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '60px', background: 'linear-gradient(transparent, #fff)' }} />
-              </div>
-            )}
-
-            {/* Tab: Straight-Line P&L */}
-            {activeFinTab === 'straightline' && (
-              <div style={{ padding: '1.5rem 2rem', overflowX: 'auto' }}>
-                <h4 className="font-bold uppercase" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', color: '#0f172a', marginBottom: '1rem', letterSpacing: '0.04em' }}>
-                  Straight-Line (GAAP) P&amp;L - By Lease Year
-                </h4>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)' }}>
-                  <thead>
-                    <tr>
-                      {['Category', 'Yr 1', 'Yr 2', 'Yr 3', 'Yr 4', 'Yr 5', 'Total'].map((h) => (
-                        <th key={h} className="text-left font-semibold uppercase text-xs" style={{ padding: '0.75rem 1rem', color: '#64748b', letterSpacing: '0.04em', borderBottom: '2px solid #e2e8f0', fontWeight: h === 'Total' ? 700 : 600 }}>{h}</th>
+                    </thead>
+                    <tbody>
+                      {[
+                        { y: 'Year 1', m: 12, br: '$17,280,000', fr: '($1,570,909)', ti: '($1,890,912)', nr: '$13,818,179', ox: '$5,990,400', tc: '$19,808,579' },
+                        { y: 'Year 2', m: 12, br: '$17,798,400', fr: '($1,570,909)', ti: '($1,890,912)', nr: '$14,336,579', ox: '$5,990,400', tc: '$20,326,979' },
+                        { y: 'Year 3', m: 12, br: '$17,798,400', fr: '($1,570,909)', ti: '($1,890,912)', nr: '$14,336,579', ox: '$5,990,400', tc: '$20,326,979' },
+                        { y: 'Year 4', m: 12, br: '$17,798,400', fr: '($1,570,909)', ti: '($1,890,912)', nr: '$14,336,579', ox: '$5,990,400', tc: '$20,326,979' },
+                      ].map((row, i) => (
+                        <tr key={i} style={{ borderBottom: '1px solid #f1f5f9', background: i % 2 === 0 ? '#f8fafc' : '#ffffff' }}>
+                          <td style={{ padding: '0.6rem 0.75rem', color: '#334155', fontWeight: 500 }}>{row.y}</td>
+                          <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: '#64748b' }}>{row.m}</td>
+                          <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: '#334155' }}>{row.br}</td>
+                          <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: '#16a34a' }}>{row.fr}</td>
+                          <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: '#16a34a' }}>{row.ti}</td>
+                          <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: '#334155' }}>{row.nr}</td>
+                          <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: '#334155' }}>{row.ox}</td>
+                          <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: '#0f172a', fontWeight: 600 }}>{row.tc}</td>
+                        </tr>
                       ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>Straight-Line Rent</td>
-                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>$679K</td>
-                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>$679K</td>
-                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>$679K</td>
-                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>$679K</td>
-                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>$679K</td>
-                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', fontWeight: 700 }}>$3.57M</td>
-                    </tr>
-                    <tr>
-                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>Cash Rent Paid</td>
-                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>$401K</td>
-                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>$709K</td>
-                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>$730K</td>
-                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>$752K</td>
-                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>$774K</td>
-                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', fontWeight: 700 }}>$3.57M</td>
-                    </tr>
-                    <tr>
-                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>Deferred Rent (Liability)</td>
-                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#2563eb' }}>$278K</td>
-                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>($30K)</td>
-                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>($51K)</td>
-                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>($73K)</td>
-                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155' }}>($95K)</td>
-                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', fontWeight: 700 }}>$0</td>
-                    </tr>
-                    <tr style={{ background: '#f8fafc' }}>
-                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', fontWeight: 600 }}>Total Occupancy</td>
-                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', fontWeight: 600 }}>$696K</td>
-                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', fontWeight: 600 }}>$1.28M</td>
-                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', fontWeight: 600 }}>$1.28M</td>
-                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', fontWeight: 600 }}>$1.28M</td>
-                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', fontWeight: 600 }}>$1.28M</td>
-                      <td style={{ padding: '0.75rem 1rem', borderBottom: '1px solid #f1f5f9', color: '#334155', fontWeight: 700 }}>$6.67M</td>
-                    </tr>
-                    <tr>
-                      <td style={{ padding: '0.75rem 1rem', color: '#334155' }}>Per RSF/yr</td>
-                      <td style={{ padding: '0.75rem 1rem', color: '#334155' }}>$79.95</td>
-                      <td style={{ padding: '0.75rem 1rem', color: '#334155' }}>$79.95</td>
-                      <td style={{ padding: '0.75rem 1rem', color: '#334155' }}>$79.95</td>
-                      <td style={{ padding: '0.75rem 1rem', color: '#334155' }}>$79.95</td>
-                      <td style={{ padding: '0.75rem 1rem', color: '#334155' }}>$79.95</td>
-                      <td style={{ padding: '0.75rem 1rem', color: '#334155', fontWeight: 700 }}>$79.35</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            )}
+                    </tbody>
+                  </table>
+                  <div style={{ display: 'flex', gap: '2rem', marginTop: '1rem', padding: '1rem', background: '#f8fafc', borderRadius: '0.5rem', flexWrap: 'wrap' }}>
+                    <div><span style={{ fontSize: '0.75rem', color: '#64748b' }}>SL Monthly All-in</span><div className="font-bold" style={{ color: '#0f172a', fontSize: '1.125rem' }}>$1,694,029</div></div>
+                    <div><span style={{ fontSize: '0.75rem', color: '#64748b' }}>SL Annual All-in</span><div className="font-bold" style={{ color: '#0f172a', fontSize: '1.125rem' }}>$20,328,348</div></div>
+                    <div><span style={{ fontSize: '0.75rem', color: '#64748b' }}>RSF/yr All-in</span><div className="font-bold" style={{ color: '#0f172a', fontSize: '1.125rem' }}>$63.53</div></div>
+                  </div>
+                </div>
+              )}
 
-            {/* Footer */}
-            <div className="text-xs" style={{ padding: '1rem 2rem', background: '#f8fafc', borderTop: '1px solid #e2e8f0', color: '#94a3b8' }}>
-              Auto-generated from uploaded RFP/LOI - cash flow, straight-line, and GAAP calculations performed automatically
+              {/* TI Allowance Tab */}
+              {activeFinTab === 'ti' && (
+                <div>
+                  <div className="text-xs font-semibold uppercase" style={{ color: '#64748b', letterSpacing: '0.05em', marginBottom: '1rem' }}>TI Allowance Summary</div>
+                  <div className="grid grid-cols-1 md:grid-cols-3" style={{ gap: '1rem', marginBottom: '1.5rem' }}>
+                    <div style={{ padding: '1.25rem', borderRadius: '0.75rem', background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+                      <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Standard TI</div>
+                      <div className="font-bold" style={{ fontSize: '1.5rem', color: '#16a34a', fontFamily: 'var(--font-display)', marginTop: '0.25rem' }}>$20,800,000</div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748b' }}>$65.00/RSF - Free concession</div>
+                    </div>
+                    <div style={{ padding: '1.25rem', borderRadius: '0.75rem', background: '#fef2f2', border: '1px solid #fecaca' }}>
+                      <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Amortized TI</div>
+                      <div className="font-bold" style={{ fontSize: '1.5rem', color: '#dc2626', fontFamily: 'var(--font-display)', marginTop: '0.25rem' }}>$12,800,000</div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748b' }}>$40.00/RSF at 6% interest</div>
+                    </div>
+                    <div style={{ padding: '1.25rem', borderRadius: '0.75rem', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                      <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total TI Package</div>
+                      <div className="font-bold" style={{ fontSize: '1.5rem', color: '#0f172a', fontFamily: 'var(--font-display)', marginTop: '0.25rem' }}>$33,600,000</div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748b' }}>$105.00/RSF combined</div>
+                    </div>
+                  </div>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
+                    <tbody>
+                      {[
+                        { label: 'Amortized TI Monthly Payment', value: '$132,698', color: '#dc2626' },
+                        { label: 'Amortized TI Total Interest', value: '$4,716,142', color: '#dc2626' },
+                        { label: 'Amortized TI Total Repayment', value: '$17,516,142', color: '#dc2626' },
+                        { label: 'Net TI Benefit (Standard TI - Interest)', value: '$16,083,858', color: '#16a34a' },
+                      ].map((row, i) => (
+                        <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '0.6rem 0.75rem', color: '#64748b' }}>{row.label}</td>
+                          <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: row.color, fontWeight: 600 }}>{row.value}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.75rem' }}>Disbursement schedule configurable: lump sum at commencement, specific month, or milestone-based payments tied to the work letter.</p>
+                </div>
+              )}
+
+              {/* Compare Versions Tab */}
+              {activeFinTab === 'compare' && (
+                <div>
+                  <div className="text-xs font-semibold uppercase" style={{ color: '#64748b', letterSpacing: '0.05em', marginBottom: '1rem' }}>Version Comparison</div>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                        <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', color: '#64748b', fontWeight: 600, fontSize: '0.6875rem', textTransform: 'uppercase' }}>Metric</th>
+                        <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', color: '#0f172a', fontWeight: 700, fontSize: '0.75rem' }}>With $40 TI Loan</th>
+                        <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', color: '#0f172a', fontWeight: 700, fontSize: '0.75rem' }}>Without TI Loan</th>
+                        <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', color: '#2563eb', fontWeight: 700, fontSize: '0.75rem' }}>Change</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { m: 'TI Allowance/RSF', a: '$65.00', b: '$65.00', c: '-' },
+                        { m: 'Amortized TI/RSF', a: '$40.00', b: '-', c: '+$40.00' },
+                        { m: 'Total TI Package', a: '$33,600,000', b: '$20,800,000', c: '+$12,800,000' },
+                        { m: 'Amortized TI Monthly', a: '$132,698', b: '$0', c: '+$132,698' },
+                        { m: 'Amortized TI Total Repayment', a: '$17,516,142', b: '$0', c: '+$17,516,142' },
+                        { m: 'SL Total Occupancy (annual)', a: '$21,920,772', b: '$20,328,348', c: '+$1,592,376 (+7.3%)' },
+                        { m: 'Total All-in Cost', a: '$261,928,494', b: '$244,411,824', c: '+$17,516,670' },
+                        { m: 'Total Concessions', a: '$38,080,000', b: '$38,080,000', c: '-' },
+                      ].map((row, i) => (
+                        <tr key={i} style={{ borderBottom: '1px solid #f1f5f9', background: i % 2 === 0 ? '#f8fafc' : '#ffffff' }}>
+                          <td style={{ padding: '0.6rem 0.75rem', color: '#334155', fontWeight: 500 }}>{row.m}</td>
+                          <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: '#334155' }}>{row.a}</td>
+                          <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: '#334155' }}>{row.b}</td>
+                          <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: '#2563eb', fontWeight: 600 }}>{row.c}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.75rem' }}>Side-by-side comparison auto-generated from two versions of the same proposal. Change column highlights the financial impact of the landlord loan.</p>
+                </div>
+              )}
+
             </div>
           </div>
+
+          {/* Bottom tagline */}
+          <p className="text-center" style={{ fontSize: '0.875rem', color: '#94a3b8', marginTop: '2rem', maxWidth: '600px', margin: '2rem auto 0' }}>
+            Every financial tab, formula, and export built automatically from uploaded proposals. Zero manual spreadsheet entry.
+          </p>
+
         </div>
       </section>
 
@@ -1375,8 +1390,8 @@ export default function LandingPage() {
               },
               {
                 icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>,
-                title: 'Financial Analysis',
-                desc: 'Upload an RFP or LOI. Get straight-line rent, occupancy costs, NPV analysis, and side-by-side deal comparisons. Set independent assumptions per building with TI allowance offsets.',
+                title: 'Financial Underwriting',
+                desc: 'Upload a proposal and get cash flow, straight-line P&L, GAAP analysis, TI allowance modeling, amortized TI loans, CAPEX with depreciation schedules, broker fees, version comparisons, and one-click Excel/Google export. Zero manual entry.',
                 tag: 'Core Feature',
               },
               {
