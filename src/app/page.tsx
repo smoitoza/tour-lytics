@@ -656,29 +656,58 @@ export default function LandingPage() {
                   ))}
                 </tbody>
               </table>
-              {/* All-in Summary */}
-              <div style={{ marginTop: '1rem', padding: '1rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
-                <div style={{ display: 'flex', gap: '2.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
-                  <div><span style={{ fontSize: '0.6875rem', color: '#64748b', display: 'block' }}>SL Monthly All-in</span><span className="font-bold" style={{ fontSize: '1.125rem', color: '#0f172a' }}>$109,246</span></div>
-                  <div><span style={{ fontSize: '0.6875rem', color: '#64748b', display: 'block' }}>SL Annual All-in</span><span className="font-bold" style={{ fontSize: '1.125rem', color: '#0f172a' }}>$1,310,956</span></div>
-                  <div><span style={{ fontSize: '0.6875rem', color: '#64748b', display: 'block' }}>RSF/yr All-in</span><span className="font-bold" style={{ fontSize: '1.125rem', color: '#0f172a' }}>$81.93</span></div>
+              {/* Straight-Line All-in Occupancy Cost Breakdown */}
+              <div style={{ marginTop: '1.25rem', padding: '1.5rem', background: '#f8fafc', borderRadius: '0.75rem', border: '1px solid #e2e8f0' }}>
+                {/* Big summary numbers */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: '1rem', marginBottom: '0.25rem' }}>
+                  <div className="font-bold" style={{ fontSize: '1.75rem', color: '#0f172a', fontFamily: 'var(--font-display)' }}>$109,246<span style={{ fontSize: '0.875rem', fontWeight: 400, color: '#64748b' }}>/mo</span></div>
+                  <div className="font-bold" style={{ fontSize: '1.75rem', color: '#0f172a', fontFamily: 'var(--font-display)' }}>$1,310,956<span style={{ fontSize: '0.875rem', fontWeight: 400, color: '#64748b' }}>/yr</span></div>
+                  <div style={{ fontSize: '0.9375rem', color: '#64748b', fontWeight: 500 }}>$81.93/RSF/yr</div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.5rem', fontSize: '0.75rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.75rem' }}>
+                <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1.25rem' }}>Straight-Line All-in Occupancy Cost</div>
+
+                {/* Line item breakdown */}
+                <div style={{ fontSize: '0.8125rem' }}>
                   {[
-                    { l: 'Base Rent', v: '$64,000/mo', v2: '$48.00/RSF' },
-                    { l: 'Free Rent Credit', v: '($5,517)/mo', v2: '($4.14)/RSF', green: true },
-                    { l: 'Net SL Rent (after TI credit)', v: '$58,483/mo', v2: '$43.86/RSF' },
-                    { l: 'Parking', v: '$2,315/mo', v2: '$1.74/RSF' },
-                    { l: 'LHI Depreciation', v: '$3,448/mo', v2: '$2.59/RSF', purple: true },
-                    { l: 'Food & Beverage', v: '$30,000/mo', v2: '$22.50/RSF' },
-                    { l: 'Workplace Experience', v: '$10,000/mo', v2: '$7.50/RSF' },
-                    { l: 'Maintenance & Security', v: '$5,000/mo', v2: '$3.75/RSF' },
-                  ].map((item, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', color: item.green ? '#16a34a' : item.purple ? '#7c3aed' : '#334155' }}>
-                      <span style={{ color: '#64748b' }}>{item.l}</span>
-                      <span style={{ fontWeight: 500 }}>{item.v} <span style={{ color: '#94a3b8', fontWeight: 400 }}>{item.v2}</span></span>
+                    { label: 'Base Rent', sub: 'Straight-line rent before concessions', mo: '$64,000/mo', yr: '$768,003/yr', rsf: '$48.00/RSF', color: '#334155' },
+                    { label: 'Free Rent Credit', sub: 'Amortized over lease term', mo: '($5,517)/mo', yr: '($66,207)/yr', rsf: '($4.14)/RSF', color: '#16a34a' },
+                    { label: 'Net SL Rent (after TI credit)', sub: '', mo: '$58,483/mo', yr: '$701,796/yr', rsf: '$43.86/RSF', color: '#334155', bold: true },
+                    { label: 'Parking', sub: '', mo: '$2,315/mo', yr: '$27,784/yr', rsf: '$1.74/RSF', color: '#334155' },
+                    { label: 'LHI Depreciation', sub: '$200,000 total CAPEX, straight-line over term', mo: '$3,448/mo', yr: '$41,376/yr', rsf: '$2.59/RSF', color: '#7c3aed' },
+                  ].map((row, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '0.625rem 0', borderBottom: '1px solid #e2e8f0' }}>
+                      <div style={{ flex: '1 1 40%', minWidth: '200px' }}>
+                        <div style={{ fontWeight: row.bold ? 700 : 500, color: '#334155' }}>{row.label}</div>
+                        {row.sub && <div style={{ fontSize: '0.6875rem', color: '#94a3b8', marginTop: '0.125rem' }}>{row.sub}</div>}
+                      </div>
+                      <div style={{ textAlign: 'right', color: row.color, fontWeight: row.bold ? 600 : 400, minWidth: '100px' }}>{row.mo}</div>
+                      <div style={{ textAlign: 'right', color: row.color, fontWeight: row.bold ? 600 : 400, minWidth: '110px' }}>{row.yr}</div>
+                      <div style={{ textAlign: 'right', color: row.color, fontWeight: row.bold ? 600 : 400, minWidth: '90px' }}>{row.rsf}</div>
                     </div>
                   ))}
+
+                  {/* Internal Operating Costs section */}
+                  <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0.875rem 0 0.5rem' }}>Internal Operating Costs</div>
+                  {[
+                    { label: 'Food & Beverage', mo: '$30,000/mo', yr: '$360,000/yr', rsf: '$22.50/RSF', color: '#2563eb' },
+                    { label: 'Workplace Experience', mo: '$10,000/mo', yr: '$120,000/yr', rsf: '$7.50/RSF', color: '#2563eb' },
+                    { label: 'Maintenance & Security', mo: '$5,000/mo', yr: '$60,000/yr', rsf: '$3.75/RSF', color: '#2563eb' },
+                  ].map((row, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '0.625rem 0', borderBottom: '1px solid #e2e8f0' }}>
+                      <div style={{ flex: '1 1 40%', minWidth: '200px', fontWeight: 400, color: '#334155' }}>{row.label}</div>
+                      <div style={{ textAlign: 'right', color: row.color, minWidth: '100px' }}>{row.mo}</div>
+                      <div style={{ textAlign: 'right', color: row.color, minWidth: '110px' }}>{row.yr}</div>
+                      <div style={{ textAlign: 'right', color: row.color, minWidth: '90px' }}>{row.rsf}</div>
+                    </div>
+                  ))}
+
+                  {/* Total row */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '0.75rem 0 0.25rem', borderTop: '2px solid #334155', marginTop: '0.25rem' }}>
+                    <div style={{ flex: '1 1 40%', minWidth: '200px', fontWeight: 700, color: '#0f172a' }}>Total Occupancy Cost</div>
+                    <div style={{ textAlign: 'right', fontWeight: 700, color: '#0f172a', minWidth: '100px' }}>$109,246/mo</div>
+                    <div style={{ textAlign: 'right', fontWeight: 700, color: '#0f172a', minWidth: '110px' }}>$1,310,956/yr</div>
+                    <div style={{ textAlign: 'right', fontWeight: 700, color: '#0f172a', minWidth: '90px' }}>$81.93/RSF</div>
+                  </div>
                 </div>
               </div>
               <p style={{ fontSize: '0.6875rem', color: '#94a3b8', marginTop: '0.75rem', lineHeight: 1.5 }}>Auto-generated from uploaded proposal. Includes straight-line rent, TI credits, parking escalation, LHI depreciation, and internal operating costs. All 58 months modeled with escalations. One-click export to Excel or Google Sheets.</p>
