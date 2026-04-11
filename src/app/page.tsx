@@ -929,7 +929,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* == COMMUTE STUDY DEMO == */}
+      {/* == COMMUTE INTELLIGENCE == */}
       <section id="commute-demo" style={{ padding: '5rem 0', background: '#f8fafc' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
           <span className="inline-block text-xs font-semibold uppercase" style={{ color: '#2563eb', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
@@ -938,81 +938,61 @@ export default function LandingPage() {
           <h2 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem, 1.2rem + 2.5vw, 3.5rem)', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.75rem' }}>
             Where should your team actually work?
           </h2>
-          <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', marginBottom: '2.5rem', maxWidth: '640px', lineHeight: 1.6 }}>
-            Upload your employee home addresses. Tour-Lytics maps commute times to every shortlisted building - transit, driving, and biking. Know which office minimizes your team&apos;s commute before you sign.
+          <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', marginBottom: '2.5rem', maxWidth: '680px', lineHeight: 1.6 }}>
+            Upload employee home addresses. Tour-Lytics maps every team member, calculates commute times to every shortlisted building by drive and transit, and ranks your options by department. Know which office minimizes your team's commute before you sign.
           </p>
 
-          {/* Commute Study Mockup */}
-          <div className="bg-white overflow-hidden" style={{ borderRadius: '1.25rem', boxShadow: '0 24px 48px rgba(0,0,0,0.16)', border: '1px solid #e2e8f0', maxWidth: '720px' }}>
-            {/* Chrome bar */}
-            <div className="flex items-center" style={{ gap: '0.5rem', padding: '0.75rem 1rem', background: '#f1f5f9', borderBottom: '1px solid #e2e8f0' }}>
-              <span className="rounded-full" style={{ width: '10px', height: '10px', background: '#ef4444' }} />
-              <span className="rounded-full" style={{ width: '10px', height: '10px', background: '#f59e0b' }} />
-              <span className="rounded-full" style={{ width: '10px', height: '10px', background: '#22c55e' }} />
-              <span className="flex-1 text-xs" style={{ marginLeft: '1rem', background: '#fff', borderRadius: '0.5rem', padding: '0.25rem 0.75rem', color: '#94a3b8', border: '1px solid #e2e8f0' }}>
-                tourlytics.ai/app - Commute Study
-              </span>
-            </div>
-            {/* Dark header */}
-            <div style={{ background: '#0f172a', padding: '1.25rem 1.5rem' }}>
-              <div className="flex items-center" style={{ gap: '0.5rem', marginBottom: '0.25rem' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /><path d="M2 12h20" /></svg>
-                <span className="font-bold text-white" style={{ fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)' }}>Commute Study - SF Office Search</span>
+          {/* Screenshot 1: Employee Location Map */}
+          <div style={{ marginBottom: '2rem', borderRadius: '1rem', overflow: 'hidden', boxShadow: '0 12px 32px rgba(0,0,0,0.12)', border: '1px solid #e2e8f0' }}>
+            <div style={{ background: '#0f172a', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div className="font-bold" style={{ color: '#ffffff', fontSize: '0.9375rem' }}>Employee Location Map</div>
+                <div style={{ color: '#94a3b8', fontSize: '0.75rem', marginTop: '0.125rem' }}>157 employees color-coded by department across the Bay Area</div>
               </div>
-              <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>24 employees analyzed across 3 buildings</span>
+              <span style={{ fontSize: '0.625rem', fontWeight: 600, color: '#2563eb', background: 'rgba(37,99,235,0.12)', padding: '0.2rem 0.625rem', borderRadius: '1rem' }}>LIVE EXAMPLE</span>
             </div>
-            {/* Building commute results */}
-            <div style={{ padding: '1.25rem 1.5rem' }}>
-              {[
-                { name: '250 Brannan', avg: 28, best: true },
-                { name: '475 Brannan', avg: 31, best: false },
-                { name: '301 Brannan', avg: 34, best: false },
-              ].map((b) => (
-                <div key={b.name} style={{ padding: '0.875rem 1rem', marginBottom: '0.625rem', borderRadius: '0.75rem', border: b.best ? '1.5px solid #22c55e' : '1px solid #e2e8f0', background: b.best ? '#f0fdf4' : '#ffffff' }}>
-                  <div className="flex items-center justify-between" style={{ marginBottom: '0.5rem' }}>
-                    <div className="flex items-center" style={{ gap: '0.5rem' }}>
-                      <span className="font-semibold text-sm" style={{ color: '#0f172a' }}>{b.name}</span>
-                      {b.best && <span className="text-xs font-semibold" style={{ color: '#16a34a', background: '#dcfce7', padding: '0.125rem 0.5rem', borderRadius: '1rem' }}>Best Commute</span>}
-                    </div>
-                    <span className="font-bold" style={{ color: b.best ? '#16a34a' : '#0f172a', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)' }}>Avg {b.avg} min</span>
-                  </div>
-                  {/* Progress bar */}
-                  <div style={{ width: '100%', height: '6px', background: '#f1f5f9', borderRadius: '3px', overflow: 'hidden' }}>
-                    <div style={{ width: `${Math.round((b.avg / 45) * 100)}%`, height: '100%', background: b.best ? '#22c55e' : '#2563eb', borderRadius: '3px', transition: 'width 0.5s ease' }} />
-                  </div>
-                </div>
-              ))}
+            <img src="/images/commute-employee-map.jpg" alt="Employee location map showing 157 employees color-coded by department" loading="lazy" style={{ width: '100%', display: 'block' }} />
+          </div>
 
-              {/* Transit mode breakdown */}
-              <div style={{ marginTop: '1.25rem', padding: '1rem', background: '#f8fafc', borderRadius: '0.75rem', border: '1px solid #e2e8f0' }}>
-                <div className="font-semibold text-xs" style={{ color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
-                  Transit Mode Breakdown
-                </div>
-                {[
-                  { mode: 'Transit', pct: 45, color: '#2563eb' },
-                  { mode: 'Driving', pct: 30, color: '#f59e0b' },
-                  { mode: 'Biking', pct: 15, color: '#22c55e' },
-                  { mode: 'Walking', pct: 10, color: '#8b5cf6' },
-                ].map((m) => (
-                  <div key={m.mode} className="flex items-center" style={{ gap: '0.75rem', marginBottom: '0.5rem' }}>
-                    <span className="text-xs" style={{ width: '50px', color: '#64748b', flexShrink: 0 }}>{m.mode}</span>
-                    <div style={{ flex: 1, height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
-                      <div style={{ width: `${m.pct}%`, height: '100%', background: m.color, borderRadius: '4px' }} />
-                    </div>
-                    <span className="font-semibold text-xs" style={{ color: '#0f172a', width: '32px', textAlign: 'right' }}>{m.pct}%</span>
-                  </div>
-                ))}
+          {/* Two-column: Transit Radius + Rankings */}
+          <div className="grid grid-cols-1 md:grid-cols-2" style={{ gap: '1.5rem', marginBottom: '2rem' }}>
+            {/* Screenshot 3: Transit Radius Selection */}
+            <div style={{ borderRadius: '1rem', overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.1)', border: '1px solid #e2e8f0' }}>
+              <div style={{ background: '#0f172a', padding: '0.875rem 1.25rem' }}>
+                <div className="font-bold" style={{ color: '#ffffff', fontSize: '0.8125rem' }}>Transit Radius Selection</div>
+                <div style={{ color: '#94a3b8', fontSize: '0.6875rem', marginTop: '0.125rem' }}>Draw a radius to see how many employees are within commuting range</div>
               </div>
+              <img src="/images/commute-transit-radius.jpg" alt="Transit radius showing 58 employees within 6.6 mile selection" loading="lazy" style={{ width: '100%', display: 'block' }} />
+            </div>
+
+            {/* Screenshot 2: Building Rankings by Department */}
+            <div style={{ borderRadius: '1rem', overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.1)', border: '1px solid #e2e8f0' }}>
+              <div style={{ background: '#0f172a', padding: '0.875rem 1.25rem' }}>
+                <div className="font-bold" style={{ color: '#ffffff', fontSize: '0.8125rem' }}>Building Rankings by Department</div>
+                <div style={{ color: '#94a3b8', fontSize: '0.6875rem', marginTop: '0.125rem' }}>Average drive time per building, broken down by team</div>
+              </div>
+              <img src="/images/commute-rankings.jpg" alt="Building commute rankings by department showing drive times" loading="lazy" style={{ width: '100%', display: 'block' }} />
             </div>
           </div>
 
-          <div className="flex items-center" style={{ gap: '0.5rem', marginTop: '1.5rem', fontSize: 'clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem)', color: '#94a3b8' }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
-            Upload a CSV of employee addresses. Results show average commute by transit, driving, and biking for each shortlisted building.
+          {/* Feature highlights */}
+          <div className="grid grid-cols-2 md:grid-cols-4" style={{ gap: '1rem' }}>
+            {[
+              { icon: '📍', title: 'Employee Mapping', desc: 'Every team member plotted by home address, color-coded by department, team, or custom filter' },
+              { icon: '🚗', title: 'Drive + Transit', desc: 'Real-time Google Maps commute calculations for every employee to every building' },
+              { icon: '⚫', title: 'Radius Selection', desc: 'Draw a circle on the map to see how many employees fall within commuting range of each option' },
+              { icon: '⭐', title: 'Smart Rankings', desc: 'Buildings ranked by average commute per department, so you know which teams benefit most' },
+            ].map((f, i) => (
+              <div key={i} style={{ padding: '1rem', borderRadius: '0.75rem', background: '#ffffff', border: '1px solid #e2e8f0' }}>
+                <div style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{f.icon}</div>
+                <div className="font-bold" style={{ fontSize: '0.8125rem', color: '#0f172a', marginBottom: '0.25rem' }}>{f.title}</div>
+                <div style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: 1.5 }}>{f.desc}</div>
+              </div>
+            ))}
           </div>
+
         </div>
       </section>
-
       {/* == THE SOLUTION == */}
       <section style={{ padding: '6rem 0', background: '#ffffff' }}>
         <div style={{ maxWidth: '1000px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
