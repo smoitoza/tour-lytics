@@ -17674,7 +17674,8 @@ function rfpShowVersionComparison(buildingAddress) {
       var tocIntCTotal = 0;
       if (Array.isArray(tocIntCustom)) tocIntCustom.forEach(function(ci) { tocIntCTotal += parseFloat(ci.amount) || 0; });
       var tocIntTotal = tocIntFB + tocIntWPE + tocIntMaint + tocIntCTotal;
-      var tocMonthly = tocSlRent + tocOpex + tocPark + tocLHI + tocBF + tocIntTotal;
+      var tocAmortTI = (tocCf.amortizedTIMonthlyPayment || 0);
+      var tocMonthly = tocSlRent + tocOpex + tocPark + tocLHI + tocBF + tocAmortTI + tocIntTotal;
       if (field.computed === 'totalOccupancyCost') return Math.round(tocMonthly);
       return Math.round(tocMonthly * 12);
     }
@@ -19811,7 +19812,8 @@ function rfpExportExcel() {
           var tocICT = 0;
           if (Array.isArray(tocIC)) tocIC.forEach(function(ci) { tocICT += parseFloat(ci.amount) || 0; });
           var tocInt = (parseFloat(tocAD.opex_food_beverage) || 0) + (parseFloat(tocAD.opex_workplace_experience) || 0) + (parseFloat(tocAD.opex_maintenance_security) || 0) + tocICT;
-          var tocMo = tocSL + tocOp + tocPk + tocLH + tocBF + tocInt;
+          var tocAT = (tocCf.amortizedTIMonthlyPayment || 0);
+          var tocMo = tocSL + tocOp + tocPk + tocLH + tocBF + tocAT + tocInt;
           val = f.key === 'totalOccupancyCostMo' ? Math.round(tocMo) : Math.round(tocMo * 12);
         } else {
           var t = s.deal_terms || s.dealTerms || {};
