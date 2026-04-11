@@ -17049,7 +17049,15 @@ function rfpBuildCombinedView(componentMap, address) {
   if (hasStaggeredStart) {
     compRow('Commencement', commDates, 'text');
   }
-  compRow('Base Rent/RSF/yr', compTerms.map(function(t) { return t.base_rent_rsf || t.baseRent || 0; }), 'curr_dec', '', 'Starting annual rate per rentable square foot');
+  compRow('Base Rent/RSF/yr', compTerms.map(function(t) {
+    var rp = t.rent_periods || t.rentPeriods;
+    if (rp && rp.length > 0) {
+      var sorted = rp.slice().sort(function(a,b) { return a.from_month - b.from_month; });
+      var fp = sorted.find(function(p) { return p.rent_rsf_yr > 0; });
+      if (fp) return fp.rent_rsf_yr;
+    }
+    return t.base_rent_rsf || t.baseRent || 0;
+  }), 'curr_dec', '', 'Starting annual rate per rentable square foot');
   compRow('Total Base Rent', components.map(function(c) { return c.totals.totalBaseRent || 0; }), 'curr', '', 'Sum of all base rent payments over the full lease term');
   compRow('Annual Escalation', compTerms.map(function(t) { return t.annual_escalation_pct || t.annualEscalation || 0; }), 'pct', '', 'Yearly rent increase percentage');
   compRow('Free Rent (mo)', compTerms.map(function(t) { return t.free_rent_months || t.freeRent || 0; }), 'plain', '', 'Months of abated base rent');
@@ -17326,7 +17334,15 @@ function rfpBuildCombinedExcelSheet(wb, cd) {
   if (exHasStagger) {
     addRow('Commencement', exCommDates, 'text', 'text');
   }
-  addRow('Base Rent/RSF/yr', terms.map(function(t) { return t.base_rent_rsf || t.baseRent || 0; }), 'curr_dec', 'curr_dec', 'Starting annual rate per rentable square foot');
+  addRow('Base Rent/RSF/yr', terms.map(function(t) {
+    var rp = t.rent_periods || t.rentPeriods;
+    if (rp && rp.length > 0) {
+      var sorted = rp.slice().sort(function(a,b) { return a.from_month - b.from_month; });
+      var fp = sorted.find(function(p) { return p.rent_rsf_yr > 0; });
+      if (fp) return fp.rent_rsf_yr;
+    }
+    return t.base_rent_rsf || t.baseRent || 0;
+  }), 'curr_dec', 'curr_dec', 'Starting annual rate per rentable square foot');
   addRow('Total Base Rent', comps.map(function(c) { return c.totals.totalBaseRent || 0; }), 'curr', 'curr', 'Sum of all base rent payments over the full lease term');
   addRow('Annual Escalation', terms.map(function(t) { return (t.annual_escalation_pct || t.annualEscalation || 0) / 100; }), 'pct', 'plain', 'Yearly rent increase percentage');
   addRow('Free Rent (mo)', terms.map(function(t) { return t.free_rent_months || t.freeRent || 0; }), 'plain', 'plain', 'Months of abated base rent');
@@ -17853,7 +17869,14 @@ function rfpShowVersionComparison(buildingAddress) {
     }
     var t = sub.deal_terms || sub.dealTerms || {};
     // For stepped rent, show first paid rate as base rent in comparisons
+    // Prefer rent_periods first paid rate over base_rent_rsf which may be monthly
     var effectiveBaseRent = t.base_rent_rsf || t.baseRent || 0;
+    var _rp = t.rent_periods || t.rentPeriods;
+    if (_rp && _rp.length > 0) {
+      var _sorted = _rp.slice().sort(function(a,b) { return a.from_month - b.from_month; });
+      var _fp = _sorted.find(function(p) { return p.rent_rsf_yr > 0; });
+      if (_fp) effectiveBaseRent = _fp.rent_rsf_yr;
+    }
     var rp = t.rent_periods || t.rentPeriods;
     if (rp && Array.isArray(rp) && rp.length > 0) {
       var firstPaid = rp.find(function(p) { return p.rent_rsf_yr > 0; });
@@ -20333,7 +20356,7 @@ function rfpExportExcel() {
       { key: 'lease_term_months', label: 'Lease Term (months)', type: 'num', src: 'terms' },
       { key: 'commencement_date', label: 'Commencement', type: 'text', src: 'terms' },
       // Rent: year then month together
-      { key: 'base_rent_rsf', label: 'Base Rent (per RSF/yr)', type: 'curr_dec', src: 'terms' },
+      { key: 'base_rent_rsf', label: 'Base Rent (per RSF/yr)', type: 'curr_dec', src: 'computed_baseRent' },
       { key: 'rentPerSFMo', label: 'Rent/SF/mo', type: 'curr_dec', src: 'computed' },
       { key: 'annual_escalation_pct', label: 'Annual Escalation (%)', type: 'pct_plain', src: 'terms' },
       { key: 'free_rent_months', label: 'Free Rent (months)', type: 'num', src: 'terms' },
@@ -20396,6 +20419,16 @@ function rfpExportExcel() {
         if (f.src === 'summary') {
           var sm = (s.analysis && s.analysis.summary) || {};
           val = sm[f.key] || 0;
+        } else if (f.src === 'computed_baseRent') {
+          // Use rent_periods first paid rate if available (base_rent_rsf may be monthly)
+          var brT = s.deal_terms || s.dealTerms || {};
+          var brRp = brT.rent_periods || brT.rentPeriods;
+          val = brT.base_rent_rsf || brT.baseRent || 0;
+          if (brRp && brRp.length > 0) {
+            var brSorted = brRp.slice().sort(function(a,b) { return a.from_month - b.from_month; });
+            var brFp = brSorted.find(function(p) { return p.rent_rsf_yr > 0; });
+            if (brFp) val = brFp.rent_rsf_yr;
+          }
         } else if (f.src === 'computed') {
           // Computed metrics from cash flow totals
           var cSm = (s.analysis && s.analysis.summary) || {};
@@ -22794,7 +22827,17 @@ var _onePagerGroups = [
   {
     label: 'Rent & Rate',
     metrics: [
-      { key: 'baseRent',  label: 'Base Rent/RSF/yr',        getter: function(d) { return (d.terms && (d.terms.base_rent_rsf || d.terms.baseRent)) || (d.summary.baseRent) || 0; }, fmt: 'curr_dec' },
+      { key: 'baseRent',  label: 'Base Rent/RSF/yr',        getter: function(d) {
+        // Prefer rent_periods first paid rate (annual) over base_rent_rsf which may be monthly
+        var t = d.terms || {};
+        var rp = t.rent_periods || t.rentPeriods;
+        if (rp && rp.length > 0) {
+          var sorted = rp.slice().sort(function(a,b) { return a.from_month - b.from_month; });
+          var firstPaid = sorted.find(function(p) { return p.rent_rsf_yr > 0; });
+          if (firstPaid) return firstPaid.rent_rsf_yr;
+        }
+        return (t.base_rent_rsf || t.baseRent) || (d.summary && d.summary.baseRent) || 0;
+      }, fmt: 'curr_dec' },
       { key: 'rentSfMo',  label: 'Rent/SF/mo',              getter: function(d) { if (d.baseRentPerMo) return d.baseRentPerMo; var rsf = d.summary.rsf || 0; var tm = d.summary.termMonths || 1; var t = (d.cfTotals || {}).totalBaseRent || 0; return rsf > 0 ? Math.round(t / tm / rsf * 100) / 100 : 0; }, fmt: 'curr_dec' },
       { key: 'effRent',   label: 'Effective Rent/RSF',      getter: function(d) { return d.summary.effectiveRentRSF || 0; }, fmt: 'curr_dec' },
       { key: 'opexSfMo',  label: 'OpEx/SF/mo',              getter: function(d) { var rsf = d.summary.rsf || 0; var tm = d.summary.termMonths || 1; var t = (d.cfTotals || {}).totalOpex || 0; return rsf > 0 ? Math.round(t / tm / rsf * 100) / 100 : 0; }, fmt: 'curr_dec' },
