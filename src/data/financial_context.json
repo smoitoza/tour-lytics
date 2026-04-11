@@ -1,7 +1,7 @@
 {
   "financial_models": {
     "250_brannan_procore_counter": {
-      "label": "250 Brannan - Procore Counter #3 ($43/RSF, 5 Mo Free)",
+      "label": "250 Brannan - Tenant Counter #3 ($43/RSF, 5 Mo Free)",
       "key_assumptions": {
         "premises_rsf": 16000,
         "lease_term_months": 63,
@@ -49,7 +49,7 @@
         "monthly_opex_internal": "$50,000 (full year) / $42,857 (partial 2026)",
         "total_monthly_pl": "$106,594"
       },
-      "note": "The Monthly P&L of $106,594 IS the all-in number. It INCLUDES both rent ($56,594) AND Procore internal OpEx ($50,000). This is NOT lease-only. In 2026 (partial year, 7 months), OpEx is $42,857/mo so total monthly is $99,451."
+      "note": "The Monthly P&L of $106,594 IS the all-in number. It INCLUDES both rent ($56,594) AND internal OpEx ($50,000). This is NOT lease-only. In 2026 (partial year, 7 months), OpEx is $42,857/mo so total monthly is $99,451."
     },
     "250_brannan_splunk_counter": {
       "label": "250 Brannan - Splunk Counter ($49.50/RSF, 3 Mo Free)",
@@ -108,7 +108,7 @@
         "pct": "9.1%",
         "by_year": {"2026": "$74,551 (9.7%)", "2027": "$127,802 (9.1%)"}
       },
-      "sources": "Splunk counter 3/10/26 | Savills recommendation (Denis Karas) | Townsend counter 3/5/26 | OpEx per Procore RE"
+      "sources": "Splunk counter 3/10/26 | Savills recommendation (Denis Karas) | Townsend counter 3/5/26 | OpEx per internal RE"
     },
     "key_deal_terms": {
       "250_brannan": {
