@@ -18166,6 +18166,48 @@ function getCapexForBuilding(buildingAddr, leaseTermMonths, componentLabel) {
   var itMonthlyDep = itEffYears > 0 ? Math.round(itTotal / (itEffYears * 12)) : 0;
   var totalMonthlyDep = constrMonthlyDep + ffeMonthlyDep + itMonthlyDep;
 
+  // Payout schedule fields
+  var payoutType = a.capex_payout_type || 'month1';
+  var payoutMonth = parseInt(a.capex_payout_month) || 1;
+  var payoutStart = parseInt(a.capex_payout_start) || 1;
+  var payoutEnd = parseInt(a.capex_payout_end) || 1;
+  var payoutMilestones = [];
+  if (a.capex_milestones) {
+    try {
+      payoutMilestones = typeof a.capex_milestones === 'string' ? JSON.parse(a.capex_milestones) : a.capex_milestones;
+    } catch(e) { payoutMilestones = []; }
+  }
+  if (!Array.isArray(payoutMilestones)) payoutMilestones = [];
+
+  // In-service date: controls when depreciation starts
+  var inServiceMonth = parseInt(a.capex_in_service_month) || 1;
+
+  // Build payout schedule array (non-zero months)
+  var payoutSchedule = [];
+  if (grandTotal > 0) {
+    var termMo = leaseTermMonths || 120;
+    for (var pm = 1; pm <= termMo; pm++) {
+      var amt = 0;
+      if (payoutType === 'month1' || !payoutType) {
+        if (pm === 1) amt = grandTotal;
+      } else if (payoutType === 'specific_month') {
+        if (pm === payoutMonth) amt = grandTotal;
+      } else if (payoutType === 'spread') {
+        if (pm >= payoutStart && pm <= payoutEnd) {
+          amt = Math.round(grandTotal / (payoutEnd - payoutStart + 1));
+        }
+      } else if (payoutType === 'milestones') {
+        for (var mi = 0; mi < payoutMilestones.length; mi++) {
+          if (payoutMilestones[mi].month === pm) {
+            amt = Math.round(grandTotal * payoutMilestones[mi].pct / 100);
+            break;
+          }
+        }
+      }
+      if (amt > 0) payoutSchedule.push({ month: pm, amount: amt });
+    }
+  }
+
   return {
     grandTotal: grandTotal,
     construction: constrTotal,
@@ -18180,8 +18222,46 @@ function getCapexForBuilding(buildingAddr, leaseTermMonths, componentLabel) {
     constrMonthlyDep: constrMonthlyDep,
     ffeMonthlyDep: ffeMonthlyDep,
     itMonthlyDep: itMonthlyDep,
-    hasCapex: grandTotal > 0
+    hasCapex: grandTotal > 0,
+    payoutType: payoutType,
+    payoutMonth: payoutMonth,
+    payoutStart: payoutStart,
+    payoutEnd: payoutEnd,
+    payoutMilestones: payoutMilestones,
+    payoutSchedule: payoutSchedule,
+    inServiceMonth: inServiceMonth,
+    depStartMonth: inServiceMonth,
+    depMonths: leaseTermMonths ? Math.max(0, leaseTermMonths - inServiceMonth + 1) : 0
   };
+}
+
+// ===== CAPEX PAYOUT SCHEDULE HELPER =====
+function getCapexPaymentForMonth(capex, month) {
+  if (!capex.hasCapex) return 0;
+  if (capex.payoutType === 'month1' || !capex.payoutType) {
+    return month === 1 ? capex.grandTotal : 0;
+  }
+  if (capex.payoutType === 'specific_month') {
+    return month === (capex.payoutMonth || 1) ? capex.grandTotal : 0;
+  }
+  if (capex.payoutType === 'spread') {
+    var start = capex.payoutStart || 1;
+    var end = capex.payoutEnd || 1;
+    if (month >= start && month <= end) {
+      var numPayments = end - start + 1;
+      return Math.round(capex.grandTotal / numPayments);
+    }
+    return 0;
+  }
+  if (capex.payoutType === 'milestones') {
+    var milestones = capex.payoutMilestones || [];
+    var ms = null;
+    for (var i = 0; i < milestones.length; i++) {
+      if (milestones[i].month === month) { ms = milestones[i]; break; }
+    }
+    return ms ? Math.round(capex.grandTotal * ms.pct / 100) : 0;
+  }
+  return month === 1 ? capex.grandTotal : 0;
 }
 
 // ===== BROKER FEE HELPER =====
@@ -18256,9 +18336,8 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
   var brokerCumulative = 0;
   monthly.forEach(function(row) {
     var isFreeRent = row.freeRentCredit && row.freeRentCredit !== 0;
-    // CAPEX: full outlay in month 1
-    var capexThisMonth = 0;
-    if (capex.hasCapex && row.month === 1) capexThisMonth = capex.grandTotal;
+    // CAPEX: payout schedule
+    var capexThisMonth = getCapexPaymentForMonth(capex, row.month);
     capexCumulative += capexThisMonth;
     // Broker fee: full cash impact in month 1
     var brokerThisMonth = 0;
@@ -18267,7 +18346,7 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
     var adjustedTotal = row.totalMonthlyCost + capexThisMonth + brokerThisMonth;
     var adjustedCumulative = row.cumulativeCash + capexCumulative + brokerCumulative;
 
-    html += '<tr' + (isFreeRent ? ' style="background:rgba(5,150,105,0.04)"' : (row.month === 1 && (capex.hasCapex || brokerFee.hasBrokerFee) ? ' style="background:rgba(124,58,237,0.04)"' : '')) + '>' +
+    html += '<tr' + (isFreeRent ? ' style="background:rgba(5,150,105,0.04)"' : ((capexThisMonth > 0 || (row.month === 1 && brokerFee.hasBrokerFee)) ? ' style="background:rgba(124,58,237,0.04)"' : '')) + '>' +
       '<td class="cell-label">' + (row.month || '') + '</td>' +
       '<td>' + (row.period || '') + '</td>' +
       '<td>' + (row.leaseYear || '') + '</td>' +
@@ -18679,7 +18758,17 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
     // Amortized TI for this year (actual cash payments from annual rollup)
     var slAmortTIYr = slHasAmortTI ? (row.amortizedTI || 0) : 0;
     var slTotalCost = slNetRent + (row.opex || 0) + (row.parking || 0) + slAmortTIYr;
-    var lhiDep = capex.hasCapex ? capex.monthlyDepreciation * months : 0;
+    // LHI Dep: only for months >= in-service month
+    var lhiDep = 0;
+    if (capex.hasCapex) {
+      var yearStartMonth = (row.year - 1) * 12 + 1;
+      var yearEndMonth = (row.year - 1) * 12 + months;
+      var inService = capex.inServiceMonth || 1;
+      var depStartInYear = Math.max(yearStartMonth, inService);
+      var depEndInYear = yearEndMonth;
+      var depMonthsThisYear = Math.max(0, depEndInYear - depStartInYear + 1);
+      lhiDep = capex.monthlyDepreciation * depMonthsThisYear;
+    }
     var brokerAmort = slBrokerFee.hasBrokerFee ? slBrokerFee.slMonthlyImpact * months : 0;
     var adjustedTotal = slTotalCost + lhiDep + brokerAmort;
     html += '<tr>' +
@@ -18942,7 +19031,7 @@ function rfpBuildGAAPTable(analysis, buildingAddr, componentLabel) {
   // Recompute ROU schedule with broker fee adjustment
   var adjRemainingROU = adjustedROUDay1;
   schedule.forEach(function(row, idx) {
-    var lhiDep = capex.hasCapex ? capex.monthlyDepreciation : 0;
+    var lhiDep = (capex.hasCapex && row.month >= (capex.inServiceMonth || 1)) ? capex.monthlyDepreciation : 0;
     var brokerAmortGAAP = gaapBrokerFee.hasBrokerFee ? gaapBrokerFee.slMonthlyImpact : 0;
     // Adjusted ROU amortization and remaining ROU asset
     var adjROUAmort = adjustedROUMonthlyAmort;
@@ -19310,10 +19399,13 @@ function rfpExportExcel() {
     var slExTIMonthly = (slTotals.monthlyTIAmortization || 0);
     var slHasAmortTIEx = (slTotals.totalAmortizedTI || 0) > 0;
     var slAmortTIMonthlyEx = (slTotals.amortizedTIMonthlyPayment || 0);
+    var slExCapex = getCapexForBuilding(address, slTermMonths, compLabel);
+    var slHasCapexEx = slExCapex.hasCapex;
     var slCols = 8; // Base: Year, Months, Base Rent, Free Rent, Net Rent, OpEx, Parking, Total Cost
     if (slHasTIEx) slCols++;
     if (slHasAmortTIEx) slCols++;
     if (slBF.hasBrokerFee) slCols++;
+    if (slHasCapexEx) slCols++;
     var slWS = XLSX.utils.aoa_to_sheet([['']]);
     var slColWidths = [{ wch: 12 }, { wch: 10 }, { wch: 16 }, { wch: 16 }];
     if (slHasTIEx) slColWidths.push({ wch: 16 }); // TI Credit
@@ -19322,6 +19414,7 @@ function rfpExportExcel() {
     slColWidths.push({ wch: 14 }); // Parking
     if (slHasAmortTIEx) slColWidths.push({ wch: 16 }); // Amort. TI
     if (slBF.hasBrokerFee) slColWidths.push({ wch: 16 });
+    if (slHasCapexEx) slColWidths.push({ wch: 16 }); // LHI Dep.
     slColWidths.push({ wch: 18 }); // Total Cost
     slWS['!cols'] = slColWidths;
     slWS['!rows'] = [{ hpt: 32 }];
@@ -19335,6 +19428,7 @@ function rfpExportExcel() {
     slHeaders.push('Net Rent', 'OpEx', 'Parking');
     if (slHasAmortTIEx) slHeaders.push('Amort. TI');
     if (slBF.hasBrokerFee) slHeaders.push(slBrokerLabel);
+    if (slHasCapexEx) slHeaders.push('LHI Dep.');
     slHeaders.push('Total Cost');
     slHeaders.forEach(function(h, i) { setCell(slWS, 2, i, h, i === 0 ? headerLeftStyle : headerStyle); });
 
@@ -19349,7 +19443,14 @@ function rfpExportExcel() {
     slColIdx.parking = slNextCol; slNextCol++;
     if (slHasAmortTIEx) { slColIdx.amortTI = slNextCol; slNextCol++; }
     if (slBF.hasBrokerFee) { slColIdx.broker = slNextCol; slNextCol++; }
+    if (slHasCapexEx) { slColIdx.lhiDep = slNextCol; slNextCol++; }
     slColIdx.totalCost = slNextCol;
+
+    // Style LHI Dep. header in purple
+    if (slHasCapexEx) {
+      var lhiHdrRef = cellRef(2, slColIdx.lhiDep);
+      if (slWS[lhiHdrRef]) slWS[lhiHdrRef].s = Object.assign({}, headerStyle, { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '7C3AED' } }, fill: { fgColor: { rgb: 'F5F3FF' } } });
+    }
 
     // Helper to get column letter from index
     function slCol(key) {
@@ -19430,10 +19531,24 @@ function rfpExportExcel() {
         setCell(slWS, r, slColIdx.broker, slBF.type === 'credit' ? -bfAmortVal : bfAmortVal, bfStyle);
       }
 
-      // Total Cost = Net Rent + OpEx + Parking [+ Amort TI] [+ Broker Fee if exists]
+      // LHI Depreciation (in-service date aware)
+      if (slHasCapexEx) {
+        var slYearStart = (row.year - 1) * 12 + 1;
+        var slYearEnd = (row.year - 1) * 12 + row.months;
+        var slInService = slExCapex.inServiceMonth || 1;
+        var slDepStart = Math.max(slYearStart, slInService);
+        var slDepEnd = slYearEnd;
+        var slDepMonths = Math.max(0, slDepEnd - slDepStart + 1);
+        var slLhiVal = Math.round(slExCapex.monthlyDepreciation * slDepMonths);
+        var slLhiStyle = Object.assign({}, currStyle, rowFill, { font: { name: 'Calibri', sz: 10, color: { rgb: '7C3AED' } } });
+        setCell(slWS, r, slColIdx.lhiDep, slLhiVal, slLhiStyle);
+      }
+
+      // Total Cost = Net Rent + OpEx + Parking [+ Amort TI] [+ Broker Fee] [+ LHI Dep]
       var slTotalFormula = slCol('netRent') + excelRow + '+' + slCol('opex') + excelRow + '+' + slCol('parking') + excelRow;
       if (slHasAmortTIEx) slTotalFormula += '+' + slCol('amortTI') + excelRow;
       if (slBF.hasBrokerFee) slTotalFormula += '+' + slCol('broker') + excelRow;
+      if (slHasCapexEx) slTotalFormula += '+' + slCol('lhiDep') + excelRow;
       setFormula(slWS, r, slColIdx.totalCost, slTotalFormula, Object.assign({}, currBoldStyle, rowFill));
     });
 
@@ -19749,11 +19864,14 @@ function rfpExportExcel() {
     var cfAmortTIMonthly = (cfTotals.amortizedTIMonthlyPayment || 0);
     var cfAmortTITermMonths = (analysis.straight_line_pl && analysis.straight_line_pl.totals) ? (analysis.straight_line_pl.totals.amortizedTITermMonths || 0) : 0;
     var cfHasTIReceived = ((cfTotals.totalTIReceived || 0) + (cfTotals.totalAmortTIReceived || 0)) > 0;
+    var cfCapex = getCapexForBuilding(address, cfTermMo, compLabel);
+    var cfHasCapex = cfCapex.hasCapex;
     var cfBaseCols = exHasPhasedRSF ? 12 : 11;
     var cfCols = cfBaseCols;
     if (cfHasTIReceived) cfCols++;
     if (cfHasAmortTI) cfCols++;
     if (cfBF.hasBrokerFee) cfCols++;
+    if (cfHasCapex) cfCols++;
     var cfWS = XLSX.utils.aoa_to_sheet([['']]);
     var cfColWidths = [{ wch: 8 }, { wch: 12 }, { wch: 10 }];
     if (exHasPhasedRSF) cfColWidths.push({ wch: 14 });
@@ -19762,6 +19880,7 @@ function rfpExportExcel() {
     cfColWidths = cfColWidths.concat([{ wch: 16 }, { wch: 12 }, { wch: 12 }]);
     if (cfHasAmortTI) cfColWidths.push({ wch: 16 });
     if (cfBF.hasBrokerFee) cfColWidths.push({ wch: 16 });
+    if (cfHasCapex) cfColWidths.push({ wch: 16 });
     cfColWidths = cfColWidths.concat([{ wch: 16 }, { wch: 18 }]);
     cfWS['!cols'] = cfColWidths;
     cfWS['!rows'] = [{ hpt: 32 }];
@@ -19775,11 +19894,13 @@ function rfpExportExcel() {
     cfHeaders = cfHeaders.concat(['Net Cash Rent', 'OpEx', 'Parking']);
     if (cfHasAmortTI) cfHeaders.push('Amort. TI');
     if (cfBF.hasBrokerFee) cfHeaders.push(cfBF.type === 'credit' ? 'Broker Credit' : 'Broker Fee');
+    if (cfHasCapex) cfHeaders.push('CAPEX');
     cfHeaders = cfHeaders.concat(['Total Monthly', 'Cumulative']);
     var cfO = exHasPhasedRSF ? 1 : 0; // column offset for Billable RSF column
     var cfTRO = cfHasTIReceived ? 1 : 0; // column offset for TI Received column
     var cfATO = cfHasAmortTI ? 1 : 0; // column offset for amortized TI column
     var cfBFO = cfBF.hasBrokerFee ? 1 : 0; // column offset for broker fee column
+    var cfCXO = cfHasCapex ? 1 : 0; // column offset for CAPEX column
     cfHeaders.forEach(function(h, i) { setCell(cfWS, 2, i, h, (i < 3 + cfO) ? headerLeftStyle : headerStyle); });
 
     // Cash Flow cross-tab refs
@@ -19861,7 +19982,14 @@ function rfpExportExcel() {
         setCell(cfWS, r, 9 + cfO + cfTRO + cfATO, bfCFVal, bfCFStyle);
       }
 
-      // Total Monthly = Net Rent + OpEx + Parking [+ Amort TI] [+ Broker Fee] [- TI Received]
+      // CAPEX column: payout schedule
+      if (cfHasCapex) {
+        var cfCapexVal = getCapexPaymentForMonth(cfCapex, row.month);
+        var cfCapexStyle = Object.assign({}, currStyle, rowFill, { font: { name: 'Calibri', sz: 10, color: { rgb: '7C3AED' } } });
+        setCell(cfWS, r, 9 + cfO + cfTRO + cfATO + cfBFO, cfCapexVal, cfCapexStyle);
+      }
+
+      // Total Monthly = Net Rent + OpEx + Parking [+ Amort TI] [+ Broker Fee] [+ CAPEX] [- TI Received]
       var netCol = XLSX.utils.encode_col(6 + cfO + cfTRO);
       var opexCol = XLSX.utils.encode_col(7 + cfO + cfTRO);
       var parkCol = XLSX.utils.encode_col(8 + cfO + cfTRO);
@@ -19874,19 +20002,23 @@ function rfpExportExcel() {
         var bfCol = XLSX.utils.encode_col(9 + cfO + cfTRO + cfATO);
         cfTotalFormula += '+' + bfCol + er;
       }
+      if (cfHasCapex) {
+        var cxCol = XLSX.utils.encode_col(9 + cfO + cfTRO + cfATO + cfBFO);
+        cfTotalFormula += '+' + cxCol + er;
+      }
       if (cfHasTIReceived) {
         var tiRecCol = XLSX.utils.encode_col(6 + cfO);
         cfTotalFormula += '-' + tiRecCol + er;
       }
-      setFormula(cfWS, r, 9 + cfO + cfTRO + cfATO + cfBFO, cfTotalFormula, Object.assign({}, currBoldStyle, rowFill));
+      setFormula(cfWS, r, 9 + cfO + cfTRO + cfATO + cfBFO + cfCXO, cfTotalFormula, Object.assign({}, currBoldStyle, rowFill));
 
       // Cumulative = previous cumulative + this month total
-      var totalCol = XLSX.utils.encode_col(9 + cfO + cfTRO + cfATO + cfBFO);
-      var cumCol = XLSX.utils.encode_col(10 + cfO + cfTRO + cfATO + cfBFO);
+      var totalCol = XLSX.utils.encode_col(9 + cfO + cfTRO + cfATO + cfBFO + cfCXO);
+      var cumCol = XLSX.utils.encode_col(10 + cfO + cfTRO + cfATO + cfBFO + cfCXO);
       if (i === 0) {
-        setFormula(cfWS, r, 10 + cfO + cfTRO + cfATO + cfBFO, totalCol + er, Object.assign({}, formulaStyle, rowFill));
+        setFormula(cfWS, r, 10 + cfO + cfTRO + cfATO + cfBFO + cfCXO, totalCol + er, Object.assign({}, formulaStyle, rowFill));
       } else {
-        setFormula(cfWS, r, 10 + cfO + cfTRO + cfATO + cfBFO, cumCol + (er - 1) + '+' + totalCol + er, Object.assign({}, formulaStyle, rowFill));
+        setFormula(cfWS, r, 10 + cfO + cfTRO + cfATO + cfBFO + cfCXO, cumCol + (er - 1) + '+' + totalCol + er, Object.assign({}, formulaStyle, rowFill));
       }
     });
 
@@ -19894,11 +20026,11 @@ function rfpExportExcel() {
     var cfTotalRow = cfStartRow + cfData.length;
     setCell(cfWS, cfTotalRow, 0, 'TOTALS', totalLabelStyle);
     for (var cfPad = 1; cfPad <= 3 + cfO; cfPad++) setCell(cfWS, cfTotalRow, cfPad, '', totalLabelStyle);
-    for (var cc = 4 + cfO; cc <= 9 + cfO + cfTRO + cfATO + cfBFO; cc++) {
+    for (var cc = 4 + cfO; cc <= 9 + cfO + cfTRO + cfATO + cfBFO + cfCXO; cc++) {
       var cLetter = XLSX.utils.encode_cell({ r: 0, c: cc }).replace(/\d+/, '');
       setFormula(cfWS, cfTotalRow, cc, 'SUM(' + cLetter + (cfStartRow + 1) + ':' + cLetter + cfTotalRow + ')', totalRowStyle);
     }
-    setCell(cfWS, cfTotalRow, 10 + cfO + cfTRO + cfATO + cfBFO, '', totalLabelStyle);
+    setCell(cfWS, cfTotalRow, 10 + cfO + cfTRO + cfATO + cfBFO + cfCXO, '', totalLabelStyle);
 
     cfWS['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: cfTotalRow, c: cfCols - 1 } });
     cfWS['!freeze'] = { xSplit: 0, ySplit: 3 };
@@ -19907,6 +20039,12 @@ function rfpExportExcel() {
       var tiRecHdrCol = 6 + cfO;
       var tiRecHdrRef = cellRef(2, tiRecHdrCol);
       if (cfWS[tiRecHdrRef]) cfWS[tiRecHdrRef].s = Object.assign({}, headerStyle, { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '16A34A' } }, fill: { fgColor: { rgb: 'F0FDF4' } } });
+    }
+    // Style CAPEX header in purple
+    if (cfHasCapex) {
+      var cxHdrCol = 9 + cfO + cfTRO + cfATO + cfBFO;
+      var cxHdrRef = cellRef(2, cxHdrCol);
+      if (cfWS[cxHdrRef]) cfWS[cxHdrRef].s = Object.assign({}, headerStyle, { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '7C3AED' } }, fill: { fgColor: { rgb: 'F5F3FF' } } });
     }
     XLSX.utils.book_append_sheet(wb, cfWS, 'Cash Flow');
   }
@@ -20068,7 +20206,18 @@ function rfpExportExcel() {
     cxR++;
     setCell(cxWS, cxR, 0, 'Depreciation Method', metricLabelStyle);
     setCell(cxWS, cxR, 1, 'Straight-line, shorter of useful life or lease term (ASC 842)', Object.assign({}, labelStyle));
-    cxR += 2;
+    cxR++;
+    // Payout schedule info
+    var cxPayoutLabels = { month1: 'Lump Sum (Month 1)', specific_month: 'Specific Month', spread: 'Spread Over Period', milestones: 'Milestone Payments' };
+    setCell(cxWS, cxR, 0, 'Payout Schedule', metricLabelStyle);
+    setCell(cxWS, cxR, 1, cxPayoutLabels[capexExport.payoutType] || 'Lump Sum (Month 1)', Object.assign({}, labelStyle));
+    cxR++;
+    if (capexExport.inServiceMonth > 1) {
+      setCell(cxWS, cxR, 0, 'In-Service Month', metricLabelStyle);
+      setCell(cxWS, cxR, 1, 'Month ' + capexExport.inServiceMonth, Object.assign({}, labelStyle));
+      cxR++;
+    }
+    cxR++;
 
     // Category breakdown
     setCell(cxWS, cxR, 0, 'Category Breakdown', sectionStyle);
@@ -20120,12 +20269,18 @@ function rfpExportExcel() {
     cxR++;
 
     var cxCumDep = 0;
+    var cxInServiceMo = capexExport.inServiceMonth || 1;
     var cxTotalYears = Math.ceil(cxTermYears);
     for (var cxYr = 1; cxYr <= cxTotalYears; cxYr++) {
       var cxMIY = (cxYr === cxTotalYears && capexExportTermMonths % 12 > 0) ? (capexExportTermMonths % 12) : 12;
-      var cDep = Math.min(capexExport.constrMonthlyDep * cxMIY, Math.max(0, capexExport.construction - (capexExport.constrMonthlyDep * 12 * (cxYr - 1))));
-      var fDep = Math.min(capexExport.ffeMonthlyDep * cxMIY, Math.max(0, capexExport.ffe - (capexExport.ffeMonthlyDep * 12 * (cxYr - 1))));
-      var iDep = Math.min(capexExport.itMonthlyDep * cxMIY, Math.max(0, capexExport.it - (capexExport.itMonthlyDep * 12 * (cxYr - 1))));
+      // In-service date aware depreciation
+      var cxYrStart = (cxYr - 1) * 12 + 1;
+      var cxYrEnd = (cxYr - 1) * 12 + cxMIY;
+      var cxDepStart = Math.max(cxYrStart, cxInServiceMo);
+      var cxDepActiveMonths = Math.max(0, cxYrEnd - cxDepStart + 1);
+      var cDep = capexExport.constrMonthlyDep * cxDepActiveMonths;
+      var fDep = capexExport.ffeMonthlyDep * cxDepActiveMonths;
+      var iDep = capexExport.itMonthlyDep * cxDepActiveMonths;
       var yrDep = cDep + fDep + iDep;
       cxCumDep += yrDep;
       var cxRemaining = Math.max(0, capexExport.grandTotal - cxCumDep);
@@ -20771,6 +20926,128 @@ function rfpBuildCapexPanel(selected) {
   });
   html += '</div></div>';
 
+  // ===== PAYOUT SCHEDULE SECTION =====
+  var curPayoutType = a.capex_payout_type || 'month1';
+  var curPayoutMonth = parseInt(a.capex_payout_month) || 1;
+  var curPayoutStart = parseInt(a.capex_payout_start) || 1;
+  var curPayoutEnd = parseInt(a.capex_payout_end) || 1;
+  var curMilestones = [];
+  if (a.capex_milestones) {
+    try { curMilestones = typeof a.capex_milestones === 'string' ? JSON.parse(a.capex_milestones) : a.capex_milestones; } catch(e) { curMilestones = []; }
+  }
+  if (!Array.isArray(curMilestones)) curMilestones = [];
+  var curInServiceMonth = parseInt(a.capex_in_service_month) || 1;
+
+  html += '<div style="' + sectionStyle + '">' +
+    '<div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-3)">' +
+      '<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#7c3aed"></span>' +
+      '<span style="font-weight:600;font-size:var(--text-sm);color:var(--color-text)">CAPEX Payout Schedule</span>' +
+    '</div>';
+
+  // Payout type dropdown
+  html += '<div style="display:flex;gap:var(--space-4);align-items:flex-start;flex-wrap:wrap;margin-bottom:var(--space-3)">';
+  html += '<div style="min-width:200px">' +
+    '<label style="' + labelStyle + '">PAYOUT TYPE</label>' +
+    '<select id="capex-payout-type" onchange="capexPayoutTypeChanged()" style="width:100%;padding:8px 10px;border:1px solid var(--color-border);border-radius:var(--radius-md);font-size:var(--text-sm);background:var(--color-bg);color:var(--color-text);font-family:inherit">' +
+      '<option value="month1"' + (curPayoutType === 'month1' ? ' selected' : '') + '>Lump Sum (Month 1)</option>' +
+      '<option value="specific_month"' + (curPayoutType === 'specific_month' ? ' selected' : '') + '>Specific Month</option>' +
+      '<option value="spread"' + (curPayoutType === 'spread' ? ' selected' : '') + '>Spread Over Period</option>' +
+      '<option value="milestones"' + (curPayoutType === 'milestones' ? ' selected' : '') + '>Milestone Payments</option>' +
+    '</select></div>';
+
+  // Specific month input
+  html += '<div id="capex-payout-month-wrap" style="min-width:120px;' + (curPayoutType !== 'specific_month' ? 'display:none' : '') + '">' +
+    '<label style="' + labelStyle + '">PAYOUT MONTH</label>' +
+    '<input id="capex-payout-month" type="number" min="1" max="' + termMonths + '" value="' + curPayoutMonth + '" style="' + inputStyle + '" />' +
+  '</div>';
+
+  // Spread inputs
+  html += '<div id="capex-payout-spread-wrap" style="display:' + (curPayoutType === 'spread' ? 'flex' : 'none') + ';gap:var(--space-3);align-items:flex-start">' +
+    '<div style="min-width:100px"><label style="' + labelStyle + '">FROM MONTH</label>' +
+      '<input id="capex-payout-start" type="number" min="1" max="' + termMonths + '" value="' + curPayoutStart + '" style="' + inputStyle + '" /></div>' +
+    '<div style="min-width:100px"><label style="' + labelStyle + '">TO MONTH</label>' +
+      '<input id="capex-payout-end" type="number" min="1" max="' + termMonths + '" value="' + curPayoutEnd + '" style="' + inputStyle + '" /></div>' +
+  '</div>';
+
+  html += '</div>';
+
+  // Spread summary
+  if (curPayoutType === 'spread' && grandTotal > 0) {
+    var spreadCount = Math.max(1, curPayoutEnd - curPayoutStart + 1);
+    var spreadAmt = Math.round(grandTotal / spreadCount);
+    html += '<div id="capex-spread-summary" style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-3);padding:6px 10px;background:var(--color-surface-2);border-radius:var(--radius-sm)">' +
+      spreadCount + ' payments of ' + rfpFmtCurrencyPlain(spreadAmt) + ' each</div>';
+  }
+
+  // Milestones editor
+  html += '<div id="capex-milestones-wrap" style="margin-bottom:var(--space-3);' + (curPayoutType !== 'milestones' ? 'display:none' : '') + '">';
+  html += '<div style="font-size:var(--text-xs);font-weight:600;color:var(--color-text-muted);margin-bottom:6px">MILESTONE PAYMENTS (must total 100%)</div>';
+  html += '<div id="capex-milestones-rows">';
+  if (curMilestones.length > 0) {
+    curMilestones.forEach(function(ms, idx) {
+      html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px" data-capex-ms="' + idx + '">' +
+        '<label style="font-size:var(--text-xs);color:var(--color-text-muted)">Month:</label>' +
+        '<input type="number" class="capex-ms-month" value="' + (ms.month || 1) + '" min="1" max="' + termMonths + '" style="width:70px;padding:6px 8px;border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:var(--text-sm)" />' +
+        '<label style="font-size:var(--text-xs);color:var(--color-text-muted)">Percent:</label>' +
+        '<input type="number" class="capex-ms-pct" value="' + (ms.pct || 0) + '" min="0" max="100" style="width:70px;padding:6px 8px;border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:var(--text-sm)" />%' +
+        '<button onclick="this.parentElement.remove()" style="padding:4px 8px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-bg);cursor:pointer;font-size:var(--text-xs);color:#dc2626">Remove</button>' +
+      '</div>';
+    });
+  } else {
+    var defaultCapexMs = [{ month: 1, pct: 30 }, { month: 5, pct: 40 }, { month: 9, pct: 30 }];
+    defaultCapexMs.forEach(function(ms, idx) {
+      html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px" data-capex-ms="' + idx + '">' +
+        '<label style="font-size:var(--text-xs);color:var(--color-text-muted)">Month:</label>' +
+        '<input type="number" class="capex-ms-month" value="' + ms.month + '" min="1" max="' + termMonths + '" style="width:70px;padding:6px 8px;border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:var(--text-sm)" />' +
+        '<label style="font-size:var(--text-xs);color:var(--color-text-muted)">Percent:</label>' +
+        '<input type="number" class="capex-ms-pct" value="' + ms.pct + '" min="0" max="100" style="width:70px;padding:6px 8px;border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:var(--text-sm)" />%' +
+        '<button onclick="this.parentElement.remove()" style="padding:4px 8px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-bg);cursor:pointer;font-size:var(--text-xs);color:#dc2626">Remove</button>' +
+      '</div>';
+    });
+  }
+  html += '</div>';
+  html += '<button onclick="capexAddMilestone()" style="padding:4px 12px;font-size:var(--text-xs);border:1px dashed var(--color-border);border-radius:var(--radius-sm);background:var(--color-bg);cursor:pointer;color:var(--color-text-muted)">+ Add Milestone</button>';
+  html += '</div>';
+
+  // ===== IN-SERVICE DATE SECTION =====
+  html += '<div style="margin-top:var(--space-3)">' +
+    '<label style="' + labelStyle + '">IN-SERVICE MONTH</label>' +
+    '<div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:4px">Month when buildout is complete and depreciation begins.</div>' +
+    '<div style="display:flex;gap:var(--space-3);align-items:center">' +
+      '<input id="capex-in-service-month" type="number" min="1" max="' + termMonths + '" value="' + curInServiceMonth + '" style="width:100px;' + inputStyle + '" />';
+  if (grandTotal > 0 && termMonths > 0) {
+    var depMo = Math.max(0, termMonths - curInServiceMonth + 1);
+    html += '<span style="font-size:var(--text-xs);color:var(--color-text-muted)">Depreciation starts Month ' + curInServiceMonth + ', ' + rfpFmtCurrencyPlain(totalMonthlyDep) + '/mo for ' + depMo + ' months</span>';
+  }
+  html += '</div></div>';
+
+  // ===== PAYOUT PREVIEW TABLE =====
+  if (grandTotal > 0) {
+    var previewCapex = getCapexForBuilding(buildingAddr, termMonths, componentLabel);
+    var previewSchedule = previewCapex.payoutSchedule || [];
+    if (previewSchedule.length > 0) {
+      html += '<div style="margin-top:var(--space-3)">' +
+        '<div style="font-size:var(--text-xs);font-weight:600;color:var(--color-text-muted);margin-bottom:4px">PAYOUT PREVIEW</div>' +
+        '<div class="fin-table-wrap"><table class="fin-table"><thead><tr>' +
+          '<th class="cell-label">Month</th>' +
+          '<th class="cell-currency">Amount</th>' +
+          '<th class="cell-currency">Cumulative</th>' +
+        '</tr></thead><tbody>';
+      var prevCum = 0;
+      previewSchedule.forEach(function(ps) {
+        prevCum += ps.amount;
+        html += '<tr>' +
+          '<td class="cell-label">Month ' + ps.month + '</td>' +
+          '<td class="cell-currency" style="color:#7c3aed">' + rfpFmtCurrency(ps.amount) + '</td>' +
+          '<td class="cell-currency">' + rfpFmtCurrency(prevCum) + '</td>' +
+        '</tr>';
+      });
+      html += '</tbody></table></div></div>';
+    }
+  }
+
+  html += '</div>';
+
   // Save button
   html += '<div style="display:flex;align-items:center;gap:var(--space-3);margin-top:var(--space-4)">' +
     '<button onclick="capexSave()" style="padding:10px 24px;font-size:var(--text-sm);font-weight:600;border-radius:var(--radius-md);border:none;background:#7c3aed;color:white;cursor:pointer;">Save CAPEX</button>' +
@@ -20781,7 +21058,7 @@ function rfpBuildCapexPanel(selected) {
   if (grandTotal > 0 && termMonths > 0) {
     html += '<hr style="border:none;border-top:1px solid var(--color-border);margin:var(--space-5) 0">';
     html += '<div style="font-weight:600;font-size:var(--text-sm);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);margin-bottom:var(--space-2)">LHI Depreciation Schedule (over lease term)</div>';
-    html += '<div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-3)">Per ASC 842, depreciation uses the shorter of useful life or lease term (' + termYears.toFixed(1) + ' years).</div>';
+    html += '<div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-3)">Per ASC 842, depreciation uses the shorter of useful life or lease term (' + termYears.toFixed(1) + ' years).' + (curInServiceMonth > 1 ? ' Depreciation starts month ' + curInServiceMonth + '.' : '') + '</div>';
     html += '<div class="fin-table-wrap"><table class="fin-table"><thead><tr>' +
       '<th class="cell-label">Year</th>' +
       '<th class="cell-currency">Construction</th>' +
@@ -20793,12 +21070,23 @@ function rfpBuildCapexPanel(selected) {
     '</tr></thead><tbody>';
 
     var cumDep = 0;
+    var depInServiceMo = curInServiceMonth || 1;
     var totalYears = Math.ceil(termYears);
     for (var yr = 1; yr <= totalYears; yr++) {
       var monthsInYear = (yr === totalYears && termMonths % 12 > 0) ? (termMonths % 12) : 12;
-      var cDep = Math.min(constrMonthlyDep * monthsInYear, Math.max(0, constrTotal - (constrMonthlyDep * 12 * (yr - 1))));
-      var fDep = Math.min(ffeMonthlyDep * monthsInYear, Math.max(0, ffeTotal - (ffeMonthlyDep * 12 * (yr - 1))));
-      var iDep = Math.min(itMonthlyDep * monthsInYear, Math.max(0, itTotal - (itMonthlyDep * 12 * (yr - 1))));
+      // In-service date aware depreciation
+      var depYrStart = (yr - 1) * 12 + 1;
+      var depYrEnd = (yr - 1) * 12 + monthsInYear;
+      var depActiveStart = Math.max(depYrStart, depInServiceMo);
+      var depActiveEnd = depYrEnd;
+      var depActiveMonths = Math.max(0, depActiveEnd - depActiveStart + 1);
+      var cDep = Math.min(constrMonthlyDep * depActiveMonths, Math.max(0, constrTotal - cumDep * (constrTotal > 0 ? constrTotal / grandTotal : 0)));
+      var fDep = Math.min(ffeMonthlyDep * depActiveMonths, Math.max(0, ffeTotal - cumDep * (ffeTotal > 0 ? ffeTotal / grandTotal : 0)));
+      var iDep = Math.min(itMonthlyDep * depActiveMonths, Math.max(0, itTotal - cumDep * (itTotal > 0 ? itTotal / grandTotal : 0)));
+      // Simpler: just use monthly dep * active months, capped at remaining per category
+      cDep = constrMonthlyDep * depActiveMonths;
+      fDep = ffeMonthlyDep * depActiveMonths;
+      iDep = itMonthlyDep * depActiveMonths;
       var yrTotal = cDep + fDep + iDep;
       cumDep += yrTotal;
       var remaining = Math.max(0, grandTotal - cumDep);
@@ -20895,6 +21183,33 @@ function capexRemoveCustomItem(idx) {
   }
 }
 
+// CAPEX helper: payout type changed
+function capexPayoutTypeChanged() {
+  var type = document.getElementById('capex-payout-type').value;
+  var monthWrap = document.getElementById('capex-payout-month-wrap');
+  var spreadWrap = document.getElementById('capex-payout-spread-wrap');
+  var msWrap = document.getElementById('capex-milestones-wrap');
+  if (monthWrap) monthWrap.style.display = type === 'specific_month' ? '' : 'none';
+  if (spreadWrap) spreadWrap.style.display = type === 'spread' ? 'flex' : 'none';
+  if (msWrap) msWrap.style.display = type === 'milestones' ? '' : 'none';
+}
+
+// CAPEX helper: add milestone
+function capexAddMilestone() {
+  var container = document.getElementById('capex-milestones-rows');
+  if (!container) return;
+  var idx = container.children.length;
+  var div = document.createElement('div');
+  div.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:4px';
+  div.setAttribute('data-capex-ms', idx);
+  div.innerHTML = '<label style="font-size:var(--text-xs);color:var(--color-text-muted)">Month:</label>' +
+    '<input type="number" class="capex-ms-month" value="1" min="1" style="width:70px;padding:6px 8px;border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:var(--text-sm)" />' +
+    '<label style="font-size:var(--text-xs);color:var(--color-text-muted)">Percent:</label>' +
+    '<input type="number" class="capex-ms-pct" value="0" min="0" max="100" style="width:70px;padding:6px 8px;border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:var(--text-sm)" />%' +
+    '<button onclick="this.parentElement.remove()" style="padding:4px 8px;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-bg);cursor:pointer;font-size:var(--text-xs);color:#dc2626">Remove</button>';
+  container.appendChild(div);
+}
+
 // CAPEX save: persist to Supabase via assumptions endpoint
 function capexSave() {
   var container = document.querySelector('[data-capex-building]');
@@ -20931,6 +21246,39 @@ function capexSave() {
     if (depInput) a['capex_' + id + '_depreciation_years'] = parseFloat(depInput.value) || 0;
     a['capex_' + id + '_input_mode'] = mode;
   });
+
+  // Read payout schedule fields
+  var payoutTypeEl = document.getElementById('capex-payout-type');
+  if (payoutTypeEl) a.capex_payout_type = payoutTypeEl.value;
+  var payoutMonthEl = document.getElementById('capex-payout-month');
+  if (payoutMonthEl) a.capex_payout_month = parseInt(payoutMonthEl.value) || 1;
+  var payoutStartEl = document.getElementById('capex-payout-start');
+  if (payoutStartEl) a.capex_payout_start = parseInt(payoutStartEl.value) || 1;
+  var payoutEndEl = document.getElementById('capex-payout-end');
+  if (payoutEndEl) a.capex_payout_end = parseInt(payoutEndEl.value) || 1;
+
+  // Read milestones
+  var capexPayoutType = a.capex_payout_type || 'month1';
+  if (capexPayoutType === 'milestones') {
+    var msRows = document.querySelectorAll('#capex-milestones-rows [data-capex-ms]');
+    var capexMilestones = [];
+    msRows.forEach(function(row) {
+      var month = parseInt(row.querySelector('.capex-ms-month').value) || 1;
+      var pct = parseFloat(row.querySelector('.capex-ms-pct').value) || 0;
+      if (pct > 0) capexMilestones.push({ month: month, pct: pct });
+    });
+    // Validate total = 100%
+    var totalPct = capexMilestones.reduce(function(s, m) { return s + m.pct; }, 0);
+    if (Math.abs(totalPct - 100) > 0.01) {
+      if (status) { status.textContent = 'Milestones must total 100% (currently ' + totalPct.toFixed(1) + '%)'; status.style.color = '#dc2626'; }
+      return;
+    }
+    a.capex_milestones = JSON.stringify(capexMilestones);
+  }
+
+  // Read in-service month
+  var inServiceEl = document.getElementById('capex-in-service-month');
+  if (inServiceEl) a.capex_in_service_month = parseInt(inServiceEl.value) || 1;
 
   window._rfpState.assumptionsMap[assumKey] = a;
 
