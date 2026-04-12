@@ -21715,7 +21715,7 @@ function flatCommCalc() {
   resultDiv.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;">' +
     '<div>' +
       '<div style="font-size:var(--text-xs);color:#6b7280;">FORMULA</div>' +
-      '<div style="font-size:var(--text-sm);color:#334155;margin-top:2px;">' + rfpFmtCurrencyPlain(rate) + '/RSF x ' + rfpFmtNumber(rsf) + ' RSF x ' + years.toFixed(1) + ' ' + yearLabel + ' years</div>' +
+      '<div style="font-size:var(--text-sm);color:#334155;margin-top:2px;">' + getCurrencySymbol() + rate.toFixed(2) + '/RSF x ' + rsf.toLocaleString() + ' RSF x ' + years.toFixed(1) + ' ' + yearLabel + ' years</div>' +
     '</div>' +
     '<div style="text-align:right;">' +
       '<div style="font-size:var(--text-xs);color:#6b7280;">TOTAL COMMISSION</div>' +
