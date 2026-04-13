@@ -18355,6 +18355,19 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
   var hasAmortTI = (totals.totalAmortizedTI || 0) > 0;
   var hasTIReceived = ((totals.totalTIReceived || 0) + (totals.totalAmortTIReceived || 0)) > 0;
 
+  // Internal operating costs from assumptions
+  var cfAssumKey = (buildingAddr || '') + (componentLabel ? '::' + componentLabel : '');
+  var cfAssumData = (window._rfpState && window._rfpState.assumptionsMap && window._rfpState.assumptionsMap[cfAssumKey]) || {};
+  var cfFnB = parseFloat(cfAssumData.opex_food_beverage) || 0;
+  var cfWPE = parseFloat(cfAssumData.opex_workplace_experience) || 0;
+  var cfMnS = parseFloat(cfAssumData.opex_maintenance_security) || 0;
+  var cfCustomInternal = cfAssumData.opex_custom_items || [];
+  if (typeof cfCustomInternal === 'string') { try { cfCustomInternal = JSON.parse(cfCustomInternal); } catch(e) { cfCustomInternal = []; } }
+  var cfCustomTotal = 0;
+  if (Array.isArray(cfCustomInternal)) cfCustomInternal.forEach(function(ci) { cfCustomTotal += parseFloat(ci.amount) || 0; });
+  var cfInternalOpex = cfFnB + cfWPE + cfMnS + cfCustomTotal;
+  var hasInternalOpex = cfInternalOpex > 0;
+
   var html = '<div class="fin-table-wrap"><table class="fin-table">';
   html += '<thead><tr>' +
     '<th class="cell-label">Month</th>' +
@@ -18371,6 +18384,7 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
     (hasAmortTI ? '<th class="cell-currency" style="color:#dc2626">Amort. TI</th>' : '') +
     (capex.hasCapex ? '<th class="cell-currency" style="color:#7c3aed">CAPEX</th>' : '') +
     (brokerFee.hasBrokerFee ? '<th class="cell-currency" style="color:#b45309">Broker ' + (brokerFee.type === 'credit' ? 'Credit' : 'Fee') + '</th>' : '') +
+    (hasInternalOpex ? '<th class="cell-currency" style="color:#2563eb">Internal OpEx</th>' : '') +
     '<th class="cell-currency">Total Monthly</th>' +
     '<th class="cell-currency">Cumulative Cash</th>' +
   '</tr></thead><tbody>';
@@ -18386,8 +18400,8 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
     var brokerThisMonth = 0;
     if (brokerFee.hasBrokerFee && row.month === 1) brokerThisMonth = brokerFee.cashFlowImpact;
     brokerCumulative += brokerThisMonth;
-    var adjustedTotal = row.totalMonthlyCost + capexThisMonth + brokerThisMonth;
-    var adjustedCumulative = row.cumulativeCash + capexCumulative + brokerCumulative;
+    var adjustedTotal = row.totalMonthlyCost + capexThisMonth + brokerThisMonth + cfInternalOpex;
+    var adjustedCumulative = row.cumulativeCash + capexCumulative + brokerCumulative + (cfInternalOpex * row.month);
 
     html += '<tr' + (isFreeRent ? ' style="background:rgba(5,150,105,0.04)"' : ((capexThisMonth > 0 || (row.month === 1 && brokerFee.hasBrokerFee)) ? ' style="background:rgba(124,58,237,0.04)"' : '')) + '>' +
       '<td class="cell-label">' + (row.month || '') + '</td>' +
@@ -18404,6 +18418,7 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
       (hasAmortTI ? '<td class="cell-currency" style="color:#dc2626">' + (row.amortizedTI ? rfpFmtCurrency(row.amortizedTI) : '') + '</td>' : '') +
       (capex.hasCapex ? '<td class="cell-currency" style="color:#7c3aed">' + (capexThisMonth > 0 ? rfpFmtCurrency(capexThisMonth) : '') + '</td>' : '') +
       (brokerFee.hasBrokerFee ? '<td class="cell-currency" style="color:#b45309">' + (brokerThisMonth !== 0 ? (brokerThisMonth < 0 ? '(' + rfpFmtCurrency(Math.abs(brokerThisMonth)) + ')' : rfpFmtCurrency(brokerThisMonth)) : '') + '</td>' : '') +
+      (hasInternalOpex ? '<td class="cell-currency" style="color:#2563eb">' + rfpFmtCurrency(cfInternalOpex) + '</td>' : '') +
       '<td class="cell-currency">' + rfpFmtCurrency(adjustedTotal) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(adjustedCumulative) + '</td>' +
     '</tr>';
