@@ -18368,6 +18368,13 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
   var cfInternalOpex = cfFnB + cfWPE + cfMnS + cfCustomTotal;
   var hasInternalOpex = cfInternalOpex > 0;
 
+  // Security deposit from deal terms
+  var cfSub = rfpGetCurrentSubmission();
+  var cfDealTerms = cfSub ? (cfSub.deal_terms || cfSub.dealTerms || {}) : {};
+  var cfSecDep = parseFloat(cfDealTerms.security_deposit || cfDealTerms.securityDeposit || 0);
+  var hasSecDep = cfSecDep > 0;
+  var cfTermMonths = monthly.length;
+
   var html = '<div class="fin-table-wrap"><table class="fin-table">';
   html += '<thead><tr>' +
     '<th class="cell-label">Month</th>' +
@@ -18385,6 +18392,7 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
     (capex.hasCapex ? '<th class="cell-currency" style="color:#7c3aed">CAPEX</th>' : '') +
     (brokerFee.hasBrokerFee ? '<th class="cell-currency" style="color:#b45309">Broker ' + (brokerFee.type === 'credit' ? 'Credit' : 'Fee') + '</th>' : '') +
     (hasInternalOpex ? '<th class="cell-currency" style="color:#2563eb">Internal OpEx</th>' : '') +
+    (hasSecDep ? '<th class="cell-currency" style="color:#64748b">Security Dep.</th>' : '') +
     '<th class="cell-currency">Total Monthly</th>' +
     '<th class="cell-currency">Cumulative Cash</th>' +
   '</tr></thead><tbody>';
@@ -18400,8 +18408,12 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
     var brokerThisMonth = 0;
     if (brokerFee.hasBrokerFee && row.month === 1) brokerThisMonth = brokerFee.cashFlowImpact;
     brokerCumulative += brokerThisMonth;
-    var adjustedTotal = row.totalMonthlyCost + capexThisMonth + brokerThisMonth + cfInternalOpex;
-    var adjustedCumulative = row.cumulativeCash + capexCumulative + brokerCumulative + (cfInternalOpex * row.month);
+    // Security deposit: outflow in month 1, returned in last month
+    var secDepThisMonth = 0;
+    if (hasSecDep && row.month === 1) secDepThisMonth = cfSecDep;
+    if (hasSecDep && row.month === cfTermMonths) secDepThisMonth = -cfSecDep;
+    var adjustedTotal = row.totalMonthlyCost + capexThisMonth + brokerThisMonth + cfInternalOpex + secDepThisMonth;
+    var adjustedCumulative = row.cumulativeCash + capexCumulative + brokerCumulative + (cfInternalOpex * row.month) + (hasSecDep && row.month < cfTermMonths ? cfSecDep : 0);
 
     html += '<tr' + (isFreeRent ? ' style="background:rgba(5,150,105,0.04)"' : ((capexThisMonth > 0 || (row.month === 1 && brokerFee.hasBrokerFee)) ? ' style="background:rgba(124,58,237,0.04)"' : '')) + '>' +
       '<td class="cell-label">' + (row.month || '') + '</td>' +
@@ -18419,6 +18431,7 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
       (capex.hasCapex ? '<td class="cell-currency" style="color:#7c3aed">' + (capexThisMonth > 0 ? rfpFmtCurrency(capexThisMonth) : '') + '</td>' : '') +
       (brokerFee.hasBrokerFee ? '<td class="cell-currency" style="color:#b45309">' + (brokerThisMonth !== 0 ? (brokerThisMonth < 0 ? '(' + rfpFmtCurrency(Math.abs(brokerThisMonth)) + ')' : rfpFmtCurrency(brokerThisMonth)) : '') + '</td>' : '') +
       (hasInternalOpex ? '<td class="cell-currency" style="color:#2563eb">' + rfpFmtCurrency(cfInternalOpex) + '</td>' : '') +
+      (hasSecDep ? '<td class="cell-currency" style="color:#64748b">' + (secDepThisMonth !== 0 ? (secDepThisMonth > 0 ? rfpFmtCurrency(secDepThisMonth) : '(' + rfpFmtCurrency(Math.abs(secDepThisMonth)) + ')') : '') + '</td>' : '') +
       '<td class="cell-currency">' + rfpFmtCurrency(adjustedTotal) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(adjustedCumulative) + '</td>' +
     '</tr>';
@@ -19936,6 +19949,10 @@ function rfpExportExcel() {
     if (Array.isArray(cfExCustomInt)) cfExCustomInt.forEach(function(ci) { cfExCustomTotal += parseFloat(ci.amount) || 0; });
     var cfExInternalOpex = cfExFnB + cfExWPE + cfExMnS + cfExCustomTotal;
     var cfHasInternal = cfExInternalOpex > 0;
+    // Security deposit from deal terms
+    var cfExSecDep = parseFloat((selected.deal_terms || selected.dealTerms || {}).security_deposit || (selected.deal_terms || selected.dealTerms || {}).securityDeposit || 0);
+    var cfHasSecDep = cfExSecDep > 0;
+    var cfExTermMonths = cfData.length;
     var cfBaseCols = exHasPhasedRSF ? 12 : 11;
     var cfCols = cfBaseCols;
     if (cfHasTIReceived) cfCols++;
@@ -19943,6 +19960,7 @@ function rfpExportExcel() {
     if (cfBF.hasBrokerFee) cfCols++;
     if (cfHasCapex) cfCols++;
     if (cfHasInternal) cfCols++;
+    if (cfHasSecDep) cfCols++;
     var cfWS = XLSX.utils.aoa_to_sheet([['']]);
     var cfColWidths = [{ wch: 8 }, { wch: 12 }, { wch: 10 }];
     if (exHasPhasedRSF) cfColWidths.push({ wch: 14 });
@@ -19953,6 +19971,7 @@ function rfpExportExcel() {
     if (cfBF.hasBrokerFee) cfColWidths.push({ wch: 16 });
     if (cfHasCapex) cfColWidths.push({ wch: 16 });
     if (cfHasInternal) cfColWidths.push({ wch: 16 });
+    if (cfHasSecDep) cfColWidths.push({ wch: 16 });
     cfColWidths = cfColWidths.concat([{ wch: 16 }, { wch: 18 }]);
     cfWS['!cols'] = cfColWidths;
     cfWS['!rows'] = [{ hpt: 32 }];
@@ -19968,6 +19987,7 @@ function rfpExportExcel() {
     if (cfBF.hasBrokerFee) cfHeaders.push(cfBF.type === 'credit' ? 'Broker Credit' : 'Broker Fee');
     if (cfHasCapex) cfHeaders.push('CAPEX');
     if (cfHasInternal) cfHeaders.push('Internal OpEx');
+    if (cfHasSecDep) cfHeaders.push('Security Dep.');
     cfHeaders = cfHeaders.concat(['Total Monthly', 'Cumulative']);
     var cfO = exHasPhasedRSF ? 1 : 0; // column offset for Billable RSF column
     var cfTRO = cfHasTIReceived ? 1 : 0; // column offset for TI Received column
@@ -19975,6 +19995,7 @@ function rfpExportExcel() {
     var cfBFO = cfBF.hasBrokerFee ? 1 : 0; // column offset for broker fee column
     var cfCXO = cfHasCapex ? 1 : 0; // column offset for CAPEX column
     var cfINO = cfHasInternal ? 1 : 0; // column offset for internal opex column
+    var cfSDO = cfHasSecDep ? 1 : 0; // column offset for security deposit column
     cfHeaders.forEach(function(h, i) { setCell(cfWS, 2, i, h, (i < 3 + cfO) ? headerLeftStyle : headerStyle); });
 
     // Cash Flow cross-tab refs
@@ -20085,19 +20106,29 @@ function rfpExportExcel() {
         setCell(cfWS, r, 9 + cfO + cfTRO + cfATO + cfBFO + cfCXO, cfExInternalOpex, Object.assign({}, Object.assign({}, currStyle, { font: { name: 'Calibri', sz: 10, color: { rgb: '2563EB' } } }), rowFill));
         cfTotalFormula += '+' + intCol + er;
       }
+      if (cfHasSecDep) {
+        var sdCol = XLSX.utils.encode_col(9 + cfO + cfTRO + cfATO + cfBFO + cfCXO + cfINO);
+        var sdVal = 0;
+        if (i === 0) sdVal = cfExSecDep;
+        if (i === cfData.length - 1) sdVal = -cfExSecDep;
+        if (sdVal !== 0) {
+          setCell(cfWS, r, 9 + cfO + cfTRO + cfATO + cfBFO + cfCXO + cfINO, sdVal, Object.assign({}, currStyle, rowFill));
+          cfTotalFormula += '+' + sdCol + er;
+        }
+      }
       if (cfHasTIReceived) {
         var tiRecCol = XLSX.utils.encode_col(6 + cfO);
         cfTotalFormula += '-' + tiRecCol + er;
       }
-      setFormula(cfWS, r, 9 + cfO + cfTRO + cfATO + cfBFO + cfCXO + cfINO, cfTotalFormula, Object.assign({}, currBoldStyle, rowFill));
+      setFormula(cfWS, r, 9 + cfO + cfTRO + cfATO + cfBFO + cfCXO + cfINO + cfSDO, cfTotalFormula, Object.assign({}, currBoldStyle, rowFill));
 
       // Cumulative = previous cumulative + this month total
-      var totalCol = XLSX.utils.encode_col(9 + cfO + cfTRO + cfATO + cfBFO + cfCXO + cfINO);
-      var cumCol = XLSX.utils.encode_col(10 + cfO + cfTRO + cfATO + cfBFO + cfCXO + cfINO);
+      var totalCol = XLSX.utils.encode_col(9 + cfO + cfTRO + cfATO + cfBFO + cfCXO + cfINO + cfSDO);
+      var cumCol = XLSX.utils.encode_col(10 + cfO + cfTRO + cfATO + cfBFO + cfCXO + cfINO + cfSDO);
       if (i === 0) {
-        setFormula(cfWS, r, 10 + cfO + cfTRO + cfATO + cfBFO + cfCXO + cfINO, totalCol + er, Object.assign({}, formulaStyle, rowFill));
+        setFormula(cfWS, r, 10 + cfO + cfTRO + cfATO + cfBFO + cfCXO + cfINO + cfSDO, totalCol + er, Object.assign({}, formulaStyle, rowFill));
       } else {
-        setFormula(cfWS, r, 10 + cfO + cfTRO + cfATO + cfBFO + cfCXO + cfINO, cumCol + (er - 1) + '+' + totalCol + er, Object.assign({}, formulaStyle, rowFill));
+        setFormula(cfWS, r, 10 + cfO + cfTRO + cfATO + cfBFO + cfCXO + cfINO + cfSDO, cumCol + (er - 1) + '+' + totalCol + er, Object.assign({}, formulaStyle, rowFill));
       }
     });
 
@@ -20105,11 +20136,11 @@ function rfpExportExcel() {
     var cfTotalRow = cfStartRow + cfData.length;
     setCell(cfWS, cfTotalRow, 0, 'TOTALS', totalLabelStyle);
     for (var cfPad = 1; cfPad <= 3 + cfO; cfPad++) setCell(cfWS, cfTotalRow, cfPad, '', totalLabelStyle);
-    for (var cc = 4 + cfO; cc <= 9 + cfO + cfTRO + cfATO + cfBFO + cfCXO + cfINO; cc++) {
+    for (var cc = 4 + cfO; cc <= 9 + cfO + cfTRO + cfATO + cfBFO + cfCXO + cfINO + cfSDO; cc++) {
       var cLetter = XLSX.utils.encode_cell({ r: 0, c: cc }).replace(/\d+/, '');
       setFormula(cfWS, cfTotalRow, cc, 'SUM(' + cLetter + (cfStartRow + 1) + ':' + cLetter + cfTotalRow + ')', totalRowStyle);
     }
-    setCell(cfWS, cfTotalRow, 10 + cfO + cfTRO + cfATO + cfBFO + cfCXO + cfINO, '', totalLabelStyle);
+    setCell(cfWS, cfTotalRow, 10 + cfO + cfTRO + cfATO + cfBFO + cfCXO + cfINO + cfSDO, '', totalLabelStyle);
 
     cfWS['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: cfTotalRow, c: cfCols - 1 } });
     cfWS['!freeze'] = { xSplit: 0, ySplit: 3 };
