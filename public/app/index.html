@@ -10219,8 +10219,8 @@ BUILDINGS.forEach((b) => {
     offset: [0, -10]
   });
 
-  // Open on hover, but keep open when mouse enters popup
-  marker.on('mouseover', function() {
+  // Open on click instead of hover (prevents tooltip pile-up on dense areas)
+  marker.on('click', function() {
     if (this._bulkNIPopupDisabled) return;
     this.openPopup();
   });
@@ -11100,7 +11100,7 @@ SURVEY_BUILDINGS.forEach((b) => {
     offset: [0, -5]
   });
 
-  marker.on('mouseover', function() {
+  marker.on('click', function() {
     if (this._bulkNIPopupDisabled) return;
     this.openPopup();
   });
@@ -11155,7 +11155,7 @@ if (allMarkers.length > 0) {
         closeButton: true, autoPan: true,
         autoPanPadding: [20, 20], offset: [0, -5]
       });
-      marker.on('mouseover', function() { if (this._bulkNIPopupDisabled) return; this.openPopup(); });
+      marker.on('click', function() { if (this._bulkNIPopupDisabled) return; this.openPopup(); });
       surveyMarkers.push(marker);
     });
 
