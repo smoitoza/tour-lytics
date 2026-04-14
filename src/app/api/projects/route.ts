@@ -182,6 +182,9 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
     }
 
+    // Always touch updated_at on any project edit
+    updates.updated_at = new Date().toISOString()
+
     const { error } = await supabase
       .from('projects')
       .update(updates)
