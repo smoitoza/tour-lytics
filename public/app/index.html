@@ -17110,7 +17110,6 @@ function rfpBuildCombinedView(componentMap, address) {
 
   // RENT ANALYSIS
   sectionRow('Rent Analysis');
-  compRow('Effective Rent/RSF', components.map(function(c) { return c.summary.effectiveRentRSF || 0; }), 'curr_dec', '', 'Net rent per RSF after TI credit is spread over the term');
   compRow('SL Annual Gross Rent (Base + Opex)', components.map(function(c) { return c.summary.straightLineAnnualExpense || 0; }), 'curr', '', 'Straight-line annual: rent + OpEx + parking, after TI credit, averaged evenly across the lease');
   compRow('Total All-in Cost (Base Rent + Opex)', components.map(function(c) { return c.summary.totalAllInCost || 0; }), 'curr', '', 'Total absolute dollars: rent + OpEx + parking over the full term (varies by RSF)');
   compRow('Effective Gross Rent/RSF/yr', components.map(function(c) {
@@ -17390,7 +17389,6 @@ function rfpBuildCombinedExcelSheet(wb, cd) {
 
   // === RENT ANALYSIS ===
   addSection('Rent Analysis');
-  addRow('Effective Rent/RSF', comps.map(function(c) { return c.summary.effectiveRentRSF || 0; }), 'curr_dec', 'curr_dec', 'Net rent per RSF after TI credit is spread over the term');
   addRow('SL Annual Gross Rent (Base + Opex)', comps.map(function(c) { return c.summary.straightLineAnnualExpense || 0; }), 'curr', 'curr', 'Straight-line annual: rent + OpEx + parking, after TI credit, averaged evenly across the lease');
   addRow('Total All-in Cost (Base Rent + Opex)', comps.map(function(c) { return c.summary.totalAllInCost || 0; }), 'curr', 'curr', 'Total absolute dollars: rent + OpEx + parking over the full term');
   addRow('Effective Gross Rent/RSF/yr', comps.map(function(c) {
@@ -17767,7 +17765,6 @@ function rfpShowVersionComparison(buildingAddress) {
     { key: 'parkingRate', label: 'Parking Rate', fmt: 'currency_dec' },
     { key: 'securityDeposit', label: 'Security Deposit', fmt: 'currency' },
     // Summary metrics
-    { key: 'effectiveRentRSF', label: 'Effective Rent/RSF', fmt: 'currency_dec', fromSummary: true },
     { key: 'straightLineAnnualExpense', label: 'SL Annual Gross Rent (Base + Opex)', fmt: 'currency', fromSummary: true },
     { key: 'totalAllInCost', label: 'Total All-in Cost (Base Rent + Opex)', fmt: 'currency', fromSummary: true },
     { key: 'totalAllInCostPerRSF', label: 'Effective Gross Rent/RSF/yr', fmt: 'currency_dec', computed: 'totalAllInPerRSF' },
@@ -22403,7 +22400,7 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
     // Rent: year then month together
     ['Base Rent/RSF/yr', function(d) { return getYear1BaseRentRSF(d.terms); }, true, 'curr_dec'],
     ['Rent/SF/mo', function(d) { return Math.round(getYear1BaseRentRSF(d.terms) / 12 * 100) / 100; }, true, 'curr_dec'],
-    ['Effective Rent/RSF', function(d) { return d.summary.effectiveRentRSF; }, true, 'curr_dec'],
+
     // OpEx: year then month together
     ['OpEx/SF/mo', function(d) {
       var rsf = d.summary.rsf || 0; var termMo = d.summary.termMonths || 1;
