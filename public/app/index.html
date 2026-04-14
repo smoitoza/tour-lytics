@@ -23254,7 +23254,7 @@ function _opRenderCard(bd, selected) {
   h += '</div>';
 
   // Column headers
-  h += '<div style="display:grid;grid-template-columns:200px ' + bd.map(function() { return '1fr'; }).join(' ') + changeCols + ';border-bottom:2px solid #e2e8f0;">';
+  h += '<div style="display:grid;grid-template-columns:200px ' + bd.map(function() { return 'minmax(120px, 1fr)'; }).join(' ') + changeCols + ';border-bottom:2px solid #e2e8f0;">';
   h += '<div style="padding:14px 16px;background:#f8fafc;"></div>';
   bd.forEach(function(b, ci) {
     var accent = colAccents[ci % colAccents.length];
@@ -23285,7 +23285,7 @@ function _opRenderCard(bd, selected) {
 
       // Group header row
       var groupNote = group.label === 'Operating Costs' ? '<span style="font-size:9px;color:#2563eb;font-weight:500;text-transform:none;letter-spacing:0;margin-left:6px;">(included in SL Total Occupancy)</span>' : '';
-      h += '<div style="display:grid;grid-template-columns:200px ' + bd.map(function() { return '1fr'; }).join(' ') + changeCols + ';background:#f1f5f9;">';
+      h += '<div style="display:grid;grid-template-columns:200px ' + bd.map(function() { return 'minmax(120px, 1fr)'; }).join(' ') + changeCols + ';background:#f1f5f9;">';
       h += '<div style="padding:6px 16px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;">' + group.label + groupNote + '</div>';
       bd.forEach(function() { h += '<div style="padding:6px 16px;"></div>'; });
       if (showChangeCol) h += '<div style="padding:6px 16px;"></div>';
@@ -23294,10 +23294,10 @@ function _opRenderCard(bd, selected) {
       groupSelected.forEach(function(m) {
         var values = bd.map(function(d) { return m.getter(d); });
 
-        h += '<div style="display:grid;grid-template-columns:200px ' + bd.map(function() { return '1fr'; }).join(' ') + changeCols + ';border-bottom:1px solid #f1f5f9;">';
+        h += '<div style="display:grid;grid-template-columns:200px ' + bd.map(function() { return 'minmax(120px, 1fr)'; }).join(' ') + changeCols + ';border-bottom:1px solid #f1f5f9;">';
         h += '<div style="padding:12px 16px;font-size:13px;color:#64748b;display:flex;align-items:center;">' + m.label + '</div>';
         values.forEach(function(v) {
-          h += '<div style="padding:12px 16px;text-align:right;font-size:17px;font-weight:700;color:#0f172a;">';
+          h += '<div style="padding:12px 16px;text-align:right;font-size:15px;font-weight:700;color:#0f172a;white-space:nowrap;">';
           h += _opFmtVal(v, m.fmt);
           h += '</div>';
         });
