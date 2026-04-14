@@ -7,6 +7,13 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
+// Touch project updated_at so dashboard sorts correctly
+async function touchProject(projectId: string) {
+  try {
+    await supabase.from('projects').update({ updated_at: new Date().toISOString() }).eq('id', projectId)
+  } catch { /* non-critical */ }
+}
+
 // GET - fetch assumptions for a project + building (or all buildings)
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
@@ -181,5 +188,6 @@ export async function POST(req: Request) {
   }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  await touchProject(projectId)
   return NextResponse.json(data)
 }

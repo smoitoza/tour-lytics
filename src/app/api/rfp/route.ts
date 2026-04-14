@@ -13,6 +13,13 @@ const supabase = createClient(
 
 const anthropic = new Anthropic()
 
+// Touch project updated_at so dashboard sorts correctly
+async function touchProject(projectId: string) {
+  try {
+    await supabase.from('projects').update({ updated_at: new Date().toISOString() }).eq('id', projectId)
+  } catch { /* non-critical */ }
+}
+
 // GET - fetch all RFP submissions for a project
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
@@ -133,6 +140,7 @@ export async function POST(req: Request) {
       .single()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    await touchProject(projectId)
     return NextResponse.json(data)
   }
 
@@ -156,6 +164,7 @@ export async function POST(req: Request) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  await touchProject(projectId)
   return NextResponse.json(data)
 }
 
@@ -243,12 +252,16 @@ export async function DELETE(req: Request) {
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
 
+  // Get project_id before archiving so we can touch the project
+  const { data: sub } = await supabase.from('rfp_submissions').select('project_id').eq('id', id).single()
+
   const { error } = await supabase
     .from('rfp_submissions')
     .update({ status: 'archived', updated_at: new Date().toISOString() })
     .eq('id', id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (sub?.project_id) await touchProject(sub.project_id)
   return NextResponse.json({ success: true })
 }
 

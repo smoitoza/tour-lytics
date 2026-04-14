@@ -15349,6 +15349,9 @@ function rfpInit() {
   var email = getCurrentUserEmail();
   var pid = getProjectId();
 
+  // Touch project updated_at so dashboard sorts by recent activity
+  fetch('/api/projects/touch?projectId=' + encodeURIComponent(pid), { method: 'POST' }).catch(function() {});
+
   // Load assumptions and submissions in parallel, render only after BOTH complete
   var assumptionsPromise = fetch('/api/assumptions?projectId=' + pid + (email ? '&userEmail=' + encodeURIComponent(email) : ''))
     .then(function(r) { return r.json(); })

@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
       .select('*')
       .in('id', projectIds)
       .neq('status', 'deleted')
-      .order('created_at', { ascending: false })
+      .order('updated_at', { ascending: false })
 
     if (projectError) {
       return NextResponse.json({ error: projectError.message }, { status: 500 })
