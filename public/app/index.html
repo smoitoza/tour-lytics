@@ -7365,8 +7365,8 @@ body {
 
     /* Comparison table enhancements */
     .rfp-comparison-table { width: 100%; }
-    .rfp-comparison-table .cell-best { color: #059669; font-weight: 700; background: rgba(5, 150, 105, 0.06); }
-    .rfp-comparison-table .cell-worst { color: #dc2626; font-weight: 600; background: rgba(220, 38, 38, 0.04); }
+    .rfp-comparison-table .cell-best { color: var(--color-text); font-weight: 600; }
+    .rfp-comparison-table .cell-worst { color: var(--color-text); font-weight: 600; }
     .rfp-compare-version-select {
       display: block; margin: 4px 0 0 auto; padding: 3px 6px; font: inherit; font-size: 12px;
       border: 1px solid #e2e8f0; border-radius: 4px; background: #fff; color: #334155;
@@ -7553,8 +7553,8 @@ body {
 
       /* Comparison table: same freeze-pane treatment */
       .rfp-comparison-table { min-width: 420px; }
-      .rfp-comparison-table .cell-best.cell-label { background: rgba(5, 150, 105, 0.06); }
-      .rfp-comparison-table .cell-worst.cell-label { background: rgba(220, 38, 38, 0.04); }
+      .rfp-comparison-table .cell-best.cell-label { background: transparent; }
+      .rfp-comparison-table .cell-worst.cell-label { background: transparent; }
 
       /* Top nav tabs */
       .page-tabs { padding: var(--space-1) var(--space-2); gap: var(--space-1); }
@@ -16987,8 +16987,21 @@ function rfpBuildCombinedView(componentMap, address) {
   }
   html += '</div>';
 
+  // Building selector
+  if (components.length > 2) {
+    html += '<div style="display:flex;align-items:center;gap:var(--space-3);margin:var(--space-3) 0;padding:var(--space-2) var(--space-3);background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-md);flex-wrap:wrap;">';
+    html += '<span style="font-size:var(--text-xs);font-weight:600;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.04em;">Show Buildings:</span>';
+    components.forEach(function(c, i) {
+      html += '<label style="display:flex;align-items:center;gap:4px;font-size:var(--text-sm);cursor:pointer;">';
+      html += '<input type="checkbox" checked onchange="toggleCompareBuilding(' + i + ', this.checked)" style="cursor:pointer;" />';
+      html += '<span>' + esc(c.label) + '</span>';
+      html += '</label>';
+    });
+    html += '</div>';
+  }
+
   // Per-component cards
-  html += '<div style="display:grid;grid-template-columns:repeat(' + components.length + ', 1fr);gap:var(--space-3);margin:var(--space-4) 0;">';
+  html += '<div id="compare-cards" style="display:grid;grid-template-columns:repeat(' + components.length + ', 1fr);gap:var(--space-3);margin:var(--space-4) 0;">';
   components.forEach(function(c) {
     html += '<div style="padding:var(--space-4);border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-bg);">';
     var vLabel = c.submission.version_label || c.submission.versionLabel || '';
@@ -22274,6 +22287,25 @@ if (!window._rfpState.compareVersions) window._rfpState.compareVersions = {};
 function rfpCompareVersionChange(buildingKey, submissionId) {
   window._rfpState.compareVersions[buildingKey] = submissionId;
   rfpRenderDashboard(window._rfpState.submissions);
+}
+
+function toggleCompareBuilding(colIdx, visible) {
+  // Toggle visibility of a building column in the comparison table
+  // Hide/show the card
+  var cards = document.querySelectorAll('#compare-cards > div');
+  if (cards[colIdx]) cards[colIdx].style.display = visible ? '' : 'none';
+  // Hide/show table columns (colIdx + 1 because first col is the label)
+  var table = document.querySelector('.rfp-comparison-table');
+  if (!table) return;
+  var rows = table.querySelectorAll('tr');
+  rows.forEach(function(row) {
+    var cells = row.children;
+    // Column index in the table: colIdx + 1 (skip label column)
+    var cellIdx = colIdx + 1;
+    if (cells[cellIdx]) {
+      cells[cellIdx].style.display = visible ? '' : 'none';
+    }
+  });
 }
 
 function rfpBuildComparisonHtml(submissions, byBuilding) {
