@@ -18052,12 +18052,9 @@ function rfpOpenVersionOnePager() {
     var bfMo = brokerFee.hasBrokerFee ? (brokerFee.slMonthlyImpact || 0) : 0;
     var atMo = (cfTotals.amortizedTIMonthlyPayment || 0);
     var slAllIn = Math.round(slMo + opexMo + parkMo + lhiMo + bfMo + atMo);
-    // Stepped-rent-aware base rent per month
-    var effectiveBaseRent = parseFloat(terms.base_rent_rsf) || parseFloat(terms.baseRent) || 0;
-    var rp = terms.rent_periods || terms.rentPeriods;
-    if (rp && Array.isArray(rp) && rp.length > 0) {
-      var firstPaid = rp.find(function(p) { return p.rent_rsf_yr > 0; });
-      if (firstPaid) effectiveBaseRent = firstPaid.rent_rsf_yr;
+    // Stepped-rent-aware base rent per month (de-escalated to year 1)
+    var effectiveBaseRent = getYear1BaseRentRSF(terms);
+    if (false) { // kept for reference
     }
     var baseRentPerMo = effectiveBaseRent > 0 ? Math.round(effectiveBaseRent / 12 * 100) / 100 : 0;
     return {
@@ -22384,12 +22381,8 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
     ['RSF', function(d) { return d.summary.rsf; }, false, 'num'],
     ['Term (months)', function(d) { return d.summary.termMonths; }, false, 'num'],
     // Rent: year then month together
-    ['Base Rent/RSF/yr', function(d) { return d.terms.base_rent_rsf || d.terms.baseRent; }, true, 'curr_dec'],
-    ['Rent/SF/mo', function(d) {
-      var rsf = d.summary.rsf || 0; var termMo = d.summary.termMonths || 1;
-      var cfTot = (d.cfTotals || {}); var totalBaseRent = cfTot.totalBaseRent || 0;
-      return rsf > 0 ? Math.round(totalBaseRent / termMo / rsf * 100) / 100 : 0;
-    }, true, 'curr_dec'],
+    ['Base Rent/RSF/yr', function(d) { return getYear1BaseRentRSF(d.terms); }, true, 'curr_dec'],
+    ['Rent/SF/mo', function(d) { return Math.round(getYear1BaseRentRSF(d.terms) / 12 * 100) / 100; }, true, 'curr_dec'],
     ['Effective Rent/RSF', function(d) { return d.summary.effectiveRentRSF; }, true, 'curr_dec'],
     // OpEx: year then month together
     ['OpEx/SF/mo', function(d) {
