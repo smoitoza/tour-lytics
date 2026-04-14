@@ -150,13 +150,13 @@ export default function LandingPage() {
             <a href="#commute-demo" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Commute</a>
             <a href="#features" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }} onMouseEnter={e => (e.target as HTMLElement).style.color = '#0f172a'} onMouseLeave={e => (e.target as HTMLElement).style.color = '#475569'}>Features</a>
             <Link href="/investors" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }}>Investors</Link>
-            <Link
-              href="/login?signup=true"
+            <a
+              href="mailto:scott@tourlytics.ai?subject=Request%20Beta%20Access%20%2F%20Demo&body=Hi%20Scott%2C%0A%0AI%27d%20like%20to%20request%20beta%20access%20or%20a%20demo%20of%20TourLytics.%0A%0AName%3A%20%0ACompany%3A%20%0ARole%3A%20%0A"
               className="font-semibold text-sm no-underline transition-all"
               style={{ backgroundColor: '#ffffff', color: '#0f172a', padding: '0.5rem 1.25rem', borderRadius: '0.75rem', border: '1px solid #e2e8f0' }}
             >
-              Create Account
-            </Link>
+              Request Demo
+            </a>
             <Link
               href="/login"
               className="font-semibold text-sm no-underline transition-all"
@@ -199,7 +199,7 @@ export default function LandingPage() {
               <a href="#commute-demo" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Commute</a>
               <a href="#features" onClick={() => setMobileMenuOpen(false)} className="text-base no-underline" style={{ color: '#475569' }}>Features</a>
               <Link href="/investors" className="text-base no-underline" style={{ color: '#475569' }}>Investors</Link>
-              <Link href="/login?signup=true" className="text-center font-semibold text-sm no-underline" style={{ backgroundColor: '#ffffff', color: '#0f172a', padding: '0.75rem 1.5rem', borderRadius: '0.75rem', marginTop: '0.5rem' }}>Create Account</Link>
+              <a href="mailto:scott@tourlytics.ai?subject=Request%20Beta%20Access%20%2F%20Demo&body=Hi%20Scott%2C%0A%0AI%27d%20like%20to%20request%20beta%20access%20or%20a%20demo%20of%20TourLytics.%0A%0AName%3A%20%0ACompany%3A%20%0ARole%3A%20%0A" className="text-center font-semibold text-sm no-underline" style={{ backgroundColor: '#ffffff', color: '#0f172a', padding: '0.75rem 1.5rem', borderRadius: '0.75rem', marginTop: '0.5rem' }}>Request Demo</a>
               <Link href="/login" className="text-center font-semibold text-sm no-underline" style={{ backgroundColor: '#2563eb', color: '#fff', padding: '0.75rem 1.5rem', borderRadius: '0.75rem' }}>Sign In</Link>
             </div>
           </div>
@@ -253,14 +253,14 @@ export default function LandingPage() {
               Request Demo
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
             </a>
-            <Link
-              href="/login?signup=true"
+            <a
+              href="mailto:scott@tourlytics.ai?subject=Request%20Beta%20Access%20%2F%20Demo&body=Hi%20Scott%2C%0A%0AI%27d%20like%20to%20request%20beta%20access%20or%20a%20demo%20of%20TourLytics.%0A%0AName%3A%20%0ACompany%3A%20%0ARole%3A%20%0A"
               className="inline-flex items-center font-semibold no-underline transition-all"
               style={{ gap: '0.5rem', backgroundColor: '#ffffff', color: '#0f172a', padding: '0.75rem 2rem', borderRadius: '0.75rem', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', border: 'none', cursor: 'pointer' }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4-4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" /></svg>
-              Create Account
-            </Link>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              Request Demo
+            </a>
             <a
               href="#demo"
               className="inline-flex items-center font-medium no-underline transition-all"
