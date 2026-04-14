@@ -7365,16 +7365,16 @@ body {
 
     /* Comparison table enhancements */
     .rfp-comparison-table { width: 100%; }
-    .rfp-comparison-table .cell-best { color: var(--color-text); font-weight: 600; }
-    .rfp-comparison-table .cell-worst { color: var(--color-text); font-weight: 600; }
+    .rfp-comparison-table .cell-best { color: var(--color-text); }
+    .rfp-comparison-table .cell-worst { color: var(--color-text); }
     .rfp-compare-version-select {
       display: block; margin: 4px 0 0 auto; padding: 3px 6px; font: inherit; font-size: 12px;
       border: 1px solid #e2e8f0; border-radius: 4px; background: #fff; color: #334155;
-      cursor: pointer; max-width: 180px; text-align: right;
+      cursor: pointer; max-width: 100%; text-align: right;
     }
     .rfp-compare-version-select:focus { outline: none; border-color: #7c3aed; box-shadow: 0 0 0 2px rgba(124,58,237,0.15); }
     .rfp-compare-version-label {
-      display: block; margin: 4px 0 0 auto; font-size: 12px; color: #94a3b8; max-width: 180px; text-align: right;
+      display: block; margin: 4px 0 0 auto; font-size: 12px; color: #94a3b8; max-width: 100%; text-align: right; word-wrap: break-word;
     }
 
     /* Detail panel */
@@ -22508,7 +22508,7 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
   html += '<div class="fin-table-wrap"><table class="fin-table rfp-comparison-table">';
   html += '<thead><tr><th class="cell-label">Metric</th>';
   buildingData.forEach(function(b) {
-    html += '<th style="text-align:right;min-width:160px">';
+    html += '<th style="text-align:right;min-width:180px;">';
     html += '<div>' + b.address + '</div>';
     if (b.allSubs.length > 1) {
       var bk = b.buildingKey.replace(/'/g, "\\'");
@@ -22560,7 +22560,7 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
       var display;
       if (typeof v === 'string') {
         display = v;
-      } else if (label === 'RSF' || label === 'Term (months)') {
+      } else if (label === 'RSF' || label === 'Term (months)' || label === 'Free Rent (months)') {
         display = rfpFmtNum(v);
       } else if (isAssumption && (v === 0 || v == null)) {
         display = '--';
