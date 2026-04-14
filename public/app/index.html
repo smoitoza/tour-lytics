@@ -22527,9 +22527,22 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
     }
     html += '</th>';
   });
+  // Delta column header for exactly 2 buildings
+  var showDelta = buildingData.length === 2;
+  if (showDelta) {
+    html += '<th style="text-align:right;min-width:140px;color:#2563eb;font-weight:700;">Delta</th>';
+  }
   html += '</tr></thead><tbody>';
 
   var highlightLabels = { 'Total All-in Cost (Base Rent + Opex)': true, 'All-In Monthly': true, 'All-In Annual': true, 'NPV @ 8%': true };
+
+  function fmtDelta(v, fmt) {
+    if (v == null || isNaN(v) || v === 0) return '--';
+    var sym = getCurrencySymbol();
+    if (fmt === 'curr_dec') return sym + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (fmt === 'num') return Math.abs(v).toLocaleString('en-US');
+    return sym + Math.abs(Math.round(v)).toLocaleString('en-US');
+  }
 
   function renderMetricRow(label, getter, lowerIsBetter, isAssumption, fmt) {
     var values = buildingData.map(function(d) { return getter(d); });
@@ -22571,6 +22584,20 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
       }
       html += '<td class="' + cls + '"' + (isHighlight ? ' style="font-weight:700"' : '') + '>' + display + '</td>';
     });
+    // Delta column
+    if (showDelta) {
+      var fromVal = Number(values[0]) || 0;
+      var toVal = Number(values[1]) || 0;
+      var diff = toVal - fromVal;
+      var deltaHTML = '<span style="color:#94a3b8;">--</span>';
+      if (fromVal > 0 && diff !== 0) {
+        var pct = ((diff / fromVal) * 100).toFixed(1);
+        var arrow = diff > 0 ? '\u2191' : '\u2193';
+        var isNumLabel = (label === 'RSF' || label === 'Term (months)' || label === 'Free Rent (months)');
+        deltaHTML = '<span style="color:#2563eb;font-weight:600;">' + arrow + ' ' + fmtDelta(Math.abs(diff), isNumLabel ? 'num' : fmt) + ' (' + (diff > 0 ? '+' : '') + pct + '%)</span>';
+      }
+      html += '<td style="text-align:right;font-size:var(--text-xs);padding:8px 14px;">' + deltaHTML + '</td>';
+    }
     html += '</tr>';
   }
 
@@ -22579,7 +22606,7 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
 
   // Assumptions section (separator + rows)
   if (hasAnyAssumptions) {
-    html += '<tr><td colspan="' + (buildingData.length + 1) + '" style="padding:var(--space-2) var(--space-3);font-weight:700;font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);background:var(--color-bg-alt);border-top:2px solid var(--color-border)">Your Assumptions</td></tr>';
+    html += '<tr><td colspan="' + (buildingData.length + 1 + (showDelta ? 1 : 0)) + '" style="padding:var(--space-2) var(--space-3);font-weight:700;font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);background:var(--color-bg-alt);border-top:2px solid var(--color-border)">Your Assumptions</td></tr>';
     assumptionMetrics.forEach(function(m) { renderMetricRow(m[0], m[1], m[2], true); });
   }
 
