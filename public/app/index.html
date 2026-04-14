@@ -17111,7 +17111,7 @@ function rfpBuildCombinedView(componentMap, address) {
   // RENT ANALYSIS
   sectionRow('Rent Analysis');
   compRow('SL Annual Gross Rent (Base + Opex)', components.map(function(c) { return c.summary.straightLineAnnualExpense || 0; }), 'curr', '', 'Straight-line annual: rent + OpEx + parking, after TI credit, averaged evenly across the lease');
-  compRow('Total All-in Cost (Base Rent + Opex)', components.map(function(c) { return c.summary.totalAllInCost || 0; }), 'curr', '', 'Total absolute dollars: rent + OpEx + parking over the full term (varies by RSF)');
+  compRow('Total All-in Cost', components.map(function(c) { return (c.totals.totalBaseRent || 0) + (c.totals.totalOpex || 0); }), 'curr', '', 'Total Base Rent + Total OpEx over the full lease term');
   compRow('Effective Gross Rent/RSF/yr', components.map(function(c) {
     var rsf = c.summary.rsf || 0; var termYrs = (c.summary.termMonths || 1) / 12;
     return rsf > 0 ? Math.round((c.summary.totalAllInCost || 0) / termYrs / rsf * 100) / 100 : 0;
@@ -17396,7 +17396,7 @@ function rfpBuildCombinedExcelSheet(wb, cd) {
   // === RENT ANALYSIS ===
   addSection('Rent Analysis');
   addRow('SL Annual Gross Rent (Base + Opex)', comps.map(function(c) { return c.summary.straightLineAnnualExpense || 0; }), 'curr', 'curr', 'Straight-line annual: rent + OpEx + parking, after TI credit, averaged evenly across the lease');
-  addRow('Total All-in Cost (Base Rent + Opex)', comps.map(function(c) { return c.summary.totalAllInCost || 0; }), 'curr', 'curr', 'Total absolute dollars: rent + OpEx + parking over the full term');
+  addRow('Total All-in Cost', comps.map(function(c) { return (c.totals.totalBaseRent || 0) + (c.totals.totalOpex || 0); }), 'curr', 'curr', 'Total Base Rent + Total OpEx over the full lease term');
   addRow('Effective Gross Rent/RSF/yr', comps.map(function(c) {
     var rsf = c.summary.rsf || 0; var termYrs = (c.summary.termMonths || 1) / 12;
     return rsf > 0 ? Math.round((c.summary.totalAllInCost || 0) / termYrs / rsf * 100) / 100 : 0;
@@ -17778,7 +17778,7 @@ function rfpShowVersionComparison(buildingAddress) {
     { key: 'securityDeposit', label: 'Security Deposit', fmt: 'currency' },
     // Summary metrics
     { key: 'straightLineAnnualExpense', label: 'SL Annual Gross Rent (Base + Opex)', fmt: 'currency', fromSummary: true },
-    { key: 'totalAllInCost', label: 'Total All-in Cost (Base Rent + Opex)', fmt: 'currency', fromSummary: true },
+    { key: 'totalAllInCost', label: 'Total All-in Cost', fmt: 'currency', computed: 'totalAllInGross' },
     { key: 'totalAllInCostPerRSF', label: 'Effective Gross Rent/RSF/yr', fmt: 'currency_dec', computed: 'totalAllInPerRSF' },
     { key: 'totalConcessions', label: 'Total Concessions', fmt: 'currency', fromSummary: true },
     { key: 'npv', label: 'NPV @ 8%', fmt: 'currency', computed: 'npv' },
@@ -17835,6 +17835,11 @@ function rfpShowVersionComparison(buildingAddress) {
       if (field.computed === 'opexPerSFMo') return Math.round((cf2.totalOpex || 0) / termMo2 / rsf2 * 100) / 100;
       if (field.computed === 'fsgPerSFMo') return Math.round(((cf2.totalBaseRent || 0) + (cf2.totalOpex || 0)) / termMo2 / rsf2 * 100) / 100;
       return 0;
+    }
+    // Total All-in Cost (gross = base rent + opex)
+    if (field.computed === 'totalAllInGross') {
+      var tagCf = (sub.analysis && sub.analysis.cash_flow && sub.analysis.cash_flow.totals) || {};
+      return (tagCf.totalBaseRent || 0) + (tagCf.totalOpex || 0);
     }
     // Total All-in Cost per RSF/yr
     if (field.computed === 'totalAllInPerRSF') {
@@ -20521,7 +20526,7 @@ function rfpExportExcel() {
       // Summary metrics
       { key: 'effectiveRentRSF', label: 'Effective Rent/RSF', type: 'curr_dec', src: 'summary' },
       { key: 'straightLineAnnualExpense', label: 'SL Annual Gross Rent (Base + Opex)', type: 'curr', src: 'summary' },
-      { key: 'totalAllInCost', label: 'Total All-in Cost (Base Rent + Opex)', type: 'curr', src: 'summary' },
+      { key: 'totalAllInCost', label: 'Total All-in Cost', type: 'curr', src: 'computed_totalAllInGross' },
       { key: 'totalAllInCostPerRSF', label: 'Effective Gross Rent/RSF/yr', type: 'curr_dec', src: 'computed_totalAllInPerRSF' },
       { key: 'totalConcessions', label: 'Total Concessions', type: 'curr', src: 'summary' },
       // Internal OpEx (from assumptions)
@@ -20561,6 +20566,9 @@ function rfpExportExcel() {
         if (f.src === 'summary') {
           var sm = (s.analysis && s.analysis.summary) || {};
           val = sm[f.key] || 0;
+        } else if (f.src === 'computed_totalAllInGross') {
+          var tagCf2 = (s.analysis && s.analysis.cash_flow && s.analysis.cash_flow.totals) || {};
+          val = (tagCf2.totalBaseRent || 0) + (tagCf2.totalOpex || 0);
         } else if (f.src === 'computed_totalAllInPerRSF') {
           var taSm2 = (s.analysis && s.analysis.summary) || {};
           var taRsf2 = taSm2.rsf || 0; var taTermYrs2 = (taSm2.termMonths || 1) / 12;
@@ -22436,7 +22444,9 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
       return rsf > 0 ? Math.round((totalRent + totalOpex) / termMo / rsf * 100) / 100 : 0;
     }, true, 'curr_dec'],
     // Totals
-    ['Total All-in Cost (Base Rent + Opex)', function(d) { return d.summary.totalAllInCost; }, true, 'curr'],
+    ['Total Base Rent', function(d) { return (d.cfTotals || {}).totalBaseRent || 0; }, true, 'curr'],
+    ['Total OpEx', function(d) { return (d.cfTotals || {}).totalOpex || 0; }, true, 'curr'],
+    ['Total All-in Cost', function(d) { return ((d.cfTotals || {}).totalBaseRent || 0) + ((d.cfTotals || {}).totalOpex || 0); }, true, 'curr'],
     ['Effective Gross Rent/RSF/yr', function(d) {
       var rsf = d.summary.rsf || 0; var termYrs = (d.summary.termMonths || 1) / 12;
       return rsf > 0 ? Math.round((d.summary.totalAllInCost || 0) / termYrs / rsf * 100) / 100 : 0;
@@ -22534,7 +22544,7 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
   }
   html += '</tr></thead><tbody>';
 
-  var highlightLabels = { 'Total All-in Cost (Base Rent + Opex)': true, 'All-In Monthly': true, 'All-In Annual': true, 'NPV @ 8%': true };
+  var highlightLabels = { 'Total All-in Cost': true, 'All-In Monthly': true, 'All-In Annual': true, 'NPV @ 8%': true };
 
   function fmtDelta(v, fmt) {
     if (v == null || isNaN(v) || v === 0) return '--';
@@ -22675,7 +22685,7 @@ function rfpExportComparison(target) {
   }
 
   // Key metric labels that should be highlighted
-  var highlightLabels = { 'Total All-in Cost (Base Rent + Opex)': true, 'All-In Monthly': true, 'All-In Annual': true, 'NPV @ 8%': true };
+  var highlightLabels = { 'Total All-in Cost': true, 'All-In Monthly': true, 'All-In Annual': true, 'NPV @ 8%': true };
 
   // Build raw data array for formulas, then apply styles
   var data = [];
@@ -22703,6 +22713,8 @@ function rfpExportComparison(target) {
   var npvPerRSFRow = -1;
   var rsfRow = -1;
   var termRow = -1;
+  var totalBaseRentRow = -1;
+  var totalOpexRow = -1;
   var totalAllInRow = -1;
   var rentSFMoRow = -1;
   var opexSFMoRow = -1;
@@ -22752,7 +22764,9 @@ function rfpExportComparison(target) {
     if (label === 'Rent/SF/mo') rentSFMoRow = data.length;
     if (label === 'OpEx/SF/mo') opexSFMoRow = data.length;
     if (label === 'Full Service Gross/SF/mo') fullServiceGrossRow = data.length;
-    if (label === 'Total All-in Cost (Base Rent + Opex)') totalAllInRow = data.length;
+    if (label === 'Total Base Rent') totalBaseRentRow = data.length;
+    if (label === 'Total OpEx') totalOpexRow = data.length;
+    if (label === 'Total All-in Cost') totalAllInRow = data.length;
     if (label === 'SL Monthly Base Rent') slMonthlyRow = data.length;
     if (label === 'SL Annual Gross Rent (Base + Opex)') slAnnualRow = data.length;
     if (label === 'Free Rent Value') freeRentRow = data.length;
@@ -22965,6 +22979,14 @@ function rfpExportComparison(target) {
     }
   }
 
+  // Total All-in Cost = Total Base Rent + Total OpEx
+  if (totalAllInRow >= 0 && totalBaseRentRow >= 0 && totalOpexRow >= 0) {
+    for (var tai = 1; tai <= bd.length; tai++) {
+      var tail = colLetter(tai);
+      setFormula(totalAllInRow, tai, tail + (totalBaseRentRow + 1) + '+' + tail + (totalOpexRow + 1));
+    }
+  }
+
   // SL Annual Expense = SL Monthly Rent * 12
   if (slMonthlyRow >= 0 && slAnnualRow >= 0) {
     for (var c = 1; c <= bd.length; c++) {
@@ -23154,7 +23176,7 @@ var _onePagerGroups = [
     metrics: [
       { key: 'totalBaseRent', label: 'Total Base Rent',            getter: function(d) { return (d.cfTotals || {}).totalBaseRent || 0; }, fmt: 'curr' },
       { key: 'totalOpex',     label: 'Total OpEx',                 getter: function(d) { return (d.cfTotals || {}).totalOpex || 0; }, fmt: 'curr' },
-      { key: 'totalAllIn',    label: 'Total All-in Cost (Base Rent + Opex)',          getter: function(d) { return d.summary.totalAllInCost || 0; }, fmt: 'curr' },
+      { key: 'totalAllIn',    label: 'Total All-in Cost',          getter: function(d) { return ((d.cfTotals || {}).totalBaseRent || 0) + ((d.cfTotals || {}).totalOpex || 0); }, fmt: 'curr' },
       { key: 'totalAllInRSF', label: 'Effective Gross Rent/RSF/yr',   getter: function(d) { var rsf = d.summary.rsf || 0; var yr = (d.summary.termMonths || 1) / 12; return rsf > 0 ? Math.round((d.summary.totalAllInCost || 0) / yr / rsf * 100) / 100 : 0; }, fmt: 'curr_dec' },
       { key: 'totalAllInRSFMo', label: 'Effective Gross Rent/RSF/Month', getter: function(d) { var rsf = d.summary.rsf || 0; var yr = (d.summary.termMonths || 1) / 12; return rsf > 0 ? Math.round((d.summary.totalAllInCost || 0) / yr / rsf / 12 * 100) / 100 : 0; }, fmt: 'curr_dec' },
       { key: 'slMonthly',     label: 'SL Monthly Base Rent',       getter: function(d) { return d.summary.straightLineMonthlyRent || 0; }, fmt: 'curr' },
