@@ -20168,9 +20168,15 @@ function rfpExportExcel() {
   if (analysis.gaap) {
     var gaapSummary = analysis.gaap.summary || {};
     var gaapSchedule = analysis.gaap.schedule || [];
-    var gCols = 10;
+    // Check for CAPEX/LHI depreciation early for column count
+    var gCapexEarly = (typeof getCapexForBuilding === 'function') ? getCapexForBuilding(address, (analysis.summary && analysis.summary.termMonths) || 0, compLabel) : { hasCapex: false };
+    var gHasLHIEarly = gCapexEarly.hasCapex;
+    var gCols = gHasLHIEarly ? 11 : 10;
     var gWS = XLSX.utils.aoa_to_sheet([['']]);
-    gWS['!cols'] = [{ wch: 8 }, { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 18 }];
+    var gColWidths = [{ wch: 8 }, { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 14 }];
+    if (gHasLHIEarly) gColWidths.push({ wch: 16 }); // LHI Dep.
+    gColWidths.push({ wch: 18 }); // Total GAAP Exp
+    gWS['!cols'] = gColWidths;
     gWS['!rows'] = [{ hpt: 32 }];
     gWS['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: gCols - 1 } }];
     setCell(gWS, 0, 0, 'GAAP / ASC 842 Analysis - ' + address + titleSuffix, titleStyle);
@@ -20230,8 +20236,20 @@ function rfpExportExcel() {
 
     // Schedule header
     var gHdrRow = 3 + gaapMetricsCount + 1;
-    var gHeaders = ['Mo', 'Period', 'Cash Payment', 'Interest Exp', 'Principal Red.', 'Lease Liability', 'ROU Amort.', 'ROU Asset', 'SL Expense', 'Total GAAP Exp'];
-    gHeaders.forEach(function(h, i) { setCell(gWS, gHdrRow, i, h, (i < 2) ? headerLeftStyle : headerStyle); });
+    // Check for CAPEX/LHI depreciation
+    var gCapex = (typeof getCapexForBuilding === 'function') ? getCapexForBuilding(address, (analysis.summary && analysis.summary.termMonths) || 0, compLabel) : { hasCapex: false };
+    var gHasLHI = gCapex.hasCapex;
+    var gLHIMonthly = gHasLHI ? (gCapex.monthlyDepreciation || 0) : 0;
+    var gInServiceMonth = gHasLHI ? (gCapex.inServiceMonth || 1) : 1;
+    var gHeaders = ['Mo', 'Period', 'Cash Payment', 'Interest Exp', 'Principal Red.', 'Lease Liability', 'ROU Amort.', 'ROU Asset', 'SL Expense'];
+    if (gHasLHI) gHeaders.push('LHI Dep.');
+    gHeaders.push('Total GAAP Exp');
+    var gCols = gHeaders.length;
+    gHeaders.forEach(function(h, i) {
+      var style = (i < 2) ? headerLeftStyle : headerStyle;
+      if (gHasLHI && h === 'LHI Dep.') style = Object.assign({}, headerStyle, { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '7C3AED' } } });
+      setCell(gWS, gHdrRow, i, h, style);
+    });
 
     var gStartRow = gHdrRow + 1;
     gaapSchedule.forEach(function(row, i) {
@@ -20277,8 +20295,21 @@ function rfpExportExcel() {
       // Col I: SL Expense (straight-line - kept as value for now)
       setCell(gWS, r, 8, n(row.straightLineExpense), Object.assign({}, currStyle, rowFill));
 
-      // Col J: Total GAAP Expense = Interest + ROU Amortization
-      setFormula(gWS, r, 9, 'D' + er + '+G' + er, Object.assign({}, currBoldStyle, rowFill));
+      // Col J (or K): LHI Depreciation (if CAPEX exists), then Total GAAP Expense
+      var gLHIOffset = gHasLHI ? 1 : 0;
+      if (gHasLHI) {
+        var lhiVal = (row.month >= gInServiceMonth) ? Math.round(gLHIMonthly) : 0;
+        var lhiStyle = Object.assign({}, currStyle, { font: { name: 'Calibri', sz: 10, color: { rgb: '7C3AED' } } });
+        setCell(gWS, r, 9, lhiVal, Object.assign({}, lhiStyle, rowFill));
+      }
+
+      // Total GAAP Expense = Interest + ROU Amortization [+ LHI Dep]
+      var gTotalCol = 9 + gLHIOffset;
+      var gTotalFormula = 'D' + er + '+G' + er;
+      if (gHasLHI) {
+        gTotalFormula += '+J' + er;
+      }
+      setFormula(gWS, r, gTotalCol, gTotalFormula, Object.assign({}, currBoldStyle, rowFill));
     });
 
     var gLastRow = gStartRow + gaapSchedule.length - 1;
