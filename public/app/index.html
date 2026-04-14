@@ -23145,6 +23145,10 @@ function rfpOpenOnePagerModal() {
   var existing = document.getElementById('onePagerModal');
   if (existing) existing.remove();
 
+  // Reset building/version filters
+  window._opSelectedBuildings = null;
+  window._opAllBuildingData = null;
+
   var selected = {};
   _onePagerDefaults.forEach(function(k) { selected[k] = true; });
 
@@ -23171,6 +23175,26 @@ function rfpOpenOnePagerModal() {
 
     // Left: metric picker
     h += '<div class="op-left-panel" style="width:320px;min-width:320px;padding:16px 20px;overflow-y:auto;border-right:1px solid #e2e8f0;">';
+
+    // Building selector (for cross-building comparisons with 2+ buildings)
+    var isVersionMode = bd.length > 1 && bd.every(function(b) { return b.address === bd[0].address; });
+    if (!isVersionMode && bd.length >= 2) {
+      if (!window._opSelectedBuildings) {
+        window._opSelectedBuildings = {};
+        bd.forEach(function(b, i) { window._opSelectedBuildings[i] = true; });
+      }
+      h += '<div style="margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #e2e8f0;">';
+      h += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;margin-bottom:8px;">Buildings to Show</div>';
+      bd.forEach(function(b, i) {
+        var checked = window._opSelectedBuildings[i] !== false;
+        var shortAddr = b.address.length > 35 ? b.address.substring(0, 35) + '...' : b.address;
+        h += '<label style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:6px;cursor:pointer;margin-bottom:2px;' + (checked ? 'background:#eff6ff;' : '') + '">';
+        h += '<input type="checkbox" ' + (checked ? 'checked' : '') + ' onchange="window._opSelectedBuildings[' + i + ']=this.checked;window._opApplyBuildingFilter()" style="accent-color:#2563eb;width:14px;height:14px;">';
+        h += '<span style="font-size:12px;color:#334155;">' + esc(shortAddr) + '</span>';
+        h += '</label>';
+      });
+      h += '</div>';
+    }
 
     // Version selector (only for version comparisons)
     if (window._rfpAllVersionBd && window._rfpAllVersionBd.length > 1 && bd.length > 1 && bd.every(function(b) { return b.address === bd[0].address; })) {
@@ -23230,6 +23254,19 @@ function rfpOpenOnePagerModal() {
   window._opSelected = selected;
 
   // Version filter: update buildingData to only include selected versions
+  // Store the full building data for filtering
+  if (!window._opAllBuildingData) window._opAllBuildingData = cd.buildingData.slice();
+
+  window._opApplyBuildingFilter = function() {
+    var allBd = window._opAllBuildingData;
+    var filtered = allBd.filter(function(b, i) {
+      return window._opSelectedBuildings[i] !== false;
+    });
+    if (filtered.length === 0) filtered = allBd;
+    cd.buildingData = filtered;
+    renderModal();
+  };
+
   window._opApplyVersionFilter = function() {
     if (!window._rfpAllVersionBd) return;
     var filtered = window._rfpAllVersionBd.filter(function(b, i) {
