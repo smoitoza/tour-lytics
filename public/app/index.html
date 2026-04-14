@@ -16698,6 +16698,12 @@ function rfpBuildDetailHtml(subs) {
   var docType = selected.doc_type || selected.docType || 'RFP';
   var canDelete = hasAdminAccess();
 
+  // Always set version one-pager data so the button works even with 1 version
+  window._rfpVersionOnePagerData = {
+    address: address,
+    subs: filteredSubs || sorted
+  };
+
   var html = '<div style="margin-top:var(--space-4)">';
 
   // Header
