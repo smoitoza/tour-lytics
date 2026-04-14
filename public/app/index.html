@@ -16793,7 +16793,7 @@ function rfpBuildDetailHtml(subs) {
       '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtNum(summary.rsf) + '</div><div class="rfp-metric-label">RSF</div></div>' +
       '<div class="rfp-metric"><div class="rfp-metric-value">' + (summary.termMonths || '--') + ' mo</div><div class="rfp-metric-label">Lease Term</div></div>' +
       '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(summary.effectiveRentRSF) + '</div><div class="rfp-metric-label">Effective Rent/RSF</div></div>' +
-      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(summary.straightLineAnnualExpense) + '</div><div class="rfp-metric-label">SL Annual Expense</div></div>' +
+      '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(summary.straightLineAnnualExpense) + '</div><div class="rfp-metric-label">SL Annual Gross Rent</div></div>' +
       '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(summary.totalAllInCost) + '</div><div class="rfp-metric-label">Total All-in Cost</div></div>' +
       '<div class="rfp-metric"><div class="rfp-metric-value">' + rfpFmtCurrencyPlain(summary.totalConcessions) + '</div><div class="rfp-metric-label">Total Concessions</div></div>' +
     '</div>';
@@ -17013,7 +17013,7 @@ function rfpBuildCombinedView(componentMap, address) {
     var cBFMo = (c.brokerFee && c.brokerFee.hasBrokerFee) ? (c.brokerFee.slMonthlyImpact || 0) : 0;
     var cAmortTIMo = (c.totals.amortizedTIMonthlyPayment || 0);
     var cSlWithLHI = Math.round(cSlAllIn + cParkMo + ((c.capex && c.capex.hasCapex) ? (c.capex.monthlyDepreciation || 0) : 0) + cBFMo + cAmortTIMo);
-    var cSlLabel = 'SL Monthly All-in' + ((anyCapex || anyBrokerFee) ? ' + LHI' : '') + (anyBrokerFee ? ' + Fees' : '');
+    var cSlLabel = 'SL Monthly (Base + Opex + LHI + Free Rent + TI Value)';
     // Per-component Full Service Gross/SF/mo
     var cRsf = c.summary.rsf || 0;
     var cTermMo = c.summary.termMonths || 1;
@@ -17111,9 +17111,9 @@ function rfpBuildCombinedView(componentMap, address) {
   // RENT ANALYSIS
   sectionRow('Rent Analysis');
   compRow('Effective Rent/RSF', components.map(function(c) { return c.summary.effectiveRentRSF || 0; }), 'curr_dec', '', 'Net rent per RSF after TI credit is spread over the term');
-  compRow('SL Annual Expense', components.map(function(c) { return c.summary.straightLineAnnualExpense || 0; }), 'curr', '', 'Straight-line annual: rent + OpEx + parking, after TI credit, averaged evenly across the lease');
-  compRow('Total All-in Cost', components.map(function(c) { return c.summary.totalAllInCost || 0; }), 'curr', '', 'Total absolute dollars: rent + OpEx + parking over the full term (varies by RSF)');
-  compRow('Total All-in Cost/RSF/yr', components.map(function(c) {
+  compRow('SL Annual Gross Rent (Base + Opex)', components.map(function(c) { return c.summary.straightLineAnnualExpense || 0; }), 'curr', '', 'Straight-line annual: rent + OpEx + parking, after TI credit, averaged evenly across the lease');
+  compRow('Total All-in Cost (Base Rent + Opex)', components.map(function(c) { return c.summary.totalAllInCost || 0; }), 'curr', '', 'Total absolute dollars: rent + OpEx + parking over the full term (varies by RSF)');
+  compRow('Effective Gross Rent/RSF/yr', components.map(function(c) {
     var rsf = c.summary.rsf || 0; var termYrs = (c.summary.termMonths || 1) / 12;
     return rsf > 0 ? Math.round((c.summary.totalAllInCost || 0) / termYrs / rsf * 100) / 100 : 0;
   }), 'curr_dec', '', 'Normalized cost per RSF per year (comparable across different sized spaces)');
@@ -17168,7 +17168,7 @@ function rfpBuildCombinedView(componentMap, address) {
   if (anyCapex || anyBrokerFee) {
     var slSectionLabel = 'Straight-Line All-in (incl. TI' + (anyCapex ? ' + LHI' : '') + (anyBrokerFee ? ' + Fees' : '') + ')';
     sectionRow(slSectionLabel);
-    var slRowLabel = 'SL Monthly All-in' + (anyCapex ? ' + LHI' : '') + (anyBrokerFee ? ' + Fees' : '');
+    var slRowLabel = 'SL Monthly (Base + Opex + LHI + Free Rent + TI Value)';
     var slRowDesc = 'SL rent + OpEx + parking, after TI credit' + (anyCapex ? ' + LHI depreciation' : '') + (anyBrokerFee ? ' + broker fee amortization' : '');
     compRow(slRowLabel, components.map(function(c) {
       var slAllInMonthly = (c.summary.straightLineAnnualExpense || 0) / 12;
@@ -17391,9 +17391,9 @@ function rfpBuildCombinedExcelSheet(wb, cd) {
   // === RENT ANALYSIS ===
   addSection('Rent Analysis');
   addRow('Effective Rent/RSF', comps.map(function(c) { return c.summary.effectiveRentRSF || 0; }), 'curr_dec', 'curr_dec', 'Net rent per RSF after TI credit is spread over the term');
-  addRow('SL Annual Expense', comps.map(function(c) { return c.summary.straightLineAnnualExpense || 0; }), 'curr', 'curr', 'Straight-line annual: rent + OpEx + parking, after TI credit, averaged evenly across the lease');
-  addRow('Total All-in Cost', comps.map(function(c) { return c.summary.totalAllInCost || 0; }), 'curr', 'curr', 'Total absolute dollars: rent + OpEx + parking over the full term');
-  addRow('Total All-in Cost/RSF/yr', comps.map(function(c) {
+  addRow('SL Annual Gross Rent (Base + Opex)', comps.map(function(c) { return c.summary.straightLineAnnualExpense || 0; }), 'curr', 'curr', 'Straight-line annual: rent + OpEx + parking, after TI credit, averaged evenly across the lease');
+  addRow('Total All-in Cost (Base Rent + Opex)', comps.map(function(c) { return c.summary.totalAllInCost || 0; }), 'curr', 'curr', 'Total absolute dollars: rent + OpEx + parking over the full term');
+  addRow('Effective Gross Rent/RSF/yr', comps.map(function(c) {
     var rsf = c.summary.rsf || 0; var termYrs = (c.summary.termMonths || 1) / 12;
     return rsf > 0 ? Math.round((c.summary.totalAllInCost || 0) / termYrs / rsf * 100) / 100 : 0;
   }), 'curr_dec', 'curr_dec', 'Normalized cost per RSF per year');
@@ -17449,9 +17449,9 @@ function rfpBuildCombinedExcelSheet(wb, cd) {
       var parkMo = (c.totals.totalParking || 0) / (c.summary.termMonths || 1);
       return Math.round(slAllIn + parkMo + (c.capex.monthlyDepreciation || 0) + (c.totals.amortizedTIMonthlyPayment || 0));
     });
-    addRow('SL Monthly All-in + LHI', slMonthlyAllInVals, 'curr', 'curr', 'SL rent + OpEx + parking + LHI depreciation, after TI credit');
-    // SL Annual All-in + LHI = monthly * 12 (formula)
-    setCell(r, 0, 'SL Annual All-in + LHI', labelStyle);
+    addRow('SL Monthly (Base + Opex + LHI + Free Rent + TI Value)', slMonthlyAllInVals, 'curr', 'curr', 'SL rent + OpEx + parking + LHI depreciation, after TI credit');
+    // SL Annual (Base + Opex + LHI + Free Rent + TI Value) = monthly * 12 (formula)
+    setCell(r, 0, 'SL Annual (Base + Opex + LHI + Free Rent + TI Value)', labelStyle);
     comps.forEach(function(c, i) {
       setFormula(r, i + 1, cellRef(r - 1, i + 1) + '*12', currStyle);
     });
@@ -17768,9 +17768,9 @@ function rfpShowVersionComparison(buildingAddress) {
     { key: 'securityDeposit', label: 'Security Deposit', fmt: 'currency' },
     // Summary metrics
     { key: 'effectiveRentRSF', label: 'Effective Rent/RSF', fmt: 'currency_dec', fromSummary: true },
-    { key: 'straightLineAnnualExpense', label: 'SL Annual Expense', fmt: 'currency', fromSummary: true },
-    { key: 'totalAllInCost', label: 'Total All-in Cost', fmt: 'currency', fromSummary: true },
-    { key: 'totalAllInCostPerRSF', label: 'Total All-in Cost/RSF/yr', fmt: 'currency_dec', computed: 'totalAllInPerRSF' },
+    { key: 'straightLineAnnualExpense', label: 'SL Annual Gross Rent (Base + Opex)', fmt: 'currency', fromSummary: true },
+    { key: 'totalAllInCost', label: 'Total All-in Cost (Base Rent + Opex)', fmt: 'currency', fromSummary: true },
+    { key: 'totalAllInCostPerRSF', label: 'Effective Gross Rent/RSF/yr', fmt: 'currency_dec', computed: 'totalAllInPerRSF' },
     { key: 'totalConcessions', label: 'Total Concessions', fmt: 'currency', fromSummary: true },
     { key: 'npv', label: 'NPV @ 8%', fmt: 'currency', computed: 'npv' },
     { key: 'npvPerRSF', label: 'NPV per RSF', fmt: 'currency', computed: 'npvPerRSF' },
@@ -19748,7 +19748,7 @@ function rfpExportExcel() {
       setFormula(slWS, smRow, 1, 'IF(' + DT + dtRefs.rsf + '>0,' + capexTotalRef + '/' + DT + dtRefs.rsf + ',0)', metricValDecStyle);
       smRow++;
 
-      var slLHILabel = exportBrokerFee.hasBrokerFee ? 'SL Monthly All-in + LHI + Fees' : 'SL Monthly All-in + LHI';
+      var slLHILabel = 'SL Monthly (Base + Opex + LHI + Free Rent + TI Value)';
       setCell(slWS, smRow, 0, slLHILabel, metricLabelStyle);
       var slLHIFormula = slMonthlyRentRef + '+' + DT + dtRefs.opex_monthly + '+' + DT + dtRefs.parking_spots + '*' + DT + dtRefs.parking_rate + '+' + lhiMonthlyRef;
       if (slHasAmortTIEx) slLHIFormula += '+' + slAmortTIMonthlyEx;
@@ -19756,7 +19756,7 @@ function rfpExportExcel() {
       setFormula(slWS, smRow, 1, slLHIFormula, Object.assign({}, metricValStyle, { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: '1E293B' } } }));
       smRow++;
 
-      var slLHIAnnLabel = exportBrokerFee.hasBrokerFee ? 'SL Annual All-in + LHI + Fees' : 'SL Annual All-in + LHI';
+      var slLHIAnnLabel = 'SL Annual (Base + Opex + LHI + Free Rent + TI Value)';
       setCell(slWS, smRow, 0, slLHIAnnLabel, metricLabelStyle);
       setFormula(slWS, smRow, 1, 'B' + smRow + '*12', Object.assign({}, metricValStyle, { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: '1E293B' } } }));
       smRow++;
@@ -19792,12 +19792,12 @@ function rfpExportExcel() {
 
       // SL with broker fee (if no CAPEX, show the all-in with fees)
       if (!exportCapex.hasCapex) {
-        setCell(slWS, smRow, 0, 'SL Monthly All-in + Fees', metricLabelStyle);
+        setCell(slWS, smRow, 0, 'SL Monthly (Base + Opex + LHI + Free Rent + TI Value)', metricLabelStyle);
         var bfAllInFormula = slMonthlyRentRef + '+' + DT + dtRefs.opex_monthly + '+' + DT + dtRefs.parking_spots + '*' + DT + dtRefs.parking_rate + '+' + exportBrokerFee.slMonthlyImpact;
         if (slHasAmortTIEx) bfAllInFormula += '+' + slAmortTIMonthlyEx;
         setFormula(slWS, smRow, 1, bfAllInFormula, Object.assign({}, metricValStyle, { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: '1E293B' } } }));
         smRow++;
-        setCell(slWS, smRow, 0, 'SL Annual All-in + Fees', metricLabelStyle);
+        setCell(slWS, smRow, 0, 'SL Annual (Base + Opex + LHI + Free Rent + TI Value)', metricLabelStyle);
         setFormula(slWS, smRow, 1, 'B' + smRow + '*12', Object.assign({}, metricValStyle, { font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: '1E293B' } } }));
         smRow++;
       }
@@ -20511,9 +20511,9 @@ function rfpExportExcel() {
       { key: 'security_deposit', label: 'Security Deposit', type: 'curr', src: 'terms' },
       // Summary metrics
       { key: 'effectiveRentRSF', label: 'Effective Rent/RSF', type: 'curr_dec', src: 'summary' },
-      { key: 'straightLineAnnualExpense', label: 'SL Annual Expense', type: 'curr', src: 'summary' },
-      { key: 'totalAllInCost', label: 'Total All-in Cost', type: 'curr', src: 'summary' },
-      { key: 'totalAllInCostPerRSF', label: 'Total All-in Cost/RSF/yr', type: 'curr_dec', src: 'computed_totalAllInPerRSF' },
+      { key: 'straightLineAnnualExpense', label: 'SL Annual Gross Rent (Base + Opex)', type: 'curr', src: 'summary' },
+      { key: 'totalAllInCost', label: 'Total All-in Cost (Base Rent + Opex)', type: 'curr', src: 'summary' },
+      { key: 'totalAllInCostPerRSF', label: 'Effective Gross Rent/RSF/yr', type: 'curr_dec', src: 'computed_totalAllInPerRSF' },
       { key: 'totalConcessions', label: 'Total Concessions', type: 'curr', src: 'summary' },
       // Internal OpEx (from assumptions)
       { key: 'intFB', label: 'F&B (monthly)', type: 'curr', src: 'computed_int' },
@@ -22417,13 +22417,13 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
       return rsf > 0 ? Math.round((totalRent + totalOpex) / termMo / rsf * 100) / 100 : 0;
     }, true, 'curr_dec'],
     // Totals
-    ['Total All-in Cost', function(d) { return d.summary.totalAllInCost; }, true, 'curr'],
-    ['Total All-in Cost/RSF/yr', function(d) {
+    ['Total All-in Cost (Base Rent + Opex)', function(d) { return d.summary.totalAllInCost; }, true, 'curr'],
+    ['Effective Gross Rent/RSF/yr', function(d) {
       var rsf = d.summary.rsf || 0; var termYrs = (d.summary.termMonths || 1) / 12;
       return rsf > 0 ? Math.round((d.summary.totalAllInCost || 0) / termYrs / rsf * 100) / 100 : 0;
     }, true, 'curr_dec'],
-    ['SL Monthly Rent', function(d) { return d.summary.straightLineMonthlyRent; }, true, 'curr'],
-    ['SL Annual Expense', function(d) { return d.summary.straightLineAnnualExpense; }, true, 'curr'],
+    ['SL Monthly Base Rent', function(d) { return d.summary.straightLineMonthlyRent; }, true, 'curr'],
+    ['SL Annual Gross Rent (Base + Opex)', function(d) { return d.summary.straightLineAnnualExpense; }, true, 'curr'],
     ['Free Rent Value', function(d) { return d.summary.freeRentValue; }, false, 'curr'],
     ['TI Value', function(d) { return d.summary.tiValue; }, false, 'curr'],
     ['Total Concessions', function(d) { return d.summary.totalConcessions; }, false, 'curr'],
@@ -22447,9 +22447,8 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
 
   // SL All-in with LHI + Fees
   if (hasAnyCapex || hasAnyBrokerFee) {
-    var slLabel = 'SL Monthly All-in' + (hasAnyCapex ? ' + LHI' : '') + (hasAnyBrokerFee ? ' + Fees' : '');
-    dealMetrics.push([slLabel, function(d) { return d.slMonthlyAllInLHI || 0; }, true, 'curr']);
-    dealMetrics.push([slLabel.replace('Monthly', 'Annual'), function(d) { return (d.slMonthlyAllInLHI || 0) * 12; }, true, 'curr']);
+    dealMetrics.push(['SL Monthly (Base + Opex + LHI + Free Rent + TI Value)', function(d) { return d.slMonthlyAllInLHI || 0; }, true, 'curr']);
+    dealMetrics.push(['SL Annual (Base + Opex + LHI + Free Rent + TI Value)', function(d) { return (d.slMonthlyAllInLHI || 0) * 12; }, true, 'curr']);
     dealMetrics.push(['Total Commitment (All-in' + (hasAnyCapex ? ' + CAPEX' : '') + (hasAnyBrokerFee ? ' + Fees' : '') + ')', function(d) {
       var total = d.summary.totalAllInCost || 0;
       if (d.capex && d.capex.hasCapex) total += d.capex.grandTotal || 0;
@@ -22506,7 +22505,7 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
   });
   html += '</tr></thead><tbody>';
 
-  var highlightLabels = { 'Total All-in Cost': true, 'All-In Monthly': true, 'All-In Annual': true, 'NPV @ 8%': true };
+  var highlightLabels = { 'Total All-in Cost (Base Rent + Opex)': true, 'All-In Monthly': true, 'All-In Annual': true, 'NPV @ 8%': true };
 
   function renderMetricRow(label, getter, lowerIsBetter, isAssumption, fmt) {
     var values = buildingData.map(function(d) { return getter(d); });
@@ -22625,7 +22624,7 @@ function rfpExportComparison(target) {
   }
 
   // Key metric labels that should be highlighted
-  var highlightLabels = { 'Total All-in Cost': true, 'All-In Monthly': true, 'All-In Annual': true, 'NPV @ 8%': true };
+  var highlightLabels = { 'Total All-in Cost (Base Rent + Opex)': true, 'All-In Monthly': true, 'All-In Annual': true, 'NPV @ 8%': true };
 
   // Build raw data array for formulas, then apply styles
   var data = [];
@@ -22702,9 +22701,9 @@ function rfpExportComparison(target) {
     if (label === 'Rent/SF/mo') rentSFMoRow = data.length;
     if (label === 'OpEx/SF/mo') opexSFMoRow = data.length;
     if (label === 'Full Service Gross/SF/mo') fullServiceGrossRow = data.length;
-    if (label === 'Total All-in Cost') totalAllInRow = data.length;
-    if (label === 'SL Monthly Rent') slMonthlyRow = data.length;
-    if (label === 'SL Annual Expense') slAnnualRow = data.length;
+    if (label === 'Total All-in Cost (Base Rent + Opex)') totalAllInRow = data.length;
+    if (label === 'SL Monthly Base Rent') slMonthlyRow = data.length;
+    if (label === 'SL Annual Gross Rent (Base + Opex)') slAnnualRow = data.length;
     if (label === 'Free Rent Value') freeRentRow = data.length;
     if (label === 'TI Value') tiValueRow = data.length;
     if (label === 'Total Concessions') totalConcessionsRow = data.length;
@@ -22715,8 +22714,8 @@ function rfpExportComparison(target) {
     if (label === 'Monthly LHI Depreciation') monthlyLHIRow = data.length;
     if (label === 'Broker Fee Amount') brokerFeeAmountRow = data.length;
     if (label === 'Broker Fee Monthly Amort.') brokerFeeMonthlyRow = data.length;
-    if (label.indexOf('SL Monthly All-in') === 0) slMonthlyAllInRow = data.length;
-    if (label.indexOf('SL Annual All-in') === 0) slAnnualAllInRow = data.length;
+    if (label.indexOf('SL Monthly (Base') === 0) slMonthlyAllInRow = data.length;
+    if (label.indexOf('SL Annual (Base') === 0) slAnnualAllInRow = data.length;
     if (label.indexOf('Total Commitment') === 0) totalCommitmentRow = data.length;
 
     var colBestWorst = [];
@@ -23104,11 +23103,14 @@ var _onePagerGroups = [
     metrics: [
       { key: 'totalBaseRent', label: 'Total Base Rent',            getter: function(d) { return (d.cfTotals || {}).totalBaseRent || 0; }, fmt: 'curr' },
       { key: 'totalOpex',     label: 'Total OpEx',                 getter: function(d) { return (d.cfTotals || {}).totalOpex || 0; }, fmt: 'curr' },
-      { key: 'totalAllIn',    label: 'Total All-in Cost',          getter: function(d) { return d.summary.totalAllInCost || 0; }, fmt: 'curr' },
-      { key: 'totalAllInRSF', label: 'Total All-in Cost/RSF/yr',   getter: function(d) { var rsf = d.summary.rsf || 0; var yr = (d.summary.termMonths || 1) / 12; return rsf > 0 ? Math.round((d.summary.totalAllInCost || 0) / yr / rsf * 100) / 100 : 0; }, fmt: 'curr_dec' },
-      { key: 'slMonthly',     label: 'SL Monthly Rent',            getter: function(d) { return d.summary.straightLineMonthlyRent || 0; }, fmt: 'curr' },
-      { key: 'slAnnual',      label: 'SL Annual Expense',          getter: function(d) { return d.summary.straightLineAnnualExpense || 0; }, fmt: 'curr' },
-      { key: 'slAllInLHI',    label: 'SL Monthly All-in + LHI',    getter: function(d) { return d.slMonthlyAllInLHI || 0; }, fmt: 'curr' },
+      { key: 'totalAllIn',    label: 'Total All-in Cost (Base Rent + Opex)',          getter: function(d) { return d.summary.totalAllInCost || 0; }, fmt: 'curr' },
+      { key: 'totalAllInRSF', label: 'Effective Gross Rent/RSF/yr',   getter: function(d) { var rsf = d.summary.rsf || 0; var yr = (d.summary.termMonths || 1) / 12; return rsf > 0 ? Math.round((d.summary.totalAllInCost || 0) / yr / rsf * 100) / 100 : 0; }, fmt: 'curr_dec' },
+      { key: 'totalAllInRSFMo', label: 'Effective Gross Rent/RSF/Month', getter: function(d) { var rsf = d.summary.rsf || 0; var yr = (d.summary.termMonths || 1) / 12; return rsf > 0 ? Math.round((d.summary.totalAllInCost || 0) / yr / rsf / 12 * 100) / 100 : 0; }, fmt: 'curr_dec' },
+      { key: 'slMonthly',     label: 'SL Monthly Base Rent',       getter: function(d) { return d.summary.straightLineMonthlyRent || 0; }, fmt: 'curr' },
+      { key: 'slMonthlyOpex', label: 'SL Monthly Opex',            getter: function(d) { var tm = d.summary.termMonths || 1; return Math.round(((d.cfTotals || {}).totalOpex || 0) / tm); }, fmt: 'curr' },
+      { key: 'slAnnual',      label: 'SL Annual Gross Rent (Base + Opex)',          getter: function(d) { return d.summary.straightLineAnnualExpense || 0; }, fmt: 'curr' },
+      { key: 'slAllInLHI',    label: 'SL Monthly (Base + Opex + LHI + Free Rent + TI Value)',    getter: function(d) { return d.slMonthlyAllInLHI || 0; }, fmt: 'curr' },
+      { key: 'slAllInLHIAn',  label: 'SL Annual (Base + Opex + LHI + Free Rent + TI Value)',     getter: function(d) { return (d.slMonthlyAllInLHI || 0) * 12; }, fmt: 'curr' },
       { key: 'slTotalOccMo',  label: 'SL Total Occupancy (Monthly)',getter: function(d) { return (d.slMonthlyAllInLHI || 0) + (d.internalOpex || 0); }, fmt: 'curr' },
       { key: 'slTotalOccAn',  label: 'SL Total Occupancy (Annual)', getter: function(d) { return ((d.slMonthlyAllInLHI || 0) + (d.internalOpex || 0)) * 12; }, fmt: 'curr' },
     ]
@@ -23138,6 +23140,7 @@ var _onePagerGroups = [
       { key: 'totalCapex',label: 'Total CAPEX',            getter: function(d) { return (d.capex && d.capex.hasCapex) ? d.capex.grandTotal : 0; }, fmt: 'curr' },
       { key: 'capexRsf',  label: 'CAPEX per RSF',          getter: function(d) { var rsf = d.summary.rsf || 0; return (d.capex && d.capex.hasCapex && rsf > 0) ? Math.round(d.capex.grandTotal / rsf * 100) / 100 : 0; }, fmt: 'curr_dec' },
       { key: 'lhi',       label: 'Monthly LHI Depreciation',getter: function(d) { return (d.capex && d.capex.hasCapex) ? Math.round(d.capex.monthlyDepreciation || 0) : 0; }, fmt: 'curr' },
+      { key: 'totalCommit', label: 'Total Commitment (All-in + CAPEX)', getter: function(d) { return (d.summary.totalAllInCost || 0) + ((d.capex && d.capex.hasCapex) ? d.capex.grandTotal : 0) + ((d.brokerFee && d.brokerFee.hasBrokerFee) ? (d.brokerFee.totalFee || 0) : 0); }, fmt: 'curr' },
       { key: 'secDep',    label: 'Security Deposit',          getter: function(d) { return (d.terms && (d.terms.security_deposit || d.terms.securityDeposit)) || 0; }, fmt: 'curr' },
     ]
   },
@@ -29259,7 +29262,7 @@ function shortlistShowCompare() {
       { label: 'SL Total Occupancy Cost (Monthly)', key: 'allInMonthly', best: 'lowest' },
       { label: 'SL Total Occupancy Cost (Annual)', key: 'allInAnnual', best: 'lowest' },
       { label: 'All-In per RSF/yr', key: 'allInPerRSF', best: 'lowest' },
-      { label: 'Straight-Line Monthly', key: 'slMonthly', best: 'lowest' },
+      { label: 'SL Monthly Base Rent', key: 'slMonthly', best: 'lowest' },
       { label: 'Internal OpEx/mo', key: 'totalMonthlyOpex' },
       { label: 'Headcount', key: 'headcount' },
       { label: 'Cost/Employee/yr', key: 'costPerEmployee', best: 'lowest' },
