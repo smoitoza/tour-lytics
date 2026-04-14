@@ -17087,6 +17087,7 @@ function rfpBuildCombinedView(componentMap, address) {
   compRow('OpEx (monthly)', compTerms.map(function(t) { return t.opex_monthly || t.opex || 0; }), 'curr', '', 'Operating expenses, taxes, CAM, insurance');
   compRow('Parking Spots', compTerms.map(function(t) { return t.parking_spots || t.parkingSpots || 0; }), 'plain');
   compRow('Parking Rate', compTerms.map(function(t) { return t.parking_rate_monthly || t.parkingRate || 0; }), 'curr_dec', '', 'Per spot per month');
+  compRow('Security Deposit', compTerms.map(function(t) { return t.security_deposit || t.securityDeposit || 0; }), 'curr', '', 'Refundable deposit at lease commencement');
 
   // RENT ANALYSIS
   sectionRow('Rent Analysis');
@@ -17366,6 +17367,7 @@ function rfpBuildCombinedExcelSheet(wb, cd) {
   addRow('OpEx (monthly)', terms.map(function(t) { return t.opex_monthly || t.opex || 0; }), 'curr', 'curr', 'Operating expenses, taxes, CAM, insurance');
   addRow('Parking Spots', terms.map(function(t) { return t.parking_spots || t.parkingSpots || 0; }), 'plain', 'plain');
   addRow('Parking Rate', terms.map(function(t) { return t.parking_rate_monthly || t.parkingRate || 0; }), 'curr_dec', 'curr_dec', 'Per spot per month');
+  addRow('Security Deposit', terms.map(function(t) { return t.security_deposit || t.securityDeposit || 0; }), 'curr', 'curr', 'Refundable deposit at lease commencement');
 
   // === RENT ANALYSIS ===
   addSection('Rent Analysis');
@@ -17742,6 +17744,7 @@ function rfpShowVersionComparison(buildingAddress) {
     // Parking
     { key: 'parkingSpots', label: 'Parking Spots', fmt: 'num' },
     { key: 'parkingRate', label: 'Parking Rate', fmt: 'currency_dec' },
+    { key: 'securityDeposit', label: 'Security Deposit', fmt: 'currency' },
     // Summary metrics
     { key: 'effectiveRentRSF', label: 'Effective Rent/RSF', fmt: 'currency_dec', fromSummary: true },
     { key: 'straightLineAnnualExpense', label: 'SL Annual Expense', fmt: 'currency', fromSummary: true },
@@ -17914,6 +17917,7 @@ function rfpShowVersionComparison(buildingAddress) {
       parkingRate: t.parking_rate_monthly || t.parkingRate || 0,
       amortizedTIRSF: t.amortized_ti_rsf || t.amortizedTIRSF || 0,
       amortizedTIRate: t.amortized_ti_rate || t.amortizedTIRate || 0,
+      securityDeposit: t.security_deposit || t.securityDeposit || 0,
     };
     return map[field.key] || 0;
   }
@@ -20448,6 +20452,7 @@ function rfpExportExcel() {
       // Parking
       { key: 'parking_spots', label: 'Parking Spots', type: 'num', src: 'terms' },
       { key: 'parking_rate_monthly', label: 'Parking Rate (per mo)', type: 'curr', src: 'terms' },
+      { key: 'security_deposit', label: 'Security Deposit', type: 'curr', src: 'terms' },
       // Summary metrics
       { key: 'effectiveRentRSF', label: 'Effective Rent/RSF', type: 'curr_dec', src: 'summary' },
       { key: 'straightLineAnnualExpense', label: 'SL Annual Expense', type: 'curr', src: 'summary' },
@@ -23040,6 +23045,7 @@ var _onePagerGroups = [
       { key: 'totalCapex',label: 'Total CAPEX',            getter: function(d) { return (d.capex && d.capex.hasCapex) ? d.capex.grandTotal : 0; }, fmt: 'curr' },
       { key: 'capexRsf',  label: 'CAPEX per RSF',          getter: function(d) { var rsf = d.summary.rsf || 0; return (d.capex && d.capex.hasCapex && rsf > 0) ? Math.round(d.capex.grandTotal / rsf * 100) / 100 : 0; }, fmt: 'curr_dec' },
       { key: 'lhi',       label: 'Monthly LHI Depreciation',getter: function(d) { return (d.capex && d.capex.hasCapex) ? Math.round(d.capex.monthlyDepreciation || 0) : 0; }, fmt: 'curr' },
+      { key: 'secDep',    label: 'Security Deposit',          getter: function(d) { return (d.terms && (d.terms.security_deposit || d.terms.securityDeposit)) || 0; }, fmt: 'curr' },
     ]
   },
 ];
