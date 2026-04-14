@@ -17104,13 +17104,9 @@ function rfpBuildCombinedView(componentMap, address) {
 
   // PER SF / MONTHLY
   sectionRow('Per SF / Monthly');
-  compRow('Rent/SF/mo', components.map(function(c) {
-    var rsf = c.summary.rsf || 0;
-    var termMo = c.summary.termMonths || 1;
-    var cfTot = c.totals || {};
-    var totalBaseRent = cfTot.totalBaseRent || 0;
-    return rsf > 0 ? Math.round(totalBaseRent / termMo / rsf * 100) / 100 : 0;
-  }), 'curr_dec', '', 'Base rent per RSF per month (how SJ/Sunnyvale markets quote)');
+  compRow('Rent/SF/mo', compTerms.map(function(t) {
+    return Math.round(getYear1BaseRentRSF(t) / 12 * 100) / 100;
+  }), 'curr_dec', '', 'Starting base rent per RSF per month');
   compRow('OpEx/SF/mo', components.map(function(c) {
     var rsf = c.summary.rsf || 0;
     var termMo = c.summary.termMonths || 1;
@@ -17384,11 +17380,9 @@ function rfpBuildCombinedExcelSheet(wb, cd) {
 
   // === PER SF / MONTHLY ===
   addSection('Per SF / Monthly');
-  addRow('Rent/SF/mo', comps.map(function(c) {
-    var rsf = c.summary.rsf || 0; var termMo = c.summary.termMonths || 1;
-    var cfTot = c.totals || {}; var totalBaseRent = cfTot.totalBaseRent || 0;
-    return rsf > 0 ? Math.round(totalBaseRent / termMo / rsf * 100) / 100 : 0;
-  }), 'curr_dec', 'curr_dec', 'Base rent per RSF per month');
+  addRow('Rent/SF/mo', terms.map(function(t) {
+    return Math.round(getYear1BaseRentRSF(t) / 12 * 100) / 100;
+  }), 'curr_dec', 'curr_dec', 'Starting base rent per RSF per month');
   addRow('OpEx/SF/mo', comps.map(function(c) {
     var rsf = c.summary.rsf || 0; var termMo = c.summary.termMonths || 1;
     var cfTot = c.totals || {}; var totalOpex = cfTot.totalOpex || 0;
@@ -20542,13 +20536,9 @@ function rfpExportExcel() {
           var cRsf = cSm.rsf || 0;
           var cTermMo = cSm.termMonths || 1;
           if (f.key === 'rentPerSFMo') {
-            // Use base rent / 12 (matches on-screen Compare Versions)
-            var expTerms = s.deal_terms || s.dealTerms || {};
-            var expBaseRent = parseFloat(expTerms.base_rent_rsf) || parseFloat(expTerms.baseRent) || 0;
-            var expRp = expTerms.rent_periods || expTerms.rentPeriods;
-            if (expRp && Array.isArray(expRp) && expRp.length > 0) {
-              var expFirstPaid = expRp.find(function(p) { return p.rent_rsf_yr > 0; });
-              if (expFirstPaid) expBaseRent = expFirstPaid.rent_rsf_yr;
+            // Use de-escalated year 1 base rent / 12
+            var expBaseRent = getYear1BaseRentRSF(s.deal_terms || s.dealTerms || {});
+            if (false) { // kept for reference
             }
             val = expBaseRent > 0 ? Math.round(expBaseRent / 12 * 100) / 100 : (cRsf > 0 ? Math.round((cCf.totalBaseRent || 0) / cTermMo / cRsf * 100) / 100 : 0);
           } else if (f.key === 'opexPerSFMo') {
