@@ -17116,6 +17116,12 @@ function rfpBuildCombinedView(componentMap, address) {
     var rsf = c.summary.rsf || 0; var termYrs = (c.summary.termMonths || 1) / 12;
     return rsf > 0 ? Math.round((c.summary.totalAllInCost || 0) / termYrs / rsf * 100) / 100 : 0;
   }), 'curr_dec', '', 'Normalized cost per RSF per year (comparable across different sized spaces)');
+  compRow('Effective Gross Rent/RSF/Month', components.map(function(c) {
+    var rsf = c.summary.rsf || 0; var termYrs = (c.summary.termMonths || 1) / 12;
+    return rsf > 0 ? Math.round((c.summary.totalAllInCost || 0) / termYrs / rsf / 12 * 100) / 100 : 0;
+  }), 'curr_dec', '', 'Normalized cost per RSF per month');
+  compRow('SL Monthly Base Rent', components.map(function(c) { return c.summary.straightLineMonthlyRent || 0; }), 'curr', '', 'Straight-line monthly base rent after TI credit');
+  compRow('SL Monthly Opex', components.map(function(c) { var tm = c.summary.termMonths || 1; return Math.round((c.totals.totalOpex || 0) / tm); }), 'curr', '', 'Total OpEx averaged monthly over lease term');
   compRow('Total Concessions', components.map(function(c) { return c.summary.totalConcessions || 0; }), 'curr', '', 'TI allowance + free rent value');
 
   // PER SF / MONTHLY
@@ -17395,6 +17401,12 @@ function rfpBuildCombinedExcelSheet(wb, cd) {
     var rsf = c.summary.rsf || 0; var termYrs = (c.summary.termMonths || 1) / 12;
     return rsf > 0 ? Math.round((c.summary.totalAllInCost || 0) / termYrs / rsf * 100) / 100 : 0;
   }), 'curr_dec', 'curr_dec', 'Normalized cost per RSF per year');
+  addRow('Effective Gross Rent/RSF/Month', comps.map(function(c) {
+    var rsf = c.summary.rsf || 0; var termYrs = (c.summary.termMonths || 1) / 12;
+    return rsf > 0 ? Math.round((c.summary.totalAllInCost || 0) / termYrs / rsf / 12 * 100) / 100 : 0;
+  }), 'curr_dec', 'curr_dec', 'Normalized cost per RSF per month');
+  addRow('SL Monthly Base Rent', comps.map(function(c) { return c.summary.straightLineMonthlyRent || 0; }), 'curr', 'curr', 'Straight-line monthly base rent after TI credit');
+  addRow('SL Monthly Opex', comps.map(function(c) { var tm = c.summary.termMonths || 1; return Math.round((c.totals.totalOpex || 0) / tm); }), 'curr', 'curr', 'Total OpEx averaged monthly over the lease term');
   addRow('Total Concessions', comps.map(function(c) { return c.summary.totalConcessions || 0; }), 'curr', 'curr', 'TI allowance + free rent value');
 
   // === PER SF / MONTHLY ===
@@ -22397,6 +22409,16 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
   var dealMetrics = [
     ['RSF', function(d) { return d.summary.rsf; }, false, 'num'],
     ['Term (months)', function(d) { return d.summary.termMonths; }, false, 'num'],
+    ['Free Rent (months)', function(d) {
+      var t = d.terms || {};
+      var rp = t.rent_periods || t.rentPeriods;
+      if (rp && Array.isArray(rp) && rp.length > 0) {
+        var fm = 0;
+        rp.forEach(function(p) { if ((p.rent_rsf_yr || 0) === 0) { fm += (p.to_month || p.toMonth || 1) - (p.from_month || p.fromMonth || 1) + 1; } });
+        if (fm > 0) return fm;
+      }
+      return t.free_rent_months || t.freeRent || 0;
+    }, false, 'num'],
     // Rent: year then month together
     ['Base Rent/RSF/yr', function(d) { return getYear1BaseRentRSF(d.terms); }, true, 'curr_dec'],
     ['Rent/SF/mo', function(d) { return Math.round(getYear1BaseRentRSF(d.terms) / 12 * 100) / 100; }, true, 'curr_dec'],
@@ -22419,7 +22441,12 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
       var rsf = d.summary.rsf || 0; var termYrs = (d.summary.termMonths || 1) / 12;
       return rsf > 0 ? Math.round((d.summary.totalAllInCost || 0) / termYrs / rsf * 100) / 100 : 0;
     }, true, 'curr_dec'],
+    ['Effective Gross Rent/RSF/Month', function(d) {
+      var rsf = d.summary.rsf || 0; var termYrs = (d.summary.termMonths || 1) / 12;
+      return rsf > 0 ? Math.round((d.summary.totalAllInCost || 0) / termYrs / rsf / 12 * 100) / 100 : 0;
+    }, true, 'curr_dec'],
     ['SL Monthly Base Rent', function(d) { return d.summary.straightLineMonthlyRent; }, true, 'curr'],
+    ['SL Monthly Opex', function(d) { var tm = d.summary.termMonths || 1; return Math.round(((d.cfTotals || {}).totalOpex || 0) / tm); }, true, 'curr'],
     ['SL Annual Gross Rent (Base + Opex)', function(d) { return d.summary.straightLineAnnualExpense; }, true, 'curr'],
     ['Free Rent Value', function(d) { return d.summary.freeRentValue; }, false, 'curr'],
     ['TI Value', function(d) { return d.summary.tiValue; }, false, 'curr'],
@@ -22687,8 +22714,8 @@ function rfpExportComparison(target) {
       if (bestVal === worstVal) { bestVal = null; worstVal = null; }
     }
 
-    var isDecCurr = (label === 'NPV per RSF' || label === 'Effective Rent/RSF' || label === 'Base Rent/RSF/yr' || label === 'Rent/SF/mo' || label === 'OpEx/SF/mo' || label === 'Full Service Gross/SF/mo' || label === 'CAPEX per RSF');
-    var isNum = (label === 'RSF' || label === 'Term (months)');
+    var isDecCurr = (label === 'NPV per RSF' || label === 'Effective Rent/RSF' || label === 'Base Rent/RSF/yr' || label === 'Rent/SF/mo' || label === 'OpEx/SF/mo' || label === 'Full Service Gross/SF/mo' || label === 'CAPEX per RSF' || label === 'Effective Gross Rent/RSF/yr' || label === 'Effective Gross Rent/RSF/Month');
+    var isNum = (label === 'RSF' || label === 'Term (months)' || label === 'Free Rent (months)');
     var isText = (m[3] === 'text');
     var isCurr = !isNum && !isText;
 
