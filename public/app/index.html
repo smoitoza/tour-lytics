@@ -22323,23 +22323,70 @@ function rfpCompareVersionChange(buildingKey, submissionId) {
   rfpRenderDashboard(window._rfpState.submissions);
 }
 
+// Track which buildings are visible in the comparison
+window._rfpVisibleBuildings = null;
+
 function toggleCompareBuilding(colIdx, visible) {
-  // Toggle visibility of a building column in the comparison table
+  // Update visibility tracker
+  if (!window._rfpVisibleBuildings) {
+    var cd = window._rfpComparisonData;
+    if (cd && cd.buildingData) {
+      window._rfpVisibleBuildings = cd.buildingData.map(function() { return true; });
+    }
+  }
+  if (window._rfpVisibleBuildings) window._rfpVisibleBuildings[colIdx] = visible;
+
   // Hide/show the card
   var cards = document.querySelectorAll('#compare-cards > div');
   if (cards[colIdx]) cards[colIdx].style.display = visible ? '' : 'none';
+
   // Hide/show table columns (colIdx + 1 because first col is the label)
   var table = document.querySelector('.rfp-comparison-table');
   if (!table) return;
   var rows = table.querySelectorAll('tr');
   rows.forEach(function(row) {
     var cells = row.children;
-    // Column index in the table: colIdx + 1 (skip label column)
     var cellIdx = colIdx + 1;
     if (cells[cellIdx]) {
       cells[cellIdx].style.display = visible ? '' : 'none';
     }
   });
+
+  // Show/hide delta column based on visible count
+  var visibleCount = window._rfpVisibleBuildings ? window._rfpVisibleBuildings.filter(Boolean).length : 0;
+  var deltaColIdx = (window._rfpComparisonData && window._rfpComparisonData.buildingData) ? window._rfpComparisonData.buildingData.length + 1 : -1;
+  var showDeltaNow = visibleCount === 2;
+  if (deltaColIdx > 0) {
+    // Get the two visible building indices
+    var visibleIndices = [];
+    if (showDeltaNow && window._rfpVisibleBuildings) {
+      window._rfpVisibleBuildings.forEach(function(v, i) { if (v) visibleIndices.push(i); });
+    }
+    rows.forEach(function(row, rowIdx) {
+      var cells = row.children;
+      if (cells[deltaColIdx]) {
+        cells[deltaColIdx].style.display = showDeltaNow ? '' : 'none';
+        // Recalculate delta values for data rows
+        if (showDeltaNow && visibleIndices.length === 2 && rowIdx > 0) {
+          var cellA = cells[visibleIndices[0] + 1];
+          var cellB = cells[visibleIndices[1] + 1];
+          if (cellA && cellB) {
+            var parseVal = function(txt) { return parseFloat(txt.replace(/[^0-9.\-]/g, '')) || 0; };
+            var vA = parseVal(cellA.textContent);
+            var vB = parseVal(cellB.textContent);
+            var diff = vB - vA;
+            if (vA > 0 && diff !== 0) {
+              var pct = ((diff / vA) * 100).toFixed(1);
+              var arrow = diff > 0 ? '\u2191' : '\u2193';
+              cells[deltaColIdx].innerHTML = '<span style="color:#2563eb;font-weight:600;">' + arrow + ' ' + (diff > 0 ? '+' : '') + pct + '%</span>';
+            } else {
+              cells[deltaColIdx].innerHTML = '<span style="color:#94a3b8;">--</span>';
+            }
+          }
+        }
+      }
+    });
+  }
 }
 
 function rfpBuildComparisonHtml(submissions, byBuilding) {
@@ -22538,9 +22585,11 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
     html += '</th>';
   });
   // Delta column header for exactly 2 buildings
-  var showDelta = buildingData.length === 2;
+  // Always render delta column (hidden unless exactly 2 buildings visible)
+  var showDelta = buildingData.length >= 2;
   if (showDelta) {
-    html += '<th style="text-align:right;min-width:140px;color:#2563eb;font-weight:700;">Delta</th>';
+    var deltaVisible = buildingData.length === 2 ? '' : 'display:none;';
+    html += '<th style="text-align:right;min-width:140px;color:#2563eb;font-weight:700;' + deltaVisible + '">Delta</th>';
   }
   html += '</tr></thead><tbody>';
 
@@ -22606,7 +22655,7 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
         var isNumLabel = (label === 'RSF' || label === 'Term (months)' || label === 'Free Rent (months)');
         deltaHTML = '<span style="color:#2563eb;font-weight:600;">' + arrow + ' ' + fmtDelta(Math.abs(diff), isNumLabel ? 'num' : fmt) + ' (' + (diff > 0 ? '+' : '') + pct + '%)</span>';
       }
-      html += '<td style="text-align:right;font-size:var(--text-xs);padding:8px 14px;">' + deltaHTML + '</td>';
+      html += '<td style="text-align:right;font-size:var(--text-xs);padding:8px 14px;' + deltaVisible + '">' + deltaHTML + '</td>';
     }
     html += '</tr>';
   }
@@ -22631,6 +22680,7 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
 
   // Store comparison data for export
   window._rfpComparisonData = { buildingData: buildingData, dealMetrics: dealMetrics, assumptionMetrics: assumptionMetrics, hasAnyAssumptions: hasAnyAssumptions };
+  window._rfpVisibleBuildings = buildingData.map(function() { return true; });
 
   return html;
 }
@@ -22640,7 +22690,11 @@ function rfpExportComparison(target) {
   var cd = window._rfpComparisonData;
   if (!cd || !cd.buildingData || cd.buildingData.length === 0) { alert('No comparison data to export.'); return; }
 
-  var bd = cd.buildingData;
+  // Filter to only visible buildings
+  var allBd = cd.buildingData;
+  var visFilter = window._rfpVisibleBuildings;
+  var bd = visFilter ? allBd.filter(function(b, i) { return visFilter[i] !== false; }) : allBd;
+  if (bd.length === 0) bd = allBd;
   var wb = XLSX.utils.book_new();
   var numCols = bd.length + 1 + (bd.length === 2 ? 1 : 0); // metric label + buildings + optional delta
 
