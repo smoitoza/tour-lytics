@@ -18023,11 +18023,12 @@ function rfpOpenVersionOnePager() {
   var allBd = vd.subs.map(function(sub, idx) {
     var summary = (sub.analysis && sub.analysis.summary) || {};
     var cfTotals = (sub.analysis && sub.analysis.cash_flow && sub.analysis.cash_flow.totals) || {};
-    var capexData = (sub.analysis && sub.analysis.capex) || {};
-    var brokerFee = (sub.analysis && sub.analysis.brokerFee) || {};
     var terms = sub.deal_terms || sub.dealTerms || {};
     var slMo = summary.straightLineMonthlyRent || 0;
     var termMo = summary.termMonths || terms.lease_term_months || terms.leaseTerm || 1;
+    // Load CAPEX and Broker Fee from assumptions (not from analysis)
+    var capexData = (typeof getCapexForBuilding === 'function') ? getCapexForBuilding(vd.address, termMo) : { hasCapex: false };
+    var brokerFee = (typeof getBrokerFeeForBuilding === 'function') ? getBrokerFeeForBuilding(vd.address, termMo) : { hasBrokerFee: false };
     var opexMo = (cfTotals.totalOpex || 0) / termMo;
     var parkMo = (cfTotals.totalParking || 0) / termMo;
     var lhiMo = capexData.hasCapex ? (capexData.monthlyDepreciation || 0) : 0;
