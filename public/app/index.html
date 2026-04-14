@@ -23103,6 +23103,7 @@ var _onePagerGroups = [
     label: 'Total Cost',
     metrics: [
       { key: 'totalBaseRent', label: 'Total Base Rent',            getter: function(d) { return (d.cfTotals || {}).totalBaseRent || 0; }, fmt: 'curr' },
+      { key: 'totalOpex',     label: 'Total OpEx',                 getter: function(d) { return (d.cfTotals || {}).totalOpex || 0; }, fmt: 'curr' },
       { key: 'totalAllIn',    label: 'Total All-in Cost',          getter: function(d) { return d.summary.totalAllInCost || 0; }, fmt: 'curr' },
       { key: 'totalAllInRSF', label: 'Total All-in Cost/RSF/yr',   getter: function(d) { var rsf = d.summary.rsf || 0; var yr = (d.summary.termMonths || 1) / 12; return rsf > 0 ? Math.round((d.summary.totalAllInCost || 0) / yr / rsf * 100) / 100 : 0; }, fmt: 'curr_dec' },
       { key: 'slMonthly',     label: 'SL Monthly Rent',            getter: function(d) { return d.summary.straightLineMonthlyRent || 0; }, fmt: 'curr' },
@@ -23144,7 +23145,7 @@ var _onePagerGroups = [
 // Flat list for lookups
 var _onePagerMetrics = _onePagerGroups.reduce(function(acc, g) { return acc.concat(g.metrics); }, []);
 
-var _onePagerDefaults = ['totalAllIn', 'effRent', 'term', 'rsf', 'totalConc', 'npv'];
+var _onePagerDefaults = ['rsf', 'term', 'freeRentMo', 'effRent', 'totalBaseRent', 'totalOpex', 'totalAllIn', 'totalConc', 'npv'];
 var _onePagerMaxMetrics = 12;
 
 function _opFmtVal(v, fmt) {
@@ -23369,10 +23370,10 @@ function _opRenderCard(bd, selected) {
 
   // Detect version comparison (all same address = comparing versions of one building)
   var isVersionCompare = bd.length > 1 && bd.every(function(b) { return b.address === bd[0].address; });
-  // For Change column: always use first and last of the DISPLAYED versions
-  var changeFromIdx = isVersionCompare ? 0 : -1;
-  var changeToIdx = isVersionCompare ? bd.length - 1 : -1;
-  var showChangeCol = isVersionCompare && bd.length >= 2 && changeFromIdx !== changeToIdx;
+  // For Change/Delta column: show for version compare OR cross-building with exactly 2 buildings
+  var changeFromIdx = (isVersionCompare || bd.length === 2) ? 0 : -1;
+  var changeToIdx = (isVersionCompare || bd.length === 2) ? bd.length - 1 : -1;
+  var showChangeCol = bd.length >= 2 && changeFromIdx !== changeToIdx;
   var changeCols = showChangeCol ? ' minmax(160px, 200px)' : '';
 
   h = '<div style="background:white;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1);font-family:\'DM Sans\',system-ui,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;">';
@@ -23404,7 +23405,7 @@ function _opRenderCard(bd, selected) {
   });
   if (showChangeCol) {
     h += '<div style="padding:14px 10px;text-align:right;background:#f8fafc;border-top:4px solid #2563eb;-webkit-print-color-adjust:exact;print-color-adjust:exact;">';
-    h += '<div style="font-size:11px;font-weight:700;color:#2563eb;">Change</div>';
+    h += '<div style="font-size:11px;font-weight:700;color:#2563eb;">' + (isVersionCompare ? 'Change' : 'Delta') + '</div>';
     h += '</div>';
   }
   h += '</div>';
@@ -23464,9 +23465,15 @@ function _opRenderCard(bd, selected) {
   });
   h += '</div>';
   if (showChangeCol) {
-    var fromLabel = bd[changeFromIdx]?.versionLabel || ('Version ' + (changeFromIdx + 1));
-    var toLabel = bd[changeToIdx]?.versionLabel || ('Version ' + (changeToIdx + 1));
-    h += '<div style="font-size:10px;color:#2563eb;font-weight:500;">Change: ' + esc(fromLabel) + ' vs ' + esc(toLabel) + '</div>';
+    var fromLabel, toLabel;
+    if (isVersionCompare) {
+      fromLabel = bd[changeFromIdx].versionLabel || ('Version ' + (changeFromIdx + 1));
+      toLabel = bd[changeToIdx].versionLabel || ('Version ' + (changeToIdx + 1));
+    } else {
+      fromLabel = bd[changeFromIdx].address;
+      toLabel = bd[changeToIdx].address;
+    }
+    h += '<div style="font-size:10px;color:#2563eb;font-weight:500;">Delta: ' + esc(fromLabel) + ' vs ' + esc(toLabel) + '</div>';
   }
   h += '</div>';
 
