@@ -22642,7 +22642,7 @@ function rfpExportComparison(target) {
 
   var bd = cd.buildingData;
   var wb = XLSX.utils.book_new();
-  var numCols = bd.length + 1; // metric label + one col per building
+  var numCols = bd.length + 1 + (bd.length === 2 ? 1 : 0); // metric label + buildings + optional delta
 
   // Helper: column letter from index
   function colLetter(idx) {
@@ -22671,9 +22671,9 @@ function rfpExportComparison(target) {
   var altRow = 'FAFBFC';
   // Highlight row for key metrics (light indigo)
   var highlightBg = 'EEF2FF';
-  // Best/worst cell backgrounds
-  var bestBg = 'F0FDF4';
-  var worstBg = 'FEF2F2';
+  // Best/worst cell backgrounds (neutralized -- no green/red)
+  var bestBg = 'FFFFFF';
+  var worstBg = 'FFFFFF';
 
   function makeLabelStyle(bgRgb, bold) {
     return { font: { sz: 10, color: { rgb: '334155' }, bold: !!bold }, fill: { fgColor: { rgb: bgRgb } }, border: baseBorder, alignment: { horizontal: 'left' } };
@@ -22701,6 +22701,8 @@ function rfpExportComparison(target) {
   // Row 3: Column headers
   var hdr = ['Metric'];
   bd.forEach(function(b) { hdr.push(b.address); });
+  var exportShowDelta = bd.length === 2;
+  if (exportShowDelta) hdr.push('Delta');
   data.push(hdr);
   var headerRow = 3;
 
@@ -22793,7 +22795,21 @@ function rfpExportComparison(target) {
       colBestWorst.push(bw);
     });
 
-    rowMeta.push({ label: label, isCurrency: isCurr, isDecimalCurrency: isDecCurr, isNum: isNum, isText: isText, isHighlight: !!highlightLabels[label], colBestWorst: colBestWorst, isSection: false });
+    // Delta column
+    var deltaStr = '';
+    if (exportShowDelta && values.length === 2) {
+      var dFrom = Number(values[0]) || 0;
+      var dTo = Number(values[1]) || 0;
+      var dDiff = dTo - dFrom;
+      if (dFrom > 0 && dDiff !== 0) {
+        var dPct = ((dDiff / dFrom) * 100).toFixed(1);
+        var dArrow = dDiff > 0 ? '\u2191' : '\u2193';
+        deltaStr = dArrow + ' ' + (dDiff > 0 ? '+' : '') + dPct + '%';
+      }
+      row.push(deltaStr);
+    }
+
+    rowMeta.push({ label: label, isCurrency: isCurr, isDecimalCurrency: isDecCurr, isNum: isNum, isText: isText, isHighlight: !!highlightLabels[label], colBestWorst: colBestWorst, isSection: false, hasDelta: exportShowDelta });
     data.push(row);
   });
 
@@ -22838,7 +22854,15 @@ function rfpExportComparison(target) {
       if (label === 'SL Total Occupancy Cost (Monthly)') slTotalOccMonthlyRow = data.length;
       if (label === 'SL Total Occupancy Cost (Annual)') slTotalOccAnnualRow = data.length;
 
-      rowMeta.push({ label: label, isCurrency: true, isDecimalCurrency: false, isNum: false, isText: false, isHighlight: !!highlightLabels[label], colBestWorst: colBestWorst, isSection: false });
+      // Delta column for assumptions
+      if (exportShowDelta && values.length === 2) {
+        var adFrom = Number(values[0]) || 0; var adTo = Number(values[1]) || 0; var adDiff = adTo - adFrom;
+        var adStr = '';
+        if (adFrom > 0 && adDiff !== 0) { var adPct = ((adDiff / adFrom) * 100).toFixed(1); adStr = (adDiff > 0 ? '\u2191' : '\u2193') + ' ' + (adDiff > 0 ? '+' : '') + adPct + '%'; }
+        row.push(adStr);
+      }
+
+      rowMeta.push({ label: label, isCurrency: true, isDecimalCurrency: false, isNum: false, isText: false, isHighlight: !!highlightLabels[label], colBestWorst: colBestWorst, isSection: false, hasDelta: exportShowDelta });
       data.push(row);
     });
   }
@@ -22860,8 +22884,9 @@ function rfpExportComparison(target) {
   var ws = XLSX.utils.aoa_to_sheet(data);
 
   // --- Column widths ---
-  var colWidths = [{ wch: 28 }];
-  bd.forEach(function() { colWidths.push({ wch: 20 }); });
+  var colWidths = [{ wch: 42 }];
+  bd.forEach(function() { colWidths.push({ wch: 22 }); });
+  if (exportShowDelta) colWidths.push({ wch: 16 });
   ws['!cols'] = colWidths;
 
   // --- Row heights ---
@@ -22948,12 +22973,17 @@ function rfpExportComparison(target) {
 
       var cellStyle = makeValueStyle(cellBg, isBold, nf);
 
-      // Best/worst font color
-      if (meta.colBestWorst && meta.colBestWorst[vc] === 'best') cellStyle.font = Object.assign({}, cellStyle.font, { color: { rgb: '059669' } });
-      else if (meta.colBestWorst && meta.colBestWorst[vc] === 'worst') cellStyle.font = Object.assign({}, cellStyle.font, { color: { rgb: 'DC2626' } });
-
       ws[vRef].s = cellStyle;
       if (nf) ws[vRef].z = nf;
+    }
+
+    // Delta column styling
+    if (meta.hasDelta) {
+      var deltaCol = bd.length + 1;
+      var deltaRef = colLetter(deltaCol) + (r + 1);
+      if (ws[deltaRef]) {
+        ws[deltaRef].s = { font: { sz: 10, color: { rgb: '2563EB' }, bold: true }, fill: { fgColor: { rgb: rowBg } }, border: baseBorder, alignment: { horizontal: 'right' } };
+      }
     }
 
     dataRowIdx++;
