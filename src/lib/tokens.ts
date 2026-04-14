@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 
 // Use service role for token operations to bypass RLS and ensure atomicity
-function getAdminClient() {
+export function getAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 

@@ -47,6 +47,40 @@ export async function GET(req: Request) {
         const offset = parseInt(searchParams.get('offset') || '0')
         const actionType = searchParams.get('actionType') || undefined
         const userEmail = searchParams.get('userEmail') || undefined
+
+        // When querying by userId, include transactions from ALL projects the user owns
+        // (team members' actions on your projects should appear in your billing)
+        if (userId && !searchParams.get('projectId')) {
+          const { getAdminClient } = await import('@/lib/tokens')
+          const adminSupa = getAdminClient()
+          // Get user's email to find owned projects
+          const { data: authUser } = await adminSupa.auth.admin.getUserById(userId)
+          const ownerEmail = authUser?.user?.email
+          let ownedProjectIds: string[] = []
+          if (ownerEmail) {
+            const { data: projects } = await adminSupa.from('projects').select('id').eq('owner_id', ownerEmail)
+            ownedProjectIds = (projects || []).map((p: any) => p.id)
+          }
+
+          // Query: user_id matches OR project_id is in owned projects
+          let query = adminSupa
+            .from('token_transactions')
+            .select('*')
+            .order('created_at', { ascending: false })
+          if (ownedProjectIds.length > 0) {
+            query = query.or(`user_id.eq.${userId},project_id.in.(${ownedProjectIds.join(',')})`)
+          } else {
+            query = query.eq('user_id', userId)
+          }
+          if (actionType) query = query.eq('action_type', actionType)
+          if (limit) query = query.limit(limit)
+          if (offset) query = query.range(offset, offset + limit - 1)
+
+          const { data, error } = await query
+          if (error) throw new Error(`Failed to fetch transactions: ${error.message}`)
+          return NextResponse.json(data || [])
+        }
+
         const transactions = await getTokenTransactions({
           userId: userId || undefined,
           projectId: userId ? (searchParams.get('projectId') || undefined) : projectId,
