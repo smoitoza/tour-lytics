@@ -16988,7 +16988,7 @@ function rfpBuildCombinedView(componentMap, address) {
   html += '</div>';
 
   // Building selector
-  if (components.length > 2) {
+  if (components.length >= 2) {
     html += '<div style="display:flex;align-items:center;gap:var(--space-3);margin:var(--space-3) 0;padding:var(--space-2) var(--space-3);background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-md);flex-wrap:wrap;">';
     html += '<span style="font-size:var(--text-xs);font-weight:600;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.04em;">Show Buildings:</span>';
     components.forEach(function(c, i) {
@@ -22450,7 +22450,22 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
   // Check if any building has assumptions entered
   var hasAnyAssumptions = buildingData.some(function(d) { return d.internalOpex > 0; });
 
-  var html = '<div class="fin-table-wrap"><table class="fin-table rfp-comparison-table">';
+  // Building selector checkboxes
+  var html = '';
+  if (buildingData.length >= 2) {
+    html += '<div style="display:flex;align-items:center;gap:var(--space-3);margin:0 0 var(--space-3);padding:var(--space-2) var(--space-3);background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-md);flex-wrap:wrap;">';
+    html += '<span style="font-size:var(--text-xs);font-weight:600;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.04em;">Show Buildings:</span>';
+    buildingData.forEach(function(b, i) {
+      var shortAddr = b.address.length > 30 ? b.address.substring(0, 30) + '...' : b.address;
+      html += '<label style="display:flex;align-items:center;gap:4px;font-size:var(--text-sm);cursor:pointer;">';
+      html += '<input type="checkbox" checked onchange="toggleCompareBuilding(' + i + ', this.checked)" style="cursor:pointer;" />';
+      html += '<span>' + esc(shortAddr) + '</span>';
+      html += '</label>';
+    });
+    html += '</div>';
+  }
+
+  html += '<div class="fin-table-wrap"><table class="fin-table rfp-comparison-table">';
   html += '<thead><tr><th class="cell-label">Metric</th>';
   buildingData.forEach(function(b) {
     html += '<th style="text-align:right;min-width:160px">';
