@@ -15548,6 +15548,9 @@ function rfpShowUploadModal() {
 
       '<div class="rfp-step">' +
         '<label class="rfp-step-label">Component Label <span style="font-weight:400;color:var(--color-text-muted)">(optional)</span></label>' +
+        '<select class="rfp-select" id="rfp-component-label-select" onchange="rfpComponentSelectChanged()" style="font-size:var(--text-sm);display:none;">' +
+          '<option value="">No component</option>' +
+        '</select>' +
         '<input class="rfp-input" id="rfp-component-label" placeholder="e.g. Office, Lab / BTS, Warehouse" style="font-size:var(--text-sm);" />' +
         '<p style="font-size:var(--text-xs);color:var(--color-text-muted);margin:4px 0 0;">For multi-component deals. Leave blank for single-building submissions.</p>' +
       '</div>' +
@@ -15682,6 +15685,67 @@ function rfpBuildingSelectChanged() {
       var input = document.getElementById('rfp-custom-address');
       if (input) input.focus();
     }
+  }
+  // Populate component label dropdown with existing labels for this building
+  rfpPopulateComponentDropdown(sel ? sel.value : '');
+}
+
+function rfpPopulateComponentDropdown(buildingSelectValue) {
+  var selectEl = document.getElementById('rfp-component-label-select');
+  var inputEl = document.getElementById('rfp-component-label');
+  if (!selectEl || !inputEl) return;
+
+  // Resolve the address from the building select option's data-address
+  var buildingSel = document.getElementById('rfp-building-select');
+  var selectedOpt = buildingSel ? buildingSel.options[buildingSel.selectedIndex] : null;
+  var address = selectedOpt ? (selectedOpt.getAttribute('data-address') || '') : '';
+
+  // Find existing component labels for this building address from loaded submissions
+  var existingLabels = [];
+  if (address && buildingSelectValue !== 'custom' && window._rfpState && window._rfpState.submissions) {
+    var seen = {};
+    window._rfpState.submissions.forEach(function(s) {
+      var sAddr = s.building_address || '';
+      if (sAddr === address && s.component_label && !seen[s.component_label]) {
+        seen[s.component_label] = true;
+        existingLabels.push(s.component_label);
+      }
+    });
+  }
+
+  if (existingLabels.length > 0) {
+    // Show dropdown, hide text input
+    var opts = '<option value="">No component</option>';
+    existingLabels.forEach(function(lbl) {
+      opts += '<option value="' + lbl.replace(/"/g, '&quot;') + '">' + lbl + '</option>';
+    });
+    opts += '<option value="__new__">+ New component...</option>';
+    selectEl.innerHTML = opts;
+    selectEl.style.display = '';
+    inputEl.style.display = 'none';
+    inputEl.value = '';
+  } else {
+    // No existing components, show text input
+    selectEl.style.display = 'none';
+    inputEl.style.display = '';
+    inputEl.value = '';
+  }
+}
+
+function rfpComponentSelectChanged() {
+  var selectEl = document.getElementById('rfp-component-label-select');
+  var inputEl = document.getElementById('rfp-component-label');
+  if (!selectEl || !inputEl) return;
+
+  if (selectEl.value === '__new__') {
+    // Show text input for new label
+    inputEl.style.display = '';
+    inputEl.placeholder = 'Enter new component label';
+    inputEl.focus();
+  } else {
+    // Use selected value, hide text input
+    inputEl.style.display = 'none';
+    inputEl.value = selectEl.value;
   }
 }
 
@@ -15826,7 +15890,15 @@ function rfpSubmitUpload() {
 
   var docType = _rfpModal._docType || 'RFP';
   var source = (document.getElementById('rfp-source-input') || {}).value || '';
-  var componentLabel = (document.getElementById('rfp-component-label') || {}).value || '';
+  // Read component label from dropdown or text input
+  var compSelect = document.getElementById('rfp-component-label-select');
+  var compInput = document.getElementById('rfp-component-label');
+  var componentLabel = '';
+  if (compSelect && compSelect.style.display !== 'none' && compSelect.value && compSelect.value !== '__new__') {
+    componentLabel = compSelect.value;
+  } else if (compInput) {
+    componentLabel = compInput.value || '';
+  }
   var entryMode = _rfpModal._entryMode || 'upload';
 
   // MANUAL ENTRY MODE - skip document parsing, submit directly to API
