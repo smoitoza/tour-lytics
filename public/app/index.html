@@ -11284,10 +11284,12 @@ function getSurveyMarkerColor(b) {
 
 // Get the per-city display number (e.g., Palo Alto building #3 out of 5)
 function getCityBuildingNum(b) {
-  // Always use the global survey order number so map pins
-  // match the tour book, broker survey, and all other views.
-  // Submarket colors still applied via getSurveyMarkerColor().
-  return b.num;
+  var city = (b.neighborhood || '').trim();
+  if (city && _cityBuildingNums[city]) {
+    var idx = _cityBuildingNums[city].indexOf(b.num);
+    if (idx >= 0) return idx + 1;
+  }
+  return b.num; // fallback to global num
 }
 var MARKER_COLOR_TOUR = '#f47920';     // Orange - on tour book
 var MARKER_COLOR_SHORTLIST = '#10b981'; // Emerald - on shortlist
