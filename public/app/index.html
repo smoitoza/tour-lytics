@@ -25332,7 +25332,7 @@ function surveyMergeBuildings(newBuildings) {
       autoPanPadding: [20, 20],
       offset: [0, -5]
     });
-    marker.on('mouseover', function() { if (this._bulkNIPopupDisabled) return; this.openPopup(); });
+    marker.on('click', function() { if (this._bulkNIPopupDisabled) return; this.openPopup(); });
     surveyMarkers.push(marker);
 
     nextNum++;
