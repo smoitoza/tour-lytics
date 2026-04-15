@@ -347,6 +347,7 @@ export async function POST(req: Request) {
     const prompt = `You are a commercial real estate data extraction expert. Parse this broker survey document and extract every building/property listed.
 
 For EACH building found, extract these fields (use null if not found):
+- name: The building or property name if given (e.g., "Parmer 3.4", "The District", "Springdale Green"). Many surveys label buildings with a name/project name separate from the address. If no name is given, leave empty.
 - address: The street address (just street, no city/state)
 - neighborhood: The neighborhood or district name (e.g. "DUMBO, Brooklyn" or "Financial District")
 - owner: The building owner/landlord name
@@ -369,6 +370,7 @@ IMPORTANT:
 Return a JSON array. Example format:
 [
   {
+    "name": "535 Mission",
     "address": "535 Mission Street",
     "neighborhood": "Financial District",
     "owner": "BXP, Inc.",
@@ -492,7 +494,7 @@ Return ONLY the JSON array, no other text.`
           }
         }
 
-        // Fallback: match street number + next word (handles "401 W" vs "401 W.")
+        // Fallback 1: match street number + next word (handles "401 W" vs "401 W.")
         if (bestPage === -1 && addrWords.length >= 2) {
           const partial = streetNum + ' ' + addrWords[1].replace(/\./g, '')
           const fallbackPages: number[] = []
@@ -507,11 +509,31 @@ Return ONLY the JSON array, no other text.`
             bestPage = aiGuess > 0
               ? fbContent.reduce((best, p) => Math.abs(p - aiGuess) < Math.abs(best - aiGuess) ? p : best)
               : fbContent[0]
-          } else if (fallbackPages.length > 0) {
-            bestPage = aiGuess > 0
-              ? fallbackPages.reduce((best, p) => Math.abs(p - aiGuess) < Math.abs(best - aiGuess) ? p : best)
-              : fallbackPages[fallbackPages.length - 1]
           }
+          // Don't fall back to matrix/overview pages -- better to use AI guess
+        }
+
+        // Fallback 2: match building name if available (brokers often use names like "Parmer 3.4" on dedicated pages)
+        if (bestPage === -1 && (b as any).name) {
+          const bName = ((b as any).name || '').toLowerCase().replace(/[.,]/g, '').trim()
+          if (bName && bName.length > 3) {
+            const namePages: number[] = []
+            for (const pt of pageTexts) {
+              const pageText = pt.text.toLowerCase().replace(/[.,]/g, '')
+              if (pageText.includes(bName)) namePages.push(pt.page)
+            }
+            const nameContent = namePages.filter(p => isSingleBuildingPage(p))
+            if (nameContent.length > 0) {
+              bestPage = aiGuess > 0
+                ? nameContent.reduce((best, p) => Math.abs(p - aiGuess) < Math.abs(best - aiGuess) ? p : best)
+                : nameContent[0]
+            }
+          }
+        }
+
+        // Final fallback: use AI's estimated page if it's reasonable (not page 1-3 which are cover/TOC)
+        if (bestPage === -1 && aiGuess > 3) {
+          bestPage = aiGuess
         }
 
         if (bestPage > 0) {

@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
   // Transform DB column names (snake_case) to client format (camelCase)
   const buildings = (data || []).map((row: any) => ({
     num: row.num,
+    name: row.name || '',
     address: row.address,
     neighborhood: row.neighborhood || '',
     owner: row.owner || '',
@@ -89,6 +90,7 @@ export async function POST(req: NextRequest) {
     const rows = buildings.map((b: any) => ({
       project_id: projectId,
       num: b.num,
+      name: b.name || '',
       address: b.address,
       neighborhood: b.neighborhood || '',
       owner: b.owner || '',
