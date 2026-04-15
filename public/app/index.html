@@ -25236,6 +25236,7 @@ function surveyNormalizeAddress(addr) {
 function surveyMergeBuildings(newBuildings) {
   // Build a map of existing addresses -> index for dedup/update
   var existingAddrMap = {};
+  var existingCountBefore = SURVEY_BUILDINGS.length;
   SURVEY_BUILDINGS.forEach(function(b, idx) {
     existingAddrMap[surveyNormalizeAddress(b.address)] = idx;
   });
@@ -25261,11 +25262,28 @@ function surveyMergeBuildings(newBuildings) {
       return;
     }
 
-    // If address already exists, update with richer data from re-upload
+    // If address already exists, either update (pre-existing) or skip (duplicate from this batch)
     if (typeof existingAddrMap[normAddr] !== 'undefined') {
       var existIdx = existingAddrMap[normAddr];
+      // If the match is against a building added in THIS batch, it's a duplicate from the AI parse -- skip it
+      if (existIdx >= existingCountBefore) {
+        // Silently merge any richer data into the already-added entry
+        var dup = SURVEY_BUILDINGS[existIdx];
+        if (nb.owner && !dup.owner) dup.owner = nb.owner;
+        if (nb.yearBuiltClass && !dup.yearBuiltClass) dup.yearBuiltClass = nb.yearBuiltClass;
+        if (nb.buildingSF && !dup.buildingSF) dup.buildingSF = nb.buildingSF;
+        if (nb.stories && !dup.stories) dup.stories = nb.stories;
+        if (nb.spaceAvailable && !dup.spaceAvailable) dup.spaceAvailable = nb.spaceAvailable;
+        if (nb.rentalRate && !dup.rentalRate) dup.rentalRate = nb.rentalRate;
+        if (nb.floors && nb.floors.length > 0 && (!dup.floors || dup.floors.length === 0)) dup.floors = nb.floors;
+        if (nb.surveyPdfUrl && !dup.surveyPdfUrl) dup.surveyPdfUrl = nb.surveyPdfUrl;
+        if (nb.estimatedPage && !dup.estimatedPage) dup.estimatedPage = nb.estimatedPage;
+        if (nb.links && nb.links.length > 0 && (!dup.links || dup.links.length === 0)) dup.links = nb.links;
+        // Don't count as updated or show in results -- it's just a duplicate
+        return;
+      }
       var existing = SURVEY_BUILDINGS[existIdx];
-      // Update fields if the new data has more info
+      // Update fields if the new data has more info (re-upload scenario)
       if (nb.owner && !existing.owner) existing.owner = nb.owner;
       if (nb.yearBuiltClass && !existing.yearBuiltClass) existing.yearBuiltClass = nb.yearBuiltClass;
       if (nb.buildingSF && !existing.buildingSF) existing.buildingSF = nb.buildingSF;
