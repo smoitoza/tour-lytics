@@ -11273,23 +11273,14 @@ function buildCityColorMap() {
 
 // Get the color for a building based on current legend grouping
 function getSurveyMarkerColor(b) {
-  if (_legendGrouping === 'type') {
-    var ptype = (b.property_type || '').trim();
-    if (ptype && _typeColorMap[ptype]) return _typeColorMap[ptype];
-  }
-  var city = (b.neighborhood || '').trim();
-  if (city && _cityColorMap[city]) return _cityColorMap[city];
-  return MARKER_COLOR_SURVEY; // fallback blue
+  // Uniform color for all survey pins -- no submarket color coding
+  return MARKER_COLOR_SURVEY;
 }
 
 // Get the per-city display number (e.g., Palo Alto building #3 out of 5)
 function getCityBuildingNum(b) {
-  var city = (b.neighborhood || '').trim();
-  if (city && _cityBuildingNums[city]) {
-    var idx = _cityBuildingNums[city].indexOf(b.num);
-    if (idx >= 0) return idx + 1;
-  }
-  return b.num; // fallback to global num
+  // Always use survey order so pin numbers match the broker's survey
+  return b.num;
 }
 var MARKER_COLOR_TOUR = '#f47920';     // Orange - on tour book
 var MARKER_COLOR_SHORTLIST = '#10b981'; // Emerald - on shortlist
@@ -11533,39 +11524,18 @@ function buildLegendHTML() {
   var hasCities = cityKeys.length >= 2;
   var canToggle = hasTypes && hasCities;
 
-  if ((hasCities || hasTypes) && surveyCount > 0) {
+  // Flat numbered list matching survey order -- no submarket grouping
+  if (surveyCount > 0) {
     html += '<div class="legend-section">';
-
-    // Grouping toggle (only if both options available)
-    if (canToggle) {
-      var cityActive = _legendGrouping === 'city';
-      var typeActive = _legendGrouping === 'type';
-      html += '<div style="display:flex;align-items:center;gap:4px;margin-bottom:4px;">';
-      html += '<span class="legend-section-label" style="margin:0;font-size:0.65rem;">Group by:</span>';
-      html += '<span class="legend-toggle-btn' + (cityActive ? ' active' : '') + '" data-grouping="city" style="font-size:0.6rem;padding:1px 6px;border-radius:3px;cursor:pointer;border:1px solid #cbd5e1;' + (cityActive ? 'background:#1e3a5f;color:white;' : 'background:white;color:#64748b;') + '">City</span>';
-      html += '<span class="legend-toggle-btn' + (typeActive ? ' active' : '') + '" data-grouping="type" style="font-size:0.6rem;padding:1px 6px;border-radius:3px;cursor:pointer;border:1px solid #cbd5e1;' + (typeActive ? 'background:#1e3a5f;color:white;' : 'background:white;color:#64748b;') + '">Type</span>';
+    html += '<div class="legend-section-label">Survey Buildings (' + surveyCount + ')</div>';
+    var sortedBuildings = SURVEY_BUILDINGS.filter(function(b) { return !b.not_interested; }).slice().sort(function(a, b) { return a.num - b.num; });
+    sortedBuildings.forEach(function(b) {
+      var label = b.name || b.address || ('Building ' + b.num);
+      html += '<div class="legend-item" style="gap:6px;">';
+      html += '<div style="min-width:18px;height:18px;border-radius:50%;background:' + MARKER_COLOR_SURVEY + ';color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;">' + b.num + '</div>';
+      html += '<span class="legend-label" style="font-size:0.7rem;">' + (b.name ? b.name : b.address) + '</span>';
       html += '</div>';
-    }
-
-    if (_legendGrouping === 'type' && hasTypes) {
-      html += '<div class="legend-section-label">Survey by Type</div>';
-      typeKeys.forEach(function(ptype) {
-        var nums = _typeBuildingNums[ptype] || [];
-        var totalInType = nums.length;
-        html += '<div class="legend-item"><div class="legend-dot" style="background:' + _typeColorMap[ptype] + '"></div><span class="legend-label">' + ptype + ' (' + totalInType + ')</span></div>';
-      });
-    } else if (hasCities) {
-      html += '<div class="legend-section-label">Survey by City</div>';
-      cityKeys.forEach(function(city) {
-        var nums = _cityBuildingNums[city] || [];
-        var totalInCity = nums.length;
-        html += '<div class="legend-item"><div class="legend-dot" style="background:' + _cityColorMap[city] + '"></div><span class="legend-label">' + city + ' (' + totalInCity + ')</span></div>';
-      });
-    }
-    html += '</div>';
-  } else if (surveyCount > 0) {
-    html += '<div class="legend-section">';
-    html += '<div class="legend-item"><div class="legend-dot survey"></div><span class="legend-label">Survey (' + surveyCount + ')</span></div>';
+    });
     html += '</div>';
   }
 
