@@ -541,6 +541,28 @@ Return ONLY the JSON array, no other text.`
           b.estimatedPage = bestPage
         }
       }
+
+      // Final pass: if most buildings still point to early pages (summary/TOC),
+      // try to distribute them evenly across the PDF based on document structure.
+      // Designed surveys typically have: cover(1) + TOC(2) + map(3) + summary(4) + N pages per building.
+      const earlyPageCount = buildings.filter((b: any) => (b.estimatedPage || 0) <= 4).length
+      if (earlyPageCount > buildings.length * 0.5 && pageTexts.length > 10) {
+        // Most buildings are stuck on early pages -- redistribute
+        const totalPages = pageTexts.length
+        const contentStart = 5 // after cover, TOC, map, summary
+        const pagesPerBuilding = Math.floor((totalPages - contentStart) / buildings.length)
+        
+        // Only override buildings that are still on early pages
+        let nextPage = contentStart
+        for (const b of buildings) {
+          if ((b.estimatedPage || 0) <= 4) {
+            console.log('Page redistribute:', b.address, '-> page', nextPage, '(was', b.estimatedPage, ')')
+            b.estimatedPage = nextPage
+          }
+          // Advance to next building section regardless
+          nextPage += Math.max(pagesPerBuilding, 1)
+        }
+      }
     }
 
     // Geocode addresses using Google Geocoding API for building-level accuracy
