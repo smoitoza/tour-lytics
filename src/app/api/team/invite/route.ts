@@ -50,11 +50,10 @@ export async function POST(req: Request) {
 
       if (existingUser) {
         authExisted = true
-        // Update their password to the new temp password so the invite email works
-        await admin.auth.admin.updateUserById(existingUser.id, {
-          password: tempPassword,
-          email_confirm: true,
-        })
+        // IMPORTANT: Do NOT reset the existing user's password.
+        // They already have an account and know their credentials -- just add
+        // them to the project. The caller should send a 'you've been added'
+        // email rather than an invite-with-password email.
       } else {
         // Create new user with auto-confirmed email
         const { error: createError } = await admin.auth.admin.createUser({
@@ -115,11 +114,13 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       member,
-      tempPassword,
+      // Only return a temp password for NEW users. For existing users,
+      // the caller must not show a password in the invite email.
+      tempPassword: authExisted ? null : tempPassword,
       authCreated,
       authExisted,
       message: authExisted
-        ? 'Account already existed. Password has been reset.'
+        ? 'User already has an account. Added to project with their existing credentials.'
         : 'Account created successfully.',
     })
   } catch (err) {

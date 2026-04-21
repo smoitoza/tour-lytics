@@ -441,16 +441,17 @@ export default function DashboardPage() {
 
     if (tempPassword) {
       bodyText +=
-        `Your account is ready to go. Here are your login credentials:\n\n` +
+        `Your new account is ready to go. Here are your login credentials:\n\n` +
         `Login page: ${getSignupUrl()}\n` +
         `Email: ${email}\n` +
         `Password: ${tempPassword}\n\n` +
         `You can change your password after signing in.\n\n`
     } else {
       bodyText +=
-        `To get started:\n` +
-        `1. Go to: ${getSignupUrl()}\n` +
-        `2. Sign in with this email (${email})\n\n`
+        `You already have a Tour-Lytics account, so no new password is needed. Just sign in with your existing credentials:\n\n` +
+        `Login page: ${getSignupUrl()}\n` +
+        `Email: ${email}\n\n` +
+        `If you've forgotten your password, use the "Forgot password" link on the login page.\n\n`
     }
 
     bodyText +=
