@@ -194,6 +194,15 @@ export default function DashboardPage() {
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null)
   const [deleting, setDeleting] = useState(false)
 
+  /* ---- Admin: Create Beta User state ---- */
+  const [showCreateBetaUserModal, setShowCreateBetaUserModal] = useState(false)
+  const [betaUserEmail, setBetaUserEmail] = useState('')
+  const [betaUserName, setBetaUserName] = useState('')
+  const [betaUserTokens, setBetaUserTokens] = useState(100)
+  const [creatingBetaUser, setCreatingBetaUser] = useState(false)
+  const [betaUserResult, setBetaUserResult] = useState<{ email: string; tempPassword: string; displayName: string; tokenBalance: number } | null>(null)
+  const [betaUserError, setBetaUserError] = useState<string | null>(null)
+
   /* ---- Team management state ---- */
   const [teamMembers, setTeamMembers] = useState<Array<{
     email: string
@@ -322,6 +331,58 @@ export default function DashboardPage() {
       setPasswordError('Something went wrong. Please try again.')
       setChangingPassword(false)
     }
+  }
+
+  const handleCreateBetaUser = async () => {
+    setBetaUserError(null)
+    const email = betaUserEmail.trim().toLowerCase()
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setBetaUserError('Please enter a valid email address.')
+      return
+    }
+    setCreatingBetaUser(true)
+    try {
+      const res = await fetch('/api/admin/create-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminEmail: user?.email || '',
+          email,
+          displayName: betaUserName.trim(),
+          tokenBalance: betaUserTokens,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setBetaUserError(data?.error || 'Failed to create user.')
+      } else {
+        setBetaUserResult({
+          email: data.email,
+          tempPassword: data.tempPassword,
+          displayName: data.displayName || '',
+          tokenBalance: data.tokenBalance,
+        })
+      }
+    } catch (err) {
+      setBetaUserError('Something went wrong. Please try again.')
+    } finally {
+      setCreatingBetaUser(false)
+    }
+  }
+
+  const resetBetaUserModal = () => {
+    setShowCreateBetaUserModal(false)
+    setBetaUserEmail('')
+    setBetaUserName('')
+    setBetaUserTokens(100)
+    setBetaUserResult(null)
+    setBetaUserError(null)
+  }
+
+  const copyBetaCredentials = () => {
+    if (!betaUserResult) return
+    const text = `Tour-Lytics Beta Access\n\nLogin: https://tourlytics.ai/login\nEmail: ${betaUserResult.email}\nPassword: ${betaUserResult.tempPassword}\n\nYou can change your password after signing in.`
+    navigator.clipboard.writeText(text).catch(() => {})
   }
 
   const handleCreateProject = async () => {
@@ -802,6 +863,29 @@ export default function DashboardPage() {
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
                   Admin
                 </span>
+              )}
+              {isSupportAdmin && (
+                <button
+                  onClick={() => setShowCreateBetaUserModal(true)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.375rem',
+                    padding: '0.375rem 0.75rem',
+                    borderRadius: '0.5rem',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    background: '#7c3aed',
+                    color: '#fff',
+                    border: 'none',
+                    cursor: 'pointer',
+                    marginLeft: '0.25rem',
+                  }}
+                  title="Create a new beta user account"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                  New Beta User
+                </button>
               )}
             </div>
             <Link
@@ -1628,6 +1712,117 @@ export default function DashboardPage() {
           }
         }
       `}</style>
+
+      {/* Admin: Create Beta User Modal */}
+      {showCreateBetaUserModal && (
+        <div
+          onClick={resetBetaUserModal}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.6)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: '#fff', borderRadius: '0.75rem', padding: '1.5rem', maxWidth: '480px', width: '100%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                Create Beta User
+              </h2>
+              <button onClick={resetBetaUserModal} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '1.25rem' }}>×</button>
+            </div>
+
+            {!betaUserResult ? (
+              <>
+                <p style={{ fontSize: '0.8125rem', color: '#64748b', marginBottom: '1rem', lineHeight: 1.5 }}>
+                  Create a new Tour-Lytics account. A temporary password will be generated for you to share with the user.
+                </p>
+
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#334155', marginBottom: '0.25rem' }}>Email *</label>
+                  <input
+                    type="email"
+                    value={betaUserEmail}
+                    onChange={(e) => setBetaUserEmail(e.target.value)}
+                    placeholder="user@example.com"
+                    style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #cbd5e1', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+                    autoFocus
+                  />
+                </div>
+
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#334155', marginBottom: '0.25rem' }}>Display Name (optional)</label>
+                  <input
+                    type="text"
+                    value={betaUserName}
+                    onChange={(e) => setBetaUserName(e.target.value)}
+                    placeholder="Jane Smith"
+                    style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #cbd5e1', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#334155', marginBottom: '0.25rem' }}>Starting Token Balance</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={50}
+                    value={betaUserTokens}
+                    onChange={(e) => setBetaUserTokens(parseInt(e.target.value) || 0)}
+                    style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #cbd5e1', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+                  />
+                  <p style={{ fontSize: '0.6875rem', color: '#94a3b8', margin: '0.25rem 0 0' }}>Default is 100 tokens (the standard beta welcome amount).</p>
+                </div>
+
+                {betaUserError && (
+                  <div style={{ padding: '0.5rem 0.75rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem', color: '#b91c1c', fontSize: '0.8125rem', marginBottom: '0.75rem' }}>
+                    {betaUserError}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                  <button onClick={resetBetaUserModal} style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', background: '#fff', color: '#475569', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+                  <button onClick={handleCreateBetaUser} disabled={creatingBetaUser} style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none', background: '#7c3aed', color: '#fff', fontSize: '0.8125rem', fontWeight: 600, cursor: creatingBetaUser ? 'not-allowed' : 'pointer', opacity: creatingBetaUser ? 0.6 : 1 }}>
+                    {creatingBetaUser ? 'Creating...' : 'Create Account'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ padding: '1rem', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '0.5rem', marginBottom: '1rem' }}>
+                  <p style={{ fontSize: '0.875rem', fontWeight: 600, color: '#166534', margin: '0 0 0.5rem' }}>Account created successfully</p>
+                  <p style={{ fontSize: '0.75rem', color: '#166534', margin: 0 }}>{betaUserResult.tokenBalance} tokens seeded. Share these credentials with the user:</p>
+                </div>
+
+                <div style={{ padding: '0.75rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '0.5rem', marginBottom: '0.75rem', fontSize: '0.8125rem' }}>
+                  <div style={{ marginBottom: '0.375rem' }}><strong style={{ color: '#64748b', fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Email</strong></div>
+                  <div style={{ fontFamily: 'monospace', color: '#0f172a', marginBottom: '0.75rem' }}>{betaUserResult.email}</div>
+                  <div style={{ marginBottom: '0.375rem' }}><strong style={{ color: '#64748b', fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Temporary Password</strong></div>
+                  <div style={{ fontFamily: 'monospace', color: '#0f172a', fontWeight: 600 }}>{betaUserResult.tempPassword}</div>
+                </div>
+
+                <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0 0 1rem', lineHeight: 1.5 }}>
+                  The user can log in at <a href="https://tourlytics.ai/login" target="_blank" rel="noopener" style={{ color: '#2563eb' }}>tourlytics.ai/login</a> and change their password in settings after signing in.
+                </p>
+
+                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                  <button onClick={copyBetaCredentials} style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', background: '#fff', color: '#475569', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer' }}>Copy Credentials</button>
+                  <button
+                    onClick={() => {
+                      const subject = 'Your Tour-Lytics Beta Access'
+                      const body = `Hi${betaUserResult.displayName ? ' ' + betaUserResult.displayName : ''},\n\nYou have been granted beta access to Tour-Lytics.\n\nLogin: https://tourlytics.ai/login\nEmail: ${betaUserResult.email}\nPassword: ${betaUserResult.tempPassword}\n\nYou can change your password after signing in. Let me know if you have any questions.\n\nBest,\nScott`
+                      window.location.href = `mailto:${betaUserResult.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+                    }}
+                    style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none', background: '#2563eb', color: '#fff', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    Draft Email
+                  </button>
+                  <button onClick={resetBetaUserModal} style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none', background: '#7c3aed', color: '#fff', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer' }}>Done</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
