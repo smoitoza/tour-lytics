@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { isAdminEmail } from '@/lib/admin'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,13 +13,22 @@ export async function GET(req: NextRequest) {
   if (!email) return NextResponse.json({ error: 'email required' }, { status: 400 })
 
   try {
-    // Get all project IDs this user owns
-    const { data: memberships } = await supabase
-      .from('project_members')
-      .select('project_id')
-      .eq('email', email.toLowerCase().trim())
-
-    const projectIds = (memberships || []).map(m => m.project_id)
+    let projectIds: string[] = []
+    if (isAdminEmail(email)) {
+      // Admin sees aggregate stats across ALL projects
+      const { data: allProjects } = await supabase
+        .from('projects')
+        .select('id')
+        .neq('status', 'deleted')
+      projectIds = (allProjects || []).map(p => p.id)
+    } else {
+      // Regular user: only their project memberships
+      const { data: memberships } = await supabase
+        .from('project_members')
+        .select('project_id')
+        .eq('email', email.toLowerCase().trim())
+      projectIds = (memberships || []).map(m => m.project_id)
+    }
     if (projectIds.length === 0) {
       return NextResponse.json({ buildings: 0, sqft: 0, shortlisted: 0, leaseValue: 0, projects: 0 })
     }

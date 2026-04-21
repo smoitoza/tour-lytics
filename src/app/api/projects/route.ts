@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { isAdminEmail } from '@/lib/admin'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -20,6 +21,28 @@ export async function GET(req: NextRequest) {
   const email = req.nextUrl.searchParams.get('email')
 
   if (email) {
+    // Admin users see ALL projects across all customers
+    if (isAdminEmail(email)) {
+      const { data: allProjects, error: allErr } = await supabase
+        .from('projects')
+        .select('*')
+        .neq('status', 'deleted')
+        .order('updated_at', { ascending: false })
+
+      if (allErr) {
+        return NextResponse.json({ error: allErr.message }, { status: 500 })
+      }
+
+      const enriched = (allProjects || []).map(p => ({
+        ...p,
+        user_role: 'admin',
+        user_persona: 'admin',
+        is_admin_view: p.owner_id !== email.toLowerCase().trim(),
+      }))
+
+      return NextResponse.json(enriched)
+    }
+
     // Return projects the user is a member of, with their role
     const { data: memberships, error: memberError } = await supabase
       .from('project_members')
@@ -94,7 +117,7 @@ export async function DELETE(req: NextRequest) {
     .single()
 
   const isOwner = email === project?.owner_id || email === project?.created_by
-  const isGlobalAdmin = email === 'samoitoza@gmail.com'
+  const isGlobalAdmin = isAdminEmail(email)
 
   if (!isOwner && !isGlobalAdmin) {
     return NextResponse.json({ error: 'Only the project owner can delete projects.' }, { status: 403 })

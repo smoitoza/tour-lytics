@@ -16,9 +16,13 @@ interface Project {
   sqft: string
   shortlisted_count: number
   created_by: string
+  owner_id?: string
+  is_admin_view?: boolean
   created_at: string
   updated_at: string
 }
+
+const ADMIN_EMAILS = ['scott@tourlytics.ai', 'samoitoza@gmail.com']
 
 export default function ProjectPage() {
   const [user, setUser] = useState<User | null>(null)
@@ -44,10 +48,10 @@ export default function ProjectPage() {
     })
   }, [router])
 
-  /* Fetch project details */
+  /* Fetch project details - pass user email so admin view works */
   useEffect(() => {
-    if (!projectId) return
-    fetch(`/api/projects?email=`)
+    if (!projectId || !user?.email) return
+    fetch(`/api/projects?email=${encodeURIComponent(user.email)}`)
       .then((r) => r.json())
       .then((data) => {
         if (Array.isArray(data)) {
@@ -56,7 +60,10 @@ export default function ProjectPage() {
         }
       })
       .catch(() => { /* use defaults */ })
-  }, [projectId])
+  }, [projectId, user?.email])
+
+  const isSupportAdmin = ADMIN_EMAILS.includes((user?.email || '').toLowerCase())
+  const isAdminViewing = isSupportAdmin && project?.owner_id && project.owner_id.toLowerCase() !== (user?.email || '').toLowerCase()
 
   const handleSignOut = async () => {
     const supabase = createClient()
@@ -124,6 +131,22 @@ export default function ProjectPage() {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              {isAdminViewing && (
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.375rem',
+                  padding: '0.25rem 0.625rem',
+                  borderRadius: '9999px',
+                  fontSize: '0.6875rem',
+                  fontWeight: 700,
+                  background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                  color: '#fff',
+                }}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+                  Admin &middot; Owner: {project?.owner_id}
+                </span>
+              )}
               <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{user?.email}</span>
               <button
                 onClick={handleSignOut}

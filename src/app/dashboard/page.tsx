@@ -67,6 +67,7 @@ interface Project {
   client_name?: string
   user_role?: string
   user_persona?: string
+  is_admin_view?: boolean
   created_at: string
   updated_at: string
 }
@@ -492,6 +493,10 @@ export default function DashboardPage() {
   const displayName = user?.email?.split('@')[0] || 'there'
   const isAdmin = !!user?.email // Every authenticated user is the admin of their own account
 
+  // Support/platform admin (can view all customer projects)
+  const ADMIN_EMAILS = ['scott@tourlytics.ai', 'samoitoza@gmail.com']
+  const isSupportAdmin = ADMIN_EMAILS.includes((user?.email || '').toLowerCase())
+
   /* Role badge colors */
   const ROLE_BADGE: Record<string, { bg: string; color: string; label: string }> = {
     owner:  { bg: 'rgba(234,124,28,0.1)', color: '#b45309', label: 'Owner' },
@@ -656,6 +661,12 @@ export default function DashboardPage() {
             <p style={{ fontSize: '0.8125rem', color: '#2563eb', fontWeight: 500, marginBottom: '0.125rem' }}>{project.client_name}</p>
           )}
           <p style={{ fontSize: '0.8125rem', color: '#64748b', marginBottom: '0.25rem' }}>{project.market}</p>
+          {project.is_admin_view && project.owner_id && (
+            <p style={{ fontSize: '0.75rem', color: '#7c3aed', marginBottom: '0.25rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Owner: {project.owner_id}
+            </p>
+          )}
           <p style={{ fontSize: '0.8125rem', color: '#94a3b8', marginBottom: '1.25rem', lineHeight: 1.5 }}>{project.description}</p>
 
           {/* Stats row */}
@@ -772,6 +783,25 @@ export default function DashboardPage() {
                 {displayName.charAt(0).toUpperCase()}
               </div>
               <span className="hidden sm:inline" style={{ fontSize: '0.8125rem', color: '#475569', fontWeight: 500 }}>{user?.email}</span>
+              {isSupportAdmin && (
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  padding: '0.25rem 0.625rem',
+                  borderRadius: '9999px',
+                  fontSize: '0.6875rem',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                  color: '#fff',
+                  marginLeft: '0.25rem',
+                }}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+                  Admin
+                </span>
+              )}
             </div>
             <Link
               href="/billing"
@@ -1022,12 +1052,12 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* -- Shared With Me column -- */}
+        {/* -- Shared With Me / All Customer Projects (admin) column -- */}
         {effectiveShared.length > 0 && (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-              <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                Shared With Me
+              <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: isSupportAdmin ? '#7c3aed' : '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                {isSupportAdmin ? 'All Customer Projects (Admin View)' : 'Shared With Me'}
               </div>
               <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{effectiveShared.length} project{effectiveShared.length !== 1 ? 's' : ''}</div>
             </div>
