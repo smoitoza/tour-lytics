@@ -9035,6 +9035,12 @@ body {
   <div class="survey-upload-modal-body">
     <p class="survey-upload-desc">Upload a broker survey (.pdf or .docx) to add new buildings to the map. Duplicate addresses will be skipped.</p>
     <p class="survey-upload-cost"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Cost: 25 tokens</p>
+    <div style="display:flex;gap:10px;padding:10px 12px;background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;margin-bottom:12px;font-size:var(--text-xs);color:#78350f;line-height:1.5;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <div>
+        <strong>File size limit: 20 MB.</strong> Larger files may fail to upload or time out. If your PDF is over the limit, compress it first at <a href="https://www.ilovepdf.com/compress_pdf" target="_blank" rel="noopener" style="color:#2563eb;font-weight:600;">iLovePDF Compressor</a> or <a href="https://smallpdf.com/compress-pdf" target="_blank" rel="noopener" style="color:#2563eb;font-weight:600;">SmallPDF</a>.
+      </div>
+    </div>
     <div class="survey-upload-dropzone" id="surveyDropzone">
       <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.4;margin-bottom:8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       <p>Drop your survey file here or <label for="surveyFileInput" style="color:var(--color-primary);cursor:pointer;font-weight:600;">browse</label></p>
@@ -24987,8 +24993,20 @@ function surveyHandleFile(file) {
     alert('Please select a PDF or DOCX file.');
     return;
   }
+  var sizeMB = file.size / (1024 * 1024);
+  if (sizeMB > 20) {
+    var proceed = confirm(
+      'This file is ' + sizeMB.toFixed(1) + ' MB. Files over 20 MB may fail to upload or time out.\n\n' +
+      'We recommend compressing the PDF first. Free compressors:\n' +
+      '  \u2022 iLovePDF: https://www.ilovepdf.com/compress_pdf\n' +
+      '  \u2022 SmallPDF: https://smallpdf.com/compress-pdf\n\n' +
+      'Click OK to try uploading anyway, or Cancel to compress first.'
+    );
+    if (!proceed) return;
+  }
   _surveyUploadFile = file;
-  document.getElementById('surveyFileName').textContent = file.name + ' (' + (file.size / 1024).toFixed(0) + ' KB)';
+  var sizeLabel = sizeMB >= 1 ? sizeMB.toFixed(1) + ' MB' : (file.size / 1024).toFixed(0) + ' KB';
+  document.getElementById('surveyFileName').textContent = file.name + ' (' + sizeLabel + ')';
   document.getElementById('surveyFileInfo').style.display = 'flex';
   document.getElementById('surveyDropzone').style.display = 'none';
   document.getElementById('surveySubmitBtn').disabled = false;
