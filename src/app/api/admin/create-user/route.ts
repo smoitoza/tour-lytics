@@ -77,17 +77,41 @@ export async function POST(req: NextRequest) {
 
     const newUserId = newAuthUser.user.id
 
-    // Seed token balance (the signup trigger creates 100 automatically).
-    // If the admin requested a different amount, adjust.
-    if (tokenBalance !== 100) {
-      await supabase.from('token_balances').upsert({
+    // Seed token balance explicitly. The signup trigger SHOULD seed 100 tokens
+    // automatically, but it silently fails in some edge cases (exception block
+    // swallows errors so signup isn't blocked). So we always seed here to
+    // guarantee admin-created users get their tokens.
+    const { data: existingBalance } = await supabase
+      .from('token_balances')
+      .select('balance')
+      .eq('user_id', newUserId)
+      .is('project_id', null)
+      .maybeSingle()
+
+    if (existingBalance) {
+      // Trigger already seeded - update to the requested amount if different
+      if (existingBalance.balance !== tokenBalance) {
+        await supabase
+          .from('token_balances')
+          .update({
+            balance: tokenBalance,
+            total_purchased: tokenBalance,
+            total_consumed: 0,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', newUserId)
+          .is('project_id', null)
+      }
+    } else {
+      // Trigger didn't seed -- do it ourselves
+      await supabase.from('token_balances').insert({
         user_id: newUserId,
         project_id: null,
         balance: tokenBalance,
         total_purchased: tokenBalance,
         total_consumed: 0,
         low_balance_threshold: 10,
-      }, { onConflict: 'user_id' })
+      })
 
       await supabase.from('token_transactions').insert({
         user_id: newUserId,
@@ -96,7 +120,7 @@ export async function POST(req: NextRequest) {
         amount: tokenBalance,
         balance_after: tokenBalance,
         user_email: email,
-        note: `Beta account setup by ${adminEmail} (${tokenBalance} tokens)`,
+        note: `Welcome bonus - ${tokenBalance} tokens (admin created by ${adminEmail})`,
       })
     }
 
