@@ -865,27 +865,50 @@ export default function DashboardPage() {
                 </span>
               )}
               {isSupportAdmin && (
-                <button
-                  onClick={() => setShowCreateBetaUserModal(true)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.375rem',
-                    padding: '0.375rem 0.75rem',
-                    borderRadius: '0.5rem',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    background: '#7c3aed',
-                    color: '#fff',
-                    border: 'none',
-                    cursor: 'pointer',
-                    marginLeft: '0.25rem',
-                  }}
-                  title="Create a new beta user account"
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
-                  New Beta User
-                </button>
+                <>
+                  <button
+                    onClick={() => setShowCreateBetaUserModal(true)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.375rem',
+                      padding: '0.375rem 0.75rem',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      background: '#7c3aed',
+                      color: '#fff',
+                      border: 'none',
+                      cursor: 'pointer',
+                      marginLeft: '0.25rem',
+                    }}
+                    title="Create a new beta user account"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                    New Beta User
+                  </button>
+                  <Link
+                    href="/admin/users"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.375rem',
+                      padding: '0.375rem 0.75rem',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      background: '#fff',
+                      color: '#7c3aed',
+                      border: '1px solid #7c3aed',
+                      cursor: 'pointer',
+                      textDecoration: 'none',
+                    }}
+                    title="Manage all users"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    Manage Users
+                  </Link>
+                </>
               )}
             </div>
             <Link
