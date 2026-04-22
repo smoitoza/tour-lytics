@@ -9450,7 +9450,11 @@ body {
           <line x1="12" y1="3" x2="12" y2="15"/>
         </svg>
         <p class="commute-dropzone-title">Drop your employee file here</p>
-        <p class="commute-dropzone-desc">or click to browse. Supports <strong>.xlsx, .xls, .csv</strong> with latitude/longitude columns</p>
+        <p class="commute-dropzone-desc">or click to browse. Supports <strong>.xlsx, .xls, .csv</strong></p>
+        <p class="commute-dropzone-desc" style="font-size:12px;color:#64748b;margin-top:6px;">
+          Include either <strong>Latitude + Longitude</strong> columns, or a <strong>Home Address</strong> column
+          (or Street / City / State / Zip). We will geocode addresses automatically.
+        </p>
         <input type="file" id="commuteFileInput" accept=".csv,.xlsx,.xls" style="display:none" />
         <button class="commute-browse-btn" onclick="document.getElementById('commuteFileInput').click()">Choose File</button>
       </div>
@@ -27256,6 +27260,12 @@ function initCommuteDropzone() {
 // Column header patterns for auto-detection
 var _commuteLatPatterns = ['lat', 'latitude', 'latitude1', 'lat1', 'y', 'employee_lat'];
 var _commuteLngPatterns = ['lng', 'longitude', 'longitude1', 'lng1', 'lon', 'lon1', 'x', 'employee_lng', 'employee_lon'];
+// Address patterns - single full-address column or component columns (street/city/state/zip)
+var _commuteAddressPatterns = ['address', 'homeaddress', 'fulladdress', 'streetaddress', 'addr', 'location', 'home', 'homelocation', 'workaddress'];
+var _commuteStreetPatterns = ['street', 'streetaddress', 'street1', 'addressline1', 'addr1'];
+var _commuteCityPatterns = ['city', 'town', 'municipality'];
+var _commuteStatePatterns = ['state', 'province', 'region', 'stateprovince'];
+var _commuteZipPatterns = ['zip', 'zipcode', 'postal', 'postalcode', 'postcode'];
 var _commuteHeaders = []; // all column headers from the file
 var _commuteLatCol = -1;
 var _commuteLngCol = -1;
@@ -27311,6 +27321,125 @@ function commuteHandleFile(file) {
   }
 }
 
+// Build a full address string from a row using available column indices
+function commuteBuildAddress(row, validCols, fullCol, streetCol, cityCol, stateCol, zipCol) {
+  if (fullCol >= 0) {
+    return String(row[validCols[fullCol]] || '').trim();
+  }
+  var parts = [];
+  if (streetCol >= 0) {
+    var s = String(row[validCols[streetCol]] || '').trim();
+    if (s) parts.push(s);
+  }
+  if (cityCol >= 0) {
+    var c = String(row[validCols[cityCol]] || '').trim();
+    if (c) parts.push(c);
+  }
+  if (stateCol >= 0) {
+    var st = String(row[validCols[stateCol]] || '').trim();
+    if (st) parts.push(st);
+  }
+  if (zipCol >= 0) {
+    var z = String(row[validCols[zipCol]] || '').trim();
+    if (z) parts.push(z);
+  }
+  return parts.join(', ');
+}
+
+// Geocode addresses from the uploaded CSV then inject lat/lng and continue processing
+async function commuteGeocodeAndProcess(rows, validCols, filename, fullCol, streetCol, cityCol, stateCol, zipCol) {
+  // Build address list from data rows
+  var addresses = [];
+  for (var ri = 1; ri < rows.length; ri++) {
+    var addr = commuteBuildAddress(rows[ri], validCols, fullCol, streetCol, cityCol, stateCol, zipCol);
+    addresses.push(addr);
+  }
+
+  var nonEmpty = addresses.filter(function(a) { return a && a.length > 0; }).length;
+  if (nonEmpty === 0) {
+    alert('Found address columns but all rows are empty. Check your file has address data.');
+    return;
+  }
+
+  // Show progress UI
+  var dropzone = document.getElementById('commuteDropzone');
+  if (dropzone) dropzone.style.display = 'none';
+  var progressEl = document.getElementById('commuteGeocodeProgress');
+  if (!progressEl) {
+    progressEl = document.createElement('div');
+    progressEl.id = 'commuteGeocodeProgress';
+    progressEl.style.cssText = 'padding:16px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;margin-bottom:12px;font-size:14px;color:#4338ca;';
+    var card = document.getElementById('commuteUploadCard');
+    if (card) card.insertBefore(progressEl, card.firstChild);
+  }
+  progressEl.innerHTML = '<div style="display:flex;align-items:center;gap:10px;"><div class="rfp-spinner" style="width:18px;height:18px;border-width:2px;"></div><div><strong>Geocoding addresses...</strong><br><span style="font-size:12px;color:#6366f1;">0 of ' + nonEmpty + ' complete</span></div></div>';
+  progressEl.style.display = 'block';
+
+  // Batch in chunks of 50 so the user sees progress
+  var CHUNK = 50;
+  var geoResults = [];
+  var completed = 0;
+  try {
+    for (var start = 0; start < addresses.length; start += CHUNK) {
+      var batch = addresses.slice(start, start + CHUNK);
+      var res = await fetch('/api/geocode-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ addresses: batch }),
+      });
+      if (!res.ok) {
+        var errData = await res.json().catch(function() { return {}; });
+        throw new Error(errData.error || 'Geocoding failed with status ' + res.status);
+      }
+      var data = await res.json();
+      geoResults.push.apply(geoResults, data.results);
+      completed += batch.filter(function(a) { return a && a.length > 0; }).length;
+      progressEl.innerHTML = '<div style="display:flex;align-items:center;gap:10px;"><div class="rfp-spinner" style="width:18px;height:18px;border-width:2px;"></div><div><strong>Geocoding addresses...</strong><br><span style="font-size:12px;color:#6366f1;">' + completed + ' of ' + nonEmpty + ' complete</span></div></div>';
+    }
+  } catch (err) {
+    progressEl.style.display = 'none';
+    alert('Geocoding failed: ' + (err.message || 'unknown error') + '\n\nYou can also upload a file with pre-filled Latitude and Longitude columns.');
+    if (dropzone) dropzone.style.display = '';
+    return;
+  }
+
+  progressEl.style.display = 'none';
+
+  // Inject lat/lng columns into rows and then continue
+  var latHeaderName = '_geocoded_lat';
+  var lngHeaderName = '_geocoded_lng';
+  rows[0].push(latHeaderName, lngHeaderName);
+  for (var ri = 1; ri < rows.length; ri++) {
+    var r = geoResults[ri - 1];
+    if (r && r.status === 'OK') {
+      rows[ri].push(r.lat, r.lng);
+    } else {
+      rows[ri].push('', '');
+    }
+  }
+
+  var successCount = geoResults.filter(function(r) { return r && r.status === 'OK'; }).length;
+  var failedCount = nonEmpty - successCount;
+
+  if (failedCount > 0) {
+    var failedAddrs = [];
+    geoResults.forEach(function(r, i) {
+      if (r && r.status !== 'OK' && r.input) failedAddrs.push('  \u2022 ' + r.input + ' (' + r.status + ')');
+    });
+    var shown = failedAddrs.slice(0, 10).join('\n');
+    var msg = failedCount + ' of ' + nonEmpty + ' addresses could not be located:\n\n' + shown;
+    if (failedAddrs.length > 10) msg += '\n  \u2022 ... and ' + (failedAddrs.length - 10) + ' more';
+    msg += '\n\nThose employees will be skipped. Continue with the remaining ' + successCount + '?';
+    if (!confirm(msg)) {
+      if (dropzone) dropzone.style.display = '';
+      return;
+    }
+  }
+
+  // Re-run the standard processor now that lat/lng exist
+  commuteProcessRows(rows, filename);
+}
+
 function commuteProcessRows(rows, filename) {
   _commuteFilename = filename || '';
   // rows[0] = headers, rows[1+] = data
@@ -27342,8 +27471,42 @@ function commuteProcessRows(rows, filename) {
     }
   }
   
+  // If lat/lng missing, try address-based flow
   if (_commuteLatCol < 0 || _commuteLngCol < 0) {
-    alert('Could not find latitude/longitude columns. Make sure your file has columns with headers like Latitude, Longitude, Lat, Lng, etc.');
+    // Detect a single full-address column or component columns
+    var fullAddrCol = -1;
+    for (var p = 0; p < _commuteAddressPatterns.length && fullAddrCol < 0; p++) {
+      for (var hi = 0; hi < headersLower.length; hi++) {
+        if (headersLower[hi] === _commuteAddressPatterns[p]) { fullAddrCol = hi; break; }
+      }
+    }
+    var streetCol = -1, cityCol = -1, stateCol = -1, zipCol = -1;
+    var findCol = function(pats) {
+      for (var p = 0; p < pats.length; p++) {
+        for (var hi = 0; hi < headersLower.length; hi++) {
+          if (headersLower[hi] === pats[p]) return hi;
+        }
+      }
+      return -1;
+    };
+    streetCol = findCol(_commuteStreetPatterns);
+    cityCol = findCol(_commuteCityPatterns);
+    stateCol = findCol(_commuteStatePatterns);
+    zipCol = findCol(_commuteZipPatterns);
+
+    var hasComponentAddress = (cityCol >= 0 || zipCol >= 0) && (streetCol >= 0 || cityCol >= 0);
+
+    if (fullAddrCol >= 0 || hasComponentAddress) {
+      // Build address list and kick off geocoding flow
+      commuteGeocodeAndProcess(rows, validCols, filename, fullAddrCol, streetCol, cityCol, stateCol, zipCol);
+      return;
+    }
+
+    alert('Could not find latitude/longitude or address columns. Your file needs either:\n\n' +
+      '\u2022 Latitude & Longitude columns, OR\n' +
+      '\u2022 An Address column, OR\n' +
+      '\u2022 Street + City + State + Zip columns\n\n' +
+      'Common header names are auto-detected (Address, Home Address, Street, City, Zip, etc.)');
     return;
   }
   
