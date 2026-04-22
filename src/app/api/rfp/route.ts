@@ -90,6 +90,7 @@ export async function POST(req: Request) {
     amortized_ti_rsf: rawTerms.amortized_ti_rsf ?? rawTerms.amortizedTIRSF ?? 0,
     amortized_ti_rate: rawTerms.amortized_ti_rate ?? rawTerms.amortizedTIRate ?? 0,
     amortized_ti_term_months: rawTerms.amortized_ti_term_months ?? rawTerms.amortizedTITermMonths ?? 0,
+    management_fee_pct: rawTerms.management_fee_pct ?? rawTerms.managementFeePct ?? 0,
     rent_basis: rawTerms.rent_basis ?? rawTerms.rentBasis ?? '',
     structure: rawTerms.structure ?? '',
     landlord: rawTerms.landlord ?? '',
@@ -308,6 +309,10 @@ interface DealTerms {
   amortized_ti_rsf?: number
   amortized_ti_rate?: number
   amortized_ti_term_months?: number
+  // Management fee charged as % of base rent (e.g. 3 = 3%).
+  // Applied to the contracted base rent each month. Scales with escalations.
+  // During free rent, fee is reduced proportionally so it's zero on fully-abated months.
+  management_fee_pct?: number
   rent_basis?: string
   structure?: string
   landlord?: string
@@ -380,6 +385,8 @@ function generateFinancialAnalysis(terms: DealTerms) {
   const parkingEsc = (terms.parking_escalation_pct || 0) / 100
   const amortTIRSF = terms.amortized_ti_rsf || 0
   const amortTIRate = (terms.amortized_ti_rate || 0) / 100
+  // Management fee: % of contracted base rent. Stored as whole-number percent (3 = 3%).
+  const mgmtFeePct = (terms.management_fee_pct || 0) / 100
   const amortTITermMonths = (terms.amortized_ti_term_months || 0) > 0 ? terms.amortized_ti_term_months! : termMonths
   const amortTIPrincipal = amortTIRSF * rsf
   let amortTIMonthlyPayment = 0
@@ -441,6 +448,7 @@ function generateFinancialAnalysis(terms: DealTerms) {
   let totalAmortTI = 0
   let totalTIReceived = 0
   let totalAmortTIReceived = 0
+  let totalMgmtFee = 0
 
   for (let m = 1; m <= termMonths; m++) {
     const leaseYear = Math.ceil(m / 12)
@@ -506,6 +514,11 @@ function generateFinancialAnalysis(terms: DealTerms) {
     freeRentCredit = freeRentCredit * proration
     const netCashRent = monthlyBaseRent - freeRentCredit
 
+    // Management fee: % of NET cash rent so that fully-abated months = $0 fee.
+    // This matches how most tenant-rep pro formas treat it. Scales with escalations
+    // automatically because monthlyBaseRent already includes escalation.
+    const mgmtFee = netCashRent * mgmtFeePct
+
     // OpEx (constant, user-defined) - prorated for partial months
     const opex = opexMonthly * proration
 
@@ -521,7 +534,7 @@ function generateFinancialAnalysis(terms: DealTerms) {
     const amortTIReceived = getTIReceivedForMonth(m, amortTIPrincipal)
 
     // Total monthly cost: TI received REDUCES net cash out
-    const totalMonthlyCost = netCashRent + opex + monthlyParking + amortTI - tiReceived - amortTIReceived
+    const totalMonthlyCost = netCashRent + mgmtFee + opex + monthlyParking + amortTI - tiReceived - amortTIReceived
     cumulativeCash += totalMonthlyCost
 
     totalBaseRent += monthlyBaseRent
@@ -531,6 +544,7 @@ function generateFinancialAnalysis(terms: DealTerms) {
     totalAmortTI += amortTI
     totalTIReceived += tiReceived
     totalAmortTIReceived += amortTIReceived
+    totalMgmtFee += mgmtFee
 
     monthly.push({
       month: m,
@@ -542,6 +556,7 @@ function generateFinancialAnalysis(terms: DealTerms) {
       monthlyBaseRent: Math.round(monthlyBaseRent),
       freeRentCredit: Math.round(freeRentCredit),
       netCashRent: Math.round(netCashRent),
+      managementFee: Math.round(mgmtFee),
       opex: Math.round(opex),
       parking: Math.round(monthlyParking),
       amortizedTI: Math.round(amortTI),
@@ -563,6 +578,7 @@ function generateFinancialAnalysis(terms: DealTerms) {
         baseRent: 0,
         freeRent: 0,
         netRent: 0,
+        managementFee: 0,
         opex: 0,
         parking: 0,
         amortizedTI: 0,
@@ -576,6 +592,7 @@ function generateFinancialAnalysis(terms: DealTerms) {
     yr.baseRent += m.monthlyBaseRent
     yr.freeRent += m.freeRentCredit
     yr.netRent += m.netCashRent
+    yr.managementFee += (m.managementFee || 0)
     yr.opex += m.opex
     yr.parking += m.parking
     yr.amortizedTI += m.amortizedTI
@@ -588,6 +605,7 @@ function generateFinancialAnalysis(terms: DealTerms) {
     baseRent: Math.round(yr.baseRent),
     freeRent: Math.round(yr.freeRent),
     netRent: Math.round(yr.netRent),
+    managementFee: Math.round(yr.managementFee),
     opex: Math.round(yr.opex),
     parking: Math.round(yr.parking),
     amortizedTI: Math.round(yr.amortizedTI),
@@ -708,6 +726,8 @@ function generateFinancialAnalysis(terms: DealTerms) {
         totalBaseRent: Math.round(totalBaseRent),
         totalFreeRentValue: Math.round(totalFreeRentValue),
         totalNetRent: Math.round(totalNetRent),
+        totalManagementFee: Math.round(totalMgmtFee),
+        managementFeePct: terms.management_fee_pct || 0,
         totalOpex: Math.round(totalOpex),
         totalParking: Math.round(totalParking),
         totalAmortizedTI: Math.round(totalAmortTI),
@@ -725,6 +745,9 @@ function generateFinancialAnalysis(terms: DealTerms) {
       totals: {
         straightLineMonthlyRent: Math.round(straightLineMonthlyRent),
         straightLineAnnualRent: Math.round(straightLineAnnualRent),
+        totalManagementFee: Math.round(totalMgmtFee),
+        managementFeePct: terms.management_fee_pct || 0,
+        monthlyManagementFee: termMonths > 0 ? Math.round(totalMgmtFee / termMonths) : 0,
         effectiveRentRSF,
         totalCostPerRSFPerYear,
         tiAllowanceTotal: tiTotal,

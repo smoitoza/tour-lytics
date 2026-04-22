@@ -16024,6 +16024,7 @@ function rfpMapTerms(raw) {
     parkingRate: raw.parking_rate_monthly || raw.parkingRate || '',
     parkingEscalation: raw.parking_escalation_pct || raw.parkingEscalation || '',
     securityDeposit: raw.security_deposit || raw.securityDeposit || '',
+    managementFeePct: raw.management_fee_pct || raw.managementFeePct || '',
     structure: raw.structure || '',
     landlord: raw.landlord || '',
     notes: raw.notes || '',
@@ -16317,6 +16318,7 @@ function rfpShowReviewForm(terms, meta) {
     { key: 'tiConstructionCost', label: 'Est. Construction Cost (optional)', type: 'number', placeholder: 'Total buildout cost estimate' },
     { key: 'opexRSF', label: 'OpEx/Tax/CAM (per RSF/yr)', type: 'number', step: '0.01', placeholder: 'e.g. 18.00' },
     { key: 'opex', label: 'OpEx (monthly override)', type: 'number', placeholder: 'Auto-calculated if per RSF entered' },
+    { key: 'managementFeePct', label: 'Management Fee (% of base rent)', type: 'number', step: '0.01', placeholder: 'e.g. 3 for 3%' },
     { key: 'parkingSpots', label: 'Parking Spots', type: 'number' },
     { key: 'parkingRate', label: 'Parking Rate (per spot/mo)', type: 'number', step: '0.01' },
     { key: 'parkingEscalation', label: 'Parking Escalation %', type: 'number', step: '0.01' },
@@ -17174,6 +17176,7 @@ function rfpBuildCombinedView(componentMap, address) {
   compRow('TI Allowance/RSF', compTerms.map(function(t) { return t.ti_allowance_rsf || t.tiAllowancePerRSF || 0; }), 'curr_dec', '', 'Landlord contribution toward build-out, per RSF');
   compRow('TI Total', compTerms.map(function(t) { return t.ti_allowance_total || t.tiAllowanceTotal || 0; }), 'curr', '', 'Total tenant improvement allowance (RSF x TI/RSF)');
   compRow('OpEx (monthly)', compTerms.map(function(t) { return t.opex_monthly || t.opex || 0; }), 'curr', '', 'Operating expenses, taxes, CAM, insurance');
+  compRow('Management Fee %', compTerms.map(function(t) { return t.management_fee_pct || t.managementFeePct || 0; }), 'plain', '', 'Landlord management fee as % of base rent');
   compRow('Parking Spots', compTerms.map(function(t) { return t.parking_spots || t.parkingSpots || 0; }), 'plain');
   compRow('Parking Rate', compTerms.map(function(t) { return t.parking_rate_monthly || t.parkingRate || 0; }), 'curr_dec', '', 'Per spot per month');
   compRow('Security Deposit', compTerms.map(function(t) { return t.security_deposit || t.securityDeposit || 0; }), 'curr', '', 'Refundable deposit at lease commencement');
@@ -17459,6 +17462,7 @@ function rfpBuildCombinedExcelSheet(wb, cd) {
   addRow('TI Allowance/RSF', terms.map(function(t) { return t.ti_allowance_rsf || t.tiAllowancePerRSF || 0; }), 'curr_dec', 'curr_dec', 'Landlord contribution toward build-out, per RSF');
   addRow('TI Total', terms.map(function(t) { return t.ti_allowance_total || t.tiAllowanceTotal || 0; }), 'curr', 'curr', 'Total tenant improvement allowance (RSF x TI/RSF)');
   addRow('OpEx (monthly)', terms.map(function(t) { return t.opex_monthly || t.opex || 0; }), 'curr', 'curr', 'Operating expenses, taxes, CAM, insurance');
+  addRow('Management Fee %', terms.map(function(t) { return t.management_fee_pct || t.managementFeePct || 0; }), 'plain', 'plain', 'Landlord management fee as % of base rent');
   addRow('Parking Spots', terms.map(function(t) { return t.parking_spots || t.parkingSpots || 0; }), 'plain', 'plain');
   addRow('Parking Rate', terms.map(function(t) { return t.parking_rate_monthly || t.parkingRate || 0; }), 'curr_dec', 'curr_dec', 'Per spot per month');
   addRow('Security Deposit', terms.map(function(t) { return t.security_deposit || t.securityDeposit || 0; }), 'curr', 'curr', 'Refundable deposit at lease commencement');
@@ -17840,6 +17844,7 @@ function rfpShowVersionComparison(buildingAddress) {
     { key: 'opexRSF', label: 'OpEx/Tax/CAM (per RSF/yr)', fmt: 'currency_dec' },
     { key: 'opexPerSFMo', label: 'OpEx/SF/mo', fmt: 'currency_dec', computed: 'opexPerSFMo' },
     { key: 'opex', label: 'OpEx (monthly total)', fmt: 'currency' },
+    { key: 'managementFeePct', label: 'Management Fee %', fmt: 'plain' },
     // Full service gross
     { key: 'fsgPerSFMo', label: 'Full Service Gross/SF/mo', fmt: 'currency_dec', computed: 'fsgPerSFMo' },
     // Parking
@@ -18025,6 +18030,7 @@ function rfpShowVersionComparison(buildingAddress) {
       tiAllowanceTotal: t.ti_allowance_total || t.tiAllowanceTotal || 0,
       opexRSF: t.opex_rsf_yr || t.opexRSF || 0,
       opex: t.opex_monthly || t.opex || 0,
+      managementFeePct: t.management_fee_pct || t.managementFeePct || 0,
       parkingSpots: t.parking_spots || t.parkingSpots || 0,
       parkingRate: t.parking_rate_monthly || t.parkingRate || 0,
       amortizedTIRSF: t.amortized_ti_rsf || t.amortizedTIRSF || 0,
@@ -18200,6 +18206,7 @@ function rfpBuildTermsTable(terms) {
     tiAllowancePerRSF: terms.ti_allowance_rsf || terms.tiAllowancePerRSF || 0,
     tiAllowanceTotal: terms.ti_allowance_total || terms.tiAllowanceTotal || 0,
     opex: terms.opex_monthly || terms.opex || 0,
+    managementFeePct: terms.management_fee_pct || terms.managementFeePct || 0,
     parkingSpots: terms.parking_spots || terms.parkingSpots || 0,
     parkingRate: terms.parking_rate_monthly || terms.parkingRate || 0,
     parkingEscalation: terms.parking_escalation_pct || terms.parkingEscalation || 0,
@@ -18263,6 +18270,11 @@ function rfpBuildTermsTable(terms) {
   rows = rows.concat([
     ['OpEx (monthly)', rfpFmtCurrencyPlain(t.opex)],
     ['OpEx/SF/mo', (t.opex && t.rsf) ? rfpFmtCurrencyDecimals(t.opex / t.rsf) : '--'],
+  ]);
+  if (t.managementFeePct || t.management_fee_pct) {
+    rows.push(['Management Fee', (t.managementFeePct || t.management_fee_pct) + '% of base rent']);
+  }
+  rows = rows.concat([
     ['Parking Spots', t.parkingSpots || '--'],
     ['Parking Rate', t.parkingRate ? rfpFmtCurrencyDecimals(t.parkingRate) + '/spot/mo' : '--'],
     ['Parking Escalation', t.parkingEscalation ? t.parkingEscalation + '%' : '--'],
@@ -18487,6 +18499,7 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
   var hasPhasedRSF = monthly.some(function(r) { return r.billableRSF && r.usableRSF && r.billableRSF !== r.usableRSF; });
   var hasAmortTI = (totals.totalAmortizedTI || 0) > 0;
   var hasTIReceived = ((totals.totalTIReceived || 0) + (totals.totalAmortTIReceived || 0)) > 0;
+  var hasMgmtFee = (totals.totalManagementFee || 0) > 0;
 
   // Internal operating costs from assumptions
   var cfAssumKey = (buildingAddr || '') + (componentLabel ? '::' + componentLabel : '');
@@ -18520,6 +18533,7 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
     (hasTIReceived ? '<th class="cell-currency" style="color:#16a34a">TI Received</th>' : '') +
     '<th class="cell-currency">Net Cash Rent</th>' +
     '<th class="cell-currency">OpEx</th>' +
+    (hasMgmtFee ? '<th class="cell-currency">Mgmt Fee</th>' : '') +
     '<th class="cell-currency">Parking</th>' +
     (hasAmortTI ? '<th class="cell-currency" style="color:#dc2626">Amort. TI</th>' : '') +
     (capex.hasCapex ? '<th class="cell-currency" style="color:#7c3aed">CAPEX</th>' : '') +
@@ -18559,6 +18573,7 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
       (hasTIReceived ? '<td class="cell-currency" style="color:#16a34a">' + (((row.tiReceived || 0) + (row.amortTIReceived || 0)) > 0 ? rfpFmtCurrency((row.tiReceived || 0) + (row.amortTIReceived || 0)) : '') + '</td>' : '') +
       '<td class="cell-currency">' + rfpFmtCurrency(row.netCashRent) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.opex) + '</td>' +
+      (hasMgmtFee ? '<td class="cell-currency">' + ((row.managementFee || 0) > 0 ? rfpFmtCurrency(row.managementFee) : '') + '</td>' : '') +
       '<td class="cell-currency">' + rfpFmtCurrency(row.parking) + '</td>' +
       (hasAmortTI ? '<td class="cell-currency" style="color:#dc2626">' + (row.amortizedTI ? rfpFmtCurrency(row.amortizedTI) : '') + '</td>' : '') +
       (capex.hasCapex ? '<td class="cell-currency" style="color:#7c3aed">' + (capexThisMonth > 0 ? rfpFmtCurrency(capexThisMonth) : '') + '</td>' : '') +
@@ -19001,7 +19016,12 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
   var cfTotals_sl = (analysis.cash_flow && analysis.cash_flow.totals) ? analysis.cash_flow.totals : {};
   var opexMonthly_sl = (cfTotals_sl.totalOpex || 0) / termMo_sl;
   var parkingMonthly_sl = (cfTotals_sl.totalParking || 0) / termMo_sl;
-  var slMonthlyAllIn = slMonthlyRent + opexMonthly_sl + parkingMonthly_sl + (slHasAmortTI ? slAmortTIMonthly : 0);
+  // Management fee: straight-line average across the lease term.
+  // totals.totalManagementFee accounts for escalations and free-rent abatement, so dividing
+  // by termMo gives an accurate SL equivalent regardless of how the fee scales month-to-month.
+  var mgmtFeeMonthly_sl = (cfTotals_sl.totalManagementFee || 0) / termMo_sl;
+  var mgmtFeePct_sl = cfTotals_sl.managementFeePct || 0;
+  var slMonthlyAllIn = slMonthlyRent + opexMonthly_sl + parkingMonthly_sl + mgmtFeeMonthly_sl + (slHasAmortTI ? slAmortTIMonthly : 0);
   var brokerMonthlyImpact = slBrokerFee.hasBrokerFee ? slBrokerFee.slMonthlyImpact : 0;
 
   // Internal assumptions (F&B, Workplace Experience, Maintenance, custom items)
@@ -19077,6 +19097,7 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
   if (rsf_sl > 0) html += '<td style="padding:6px 0;text-align:right;font-weight:600;">' + rfpFmtCurrencyDecimals(totals.effectiveRentRSF) + '/RSF</td>';
   html += '</tr>';
   if (opexMonthly_sl > 0) slBuildRow('OpEx', opexMonthly_sl, '', 'Taxes, CAM, insurance');
+  if (mgmtFeeMonthly_sl > 0) slBuildRow('Management Fee', mgmtFeeMonthly_sl, '', mgmtFeePct_sl + '% of base rent, straight-line avg over term');
   if (parkingMonthly_sl > 0) slBuildRow('Parking', parkingMonthly_sl, '');
   if (slHasAmortTI) slBuildRow('Amortized TI', slAmortTIMonthly, 'color:#dc2626;', rfpFmtCurrencyPlain(totals.amortizedTIPrincipal || 0) + ' principal at ' + (totals.amortizedTIRate || 0) + '% over ' + (totals.amortizedTITermMonths || 0) + ' months');
   if (capex.hasCapex) {
