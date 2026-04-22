@@ -18312,16 +18312,33 @@ function getCapexForBuilding(buildingAddr, leaseTermMonths, componentLabel) {
   var ffeDepYears = parseFloat(a.capex_ffe_depreciation_years) || 7;
   var itDepYears = parseFloat(a.capex_it_depreciation_years) || 5;
 
-  // ASC 842: depreciate over shorter of useful life or lease term
-  var leaseYears = (leaseTermMonths && leaseTermMonths > 0) ? leaseTermMonths / 12 : 0;
-  var constrEffYears = leaseYears > 0 ? Math.min(constrDepYears, leaseYears) : constrDepYears;
-  var ffeEffYears = leaseYears > 0 ? Math.min(ffeDepYears, leaseYears) : ffeDepYears;
-  var itEffYears = leaseYears > 0 ? Math.min(itDepYears, leaseYears) : itDepYears;
+  // In-service month: depreciation does not start until the asset is placed in service.
+  // Before in-service, CAPEX sits on the balance sheet as Construction in Progress (CIP).
+  var inServiceMonthRaw = parseInt(a.capex_in_service_month) || 1;
+  var inServiceMonth = Math.max(1, Math.min(inServiceMonthRaw, leaseTermMonths || inServiceMonthRaw));
+
+  // ASC 842: depreciate over shorter of useful life or REMAINING lease term after in-service.
+  // Months available for depreciation = from in-service month to end of lease (inclusive).
+  var depAvailableMonths = leaseTermMonths ? Math.max(0, leaseTermMonths - inServiceMonth + 1) : 0;
+  var depAvailableYears = depAvailableMonths / 12;
+
+  // Each asset class depreciates over the shorter of its useful life or the remaining lease term.
+  var constrEffYears = depAvailableYears > 0 ? Math.min(constrDepYears, depAvailableYears) : constrDepYears;
+  var ffeEffYears = depAvailableYears > 0 ? Math.min(ffeDepYears, depAvailableYears) : ffeDepYears;
+  var itEffYears = depAvailableYears > 0 ? Math.min(itDepYears, depAvailableYears) : itDepYears;
 
   var constrMonthlyDep = constrEffYears > 0 ? Math.round(constrTotal / (constrEffYears * 12)) : 0;
   var ffeMonthlyDep = ffeEffYears > 0 ? Math.round(ffeTotal / (ffeEffYears * 12)) : 0;
   var itMonthlyDep = itEffYears > 0 ? Math.round(itTotal / (itEffYears * 12)) : 0;
-  var totalMonthlyDep = constrMonthlyDep + ffeMonthlyDep + itMonthlyDep;
+  // Custom CAPEX follows same rule - depreciate over shorter of construction life or post-in-service term
+  var customEffYears = depAvailableYears > 0 ? Math.min(constrDepYears, depAvailableYears) : constrDepYears;
+  var customMonthlyDep = customEffYears > 0 ? Math.round(customTotal / (customEffYears * 12)) : 0;
+  // Post-in-service run rate (what hits the P&L each month during operation)
+  var totalMonthlyDep = constrMonthlyDep + ffeMonthlyDep + itMonthlyDep + customMonthlyDep;
+
+  // Lease-avg monthly dep = total CAPEX smeared across the ENTIRE lease term.
+  // Useful as a normalized comparison metric (shows what CAPEX 'costs' the lease on average).
+  var leaseAvgMonthlyDep = leaseTermMonths > 0 ? Math.round(grandTotal / leaseTermMonths) : 0;
 
   // Payout schedule fields
   var payoutType = a.capex_payout_type || 'month1';
@@ -18335,9 +18352,6 @@ function getCapexForBuilding(buildingAddr, leaseTermMonths, componentLabel) {
     } catch(e) { payoutMilestones = []; }
   }
   if (!Array.isArray(payoutMilestones)) payoutMilestones = [];
-
-  // In-service date: controls when depreciation starts
-  var inServiceMonth = parseInt(a.capex_in_service_month) || 1;
 
   // Build payout schedule array (non-zero months)
   var payoutSchedule = [];
@@ -18371,14 +18385,19 @@ function getCapexForBuilding(buildingAddr, leaseTermMonths, componentLabel) {
     ffe: ffeTotal,
     it: itTotal,
     custom: customTotal,
+    // monthlyDepreciation = POST in-service run rate (what hits the P&L each occupied month).
+    // Downstream P&L/GAAP gates use this with `month >= inServiceMonth`.
     monthlyDepreciation: totalMonthlyDep,
     annualDepreciation: totalMonthlyDep * 12,
+    // Lease-avg run rate: total CAPEX / full term. Used for cross-deal comparison metrics.
+    leaseAvgMonthlyDepreciation: leaseAvgMonthlyDep,
     constrEffYears: constrEffYears,
     ffeEffYears: ffeEffYears,
     itEffYears: itEffYears,
     constrMonthlyDep: constrMonthlyDep,
     ffeMonthlyDep: ffeMonthlyDep,
     itMonthlyDep: itMonthlyDep,
+    customMonthlyDep: customMonthlyDep,
     hasCapex: grandTotal > 0,
     payoutType: payoutType,
     payoutMonth: payoutMonth,
@@ -18388,7 +18407,7 @@ function getCapexForBuilding(buildingAddr, leaseTermMonths, componentLabel) {
     payoutSchedule: payoutSchedule,
     inServiceMonth: inServiceMonth,
     depStartMonth: inServiceMonth,
-    depMonths: leaseTermMonths ? Math.max(0, leaseTermMonths - inServiceMonth + 1) : 0
+    depMonths: depAvailableMonths
   };
 }
 
@@ -19020,7 +19039,17 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
   html += '<div style="font-weight:700;font-size:var(--text-lg);color:var(--color-text);">' + rfpFmtCurrencyPlain(Math.round(slAnnualWithLHI)) + '<span style="font-size:var(--text-sm);font-weight:400;color:var(--color-text-muted);">/yr</span></div>';
   if (rsf_sl > 0) html += '<div style="font-weight:600;font-size:var(--text-sm);color:var(--color-text-muted);">' + rfpFmtCurrencyDecimals(slPerRSFWithLHI) + '/RSF/yr</div>';
   html += '</div>';
-  html += '<div style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);margin-bottom:var(--space-3);">Straight-Line All-in Occupancy Cost</div>';
+  html += '<div style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);margin-bottom:var(--space-3);">Straight-Line All-in Occupancy Cost' + (capex.hasCapex && capex.inServiceMonth > 1 ? ' &middot; post in-service run rate' : '') + '</div>';
+  if (capex.hasCapex && capex.inServiceMonth > 1 && capex.leaseAvgMonthlyDepreciation !== undefined) {
+    // Show a lease-avg variant so user can see what the "normalized" number looks like
+    var slMonthlyLeaseAvg = slMonthlyAllIn + capex.leaseAvgMonthlyDepreciation + brokerMonthlyImpact + intTotalMonthly;
+    var slAnnualLeaseAvg = slMonthlyLeaseAvg * 12;
+    var slPerRSFLeaseAvg = rsf_sl > 0 ? Math.round(slAnnualLeaseAvg / rsf_sl * 100) / 100 : 0;
+    html += '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:-6px;margin-bottom:var(--space-3);padding:6px 10px;background:var(--color-surface-2);border-radius:var(--radius-sm);font-size:var(--text-xs);color:var(--color-text-muted);">' +
+      '<div><strong>Lease avg:</strong> ' + rfpFmtCurrencyPlain(Math.round(slMonthlyLeaseAvg)) + '/mo &middot; ' + rfpFmtCurrencyPlain(Math.round(slAnnualLeaseAvg)) + '/yr' + (rsf_sl > 0 ? ' &middot; ' + rfpFmtCurrencyDecimals(slPerRSFLeaseAvg) + '/RSF/yr' : '') + '</div>' +
+      '<div>Smears CAPEX over full ' + slTermMonths + '-month term (vs run rate above)</div>' +
+    '</div>';
+  }
 
   // Build-up table
   html += '<table style="width:100%;font-size:var(--text-sm);border-collapse:collapse;">';
@@ -19050,7 +19079,15 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
   if (opexMonthly_sl > 0) slBuildRow('OpEx', opexMonthly_sl, '', 'Taxes, CAM, insurance');
   if (parkingMonthly_sl > 0) slBuildRow('Parking', parkingMonthly_sl, '');
   if (slHasAmortTI) slBuildRow('Amortized TI', slAmortTIMonthly, 'color:#dc2626;', rfpFmtCurrencyPlain(totals.amortizedTIPrincipal || 0) + ' principal at ' + (totals.amortizedTIRate || 0) + '% over ' + (totals.amortizedTITermMonths || 0) + ' months');
-  if (capex.hasCapex) slBuildRow('LHI Depreciation', lhiMonthly, 'color:#7c3aed;', rfpFmtCurrencyPlain(capex.grandTotal) + ' total CAPEX, straight-line over term');
+  if (capex.hasCapex) {
+    var lhiDesc = rfpFmtCurrencyPlain(capex.grandTotal) + ' total CAPEX';
+    if (capex.inServiceMonth > 1) {
+      lhiDesc += ' &middot; placed in service Month ' + capex.inServiceMonth + ', depreciated over remaining ' + capex.depMonths + ' months (post-in-service run rate)';
+    } else {
+      lhiDesc += ', straight-line over term';
+    }
+    slBuildRow('LHI Depreciation', lhiMonthly, 'color:#7c3aed;', lhiDesc);
+  }
   if (slBrokerFee.hasBrokerFee) {
     var bfLabel = slBrokerFee.type === 'credit' ? 'Broker Credit' : 'Broker Fee';
     var bfDesc = rfpFmtCurrencyPlain(slBrokerFee.amount) + ' amortized over lease term';
@@ -21047,15 +21084,25 @@ function rfpBuildCapexPanel(selected) {
   customItems.forEach(function(item) { customTotal += parseFloat(item.total) || 0; });
   var grandTotal = constrTotal + ffeTotal + itTotal + customTotal;
 
-  // Depreciation (straight-line, shorter of useful life or lease term per ASC 842)
-  var constrEffYears = termYears > 0 ? Math.min(capex.construction.depYears, termYears) : capex.construction.depYears;
-  var ffeEffYears = termYears > 0 ? Math.min(capex.ffe.depYears, termYears) : capex.ffe.depYears;
-  var itEffYears = termYears > 0 ? Math.min(capex.it.depYears, termYears) : capex.it.depYears;
+  // In-service month: depreciation starts when asset is placed in service.
+  // Pulled up here so buildCapexCategory (defined below) can reference it.
+  var curInServiceMonth = parseInt(a.capex_in_service_month) || 1;
+  var curInServiceMonthClamped = Math.max(1, Math.min(curInServiceMonth, termMonths || curInServiceMonth));
+
+  // ASC 842 + in-service: depreciate over shorter of useful life or REMAINING term after in-service
+  var depAvailableMonths = termMonths ? Math.max(0, termMonths - curInServiceMonthClamped + 1) : 0;
+  var depAvailableYears = depAvailableMonths / 12;
+  var constrEffYears = depAvailableYears > 0 ? Math.min(capex.construction.depYears, depAvailableYears) : capex.construction.depYears;
+  var ffeEffYears = depAvailableYears > 0 ? Math.min(capex.ffe.depYears, depAvailableYears) : capex.ffe.depYears;
+  var itEffYears = depAvailableYears > 0 ? Math.min(capex.it.depYears, depAvailableYears) : capex.it.depYears;
   var constrMonthlyDep = constrEffYears > 0 ? Math.round(constrTotal / (constrEffYears * 12)) : 0;
   var ffeMonthlyDep = ffeEffYears > 0 ? Math.round(ffeTotal / (ffeEffYears * 12)) : 0;
   var itMonthlyDep = itEffYears > 0 ? Math.round(itTotal / (itEffYears * 12)) : 0;
-  var totalMonthlyDep = constrMonthlyDep + ffeMonthlyDep + itMonthlyDep;
+  var customEffYears = depAvailableYears > 0 ? Math.min(capex.construction.depYears, depAvailableYears) : capex.construction.depYears;
+  var customMonthlyDep = customEffYears > 0 ? Math.round(customTotal / (customEffYears * 12)) : 0;
+  var totalMonthlyDep = constrMonthlyDep + ffeMonthlyDep + itMonthlyDep + customMonthlyDep;
   var totalAnnualDep = totalMonthlyDep * 12;
+  var leaseAvgMonthlyDep = termMonths > 0 ? Math.round(grandTotal / termMonths) : 0;
 
   var html = '<div style="padding:var(--space-4)" data-capex-building="' + buildingAddr.replace(/"/g, '&quot;') + '" data-capex-component="' + (componentLabel || '').replace(/"/g, '&quot;') + '">';
 
@@ -21114,10 +21161,14 @@ function rfpBuildCapexPanel(selected) {
   function buildCapexCategory(id, label, color, cat, defaultDepYears) {
     var modeIsPerRSF = cat.mode === 'per_rsf';
     var effectiveTotal = modeIsPerRSF && rsf > 0 ? Math.round(cat.perRSF * rsf) : cat.total;
-    // Shorter of useful life or lease term (ASC 842)
-    var effDepYears = termYears > 0 ? Math.min(cat.depYears, termYears) : cat.depYears;
+    // Post in-service available months (for run-rate calc)
+    var isvcMo = Math.max(1, Math.min(curInServiceMonth || 1, termMonths || (curInServiceMonth || 1)));
+    var availMonths = termMonths ? Math.max(0, termMonths - isvcMo + 1) : 0;
+    var availYears = availMonths / 12;
+    // ASC 842: shorter of useful life or remaining lease term (post in-service)
+    var effDepYears = availYears > 0 ? Math.min(cat.depYears, availYears) : cat.depYears;
     var monthlyDep = effDepYears > 0 ? Math.round(effectiveTotal / (effDepYears * 12)) : 0;
-    var usingShorterTerm = termYears > 0 && termYears < cat.depYears;
+    var usingShorterTerm = availYears > 0 && availYears < cat.depYears;
 
     var s = '<div style="' + sectionStyle + '">' +
       '<div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-3)">' +
@@ -21171,12 +21222,13 @@ function rfpBuildCapexPanel(selected) {
       '<input type="number" step="1" id="capex-' + id + '-depyears" value="' + (cat.depYears || defaultDepYears) + '" placeholder="' + defaultDepYears + '" style="' + inputStyle + '" onchange="capexRecalc(\'' + id + '\')" />' +
     '</div>';
 
-    // Monthly depreciation
+    // Monthly depreciation (post in-service run rate)
     s += '<div>' +
-      '<label style="' + labelStyle + '">Monthly Depreciation</label>' +
+      '<label style="' + labelStyle + '">Monthly Depreciation (post in-service)</label>' +
       '<div id="capex-' + id + '-mondep" style="padding:8px 10px;font-size:var(--text-sm);color:var(--color-text-muted);background:var(--color-surface-2);border-radius:var(--radius-md);">' +
         (monthlyDep > 0 ? rfpFmtCurrencyPlain(monthlyDep) + '/mo' : '--') +
-        (usingShorterTerm ? '<div style="font-size:var(--text-xs);color:#7c3aed;margin-top:2px;">Dep. over ' + termYears.toFixed(1) + 'yr lease (shorter than ' + cat.depYears + 'yr useful life)</div>' : '') +
+        (usingShorterTerm ? '<div style="font-size:var(--text-xs);color:#7c3aed;margin-top:2px;">Dep. over ' + availYears.toFixed(1) + 'yr remaining (shorter than ' + cat.depYears + 'yr useful life)</div>' : '') +
+        (isvcMo > 1 && effectiveTotal > 0 && termMonths > 0 ? '<div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:2px;">Lease avg: ' + rfpFmtCurrencyPlain(Math.round(effectiveTotal / termMonths)) + '/mo over full ' + termMonths + '-month term</div>' : '') +
       '</div>' +
     '</div>';
 
@@ -21214,7 +21266,7 @@ function rfpBuildCapexPanel(selected) {
     try { curMilestones = typeof a.capex_milestones === 'string' ? JSON.parse(a.capex_milestones) : a.capex_milestones; } catch(e) { curMilestones = []; }
   }
   if (!Array.isArray(curMilestones)) curMilestones = [];
-  var curInServiceMonth = parseInt(a.capex_in_service_month) || 1;
+  // curInServiceMonth already declared at top of function
 
   html += '<div style="' + sectionStyle + '">' +
     '<div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-3)">' +
@@ -21290,12 +21342,21 @@ function rfpBuildCapexPanel(selected) {
   // ===== IN-SERVICE DATE SECTION =====
   html += '<div style="margin-top:var(--space-3)">' +
     '<label style="' + labelStyle + '">IN-SERVICE MONTH</label>' +
-    '<div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:4px">Month when buildout is complete and depreciation begins.</div>' +
-    '<div style="display:flex;gap:var(--space-3);align-items:center">' +
+    '<div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:4px">' +
+      'Month when buildout is complete and the asset is placed in service. Before this, CAPEX sits on the balance sheet as Construction in Progress (CIP) and does NOT hit the P&amp;L. After in-service, depreciation is accelerated across the remaining lease term.' +
+    '</div>' +
+    '<div style="display:flex;gap:var(--space-3);align-items:center;flex-wrap:wrap">' +
       '<input id="capex-in-service-month" type="number" min="1" max="' + termMonths + '" value="' + curInServiceMonth + '" style="width:100px;' + inputStyle + '" />';
   if (grandTotal > 0 && termMonths > 0) {
-    var depMo = Math.max(0, termMonths - curInServiceMonth + 1);
-    html += '<span style="font-size:var(--text-xs);color:var(--color-text-muted)">Depreciation starts Month ' + curInServiceMonth + ', ' + rfpFmtCurrencyPlain(totalMonthlyDep) + '/mo for ' + depMo + ' months</span>';
+    var depMo = Math.max(0, termMonths - curInServiceMonthClamped + 1);
+    if (curInServiceMonth > 1) {
+      html += '<div style="font-size:var(--text-xs);color:var(--color-text-muted);line-height:1.5">' +
+        '<div><strong style="color:#7c3aed">Run rate (post in-service):</strong> ' + rfpFmtCurrencyPlain(totalMonthlyDep) + '/mo &times; ' + depMo + ' months starting Month ' + curInServiceMonthClamped + '</div>' +
+        '<div><strong>Lease avg:</strong> ' + rfpFmtCurrencyPlain(leaseAvgMonthlyDep) + '/mo over full ' + termMonths + '-month term (for cross-deal comparison)</div>' +
+      '</div>';
+    } else {
+      html += '<span style="font-size:var(--text-xs);color:var(--color-text-muted)">Depreciation starts Month 1, ' + rfpFmtCurrencyPlain(totalMonthlyDep) + '/mo for ' + depMo + ' months</span>';
+    }
   }
   html += '</div></div>';
 
@@ -21336,7 +21397,7 @@ function rfpBuildCapexPanel(selected) {
   if (grandTotal > 0 && termMonths > 0) {
     html += '<hr style="border:none;border-top:1px solid var(--color-border);margin:var(--space-5) 0">';
     html += '<div style="font-weight:600;font-size:var(--text-sm);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);margin-bottom:var(--space-2)">LHI Depreciation Schedule (over lease term)</div>';
-    html += '<div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-3)">Per ASC 842, depreciation uses the shorter of useful life or lease term (' + termYears.toFixed(1) + ' years).' + (curInServiceMonth > 1 ? ' Depreciation starts month ' + curInServiceMonth + '.' : '') + '</div>';
+    html += '<div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-3)">Per ASC 842, depreciation uses the shorter of useful life or remaining lease term.' + (curInServiceMonth > 1 ? ' Asset placed in service Month ' + curInServiceMonthClamped + '; depreciation runs over the remaining ' + depAvailableYears.toFixed(1) + ' years.' : ' Depreciation runs over the full ' + termYears.toFixed(1) + '-year lease term.') + '</div>';
     html += '<div class="fin-table-wrap"><table class="fin-table"><thead><tr>' +
       '<th class="cell-label">Year</th>' +
       '<th class="cell-currency">Construction</th>' +
