@@ -59,6 +59,7 @@ export async function POST(req: Request) {
     dealTerms, terms,
     componentLabel, component_label,
     status = 'confirmed',
+    analysis: providedAnalysis,
   } = body
 
   const finalBuildingNum = buildingNum ?? building_num
@@ -99,10 +100,14 @@ export async function POST(req: Request) {
     ti_construction_cost: rawTerms.ti_construction_cost ?? rawTerms.tiConstructionCost ?? undefined,
   }
 
-  // Generate financial analysis from deal terms
+  // Generate financial analysis from deal terms.
+  // 'existing' doc_type (executed leases) goes through the same extraction ->
+  // review -> deal_terms pipeline as RFPs, so we always run the analysis engine.
+  const isExisting = finalDocType === 'existing'
   const analysis = generateFinancialAnalysis(finalDealTerms)
+  void providedAnalysis // accepted for backward compat but no longer used
 
-  // Debit tokens for new RFP analysis (updates are free)
+  // Debit tokens for new submissions (updates are free).
   if (!id) {
     try {
       const tokenResult = await debitTokens({
@@ -126,15 +131,21 @@ export async function POST(req: Request) {
 
   if (id) {
     // Update existing
+    const updatePayload: Record<string, any> = {
+      deal_terms: finalDealTerms,
+      analysis,
+      status,
+      doc_source: finalDocSource,
+      updated_at: new Date().toISOString(),
+    }
+    // Allow renaming an existing building via address
+    if (isExisting && finalBuildingAddress) {
+      updatePayload.building_address = finalBuildingAddress
+      updatePayload.doc_name = finalDocName
+    }
     const { data, error } = await supabase
       .from('rfp_submissions')
-      .update({
-        deal_terms: finalDealTerms,
-        analysis,
-        status,
-        doc_source: finalDocSource,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('id', id)
       .select()
       .single()

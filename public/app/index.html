@@ -7249,6 +7249,7 @@ body {
     }
     .rfp-building-card-badge.rfp { background: rgba(244, 121, 32, 0.1); color: var(--color-primary-dark); }
     .rfp-building-card-badge.loi { background: rgba(37, 99, 235, 0.1); color: var(--color-accent-blue); }
+    .rfp-building-card-badge.existing { background: rgba(124, 58, 237, 0.12); color: #6d28d9; }
 
     /* Summary metrics bar */
     .rfp-summary-metrics {
@@ -15458,8 +15459,11 @@ function rfpRenderEmpty() {
 }
 
 // ===== UPLOAD MODAL =====
-function rfpShowUploadModal() {
+function rfpShowUploadModal(opts) {
   if (_rfpModal) { _rfpModal.remove(); _rfpModal = null; }
+  opts = opts || {};
+  // Lease mode: forces docType='existing', hides doc-type toggle, tweaks UI labels
+  var isLeaseMode = !!opts.lease;
 
   var surveyBuildings = (typeof SURVEY_BUILDINGS !== 'undefined') ? SURVEY_BUILDINGS : [];
   var dealBuildings = (typeof BUILDINGS !== 'undefined') ? BUILDINGS : [];
@@ -15518,7 +15522,8 @@ function rfpShowUploadModal() {
       '<button class="rfp-modal-close" onclick="rfpCloseModal()" title="Close">' +
         '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
       '</button>' +
-      '<div class="rfp-modal-title">Submit RFP / LOI / Lease</div>' +
+      '<div class="rfp-modal-title">' + (isLeaseMode ? 'Add Existing Lease' : 'Submit RFP / LOI / Lease') + '</div>' +
+      (isLeaseMode ? '<p style="margin:-8px 0 16px;font-size:var(--text-sm);color:var(--color-text-muted);">Upload your current executed lease. Our tool extracts the deal terms so your existing building can be compared apples-to-apples with new proposals.</p>' : '') +
 
       '<div class="rfp-step">' +
         '<label class="rfp-step-label">Step 1: Select Building</label>' +
@@ -15604,18 +15609,20 @@ function rfpShowUploadModal() {
         '</div>' +
       '</div>' +
 
-      '<div class="rfp-step">' +
-        '<label class="rfp-step-label" id="rfp-doctype-label">Step 4: Document Type</label>' +
-        '<div class="rfp-toggle-group">' +
-          '<button class="rfp-toggle-btn active" onclick="rfpSetDocType(this, \'RFP\')" data-type="RFP">RFP</button>' +
-          '<button class="rfp-toggle-btn" onclick="rfpSetDocType(this, \'LOI\')" data-type="LOI">LOI</button>' +
-          '<button class="rfp-toggle-btn" onclick="rfpSetDocType(this, \'Lease\')" data-type="Lease">Lease</button>' +
-        '</div>' +
-      '</div>' +
+      (isLeaseMode ? '' :
+        '<div class="rfp-step">' +
+          '<label class="rfp-step-label" id="rfp-doctype-label">Step 4: Document Type</label>' +
+          '<div class="rfp-toggle-group">' +
+            '<button class="rfp-toggle-btn active" onclick="rfpSetDocType(this, \'RFP\')" data-type="RFP">RFP</button>' +
+            '<button class="rfp-toggle-btn" onclick="rfpSetDocType(this, \'LOI\')" data-type="LOI">LOI</button>' +
+            '<button class="rfp-toggle-btn" onclick="rfpSetDocType(this, \'Lease\')" data-type="Lease">Lease</button>' +
+          '</div>' +
+        '</div>'
+      ) +
 
       '<div class="rfp-step">' +
-        '<label class="rfp-step-label" id="rfp-source-label">Step 5: Source (optional)</label>' +
-        '<input class="rfp-input" id="rfp-source-input" placeholder="e.g. Counter #3 from Landlord via Broker" />' +
+        '<label class="rfp-step-label" id="rfp-source-label">' + (isLeaseMode ? 'Source (optional)' : 'Step 5: Source (optional)') + '</label>' +
+        '<input class="rfp-input" id="rfp-source-input" placeholder="' + (isLeaseMode ? 'e.g. Executed Lease dated 2022-06-01' : 'e.g. Counter #3 from Landlord via Broker') + '" value="' + (isLeaseMode ? 'Executed Lease' : '') + '" />' +
       '</div>' +
 
       '<div id="rfp-upload-status" style="display:none"></div>' +
@@ -15629,8 +15636,9 @@ function rfpShowUploadModal() {
   document.body.appendChild(modal);
   _rfpModal = modal;
   _rfpModal._selectedFile = null;
-  _rfpModal._docType = 'RFP';
+  _rfpModal._docType = isLeaseMode ? 'Existing' : 'RFP';
   _rfpModal._entryMode = 'upload';
+  _rfpModal._isLeaseMode = isLeaseMode;
 
   // Wire up drop zone
   var dropZone = document.getElementById('rfp-drop-zone');
@@ -16635,6 +16643,11 @@ function rfpRenderDashboard(submissions) {
           '<button class="rfp-btn-primary" onclick="rfpShowUploadModal()">' +
             '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
             'Submit RFP / LOI' +
+          '</button>' : '') +
+        (canUpload ?
+          '<button class="rfp-btn-secondary" onclick="rfpShowUploadModal({lease:true})" style="display:inline-flex;align-items:center;gap:0.375rem;padding:0.5rem 0.875rem;background:#fff;color:#475569;border:1px solid #cbd5e1;border-radius:0.5rem;font-weight:600;font-size:0.8125rem;cursor:pointer;margin-left:0.5rem;">' +
+            '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 9h1"/><path d="M9 13h1"/><path d="M9 17h1"/><path d="M14 9h1"/><path d="M14 13h1"/><path d="M14 17h1"/></svg>' +
+            'Add Existing Lease' +
           '</button>' : '') +
         '<div class="rfp-view-toggle">' +
           '<button class="rfp-view-toggle-btn' + (!isCompare ? ' active' : '') + '" onclick="rfpSwitchView(\'dashboard\')">Buildings</button>' +
