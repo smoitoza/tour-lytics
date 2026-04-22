@@ -15749,8 +15749,25 @@ async function rfpSaveExistingBuilding() {
   try {
     var projectId = getProjectId();
     var userEmail = getCurrentUserEmail();
+
+    // Resolve a building_num. If editing, reuse the existing one. If an existing
+    // submission already uses this address, reuse its building_num so versions
+    // group together. Otherwise mint a new 8000-range id for existing buildings.
+    var buildingNum = null;
+    if (_existingEditId) {
+      var editing = (window._rfpState.submissions || []).find(function(s) { return s.id === _existingEditId; });
+      buildingNum = editing ? (editing.building_num || editing.buildingNum) : null;
+    }
+    if (!buildingNum) {
+      var match = (window._rfpState.submissions || []).find(function(s) {
+        return (s.building_address || s.buildingAddress || '') === f.address;
+      });
+      buildingNum = match ? (match.building_num || match.buildingNum) : (8000 + Math.floor(Math.random() * 1000));
+    }
+
     var payload = {
       projectId: projectId,
+      buildingNum: buildingNum,
       buildingAddress: f.address,
       docType: 'Existing',
       docName: f.address,
