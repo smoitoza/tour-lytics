@@ -27322,13 +27322,17 @@ function commuteHandleFile(file) {
 }
 
 // Build a full address string from a row using available column indices
-function commuteBuildAddress(row, validCols, fullCol, streetCol, cityCol, stateCol, zipCol) {
+function commuteBuildAddress(row, validCols, fullCol, streetCol, aptCol, cityCol, stateCol, zipCol) {
   if (fullCol >= 0) {
     return String(row[validCols[fullCol]] || '').trim();
   }
   var parts = [];
   if (streetCol >= 0) {
     var s = String(row[validCols[streetCol]] || '').trim();
+    if (aptCol >= 0) {
+      var apt = String(row[validCols[aptCol]] || '').trim();
+      if (apt) s = s ? s + ' ' + apt : apt;
+    }
     if (s) parts.push(s);
   }
   if (cityCol >= 0) {
@@ -27347,11 +27351,11 @@ function commuteBuildAddress(row, validCols, fullCol, streetCol, cityCol, stateC
 }
 
 // Geocode addresses from the uploaded CSV then inject lat/lng and continue processing
-async function commuteGeocodeAndProcess(rows, validCols, filename, fullCol, streetCol, cityCol, stateCol, zipCol) {
+async function commuteGeocodeAndProcess(rows, validCols, filename, fullCol, streetCol, aptCol, cityCol, stateCol, zipCol) {
   // Build address list from data rows
   var addresses = [];
   for (var ri = 1; ri < rows.length; ri++) {
-    var addr = commuteBuildAddress(rows[ri], validCols, fullCol, streetCol, cityCol, stateCol, zipCol);
+    var addr = commuteBuildAddress(rows[ri], validCols, fullCol, streetCol, aptCol, cityCol, stateCol, zipCol);
     addresses.push(addr);
   }
 
@@ -27473,40 +27477,74 @@ function commuteProcessRows(rows, filename) {
   
   // If lat/lng missing, try address-based flow
   if (_commuteLatCol < 0 || _commuteLngCol < 0) {
-    // Detect a single full-address column or component columns
-    var fullAddrCol = -1;
-    for (var p = 0; p < _commuteAddressPatterns.length && fullAddrCol < 0; p++) {
+    // Use substring matching so Workday-style headers like
+    // 'Primary Home Address - City' also match.
+    // Match function: true if the header contains the pattern
+    // AND doesn't match a more specific type we want to keep distinct.
+    var isCityHeader = function(h) {
+      return (h.indexOf('city') >= 0 || h.indexOf('town') >= 0) && h.indexOf('state') < 0 && h.indexOf('country') < 0;
+    };
+    var isStateHeader = function(h) {
+      return h.indexOf('state') >= 0 || h.indexOf('province') >= 0 || h === 'region';
+    };
+    var isZipHeader = function(h) {
+      return h.indexOf('zip') >= 0 || h.indexOf('postal') >= 0 || h.indexOf('postcode') >= 0;
+    };
+    var isStreetHeader = function(h) {
+      // Matches: 'street', 'street address', 'address line 1', 'formatted line 1', etc.
+      // Avoid matching just 'address' alone (that's the full-address case) or city/state/zip
+      if (isCityHeader(h) || isStateHeader(h) || isZipHeader(h)) return false;
+      if (h.indexOf('country') >= 0) return false;
+      return h.indexOf('street') >= 0
+        || h.indexOf('addressline1') >= 0 || h.indexOf('addressline') >= 0 || h.indexOf('addr1') >= 0
+        || h.indexOf('formattedline1') >= 0 || h.indexOf('formattedline') >= 0
+        || h.indexOf('line1') >= 0;
+    };
+    var isAptHeader = function(h) {
+      // Line 2 / apt / suite - appended to street if present
+      return h.indexOf('addressline2') >= 0 || h.indexOf('addr2') >= 0
+        || h.indexOf('formattedline2') >= 0
+        || h.indexOf('line2') >= 0
+        || h.indexOf('apt') >= 0 || h.indexOf('suite') >= 0 || h.indexOf('unit') >= 0;
+    };
+    var isFullAddressHeader = function(h) {
+      // A single field that's supposed to be the entire address.
+      // Match 'address', 'home address', 'full address', etc.
+      // But NOT when paired with city/state/zip/country/line1/line2.
+      if (isCityHeader(h) || isStateHeader(h) || isZipHeader(h) || isStreetHeader(h) || isAptHeader(h)) return false;
+      if (h.indexOf('country') >= 0) return false;
+      // Exact or includes 'address' but without line number qualifier
+      return h === 'address' || h === 'homeaddress' || h === 'fulladdress'
+        || h === 'location' || h === 'home' || h === 'workaddress';
+    };
+
+    var findFirst = function(fn, exclude) {
       for (var hi = 0; hi < headersLower.length; hi++) {
-        if (headersLower[hi] === _commuteAddressPatterns[p]) { fullAddrCol = hi; break; }
-      }
-    }
-    var streetCol = -1, cityCol = -1, stateCol = -1, zipCol = -1;
-    var findCol = function(pats) {
-      for (var p = 0; p < pats.length; p++) {
-        for (var hi = 0; hi < headersLower.length; hi++) {
-          if (headersLower[hi] === pats[p]) return hi;
-        }
+        if (exclude && exclude.indexOf(hi) >= 0) continue;
+        if (fn(headersLower[hi])) return hi;
       }
       return -1;
     };
-    streetCol = findCol(_commuteStreetPatterns);
-    cityCol = findCol(_commuteCityPatterns);
-    stateCol = findCol(_commuteStatePatterns);
-    zipCol = findCol(_commuteZipPatterns);
 
-    var hasComponentAddress = (cityCol >= 0 || zipCol >= 0) && (streetCol >= 0 || cityCol >= 0);
+    var fullAddrCol = findFirst(isFullAddressHeader);
+    var streetCol = findFirst(isStreetHeader);
+    var aptCol = findFirst(isAptHeader, [streetCol]);
+    var cityCol = findFirst(isCityHeader);
+    var stateCol = findFirst(isStateHeader, [cityCol]);
+    var zipCol = findFirst(isZipHeader);
+
+    var hasComponentAddress = streetCol >= 0 && (cityCol >= 0 || zipCol >= 0);
 
     if (fullAddrCol >= 0 || hasComponentAddress) {
-      // Build address list and kick off geocoding flow
-      commuteGeocodeAndProcess(rows, validCols, filename, fullAddrCol, streetCol, cityCol, stateCol, zipCol);
+      commuteGeocodeAndProcess(rows, validCols, filename, fullAddrCol, streetCol, aptCol, cityCol, stateCol, zipCol);
       return;
     }
 
     alert('Could not find latitude/longitude or address columns. Your file needs either:\n\n' +
       '\u2022 Latitude & Longitude columns, OR\n' +
-      '\u2022 An Address column, OR\n' +
-      '\u2022 Street + City + State + Zip columns\n\n' +
-      'Common header names are auto-detected (Address, Home Address, Street, City, Zip, etc.)');
+      '\u2022 An Address column (e.g. "Home Address"), OR\n' +
+      '\u2022 Street + City + Zip columns (Workday\'s "Primary Home Address - ..." layout is supported)\n\n' +
+      'Detected headers: ' + _commuteHeaders.join(', '));
     return;
   }
   
