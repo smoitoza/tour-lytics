@@ -27492,34 +27492,20 @@ function commuteProcessRows(rows, filename) {
     };
     var isStreetHeader = function(h) {
       // Matches: 'street', 'street address', 'address line 1', 'formatted line 1', etc.
-      // Avoid matching just 'address' alone (that's the full-address case) or city/state/zip.
+      // Avoid matching just 'address' alone (that's the full-address case) or city/state/zip
       if (isCityHeader(h) || isStateHeader(h) || isZipHeader(h)) return false;
       if (h.indexOf('country') >= 0) return false;
-      if (h.indexOf('line2') >= 0 || h.indexOf('line 2') >= 0) return false;
-      // 'street' is unambiguous
-      if (h.indexOf('street') >= 0) return true;
-      // Line 1 / Address Line / Formatted Line patterns must have address context
-      var hasAddressContext = h.indexOf('address') >= 0 || h.indexOf('formatted') >= 0 || h.indexOf('addr') >= 0;
-      if (!hasAddressContext) return false;
-      return h.indexOf('line1') >= 0 || h.indexOf('line 1') >= 0
-        || h.indexOf('addressline') >= 0 || h.indexOf('addr1') >= 0
-        || h.indexOf('formattedline') >= 0;
+      return h.indexOf('street') >= 0
+        || h.indexOf('addressline1') >= 0 || h.indexOf('addressline') >= 0 || h.indexOf('addr1') >= 0
+        || h.indexOf('formattedline1') >= 0 || h.indexOf('formattedline') >= 0
+        || h.indexOf('line1') >= 0;
     };
     var isAptHeader = function(h) {
-      // Line 2 / apt / suite - appended to street if present.
-      // Must be clearly address-related: include 'address' or 'formatted' or 'line2' context.
-      // This prevents department/cost-center columns from being mistaken for apt numbers.
-      if (isCityHeader(h) || isStateHeader(h) || isZipHeader(h)) return false;
-      if (h.indexOf('country') >= 0) return false;
-      // Must contain "line2" as a distinct token, OR address-qualified apt/suite/unit
-      var hasLine2 = h.indexOf('line2') >= 0 || h.indexOf('line 2') >= 0;
-      var hasAddressContext = h.indexOf('address') >= 0 || h.indexOf('formatted') >= 0 || h.indexOf('addr') >= 0;
-      var hasAptKeyword = h.indexOf('apt') >= 0 || h.indexOf('suite') >= 0 || h.indexOf('unit') >= 0;
-      // Line 2 with address context = definitely apt
-      if (hasLine2 && hasAddressContext) return true;
-      // Explicit apt keyword WITH address context (not standalone 'Business Unit', 'Team Unit', etc.)
-      if (hasAptKeyword && hasAddressContext) return true;
-      return false;
+      // Line 2 / apt / suite - appended to street if present
+      return h.indexOf('addressline2') >= 0 || h.indexOf('addr2') >= 0
+        || h.indexOf('formattedline2') >= 0
+        || h.indexOf('line2') >= 0
+        || h.indexOf('apt') >= 0 || h.indexOf('suite') >= 0 || h.indexOf('unit') >= 0;
     };
     var isFullAddressHeader = function(h) {
       // A single field that's supposed to be the entire address.
