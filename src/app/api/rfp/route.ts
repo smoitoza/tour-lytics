@@ -100,17 +100,15 @@ export async function POST(req: Request) {
     ti_construction_cost: rawTerms.ti_construction_cost ?? rawTerms.tiConstructionCost ?? undefined,
   }
 
-  // Generate financial analysis from deal terms
-  // For 'existing' doc_type (manual entry of current building), use the pre-computed
-  // analysis from the client since the user provided summary values directly.
+  // Generate financial analysis from deal terms.
+  // 'existing' doc_type (executed leases) goes through the same extraction ->
+  // review -> deal_terms pipeline as RFPs, so we always run the analysis engine.
   const isExisting = finalDocType === 'existing'
-  const analysis = isExisting && providedAnalysis
-    ? providedAnalysis
-    : generateFinancialAnalysis(finalDealTerms)
+  const analysis = generateFinancialAnalysis(finalDealTerms)
+  void providedAnalysis // accepted for backward compat but no longer used
 
-  // Debit tokens for new RFP analysis (updates are free).
-  // Existing buildings are manual entry - no AI analysis, so no token charge.
-  if (!id && !isExisting) {
+  // Debit tokens for new submissions (updates are free).
+  if (!id) {
     try {
       const tokenResult = await debitTokens({
         projectId,

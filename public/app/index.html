@@ -15458,349 +15458,12 @@ function rfpRenderEmpty() {
     '</div>';
 }
 
-// ===== EXISTING BUILDING MODAL =====
-// Greenfield entry form - user can fill in whatever financial data they have.
-// Saves as a special RFP submission with doc_type='Existing' so it flows through
-// the same Compare view, one-pager, and export logic.
-var _existingModal = null;
-var _existingEditId = null; // set when editing an existing entry
-
-function rfpShowExistingModal(submissionId) {
-  if (_existingModal) { _existingModal.remove(); _existingModal = null; }
-  _existingEditId = submissionId || null;
-
-  // If editing, find the submission and pre-fill values
-  var existing = null;
-  if (submissionId && window._rfpState && window._rfpState.submissions) {
-    existing = window._rfpState.submissions.find(function(s) { return s.id === submissionId; });
-  }
-  var d = existing ? (existing.deal_terms || {}) : {};
-  var s = existing ? ((existing.analysis || {}).summary || {}) : {};
-  var cfT = existing ? ((existing.analysis || {}).cash_flow || {}).totals || {} : {};
-
-  function val(v) { return (v == null || v === '') ? '' : String(v); }
-
-  var overlay = document.createElement('div');
-  overlay.className = 'existing-modal-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.6);z-index:99999;display:block;padding:2rem 1rem;overflow-y:auto;overflow-x:hidden;';
-  overlay.onclick = function(e) { if (e.target === overlay) rfpCloseExistingModal(); };
-
-  var isEdit = !!submissionId;
-
-  overlay.innerHTML =
-    '<div class="existing-modal-card" style="background:#fff;border-radius:0.75rem;max-width:640px;width:100%;padding:1.5rem;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);margin:0 auto;position:relative;">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">' +
-        '<h2 style="margin:0;font-size:1.125rem;font-weight:700;color:#0f172a;">' + (isEdit ? 'Edit Existing Building' : 'Include Existing Building') + '</h2>' +
-        '<button onclick="rfpCloseExistingModal()" style="background:transparent;border:none;cursor:pointer;color:#94a3b8;font-size:1.5rem;line-height:1;">\u00d7</button>' +
-      '</div>' +
-      '<p style="font-size:0.8125rem;color:#64748b;margin:0 0 1rem;line-height:1.5;">' +
-        'Add your current building to the comparison. Fill in whatever you know - skip any fields you don\'t have data for. We\'ll use what you provide.' +
-      '</p>' +
-
-      '<div class="existing-form" style="display:flex;flex-direction:column;gap:0.875rem;">' +
-
-        // IDENTITY section
-        '<div style="border:1px solid #e2e8f0;border-radius:0.5rem;padding:0.875rem;">' +
-          '<div style="font-size:0.6875rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.625rem;">Building Identity</div>' +
-          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.625rem;">' +
-            '<div style="grid-column:span 2;"><label class="existing-label">Building Name or Address <span style="color:#dc2626;">*</span></label>' +
-              '<input type="text" id="ex-address" class="existing-input" placeholder="e.g. 1 Market Street - Current Lease" value="' + val(existing ? existing.building_address : '').replace(/"/g, '&quot;') + '"/></div>' +
-            '<div><label class="existing-label">Term (months)</label>' +
-              '<input type="number" id="ex-term" class="existing-input" min="0" placeholder="e.g. 60" value="' + val(d.term_months || d.termMonths || s.termMonths || '') + '"/></div>' +
-            '<div><label class="existing-label">RSF</label>' +
-              '<input type="number" id="ex-rsf" class="existing-input" min="0" placeholder="e.g. 50000" value="' + val(d.rsf || s.rsf || '') + '"/></div>' +
-          '</div>' +
-        '</div>' +
-
-        // RENT section
-        '<div style="border:1px solid #e2e8f0;border-radius:0.5rem;padding:0.875rem;">' +
-          '<div style="font-size:0.6875rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.25rem;">Base Rent</div>' +
-          '<div style="font-size:0.6875rem;color:#94a3b8;margin-bottom:0.625rem;">Fill in ANY one of these - we\'ll use what you give us.</div>' +
-          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.625rem;">' +
-            '<div><label class="existing-label">Base Rent/RSF/yr</label>' +
-              '<input type="number" id="ex-base-rent-rsf" class="existing-input" step="0.01" min="0" placeholder="e.g. 54.00" value="' + val(d.base_rent_rsf_yr || '') + '"/></div>' +
-            '<div><label class="existing-label">SL Monthly Base Rent ($)</label>' +
-              '<input type="number" id="ex-sl-monthly-rent" class="existing-input" min="0" placeholder="e.g. 225000" value="' + val(s.straightLineMonthlyRent || '') + '"/></div>' +
-            '<div style="grid-column:span 2;"><label class="existing-label">Total Base Rent over term ($)</label>' +
-              '<input type="number" id="ex-total-base-rent" class="existing-input" min="0" placeholder="e.g. 13500000" value="' + val(cfT.totalBaseRent || '') + '"/></div>' +
-          '</div>' +
-        '</div>' +
-
-        // OPEX section
-        '<div style="border:1px solid #e2e8f0;border-radius:0.5rem;padding:0.875rem;">' +
-          '<div style="font-size:0.6875rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.25rem;">Operating Expenses</div>' +
-          '<div style="font-size:0.6875rem;color:#94a3b8;margin-bottom:0.625rem;">Fill in ANY one of these.</div>' +
-          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.625rem;">' +
-            '<div><label class="existing-label">OpEx/SF/mo</label>' +
-              '<input type="number" id="ex-opex-sf-mo" class="existing-input" step="0.01" min="0" placeholder="e.g. 1.64" value="' + val(d.opex_sf_mo || '') + '"/></div>' +
-            '<div><label class="existing-label">SL Monthly OpEx ($)</label>' +
-              '<input type="number" id="ex-sl-monthly-opex" class="existing-input" min="0" placeholder="e.g. 75000" value="' + val(s.slMonthlyOpex || '') + '"/></div>' +
-            '<div style="grid-column:span 2;"><label class="existing-label">Total OpEx over term ($)</label>' +
-              '<input type="number" id="ex-total-opex" class="existing-input" min="0" placeholder="e.g. 4500000" value="' + val(cfT.totalOpex || '') + '"/></div>' +
-          '</div>' +
-        '</div>' +
-
-        // CONCESSIONS section
-        '<div style="border:1px solid #e2e8f0;border-radius:0.5rem;padding:0.875rem;">' +
-          '<div style="font-size:0.6875rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.625rem;">Concessions & CAPEX (optional)</div>' +
-          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.625rem;">' +
-            '<div><label class="existing-label">Free Rent (months)</label>' +
-              '<input type="number" id="ex-free-rent" class="existing-input" min="0" placeholder="0" value="' + val(d.free_rent_months || '') + '"/></div>' +
-            '<div><label class="existing-label">TI Value ($)</label>' +
-              '<input type="number" id="ex-ti-value" class="existing-input" min="0" placeholder="0" value="' + val(s.tiValue || '') + '"/></div>' +
-            '<div><label class="existing-label">Total CAPEX ($)</label>' +
-              '<input type="number" id="ex-capex" class="existing-input" min="0" placeholder="0" value="' + val(d.capex_total || '') + '"/></div>' +
-            '<div><label class="existing-label">NPV @ 8% ($)</label>' +
-              '<input type="number" id="ex-npv" class="existing-input" min="0" placeholder="(optional)" value="' + val(s.npv || '') + '"/></div>' +
-          '</div>' +
-        '</div>' +
-
-        '<div id="ex-error" style="display:none;padding:0.5rem 0.75rem;background:#fef2f2;border:1px solid #fecaca;border-radius:0.5rem;color:#b91c1c;font-size:0.8125rem;"></div>' +
-
-        '<div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.25rem;">' +
-          '<button onclick="rfpCloseExistingModal()" style="padding:0.5rem 1rem;border-radius:0.5rem;border:1px solid #cbd5e1;background:#fff;color:#475569;font-size:0.8125rem;font-weight:600;cursor:pointer;">Cancel</button>' +
-          '<button id="ex-save-btn" onclick="rfpSaveExistingBuilding()" style="padding:0.5rem 1rem;border-radius:0.5rem;border:none;background:#2563eb;color:#fff;font-size:0.8125rem;font-weight:600;cursor:pointer;">' + (isEdit ? 'Save Changes' : 'Add to Comparison') + '</button>' +
-        '</div>' +
-      '</div>' +
-    '</div>';
-
-  // Add some inline styles for inputs
-  var style = document.createElement('style');
-  style.setAttribute('data-existing-form', '1');
-  style.innerHTML =
-    '.existing-modal-overlay .existing-label { display:block; font-size:0.75rem; font-weight:600; color:#334155; margin-bottom:0.3125rem; line-height:1.3; }' +
-    '.existing-modal-overlay .existing-input { width:100%; padding:0.5rem 0.625rem; border:1px solid #cbd5e1; border-radius:0.375rem; font-size:0.875rem; font-family:inherit; box-sizing:border-box; color:#0f172a; background:#fff; }' +
-    '.existing-modal-overlay .existing-input:focus { outline:none; border-color:#2563eb; box-shadow:0 0 0 2px rgba(37,99,235,0.15); }' +
-    '.existing-modal-overlay .existing-input::placeholder { color:#cbd5e1; }';
-  document.head.appendChild(style);
-
-  document.body.appendChild(overlay);
-  _existingModal = overlay;
-  setTimeout(function() { var first = document.getElementById('ex-address'); if (first) first.focus(); }, 50);
-}
-
-function rfpCloseExistingModal() {
-  if (_existingModal) { _existingModal.remove(); _existingModal = null; }
-  _existingEditId = null;
-  document.querySelectorAll('style[data-existing-form]').forEach(function(s) { s.remove(); });
-}
-
-function rfpReadExistingForm() {
-  function num(id) {
-    var el = document.getElementById(id);
-    if (!el || !el.value) return null;
-    var n = parseFloat(el.value);
-    return isNaN(n) ? null : n;
-  }
-  function str(id) {
-    var el = document.getElementById(id);
-    return el ? (el.value || '').trim() : '';
-  }
-  return {
-    address: str('ex-address'),
-    term: num('ex-term'),
-    rsf: num('ex-rsf'),
-    baseRentRSF: num('ex-base-rent-rsf'),
-    slMonthlyRent: num('ex-sl-monthly-rent'),
-    totalBaseRent: num('ex-total-base-rent'),
-    opexSFMo: num('ex-opex-sf-mo'),
-    slMonthlyOpex: num('ex-sl-monthly-opex'),
-    totalOpex: num('ex-total-opex'),
-    freeRent: num('ex-free-rent'),
-    tiValue: num('ex-ti-value'),
-    capex: num('ex-capex'),
-    npv: num('ex-npv'),
-  };
-}
-
-// Build a computed analysis object from the user's partial inputs.
-// Fills in what it can; leaves unknown fields as 0 or null so the
-// Compare view shows "--" for missing data.
-function rfpBuildExistingAnalysis(f) {
-  // Derive base rent values in multiple units if we have enough info
-  var term = f.term || 0;
-  var rsf = f.rsf || 0;
-
-  // Base rent: SL monthly is the most useful derived value
-  var slMonthlyRent = f.slMonthlyRent;
-  var totalBaseRent = f.totalBaseRent;
-
-  if (slMonthlyRent == null && totalBaseRent != null && term > 0) {
-    slMonthlyRent = Math.round(totalBaseRent / term);
-  } else if (totalBaseRent == null && slMonthlyRent != null && term > 0) {
-    totalBaseRent = Math.round(slMonthlyRent * term);
-  } else if (slMonthlyRent == null && totalBaseRent == null && f.baseRentRSF != null && rsf > 0) {
-    var annualRent = f.baseRentRSF * rsf;
-    slMonthlyRent = Math.round(annualRent / 12);
-    if (term > 0) totalBaseRent = Math.round(annualRent * (term / 12));
-  }
-
-  // OpEx: same derivation pattern
-  var slMonthlyOpex = f.slMonthlyOpex;
-  var totalOpex = f.totalOpex;
-
-  if (slMonthlyOpex == null && totalOpex != null && term > 0) {
-    slMonthlyOpex = Math.round(totalOpex / term);
-  } else if (totalOpex == null && slMonthlyOpex != null && term > 0) {
-    totalOpex = Math.round(slMonthlyOpex * term);
-  } else if (slMonthlyOpex == null && totalOpex == null && f.opexSFMo != null && rsf > 0) {
-    slMonthlyOpex = Math.round(f.opexSFMo * rsf);
-    if (term > 0) totalOpex = Math.round(slMonthlyOpex * term);
-  }
-
-  // Concessions
-  var freeRentValue = 0;
-  if (f.freeRent && slMonthlyRent) {
-    freeRentValue = Math.round(f.freeRent * slMonthlyRent);
-  }
-  var tiValue = f.tiValue || 0;
-  var totalConcessions = freeRentValue + tiValue;
-
-  // Total all-in = Base + OpEx
-  var totalAllInCost = (totalBaseRent || 0) + (totalOpex || 0);
-
-  // Derive per-RSF figures
-  var baseRentRSFyr = f.baseRentRSF;
-  if (baseRentRSFyr == null && slMonthlyRent && rsf > 0) {
-    baseRentRSFyr = Math.round((slMonthlyRent * 12) / rsf * 100) / 100;
-  }
-  var opexSFMo = f.opexSFMo;
-  if (opexSFMo == null && slMonthlyOpex && rsf > 0) {
-    opexSFMo = Math.round(slMonthlyOpex / rsf * 100) / 100;
-  }
-
-  // Effective rent per RSF = total base rent - TI - free rent, per RSF per year
-  var effectiveRentRSF = 0;
-  if (totalBaseRent && rsf > 0 && term > 0) {
-    var netRent = totalBaseRent - freeRentValue - tiValue;
-    effectiveRentRSF = Math.round(netRent / (term / 12) / rsf * 100) / 100;
-  }
-
-  // Straight-line annual = SL monthly * 12 + (opex + parking effects)
-  var straightLineMonthlyRent = slMonthlyRent || 0;
-  var straightLineAnnualExpense = 0;
-  if (slMonthlyRent && slMonthlyOpex) {
-    straightLineAnnualExpense = Math.round((slMonthlyRent + slMonthlyOpex) * 12);
-  } else if (slMonthlyRent) {
-    straightLineAnnualExpense = Math.round(slMonthlyRent * 12);
-  }
-
-  return {
-    summary: {
-      rsf: rsf,
-      termMonths: term,
-      baseRentRSFyr: baseRentRSFyr || 0,
-      opexSFMo: opexSFMo || 0,
-      effectiveRentRSF: effectiveRentRSF,
-      straightLineMonthlyRent: straightLineMonthlyRent,
-      straightLineAnnualExpense: straightLineAnnualExpense,
-      totalAllInCost: totalAllInCost,
-      freeRentValue: freeRentValue,
-      tiValue: tiValue,
-      totalConcessions: totalConcessions,
-      npv: f.npv || 0,
-      npvPerRSF: (f.npv && rsf > 0) ? Math.round(f.npv / rsf * 100) / 100 : 0,
-      slMonthlyOpex: slMonthlyOpex || 0,
-    },
-    cash_flow: {
-      totals: {
-        totalBaseRent: totalBaseRent || 0,
-        totalOpex: totalOpex || 0,
-        totalParking: 0,
-      },
-    },
-    capex: {
-      hasCapex: !!(f.capex && f.capex > 0),
-      grandTotal: f.capex || 0,
-      monthlyDepreciation: 0,
-    },
-    brokerFee: { hasBrokerFee: false },
-    amortizedTI: { hasAmortizedTI: false },
-  };
-}
-
-async function rfpSaveExistingBuilding() {
-  var btn = document.getElementById('ex-save-btn');
-  var errEl = document.getElementById('ex-error');
-  if (btn) btn.disabled = true;
-  if (errEl) errEl.style.display = 'none';
-
-  var f = rfpReadExistingForm();
-
-  if (!f.address) {
-    if (errEl) { errEl.textContent = 'Building Name or Address is required.'; errEl.style.display = 'block'; }
-    if (btn) btn.disabled = false;
-    return;
-  }
-
-  // Build deal_terms (raw inputs) and analysis (computed)
-  var dealTerms = {
-    rsf: f.rsf || 0,
-    term_months: f.term || 0,
-    base_rent_rsf_yr: f.baseRentRSF || 0,
-    opex_sf_mo: f.opexSFMo || 0,
-    free_rent_months: f.freeRent || 0,
-    capex_total: f.capex || 0,
-    ti_allowance_rsf: (f.tiValue && f.rsf) ? Math.round(f.tiValue / f.rsf * 100) / 100 : 0,
-    ti_allowance_total: f.tiValue || 0,
-  };
-  var analysis = rfpBuildExistingAnalysis(f);
-
-  try {
-    var projectId = getProjectId();
-    var userEmail = getCurrentUserEmail();
-
-    // Resolve a building_num. If editing, reuse the existing one. If an existing
-    // submission already uses this address, reuse its building_num so versions
-    // group together. Otherwise mint a new 8000-range id for existing buildings.
-    var buildingNum = null;
-    if (_existingEditId) {
-      var editing = (window._rfpState.submissions || []).find(function(s) { return s.id === _existingEditId; });
-      buildingNum = editing ? (editing.building_num || editing.buildingNum) : null;
-    }
-    if (!buildingNum) {
-      var match = (window._rfpState.submissions || []).find(function(s) {
-        return (s.building_address || s.buildingAddress || '') === f.address;
-      });
-      buildingNum = match ? (match.building_num || match.buildingNum) : (8000 + Math.floor(Math.random() * 1000));
-    }
-
-    var payload = {
-      projectId: projectId,
-      buildingNum: buildingNum,
-      buildingAddress: f.address,
-      docType: 'Existing',
-      docName: f.address,
-      docSource: 'Current Lease / Manual Entry',
-      submittedBy: userEmail,
-      dealTerms: dealTerms,
-      analysis: analysis,
-      status: 'confirmed',
-    };
-    if (_existingEditId) payload.id = _existingEditId;
-
-    var res = await fetch('/api/rfp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    var data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || 'Save failed');
-    }
-
-    rfpCloseExistingModal();
-    // Refresh the Financials view
-    rfpInit();
-  } catch (err) {
-    if (errEl) { errEl.textContent = 'Could not save: ' + (err.message || 'unknown error'); errEl.style.display = 'block'; }
-    if (btn) btn.disabled = false;
-  }
-}
-
 // ===== UPLOAD MODAL =====
-function rfpShowUploadModal() {
+function rfpShowUploadModal(opts) {
   if (_rfpModal) { _rfpModal.remove(); _rfpModal = null; }
+  opts = opts || {};
+  // Lease mode: forces docType='existing', hides doc-type toggle, tweaks UI labels
+  var isLeaseMode = !!opts.lease;
 
   var surveyBuildings = (typeof SURVEY_BUILDINGS !== 'undefined') ? SURVEY_BUILDINGS : [];
   var dealBuildings = (typeof BUILDINGS !== 'undefined') ? BUILDINGS : [];
@@ -15859,7 +15522,8 @@ function rfpShowUploadModal() {
       '<button class="rfp-modal-close" onclick="rfpCloseModal()" title="Close">' +
         '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
       '</button>' +
-      '<div class="rfp-modal-title">Submit RFP / LOI / Lease</div>' +
+      '<div class="rfp-modal-title">' + (isLeaseMode ? 'Add Existing Lease' : 'Submit RFP / LOI / Lease') + '</div>' +
+      (isLeaseMode ? '<p style="margin:-8px 0 16px;font-size:var(--text-sm);color:var(--color-text-muted);">Upload your current executed lease. Our tool extracts the deal terms so your existing building can be compared apples-to-apples with new proposals.</p>' : '') +
 
       '<div class="rfp-step">' +
         '<label class="rfp-step-label">Step 1: Select Building</label>' +
@@ -15945,18 +15609,20 @@ function rfpShowUploadModal() {
         '</div>' +
       '</div>' +
 
-      '<div class="rfp-step">' +
-        '<label class="rfp-step-label" id="rfp-doctype-label">Step 4: Document Type</label>' +
-        '<div class="rfp-toggle-group">' +
-          '<button class="rfp-toggle-btn active" onclick="rfpSetDocType(this, \'RFP\')" data-type="RFP">RFP</button>' +
-          '<button class="rfp-toggle-btn" onclick="rfpSetDocType(this, \'LOI\')" data-type="LOI">LOI</button>' +
-          '<button class="rfp-toggle-btn" onclick="rfpSetDocType(this, \'Lease\')" data-type="Lease">Lease</button>' +
-        '</div>' +
-      '</div>' +
+      (isLeaseMode ? '' :
+        '<div class="rfp-step">' +
+          '<label class="rfp-step-label" id="rfp-doctype-label">Step 4: Document Type</label>' +
+          '<div class="rfp-toggle-group">' +
+            '<button class="rfp-toggle-btn active" onclick="rfpSetDocType(this, \'RFP\')" data-type="RFP">RFP</button>' +
+            '<button class="rfp-toggle-btn" onclick="rfpSetDocType(this, \'LOI\')" data-type="LOI">LOI</button>' +
+            '<button class="rfp-toggle-btn" onclick="rfpSetDocType(this, \'Lease\')" data-type="Lease">Lease</button>' +
+          '</div>' +
+        '</div>'
+      ) +
 
       '<div class="rfp-step">' +
-        '<label class="rfp-step-label" id="rfp-source-label">Step 5: Source (optional)</label>' +
-        '<input class="rfp-input" id="rfp-source-input" placeholder="e.g. Counter #3 from Landlord via Broker" />' +
+        '<label class="rfp-step-label" id="rfp-source-label">' + (isLeaseMode ? 'Source (optional)' : 'Step 5: Source (optional)') + '</label>' +
+        '<input class="rfp-input" id="rfp-source-input" placeholder="' + (isLeaseMode ? 'e.g. Executed Lease dated 2022-06-01' : 'e.g. Counter #3 from Landlord via Broker') + '" value="' + (isLeaseMode ? 'Executed Lease' : '') + '" />' +
       '</div>' +
 
       '<div id="rfp-upload-status" style="display:none"></div>' +
@@ -15970,8 +15636,9 @@ function rfpShowUploadModal() {
   document.body.appendChild(modal);
   _rfpModal = modal;
   _rfpModal._selectedFile = null;
-  _rfpModal._docType = 'RFP';
+  _rfpModal._docType = isLeaseMode ? 'Existing' : 'RFP';
   _rfpModal._entryMode = 'upload';
+  _rfpModal._isLeaseMode = isLeaseMode;
 
   // Wire up drop zone
   var dropZone = document.getElementById('rfp-drop-zone');
@@ -16978,9 +16645,9 @@ function rfpRenderDashboard(submissions) {
             'Submit RFP / LOI' +
           '</button>' : '') +
         (canUpload ?
-          '<button class="rfp-btn-secondary" onclick="rfpShowExistingModal()" style="display:inline-flex;align-items:center;gap:0.375rem;padding:0.5rem 0.875rem;background:#fff;color:#475569;border:1px solid #cbd5e1;border-radius:0.5rem;font-weight:600;font-size:0.8125rem;cursor:pointer;margin-left:0.5rem;">' +
+          '<button class="rfp-btn-secondary" onclick="rfpShowUploadModal({lease:true})" style="display:inline-flex;align-items:center;gap:0.375rem;padding:0.5rem 0.875rem;background:#fff;color:#475569;border:1px solid #cbd5e1;border-radius:0.5rem;font-weight:600;font-size:0.8125rem;cursor:pointer;margin-left:0.5rem;">' +
             '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 9h1"/><path d="M9 13h1"/><path d="M9 17h1"/><path d="M14 9h1"/><path d="M14 13h1"/><path d="M14 17h1"/></svg>' +
-            'Include Existing Building' +
+            'Add Existing Lease' +
           '</button>' : '') +
         '<div class="rfp-view-toggle">' +
           '<button class="rfp-view-toggle-btn' + (!isCompare ? ' active' : '') + '" onclick="rfpSwitchView(\'dashboard\')">Buildings</button>' +
@@ -17123,7 +16790,6 @@ function rfpBuildDetailHtml(subs) {
         '<button class="rfp-btn-secondary rfp-export-btn" onclick="rfpExportExcel()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export Excel</button>' +
         '<button class="rfp-btn-secondary rfp-drive-btn" onclick="rfpExportGoogleDrive()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>Save to Drive</button>' +
         '<button class="rfp-btn-secondary" onclick="rfpOpenVersionOnePager()" style="background:#0f172a;color:white;border-color:#0f172a;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>One-Pager</button>' +
-        ((docType || '').toString().toLowerCase() === 'existing' ? '<button class="rfp-btn-secondary" onclick="rfpShowExistingModal(\'' + selected.id + '\')" style="background:#7c3aed;color:white;border-color:#7c3aed;">Edit Existing</button>' : '') +
         (canDelete ? '<button class="rfp-btn-danger" onclick="rfpDeleteSubmission(\'' + selected.id + '\')">Delete</button>' : '') +
       '</div>' +
     '</div>';
