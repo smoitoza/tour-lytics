@@ -253,7 +253,7 @@ function LoginPageInner() {
             height="36"
             viewBox="0 0 40 40"
             fill="none"
-            aria-label="Tour-Lytics logo"
+            aria-label="TourLytics logo"
           >
             <rect x="2" y="2" width="36" height="36" rx="8" stroke="white" strokeWidth="2.5" />
             <path
@@ -280,7 +280,7 @@ function LoginPageInner() {
               letterSpacing: '-0.02em',
             }}
           >
-            Tour<span style={{ color: '#2563eb' }}>-Lytics</span>
+            Tour<span style={{ color: '#2563eb' }}>Lytics</span>
           </span>
         </Link>
 

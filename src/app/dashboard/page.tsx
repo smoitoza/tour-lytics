@@ -10,7 +10,7 @@ import TokenWidget from '@/components/TokenWidget'
 /* -- SVG Logo -- */
 function Logo({ size = 28 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-label="Tour-Lytics logo">
+    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-label="TourLytics logo">
       <rect x="2" y="2" width="36" height="36" rx="8" stroke="currentColor" strokeWidth="2.5" />
       <path d="M12 14h16M20 14v14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
       <circle cx="20" cy="10" r="2" fill="#2563eb" />
@@ -381,7 +381,7 @@ export default function DashboardPage() {
 
   const copyBetaCredentials = () => {
     if (!betaUserResult) return
-    const text = `Tour-Lytics Beta Access\n\nLogin: https://tourlytics.ai/login\nEmail: ${betaUserResult.email}\nPassword: ${betaUserResult.tempPassword}\n\nYou can change your password after signing in.`
+    const text = `TourLytics Beta Access\n\nLogin: https://tourlytics.ai/login\nEmail: ${betaUserResult.email}\nPassword: ${betaUserResult.tempPassword}\n\nYou can change your password after signing in.`
     navigator.clipboard.writeText(text).catch(() => {})
   }
 
@@ -495,10 +495,10 @@ export default function DashboardPage() {
     const greeting = firstName ? `Hi ${firstName},` : 'Hi,'
     const roleNames: Record<string, string> = { admin: 'admin', broker: 'broker', cre_team: 'CRE team member', touree: 'tour reviewer' }
     const roleName = roleNames[persona] || 'tour reviewer'
-    const subject = encodeURIComponent('You\'re invited to Tour-Lytics - SF Office Search')
+    const subject = encodeURIComponent('You\'re invited to TourLytics - SF Office Search')
 
     let bodyText = `${greeting}\n\n` +
-      `You've been added as a ${roleName} on our San Francisco Office Search project in Tour-Lytics.\n\n`
+      `You've been added as a ${roleName} on our San Francisco Office Search project in TourLytics.\n\n`
 
     if (tempPassword) {
       bodyText +=
@@ -509,7 +509,7 @@ export default function DashboardPage() {
         `You can change your password after signing in.\n\n`
     } else {
       bodyText +=
-        `You already have a Tour-Lytics account, so no new password is needed. Just sign in with your existing credentials:\n\n` +
+        `You already have a TourLytics account, so no new password is needed. Just sign in with your existing credentials:\n\n` +
         `Login page: ${getSignupUrl()}\n` +
         `Email: ${email}\n\n` +
         `If you've forgotten your password, use the "Forgot password" link on the login page.\n\n`
@@ -532,7 +532,7 @@ export default function DashboardPage() {
 
   const handleCopyLink = async (email: string) => {
     try {
-      await navigator.clipboard.writeText(`${getSignupUrl()}\n\nSign up with ${email} to access the SF Office Search project on Tour-Lytics.`)
+      await navigator.clipboard.writeText(`${getSignupUrl()}\n\nSign up with ${email} to access the SF Office Search project on TourLytics.`)
       setCopiedLink(email)
       setTimeout(() => setCopiedLink(null), 2000)
     } catch {
@@ -822,7 +822,7 @@ export default function DashboardPage() {
           <Link href="/dashboard" className="no-underline" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#0f172a', textDecoration: 'none' }}>
             <Logo size={28} />
             <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.02em' }}>
-              Tour<span style={{ color: '#2563eb' }}>-Lytics</span>
+              Tour<span style={{ color: '#2563eb' }}>Lytics</span>
             </span>
           </Link>
 
@@ -1757,7 +1757,7 @@ export default function DashboardPage() {
             {!betaUserResult ? (
               <>
                 <p style={{ fontSize: '0.8125rem', color: '#64748b', marginBottom: '1rem', lineHeight: 1.5 }}>
-                  Create a new Tour-Lytics account. A temporary password will be generated for you to share with the user.
+                  Create a new TourLytics account. A temporary password will be generated for you to share with the user.
                 </p>
 
                 <div style={{ marginBottom: '0.75rem' }}>
@@ -1831,8 +1831,8 @@ export default function DashboardPage() {
                   <button onClick={copyBetaCredentials} style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: '1px solid #cbd5e1', background: '#fff', color: '#475569', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer' }}>Copy Credentials</button>
                   <button
                     onClick={() => {
-                      const subject = 'Your Tour-Lytics Beta Access'
-                      const body = `Hi${betaUserResult.displayName ? ' ' + betaUserResult.displayName : ''},\n\nYou have been granted beta access to Tour-Lytics.\n\nLogin: https://tourlytics.ai/login\nEmail: ${betaUserResult.email}\nPassword: ${betaUserResult.tempPassword}\n\nYou can change your password after signing in. Let me know if you have any questions.\n\nBest,\nScott`
+                      const subject = 'Your TourLytics Beta Access'
+                      const body = `Hi${betaUserResult.displayName ? ' ' + betaUserResult.displayName : ''},\n\nYou have been granted beta access to TourLytics.\n\nLogin: https://tourlytics.ai/login\nEmail: ${betaUserResult.email}\nPassword: ${betaUserResult.tempPassword}\n\nYou can change your password after signing in. Let me know if you have any questions.\n\nBest,\nScott`
                       window.location.href = `mailto:${betaUserResult.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
                     }}
                     style={{ padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none', background: '#2563eb', color: '#fff', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer' }}

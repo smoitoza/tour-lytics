@@ -114,7 +114,7 @@ export default function ProjectPage() {
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="15 18 9 12 15 6" />
                 </svg>
-                <svg width="22" height="22" viewBox="0 0 40 40" fill="none" aria-label="Tour-Lytics logo">
+                <svg width="22" height="22" viewBox="0 0 40 40" fill="none" aria-label="TourLytics logo">
                   <rect x="2" y="2" width="36" height="36" rx="8" stroke="currentColor" strokeWidth="2.5" />
                   <path d="M12 14h16M20 14v14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
                   <circle cx="20" cy="10" r="2" fill="#2563eb" />

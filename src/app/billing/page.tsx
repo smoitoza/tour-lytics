@@ -9,7 +9,7 @@ import type { User } from '@supabase/supabase-js'
 /* -- SVG Logo -- */
 function Logo({ size = 28 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-label="Tour-Lytics logo">
+    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-label="TourLytics logo">
       <rect x="2" y="2" width="36" height="36" rx="8" stroke="currentColor" strokeWidth="2.5" />
       <path d="M12 14h16M20 14v14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
       <circle cx="20" cy="10" r="2" fill="#2563eb" />
@@ -179,7 +179,7 @@ export default function BillingPage() {
           <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#0f172a', textDecoration: 'none' }}>
             <Logo size={28} />
             <span style={{ fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.02em' }}>
-              Tour<span style={{ color: '#2563eb' }}>-Lytics</span>
+              Tour<span style={{ color: '#2563eb' }}>Lytics</span>
             </span>
           </Link>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>

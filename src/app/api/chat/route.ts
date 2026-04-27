@@ -745,7 +745,7 @@ IMPORTANT: When the user says "tomorrow", they mean ${tomorrowDate}. When they s
 // ---- Dynamic system prompt (adapts to project) ----
 function buildSystemPrompt(projectName: string, market: string, buildingCount: number): string {
   const marketLabel = market || 'the target market'
-  return `You are the Tour-Lytics Tour Book Assistant -- an AI concierge for a commercial real estate office search project.
+  return `You are the TourLytics Tour Book Assistant -- an AI concierge for a commercial real estate office search project.
 
 PROJECT: ${projectName}
 MARKET: ${marketLabel}

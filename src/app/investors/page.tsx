@@ -12,7 +12,7 @@ function Logo({ className = '', size = 32 }: { className?: string; size?: number
       height={size}
       viewBox="0 0 40 40"
       fill="none"
-      aria-label="Tour-Lytics logo"
+      aria-label="TourLytics logo"
       className={className}
     >
       <rect x="2" y="2" width="36" height="36" rx="8" stroke="currentColor" strokeWidth="2.5" />
@@ -71,7 +71,7 @@ export default function InvestorsPage() {
         <div className="flex items-center justify-between" style={{ maxWidth: '1200px', margin: '0 auto', padding: '1rem 1.5rem', height: '64px' }}>
           <Link href="/" className="flex items-center no-underline" style={{ gap: '0.625rem' }}>
             <Logo size={28} />
-            <span className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: '1.125rem', color: '#0f172a', letterSpacing: '-0.01em' }}>Tour-Lytics</span>
+            <span className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: '1.125rem', color: '#0f172a', letterSpacing: '-0.01em' }}>TourLytics</span>
           </Link>
           <div className="hidden md:flex items-center" style={{ gap: '2rem' }}>
             <Link href="/" className="text-sm font-medium no-underline transition-colors" style={{ color: '#475569' }}>Home</Link>
@@ -157,7 +157,7 @@ export default function InvestorsPage() {
           </h1>
 
           <p style={{ fontSize: 'clamp(1.125rem, 1rem + 0.75vw, 1.375rem)', color: '#94a3b8', maxWidth: '700px', margin: '0 auto 1.5rem auto', lineHeight: 1.55 }}>
-            AI-powered deal intelligence for every commercial real estate tour. From broker survey to signed lease, Tour-Lytics replaces the spreadsheets, PDFs, and email chains that still run a $20T+ market.
+            AI-powered deal intelligence for every commercial real estate tour. From broker survey to signed lease, TourLytics replaces the spreadsheets, PDFs, and email chains that still run a $20T+ market.
           </p>
 
           {/* TAM punch line */}
@@ -197,7 +197,7 @@ export default function InvestorsPage() {
               Built and validated with a live search
             </h2>
             <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', maxWidth: '600px', margin: '0 auto', lineHeight: 1.6 }}>
-              A Fortune 500 company used Tour-Lytics to evaluate their entire San Francisco office search, replacing weeks of manual spreadsheet work.
+              A Fortune 500 company used TourLytics to evaluate their entire San Francisco office search, replacing weeks of manual spreadsheet work.
             </p>
           </div>
 
@@ -293,7 +293,7 @@ export default function InvestorsPage() {
               Embedded in every step of the deal
             </h2>
             <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', maxWidth: '640px', margin: '0 auto', lineHeight: 1.6 }}>
-              Tour-Lytics is not a standalone analytics tool. It lives inside the entire site selection workflow, from the first broker survey to the final lease decision.
+              TourLytics is not a standalone analytics tool. It lives inside the entire site selection workflow, from the first broker survey to the final lease decision.
             </p>
           </div>
 
@@ -335,7 +335,7 @@ export default function InvestorsPage() {
                 The knowledge graph of commercial real estate searches
               </h2>
               <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', lineHeight: 1.7, marginBottom: '1.5rem' }}>
-                Every project builds a structured intelligence layer. Tour-Lytics ingests broker surveys, financial terms, tour schedules, photos, and employee commute data into a single knowledge graph. The AI does not just answer questions. It understands the relationships between buildings, deal terms, team preferences, and location data.
+                Every project builds a structured intelligence layer. TourLytics ingests broker surveys, financial terms, tour schedules, photos, and employee commute data into a single knowledge graph. The AI does not just answer questions. It understands the relationships between buildings, deal terms, team preferences, and location data.
               </p>
               <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', lineHeight: 1.7, marginBottom: '1.5rem' }}>
                 Connected to Google Maps and Google Places APIs, the assistant can find nearby restaurants, calculate commute times, and pull real-time local data. Users ask questions in plain English and get answers grounded in their actual project data.
@@ -366,7 +366,7 @@ export default function InvestorsPage() {
               {/* Dark chat header */}
               <div style={{ padding: '1rem 1.25rem', background: '#0f172a', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', animation: 'pulse 2s infinite' }} />
-                <span className="font-semibold" style={{ color: '#e2e8f0', fontSize: '0.8125rem', fontFamily: 'var(--font-display)' }}>Tour-Lytics AI Assistant</span>
+                <span className="font-semibold" style={{ color: '#e2e8f0', fontSize: '0.8125rem', fontFamily: 'var(--font-display)' }}>TourLytics AI Assistant</span>
               </div>
 
               {/* Chat messages */}
@@ -417,7 +417,7 @@ export default function InvestorsPage() {
               Built for both sides of the deal
             </h2>
             <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', maxWidth: '640px', margin: '0 auto', lineHeight: 1.6 }}>
-              Tour-Lytics serves the two key personas in every commercial real estate site selection: the broker driving the process and the tenant making the decision.
+              TourLytics serves the two key personas in every commercial real estate site selection: the broker driving the process and the tenant making the decision.
             </p>
           </div>
 
@@ -434,7 +434,7 @@ export default function InvestorsPage() {
                 <h3 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.25rem, 1.1rem + 0.5vw, 1.5rem)', color: '#0f172a', margin: 0 }}>Tenant-Rep Brokers</h3>
               </div>
               <p style={{ fontSize: '0.9375rem', color: '#64748b', lineHeight: 1.65, marginBottom: '1.5rem' }}>
-                Brokers are the entry point. They run the tour, distribute the surveys, and manage the process. Tour-Lytics gives them a modern platform to deliver a better client experience.
+                Brokers are the entry point. They run the tour, distribute the surveys, and manage the process. TourLytics gives them a modern platform to deliver a better client experience.
               </p>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {[
@@ -530,7 +530,7 @@ export default function InvestorsPage() {
               {
                 step: '03',
                 title: 'The Platform',
-                desc: 'Both sides of the table. Brokers publish surveys through Tour-Lytics. Tenants consume them. One connected ecosystem.',
+                desc: 'Both sides of the table. Brokers publish surveys through TourLytics. Tenants consume them. One connected ecosystem.',
               },
             ].map((item) => (
               <div key={item.step} style={{ padding: '2rem', borderRadius: '1rem', background: '#ffffff', border: '1px solid #e2e8f0' }}>
@@ -716,7 +716,7 @@ export default function InvestorsPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1.5fr', background: '#0f172a', padding: '1rem 1.5rem' }}>
                   <span className="font-semibold" style={{ fontFamily: 'var(--font-display)', color: '#e2e8f0', fontSize: '0.8125rem', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Category</span>
                   <span className="font-semibold" style={{ fontFamily: 'var(--font-display)', color: '#e2e8f0', fontSize: '0.8125rem', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>What They Do</span>
-                  <span className="font-semibold" style={{ fontFamily: 'var(--font-display)', color: '#60a5fa', fontSize: '0.8125rem', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Tour-Lytics Difference</span>
+                  <span className="font-semibold" style={{ fontFamily: 'var(--font-display)', color: '#60a5fa', fontSize: '0.8125rem', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>TourLytics Difference</span>
                 </div>
                 {/* Table rows */}
                 {[
@@ -784,7 +784,7 @@ export default function InvestorsPage() {
                     No tool converts broker deliverables into actionable intelligence for occupiers
                   </div>
                   <div style={{ fontSize: '0.875rem', color: '#1e40af', lineHeight: 1.6, fontWeight: 600 }}>
-                    Tour-Lytics fills this gap: deal intelligence for commercial real estate searches
+                    TourLytics fills this gap: deal intelligence for commercial real estate searches
                   </div>
                 </div>
               </div>
