@@ -1292,6 +1292,48 @@ body {
   box-shadow: var(--shadow-md);
   font-family: var(--font-body);
   min-width: 180px;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+.map-legend::-webkit-scrollbar { width: 6px; }
+.map-legend::-webkit-scrollbar-track { background: transparent; }
+.map-legend::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+.map-legend::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* Collapsible section header (used for Survey Buildings) */
+.legend-section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  padding: 2px 0;
+  margin-bottom: var(--space-1);
+}
+.legend-section-toggle:hover .legend-section-label {
+  color: var(--color-text);
+}
+.legend-section-toggle .legend-caret {
+  font-size: 10px;
+  color: var(--color-text-faint);
+  transition: transform 0.15s ease;
+  display: inline-block;
+  line-height: 1;
+}
+.legend-section-toggle.collapsed .legend-caret {
+  transform: rotate(-90deg);
+}
+.legend-section-collapsible {
+  overflow: hidden;
+  max-height: 1000px;
+  transition: max-height 0.2s ease;
+}
+.legend-section-collapsible.collapsed {
+  max-height: 0;
 }
 
 .legend-title {
@@ -11538,9 +11580,19 @@ function buildLegendHTML() {
   var canToggle = hasTypes && hasCities;
 
   // Flat numbered list matching survey order -- no submarket grouping
+  // Auto-collapsed when > 8 buildings to keep the legend compact; user can expand.
+  // Persist expanded/collapsed state across re-renders via window._surveyLegendExpanded.
   if (surveyCount > 0) {
+    if (typeof window._surveyLegendExpanded === 'undefined') {
+      window._surveyLegendExpanded = surveyCount <= 8;
+    }
+    var collapsed = !window._surveyLegendExpanded;
     html += '<div class="legend-section">';
-    html += '<div class="legend-section-label">Survey Buildings (' + surveyCount + ')</div>';
+    html += '<div class="legend-section-toggle' + (collapsed ? ' collapsed' : '') + '" onclick="toggleSurveyLegend()">' +
+      '<span class="legend-section-label" style="margin-bottom:0;">Survey Buildings (' + surveyCount + ')</span>' +
+      '<span class="legend-caret">\u25BE</span>' +
+    '</div>';
+    html += '<div class="legend-section-collapsible' + (collapsed ? ' collapsed' : '') + '" id="survey-legend-list">';
     var sortedBuildings = SURVEY_BUILDINGS.filter(function(b) { return !b.not_interested; }).slice().sort(function(a, b) { return a.num - b.num; });
     sortedBuildings.forEach(function(b) {
       var label = b.name || b.address || ('Building ' + b.num);
@@ -11549,6 +11601,7 @@ function buildLegendHTML() {
       html += '<span class="legend-label" style="font-size:0.7rem;">' + (b.name ? b.name : b.address) + '</span>';
       html += '</div>';
     });
+    html += '</div>';
     html += '</div>';
   }
 
@@ -11567,6 +11620,23 @@ function buildLegendHTML() {
 function refreshLegend() {
   var legendDiv = document.querySelector('.map-legend');
   if (legendDiv) legendDiv.innerHTML = buildLegendHTML();
+}
+
+// Toggle the Survey Buildings list expanded/collapsed.
+// Avoids re-rendering the whole legend so scroll position is preserved.
+function toggleSurveyLegend() {
+  window._surveyLegendExpanded = !window._surveyLegendExpanded;
+  var toggle = document.querySelector('.map-legend .legend-section-toggle');
+  var list = document.getElementById('survey-legend-list');
+  if (toggle && list) {
+    if (window._surveyLegendExpanded) {
+      toggle.classList.remove('collapsed');
+      list.classList.remove('collapsed');
+    } else {
+      toggle.classList.add('collapsed');
+      list.classList.add('collapsed');
+    }
+  }
 }
 
 legend.onAdd = function(map) {
