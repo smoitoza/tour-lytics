@@ -11,7 +11,7 @@ function Logo({ className = '', size = 32 }: { className?: string; size?: number
       height={size}
       viewBox="0 0 40 40"
       fill="none"
-      aria-label="Tour-Lytics logo"
+      aria-label="TourLytics logo"
       className={className}
     >
       <rect x="2" y="2" width="36" height="36" rx="8" stroke="currentColor" strokeWidth="2.5" />
@@ -139,7 +139,7 @@ export default function LandingPage() {
           <Link href="/" className="flex items-center no-underline" style={{ gap: '0.75rem', color: '#0f172a' }}>
             <Logo size={32} className="text-[#0f172a]" />
             <span className="font-bold tracking-tight" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.125rem,1rem+0.75vw,1.5rem)' }}>
-              Tour<span style={{ color: '#2563eb' }}>-Lytics</span>
+              Tour<span style={{ color: '#2563eb' }}>Lytics</span>
             </span>
           </Link>
           <div className="hidden md:flex items-center" style={{ gap: '2rem' }}>
@@ -564,7 +564,7 @@ export default function LandingPage() {
               Drop in a proposal. Get a complete financial model.
             </h2>
             <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', maxWidth: '720px', margin: '0 auto', lineHeight: 1.6 }}>
-              Upload any RFP, LOI, or lease abstract. Tour-Lytics extracts every deal term and builds cash flows, straight-line P&amp;L, GAAP analysis, TI schedules, and CAPEX models automatically. No spreadsheets. No manual entry. CFO-ready in seconds.
+              Upload any RFP, LOI, or lease abstract. TourLytics extracts every deal term and builds cash flows, straight-line P&amp;L, GAAP analysis, TI schedules, and CAPEX models automatically. No spreadsheets. No manual entry. CFO-ready in seconds.
             </p>
           </div>
 
@@ -939,7 +939,7 @@ export default function LandingPage() {
             Where should your team actually work?
           </h2>
           <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', marginBottom: '2.5rem', maxWidth: '680px', lineHeight: 1.6 }}>
-            Upload employee home addresses. Tour-Lytics maps every team member, calculates commute times to every shortlisted building by drive and transit, and ranks your options by department. Know which office minimizes your team's commute before you sign.
+            Upload employee home addresses. TourLytics maps every team member, calculates commute times to every shortlisted building by drive and transit, and ranks your options by department. Know which office minimizes your team's commute before you sign.
           </p>
 
           {/* Screenshot 1: Employee Location Map */}
@@ -1004,7 +1004,7 @@ export default function LandingPage() {
               One platform that speaks both broker and CFO
             </h2>
             <p style={{ fontSize: 'clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', color: '#64748b', maxWidth: '640px', margin: '0 auto', lineHeight: 1.6 }}>
-              From broker surveys to executive summaries, financial models to stakeholder emails. Tour-Lytics is the single platform where deals get analyzed, decisions get made, and teams stay aligned.
+              From broker surveys to executive summaries, financial models to stakeholder emails. TourLytics is the single platform where deals get analyzed, decisions get made, and teams stay aligned.
             </p>
           </div>
 
@@ -1180,7 +1180,7 @@ export default function LandingPage() {
               There is no map, no sorting, no filtering. Commute studies require outside consultants. Financial models get rebuilt from scratch every time. Tour notes are handwritten on paper folders. And at the end of it all, the final decision often comes down to gut feel instead of structured intelligence.
             </p>
             <p style={{ color: '#64748b', lineHeight: 1.7, marginTop: '1rem' }}>
-              Tour-Lytics replaces this entire workflow. Upload a broker survey PDF and get an interactive map with every building. Generate GAAP-compliant financials the moment a deal lands. Run commute studies in seconds instead of weeks. Score buildings during the tour from your phone. And ask your built-in assistant anything about your buildings, costs, or schedule. From broker survey to signed lease, every step lives in one place.
+              TourLytics replaces this entire workflow. Upload a broker survey PDF and get an interactive map with every building. Generate GAAP-compliant financials the moment a deal lands. Run commute studies in seconds instead of weeks. Score buildings during the tour from your phone. And ask your built-in assistant anything about your buildings, costs, or schedule. From broker survey to signed lease, every step lives in one place.
             </p>
           </div>
 
@@ -1209,7 +1209,7 @@ export default function LandingPage() {
             {/* Solution Card */}
             <div style={{ padding: '1.5rem', borderRadius: '1rem', border: '1px solid #bbf7d0', background: '#f0fdf4' }}>
               <div className="inline-flex items-center justify-center rounded-full font-bold" style={{ width: '28px', height: '28px', background: '#dcfce7', color: '#16a34a', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', marginBottom: '0.75rem' }}>&#x2713;</div>
-              <h4 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', color: '#166534', marginBottom: '0.75rem' }}>What Tour-Lytics gives you</h4>
+              <h4 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', color: '#166534', marginBottom: '0.75rem' }}>What TourLytics gives you</h4>
               <ul className="flex flex-col" style={{ listStyle: 'none', padding: 0, gap: '0.5rem' }}>
                 {[
                   'Interactive map with every building',
@@ -1249,7 +1249,7 @@ export default function LandingPage() {
                 Every great deal starts with a great broker. But the tools they work with haven&apos;t kept up. Every survey is still assembled from scratch: gathering listings, formatting pages, printing decks, emailing them out, and hoping someone reads past page three.
               </p>
               <p style={{ color: '#64748b', lineHeight: 1.7 }}>
-                Tour-Lytics gives brokers a better way to deliver. Publish an interactive survey instead of a static PDF. See which buildings your clients actually explored. Upload new surveys and proposals directly into the platform. Move faster, present better, and give your clients the kind of experience that wins the next engagement.
+                TourLytics gives brokers a better way to deliver. Publish an interactive survey instead of a static PDF. See which buildings your clients actually explored. Upload new surveys and proposals directly into the platform. Move faster, present better, and give your clients the kind of experience that wins the next engagement.
               </p>
             </div>
             <div className="flex flex-col" style={{ gap: '1rem' }}>
@@ -1275,7 +1275,7 @@ export default function LandingPage() {
               {/* Green Card */}
               <div style={{ padding: '1.5rem', borderRadius: '1rem', border: '1px solid #bbf7d0', background: '#f0fdf4' }}>
                 <div className="inline-flex items-center justify-center rounded-full font-bold" style={{ width: '28px', height: '28px', background: '#dcfce7', color: '#16a34a', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', marginBottom: '0.75rem' }}>&#x2713;</div>
-                <h4 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', color: '#166534', marginBottom: '0.75rem' }}>What Tour-Lytics gives brokers</h4>
+                <h4 className="font-bold" style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(0.875rem, 0.8rem + 0.35vw, 1rem)', color: '#166534', marginBottom: '0.75rem' }}>What TourLytics gives brokers</h4>
                 <ul className="flex flex-col" style={{ listStyle: 'none', padding: 0, gap: '0.5rem' }}>
                   {[
                     'Publish interactive surveys instantly',

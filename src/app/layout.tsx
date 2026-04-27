@@ -3,7 +3,7 @@ import './globals.css'
 import RecoveryRedirect from '@/components/RecoveryRedirect'
 
 export const metadata: Metadata = {
-  title: 'Tour-Lytics - Commercial Real Estate Intelligence',
+  title: 'TourLytics - Commercial Real Estate Intelligence',
   description: 'AI-powered lease analytics, interactive maps, and tour management for corporate real estate teams.',
 }
 

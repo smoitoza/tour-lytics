@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tour-Lytics</title>
+<title>TourLytics</title>
 
 <!-- Leaflet CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -13441,7 +13441,7 @@ function renderTourBook() {
             '</svg>' +
           '</div>' +
           '<h3 style="font-size:1.125rem;font-weight:700;color:#0f172a;margin:0 0 0.5rem;">Upload Your Broker Survey</h3>' +
-          '<p style="font-size:0.875rem;color:#64748b;max-width:400px;margin:0 auto 1.5rem;line-height:1.6;">Get started by uploading a broker survey PDF. Tour-Lytics will extract all the building data and populate your project automatically.</p>' +
+          '<p style="font-size:0.875rem;color:#64748b;max-width:400px;margin:0 auto 1.5rem;line-height:1.6;">Get started by uploading a broker survey PDF. TourLytics will extract all the building data and populate your project automatically.</p>' +
           '<button onclick="openSurveyUploadModal()" style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.75rem 1.5rem;background:#2563eb;color:#fff;border:none;border-radius:0.75rem;font-size:0.875rem;font-weight:600;cursor:pointer;transition:opacity 0.15s;font-family:inherit;" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">' +
             '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' +
             'Upload Survey PDF' +
@@ -13639,7 +13639,7 @@ function renderTourBook() {
     html +=
       '<div class="tourbook-submit-section" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border-color:#bfdbfe;">' +
         '<h3 style="color:#1e40af;">Sign in to submit your scores</h3>' +
-        '<p>Your scores are saved locally. Sign in through the Tour-Lytics dashboard to submit them for the team to see.</p>' +
+        '<p>Your scores are saved locally. Sign in through the TourLytics dashboard to submit them for the team to see.</p>' +
       '</div>';
   }
 
@@ -13931,7 +13931,7 @@ async function submitChangePassword() {
 }
 
 function signOutUser() {
-  if (!confirm('Sign out of Tour-Lytics?')) return;
+  if (!confirm('Sign out of TourLytics?')) return;
   window.location.href = '/login';
 }
 
@@ -14423,7 +14423,7 @@ function generateCalendarLinks(invites, btn, statusEl) {
     var endFmt = inv.date.replace(/-/g, '') + 'T' + endTime.replace(':', '') + '00';
     
     var title = encodeURIComponent('Office Tour: ' + inv.building);
-    var _calProjectName = document.getElementById('projectTitle') ? document.getElementById('projectTitle').textContent : 'Tour-Lytics';
+    var _calProjectName = document.getElementById('projectTitle') ? document.getElementById('projectTitle').textContent : 'TourLytics';
     var details = encodeURIComponent('Office tour of ' + inv.building + '\n' + inv.address + '\n\n' + _calProjectName + ' Tour Book');
     var location = encodeURIComponent(inv.address);
     var attendeeStr = inv.attendees.map(function(e) { return encodeURIComponent(e); }).join(',');
@@ -26805,14 +26805,14 @@ async function teamAddMember() {
     // Build mailto invite
     var tempPw = result.tempPassword || '';
     var appUrl = window.location.origin + '/login';
-    var _invProjectName = document.getElementById('projectTitle') ? document.getElementById('projectTitle').textContent : 'Tour-Lytics';
-    var subject = encodeURIComponent('You\'re invited to Tour-Lytics - ' + _invProjectName);
+    var _invProjectName = document.getElementById('projectTitle') ? document.getElementById('projectTitle').textContent : 'TourLytics';
+    var subject = encodeURIComponent('You\'re invited to TourLytics - ' + _invProjectName);
     var roleNames = { admin: 'admin', broker: 'broker', cre_team: 'CRE team member', touree: 'tour reviewer' };
     var roleName = roleNames[persona] || 'team member';
     var firstName = displayName ? displayName.split(' ')[0] : '';
     var greeting = firstName ? 'Hi ' + firstName + ',' : 'Hi,';
     var body = greeting + '\n\n' +
-      'You\'ve been added as a ' + roleName + ' on our ' + _invProjectName + ' project in Tour-Lytics.\n\n';
+      'You\'ve been added as a ' + roleName + ' on our ' + _invProjectName + ' project in TourLytics.\n\n';
     if (tempPw) {
       body += 'Your account is ready. Here are your login credentials:\n\n' +
         'Login: ' + appUrl + '\n' +
@@ -26851,12 +26851,12 @@ function teamResendInvite(email, displayName, persona) {
   var roleNames = { admin: 'admin', broker: 'broker', cre_team: 'CRE team member', touree: 'tour reviewer' };
   var roleName = roleNames[persona] || 'team member';
   var appUrl = window.location.origin + '/login';
-  var _resendProjectName = document.getElementById('projectTitle') ? document.getElementById('projectTitle').textContent : 'Tour-Lytics';
-  var subject = encodeURIComponent('Tour-Lytics - Reminder: You\'re on the ' + _resendProjectName + ' team');
+  var _resendProjectName = document.getElementById('projectTitle') ? document.getElementById('projectTitle').textContent : 'TourLytics';
+  var subject = encodeURIComponent('TourLytics - Reminder: You\'re on the ' + _resendProjectName + ' team');
   var firstName = displayName ? displayName.split(' ')[0] : '';
   var greeting = firstName ? 'Hi ' + firstName + ',' : 'Hi,';
   var body = greeting + '\n\n' +
-    'Just a reminder - you\'ve been added as a ' + roleName + ' on our ' + _resendProjectName + ' project in Tour-Lytics.\n\n' +
+    'Just a reminder - you\'ve been added as a ' + roleName + ' on our ' + _resendProjectName + ' project in TourLytics.\n\n' +
     'Login here: ' + appUrl + '\n\n' +
     'If you need a password reset, let me know.\n\n' +
     'See you on the tour!';
@@ -26887,9 +26887,9 @@ async function teamResetPassword(email, displayName) {
     var appUrl = window.location.origin + '/login';
     var firstName = displayName ? displayName.split(' ')[0] : '';
     var greeting = firstName ? 'Hi ' + firstName + ',' : 'Hi,';
-    var subject = encodeURIComponent('Tour-Lytics - Your password has been reset');
+    var subject = encodeURIComponent('TourLytics - Your password has been reset');
     var body = greeting + '\n\n' +
-      'Your Tour-Lytics password has been reset. Here are your updated credentials:\n\n' +
+      'Your TourLytics password has been reset. Here are your updated credentials:\n\n' +
       'Login: ' + appUrl + '\n' +
       'Email: ' + email + '\n' +
       'Password: ' + tempPw + '\n\n' +

@@ -1,4 +1,4 @@
-# Tour-Lytics
+# TourLytics
 
 Commercial real estate intelligence platform. AI-powered lease analytics, interactive maps, and tour management.
 
