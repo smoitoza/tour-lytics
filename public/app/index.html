@@ -16094,6 +16094,7 @@ function rfpMapTerms(raw) {
     freeRent: raw.free_rent_months || raw.freeRent || '',
     rentPeriods: raw.rent_periods || raw.rentPeriods || null,
     rentPeriodsUnitCorrected: raw.rent_periods_unit_corrected || raw.rentPeriodsUnitCorrected || false,
+    rentPeriodsAutoExtended: raw.rent_periods_auto_extended || raw.rentPeriodsAutoExtended || false,
     tiAllowancePerRSF: raw.ti_allowance_rsf || raw.tiAllowancePerRSF || '',
     tiAllowanceTotal: raw.ti_allowance_total || raw.tiAllowanceTotal || '',
     opexRSF: raw.opex_rsf_yr || raw.opexRSF || '',
@@ -16200,8 +16201,13 @@ function rfpMultiBuildingNext() {
 function rfpBuildRentPeriodsUI(periods) {
   var html = '<div id="rfp-rent-periods-list">';
   if (periods && periods.length > 0) {
+    // Pass each row the prior PAID rate so it can compute Esc % at build time
+    // (we cannot rely on DOM walk during HTML string construction).
+    var lastPaidAnnual = null;
     periods.forEach(function(p, i) {
-      html += rfpRentPeriodRow(i, p);
+      html += rfpRentPeriodRow(i, p, lastPaidAnnual);
+      var thisAnnual = (p && p.rent_rsf_yr != null && p.rent_rsf_yr !== '') ? Number(p.rent_rsf_yr) : null;
+      if (thisAnnual != null && thisAnnual > 0) lastPaidAnnual = thisAnnual;
     });
   }
   html += '</div>';
@@ -16217,7 +16223,7 @@ function rfpCurrentRentUnit() {
   return 'year';
 }
 
-function rfpRentPeriodRow(index, period) {
+function rfpRentPeriodRow(index, period, priorAnnualOverride) {
   var p = period || { from_month: '', to_month: '', rent_rsf_yr: '', billable_rsf: '', label: '' };
   var unit = rfpCurrentRentUnit();
   var headerLabel = unit === 'month' ? 'Rate/RSF/mo' : 'Rate/RSF/yr';
@@ -16227,13 +16233,12 @@ function rfpRentPeriodRow(index, period) {
   if (annualVal != null) {
     displayVal = (unit === 'month' ? (annualVal / 12) : annualVal).toFixed(2);
   }
-  // Esc % column: implied escalation from the prior period's rate. Period 0 always shows dash.
-  // We compute on-the-fly here (rather than storing) so it always reflects the current rate row.
+  // Esc % column: implied escalation from the prior PAID period's rate. Period 0 always shows dash.
+  // priorAnnualOverride is passed in by rfpBuildRentPeriodsUI during initial render.
+  // For DOM-based recompute we fall back to walking the live DOM via rfpReadPriorPeriodAnnual.
   var escDisplay = '';
-  if (index === 0) {
-    escDisplay = '\u2014'; // em dash for period 1
-  } else if (annualVal != null && annualVal > 0) {
-    var prevAnnual = rfpReadPriorPeriodAnnual(index);
+  if (index !== 0 && annualVal != null && annualVal > 0) {
+    var prevAnnual = (priorAnnualOverride != null) ? priorAnnualOverride : rfpReadPriorPeriodAnnual(index);
     if (prevAnnual && prevAnnual > 0) {
       var pct = ((annualVal / prevAnnual) - 1) * 100;
       escDisplay = pct.toFixed(2);
@@ -16696,9 +16701,13 @@ function rfpRefreshRentScheduleDisplay() {
       label: labelEl ? labelEl.value : ''
     });
   });
-  // Re-render rows using the new active unit
+  // Re-render rows using the new active unit. Pass the running prior-paid rate.
   var newHtml = '';
-  snapshot.forEach(function(p, i) { newHtml += rfpRentPeriodRow(i, p); });
+  var lastPaidAnnual = null;
+  snapshot.forEach(function(p, i) {
+    newHtml += rfpRentPeriodRow(i, p, lastPaidAnnual);
+    if (p.rent_rsf_yr != null && Number(p.rent_rsf_yr) > 0) lastPaidAnnual = Number(p.rent_rsf_yr);
+  });
   list.innerHTML = newHtml;
 }
 
@@ -16819,6 +16828,12 @@ function rfpShowReviewForm(terms, meta) {
       if (terms.rentPeriodsUnitCorrected) {
         formHtml += '<div style="margin-bottom:8px;padding:6px 10px;font-size:var(--text-xs);color:#b45309;background:rgba(180,83,9,0.08);border-radius:4px;">' +
           '\u26A0 Schedule rates appeared to be quoted monthly. Auto-converted to annual ($/RSF/yr) to match the cash-flow engine. Verify the values below.' +
+        '</div>';
+      }
+      // Auto-extended notice: schedule was incomplete, we filled to lease term
+      if (terms.rentPeriodsAutoExtended) {
+        formHtml += '<div style="margin-bottom:8px;padding:6px 10px;font-size:var(--text-xs);color:#1e40af;background:rgba(30,64,175,0.08);border-radius:4px;">' +
+          '\u2139 Schedule didn\u2019t cover the full lease term. Auto-extended at ' + (terms.annualEscalation || 3) + '% annual escalation. Edit any row to adjust.' +
         '</div>';
       }
       formHtml += '<div id="rfp-rent-periods-container" style="' + (hasRentPeriods ? '' : 'display:none') + '">';
