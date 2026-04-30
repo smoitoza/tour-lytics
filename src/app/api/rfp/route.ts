@@ -291,9 +291,10 @@ export async function DELETE(req: Request) {
 interface RentPeriod {
   from_month: number
   to_month: number
-  rent_rsf_yr: number
+  rent_rsf_yr: number       // Contractual rate. For free-rent periods this is what would be paid absent the abatement.
   billable_rsf?: number
   label?: string
+  is_free_rent?: boolean    // When true, the rate is fully abated (free rent credit = full base rent)
 }
 
 interface DealTerms {
@@ -357,9 +358,11 @@ function getRentForMonth(
     // Check if month falls within a defined period
     for (const p of sorted) {
       if (month >= p.from_month && month <= p.to_month) {
+        // A period is free rent when the explicit flag is set OR (legacy) the rate is zero.
+        const free = !!p.is_free_rent || p.rent_rsf_yr === 0
         return {
           rentRSFYr: p.rent_rsf_yr,
-          isFreeRent: p.rent_rsf_yr === 0,
+          isFreeRent: free,
           billableRSF: p.billable_rsf || defaultRSF
         }
       }
@@ -487,30 +490,30 @@ function generateFinancialAnalysis(terms: DealTerms) {
       billableRSF = result.billableRSF
       // Use billable RSF (not full premises RSF) for rent calculation
       monthlyBaseRent = (currentRentRSF * billableRSF) / 12
-      // In stepped mode, $0 periods are "free rent" -- show the shadow rent as base
-      // and an equal free rent credit so Net Cash Rent = $0
-      if (currentRentRSF === 0) {
-        const sorted = [...rentPeriods!].sort((a, b) => a.from_month - b.from_month)
-        const firstPaidPeriod = sorted.find(p => p.rent_rsf_yr > 0)
-        const shadowRSF = firstPaidPeriod?.billable_rsf || rsf
-        // De-escalate the first paid period's rate back to what year 1 rate would be.
-        // The first paid period starts at firstPaidPeriod.from_month; figure out how many
-        // escalation years separate the current free month from that paid period.
-        let shadowRent = baseRentRSF
-        if (firstPaidPeriod && escalation > 0) {
-          const freeYear = Math.ceil(m / 12) // which lease year this free month is in
-          const paidYear = Math.ceil(firstPaidPeriod.from_month / 12) // lease year of first paid period
-          // De-escalate from the paid period's rate back to the free month's lease year
-          const yearsBack = paidYear - freeYear
-          shadowRent = firstPaidPeriod.rent_rsf_yr / Math.pow(1 + escalation, yearsBack)
-        } else if (firstPaidPeriod) {
-          shadowRent = firstPaidPeriod.rent_rsf_yr
+      // Free rent: explicit is_free_rent flag (preferred) OR legacy rate=0 fallback.
+      if (result.isFreeRent) {
+        // If the period has a real contractual rate, use it directly.
+        // Otherwise (legacy rate=0 case), de-escalate from the next paid period.
+        if (currentRentRSF > 0) {
+          // is_free_rent=true with contractual rate already set; just credit fully
+          freeRentCredit = monthlyBaseRent
+        } else {
+          const sorted = [...rentPeriods!].sort((a, b) => a.from_month - b.from_month)
+          const firstPaidPeriod = sorted.find(p => !p.is_free_rent && p.rent_rsf_yr > 0)
+          const shadowRSF = firstPaidPeriod?.billable_rsf || rsf
+          let shadowRent = baseRentRSF
+          if (firstPaidPeriod && escalation > 0) {
+            const freeYear = Math.ceil(m / 12)
+            const paidYear = Math.ceil(firstPaidPeriod.from_month / 12)
+            const yearsBack = paidYear - freeYear
+            shadowRent = firstPaidPeriod.rent_rsf_yr / Math.pow(1 + escalation, yearsBack)
+          } else if (firstPaidPeriod) {
+            shadowRent = firstPaidPeriod.rent_rsf_yr
+          }
+          currentRentRSF = Math.round(shadowRent * 100) / 100
+          monthlyBaseRent = (currentRentRSF * shadowRSF) / 12
+          freeRentCredit = monthlyBaseRent
         }
-        // Show the contractual rent as base rent (what would be owed)
-        currentRentRSF = Math.round(shadowRent * 100) / 100
-        monthlyBaseRent = (currentRentRSF * shadowRSF) / 12
-        // Free rent credit offsets it fully so net cash rent = $0
-        freeRentCredit = monthlyBaseRent
       }
     } else {
       // Legacy mode: single base rent + escalation
