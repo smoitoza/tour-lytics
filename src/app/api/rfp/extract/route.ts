@@ -68,7 +68,11 @@ IF THE DOCUMENT COVERS A SINGLE BUILDING/PREMISES, return:
   "lease_term_months": <number - total lease term in months>,
   "commencement_date": <string - "YYYY-MM-DD" format, or estimated>,
   "expiration_date": <string - "YYYY-MM-DD" format, or estimated>,
-  "base_rent_rsf": <number - base rent per RSF per year, use the FIRST paid rent rate if stepped>,
+  "base_rent_rsf": <number - base rent per RSF per YEAR (annualized), use the FIRST paid rent rate if stepped>,
+  "base_rent_unit": <string - "month" or "year" - the ORIGINAL unit as quoted in the document, BEFORE you annualized it>,
+  "base_rent_source_value": <number - the EXACT rent number as written in the source document, without conversion>,
+  "base_rent_source_quote": <string - the exact phrase from the document that contains the base rent figure, max 200 chars>,
+  "base_rent_detection_confidence": <number 0.0-1.0 - your confidence in the unit detection. Use 0.95+ when there is an explicit time qualifier ("per month", "/yr", "annually"). Use 0.70-0.85 when the unit is implied by document context (e.g. asset class, NNN/RSF shorthand). Use below 0.60 when there is no clear time qualifier and you had to guess.>,
   "rent_basis": <string - "Full Service Gross", "Modified Gross", "NNN", etc.>,
   "annual_escalation_pct": <number - annual rent escalation percentage>,
   "free_rent_months": <number - months of free/abated rent>,
@@ -87,10 +91,12 @@ IF THE DOCUMENT COVERS A SINGLE BUILDING/PREMISES, return:
 
 IMPORTANT:
 - Return ONLY valid JSON, no markdown or explanation
-- Convert all rates to annual $/RSF if given monthly (multiply monthly by 12)
+- Convert all rates to annual $/RSF if given monthly (multiply monthly by 12), but ALSO record the original unit in base_rent_unit and the raw quoted number in base_rent_source_value so the user can verify.
+- A rent quoted as "$7.00/RSF/month" → base_rent_rsf=84, base_rent_unit="month", base_rent_source_value=7
+- A rent quoted as "$84.00/RSF/year" → base_rent_rsf=84, base_rent_unit="year", base_rent_source_value=84
+- For ambiguous cases (no explicit time qualifier), default to "year" for office deals (industry standard), default to "month" for industrial/flex deals, and set base_rent_detection_confidence below 0.65 so the user is prompted to confirm.
 - If a lease term is given in years, convert to months
 - If TI is given as $/RSF, also calculate the total (RSF x TI/RSF)
-- If rent is given monthly, convert to annual $/RSF
 - For dates, estimate if only month/year is given (use the 1st of the month)
 - If the document specifies different rent rates for different periods, include them in rent_periods
 - If the lease has phased/ramping billable RSF, include billable_rsf in each rent_periods entry. The top-level RSF should be the FULL premises size.
@@ -154,7 +160,7 @@ ${documentText.substring(0, 15000)}`
 }
 
 function cleanNulls(obj: any) {
-  const numericFields = ['rsf', 'lease_term_months', 'base_rent_rsf', 'annual_escalation_pct', 'free_rent_months', 'ti_allowance_rsf', 'ti_allowance_total', 'security_deposit', 'parking_spots', 'parking_rate_monthly', 'parking_escalation_pct', 'opex_monthly']
+  const numericFields = ['rsf', 'lease_term_months', 'base_rent_rsf', 'annual_escalation_pct', 'free_rent_months', 'ti_allowance_rsf', 'ti_allowance_total', 'security_deposit', 'parking_spots', 'parking_rate_monthly', 'parking_escalation_pct', 'opex_monthly', 'base_rent_source_value', 'base_rent_detection_confidence']
   Object.keys(obj).forEach(key => {
     if (obj[key] === null || obj[key] === 'null') {
       if (numericFields.includes(key)) {
@@ -164,4 +170,13 @@ function cleanNulls(obj: any) {
       }
     }
   })
+  // Apply rent-unit validation heuristic.
+  // If the LLM returned an annualized rent outside the $5-$300/RSF/yr band,
+  // it's likely a unit-detection error. Flag by dropping confidence so the UI prompts the user.
+  const annualRent = Number(obj.base_rent_rsf) || 0
+  if (annualRent > 0 && (annualRent < 5 || annualRent > 300)) {
+    const currentConfidence = Number(obj.base_rent_detection_confidence) || 0.5
+    obj.base_rent_detection_confidence = Math.min(currentConfidence, 0.4)
+    obj.base_rent_unit_warning = `Annualized rent of $${annualRent.toFixed(2)}/RSF/yr is outside typical bands ($5-$300). Verify the per-month vs per-year unit.`
+  }
 }

@@ -16081,6 +16081,13 @@ function rfpMapTerms(raw) {
     commencementDate: raw.commencement_date || raw.commencementDate || '',
     leaseEndDate: raw.lease_end_date || raw.leaseEndDate || '',
     baseRent: raw.base_rent_rsf || raw.baseRent || '',
+    // Rent unit detection metadata - used by review form to show dual display + confidence flag
+    baseRentUnit: raw.base_rent_unit || raw.baseRentUnit || 'year',
+    baseRentSourceValue: raw.base_rent_source_value || raw.baseRentSourceValue || 0,
+    baseRentSourceQuote: raw.base_rent_source_quote || raw.baseRentSourceQuote || '',
+    baseRentDetectionConfidence: (raw.base_rent_detection_confidence !== undefined ? raw.base_rent_detection_confidence : (raw.baseRentDetectionConfidence !== undefined ? raw.baseRentDetectionConfidence : 1.0)),
+    baseRentUserConfirmed: raw.base_rent_user_confirmed || raw.baseRentUserConfirmed || false,
+    baseRentUnitWarning: raw.base_rent_unit_warning || raw.baseRentUnitWarning || '',
     totalAnnualRent: raw.total_annual_rent || raw.totalAnnualRent || '',
     rentBasis: raw.rent_basis || raw.rentBasis || '',
     annualEscalation: raw.annual_escalation_pct || raw.annualEscalation || '',
@@ -16366,9 +16373,162 @@ function rfpCollectTIMilestones() {
   return milestones.length > 0 ? milestones : null;
 }
 
+// ===== RENT UNIT DETECTION CARD =====
+// Renders the dual-display ($/RSF/month + $/RSF/yr) + confidence badge + override toggle
+// that appears below the Base Rent input in the review form.
+function rfpBuildRentUnitCard(terms) {
+  var annualRent = parseFloat(terms.baseRent) || 0;
+  if (annualRent <= 0) {
+    // No rent data yet - hide the card entirely (e.g. blank counter-proposal)
+    return '';
+  }
+  var unit = (terms.baseRentUnit || 'year').toLowerCase();
+  var sourceQuote = terms.baseRentSourceQuote || '';
+  var confidence = (terms.baseRentDetectionConfidence !== undefined && terms.baseRentDetectionConfidence !== null)
+    ? Number(terms.baseRentDetectionConfidence) : 1.0;
+  var confirmed = !!terms.baseRentUserConfirmed;
+  var warning = terms.baseRentUnitWarning || '';
+
+  var monthlyRSF = annualRent / 12;
+  var asQuoted = unit === 'month' ? monthlyRSF : annualRent;
+
+  // Confidence styling
+  var badgeColor = '#16a34a';   // green
+  var badgeBg = 'rgba(22,163,74,0.1)';
+  var badgeLabel = 'High confidence';
+  if (confidence < 0.5) {
+    badgeColor = '#dc2626'; badgeBg = 'rgba(220,38,38,0.1)'; badgeLabel = 'Low confidence';
+  } else if (confidence < 0.85) {
+    badgeColor = '#b45309'; badgeBg = 'rgba(180,83,9,0.1)'; badgeLabel = 'Please verify';
+  }
+  if (confirmed) {
+    badgeColor = '#16a34a'; badgeBg = 'rgba(22,163,74,0.1)'; badgeLabel = 'Confirmed';
+  }
+
+  var s = '<div class="full-width" id="rfp-rent-unit-card" style="grid-column:1/-1;margin:8px 0 12px;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;font-size:var(--text-sm);">';
+
+  // Top row: dual display
+  s += '<div style="display:flex;gap:24px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px;">';
+  s += '<div>' +
+    '<div style="font-size:var(--text-xs);color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.05em;">$ / RSF / month</div>' +
+    '<div id="rfp-rent-display-month" style="font-weight:600;font-size:var(--text-base);' + (unit === 'month' ? 'color:#2563eb' : 'color:var(--color-text)') + '">$' + monthlyRSF.toFixed(2) + (unit === 'month' ? ' \u25C0\uFE0F as quoted' : '') + '</div>' +
+  '</div>';
+  s += '<div>' +
+    '<div style="font-size:var(--text-xs);color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.05em;">$ / RSF / year</div>' +
+    '<div id="rfp-rent-display-year" style="font-weight:600;font-size:var(--text-base);' + (unit === 'year' ? 'color:#2563eb' : 'color:var(--color-text)') + '">$' + annualRent.toFixed(2) + (unit === 'year' ? ' \u25C0\uFE0F as quoted' : '') + '</div>' +
+    '<div style="font-size:var(--text-xs);color:var(--color-text-muted);">used in cash flow</div>' +
+  '</div>';
+  s += '</div>';
+
+  // Detection info row
+  s += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">';
+  s += '<span id="rfp-rent-detected-label" style="font-size:var(--text-xs);color:var(--color-text-muted);">Detected unit: <strong style="color:var(--color-text);">per ' + unit + '</strong></span>';
+  s += '<span id="rfp-rent-confidence-badge" style="display:inline-block;padding:2px 8px;border-radius:10px;background:' + badgeBg + ';color:' + badgeColor + ';font-size:var(--text-xs);font-weight:600;">' + badgeLabel + ' (' + Math.round(confidence * 100) + '%)</span>';
+  s += '</div>';
+
+  // Source quote (if any)
+  if (sourceQuote) {
+    s += '<div style="font-size:var(--text-xs);color:var(--color-text-muted);font-style:italic;margin-bottom:6px;padding:4px 8px;background:#fff;border-left:3px solid #cbd5e1;border-radius:2px;">' +
+      '\u201C' + String(sourceQuote).replace(/</g, '&lt;').slice(0, 200) + '\u201D' +
+    '</div>';
+  }
+
+  // Warning banner for outlier validation
+  if (warning) {
+    s += '<div style="font-size:var(--text-xs);color:#b45309;background:rgba(180,83,9,0.08);padding:4px 8px;border-radius:4px;margin-bottom:6px;">\u26A0 ' + warning + '</div>';
+  }
+
+  // Override action: "Switch to per year/month"
+  var otherUnit = unit === 'month' ? 'year' : 'month';
+  s += '<div style="display:flex;gap:8px;flex-wrap:wrap;">';
+  if (!confirmed) {
+    s += '<button type="button" onclick="rfpConfirmRentUnit()" style="padding:5px 12px;background:#16a34a;color:#fff;border:none;border-radius:4px;font-size:var(--text-xs);font-weight:600;cursor:pointer;">\u2713 Confirm: per ' + unit + '</button>';
+  }
+  s += '<button type="button" onclick="rfpToggleRentUnit()" style="padding:5px 12px;background:#fff;color:#475569;border:1px solid #cbd5e1;border-radius:4px;font-size:var(--text-xs);font-weight:600;cursor:pointer;">Switch to per ' + otherUnit + '</button>';
+  s += '</div>';
+
+  s += '</div>';
+  return s;
+}
+
+// User clicks Confirm. Mark as user-confirmed (sets confidence to 1.0 visually).
+function rfpConfirmRentUnit() {
+  if (!_rfpReviewState) return;
+  _rfpReviewState.terms.baseRentUserConfirmed = true;
+  _rfpReviewState.terms.baseRentDetectionConfidence = 1.0;
+  rfpRefreshRentUnitCard();
+}
+
+// User clicks "Switch to per year/month".
+// Per spec Option B: this means "the LLM was wrong about how to interpret the source number".
+// We flip the unit and recompute the canonical $/RSF/yr from the source value.
+//   - If switching to "year": the source value IS the annual rate. baseRent (annual) = source_value.
+//   - If switching to "month": the source value is monthly. baseRent (annual) = source_value * 12.
+// If we don't have a stored source value (e.g. legacy submission), we infer it from the current
+// canonical annual rate: switching from year->month assumes the user means the current value
+// was monthly all along (so annual = current * 12), and vice versa.
+function rfpToggleRentUnit() {
+  if (!_rfpReviewState) return;
+  var t = _rfpReviewState.terms;
+  var currentUnit = (t.baseRentUnit || 'year').toLowerCase();
+  var newUnit = currentUnit === 'month' ? 'year' : 'month';
+
+  // Preferred path: use the stored source value if present
+  var sourceVal = parseFloat(t.baseRentSourceValue) || 0;
+  var currentAnnual = parseFloat(t.baseRent) || 0;
+
+  if (sourceVal > 0) {
+    // Source value is the raw quoted number; reinterpret it under the new unit
+    if (newUnit === 'year') {
+      t.baseRent = sourceVal;
+    } else {
+      t.baseRent = sourceVal * 12;
+    }
+  } else if (currentAnnual > 0) {
+    // Legacy / no source value: interpret current annual as if it had been quoted under the new unit
+    if (newUnit === 'month') {
+      // User says "current number was actually monthly" -> annual = current * 12
+      t.baseRent = currentAnnual * 12;
+    } else {
+      // User says "current number was actually annual already" - no change to canonical (it already is annual)
+      // But to make the toggle have visible effect, we treat the current annual as the new source value
+      t.baseRent = currentAnnual;
+    }
+  }
+
+  t.baseRentUnit = newUnit;
+  t.baseRentSourceValue = newUnit === 'month' ? (parseFloat(t.baseRent) / 12) : parseFloat(t.baseRent);
+  t.baseRentUserConfirmed = true;
+  t.baseRentDetectionConfidence = 1.0;
+  // Clear validation warning since user has explicitly chosen
+  t.baseRentUnitWarning = '';
+
+  // Update the visible Base Rent input field too
+  var rentInput = document.getElementById('rfp-field-baseRent');
+  if (rentInput) rentInput.value = parseFloat(t.baseRent).toFixed(2);
+
+  rfpRefreshRentUnitCard();
+}
+
+// Re-render just the rent unit card without rebuilding the whole modal
+function rfpRefreshRentUnitCard() {
+  if (!_rfpReviewState) return;
+  var card = document.getElementById('rfp-rent-unit-card');
+  if (!card) return;
+  var fresh = rfpBuildRentUnitCard(_rfpReviewState.terms);
+  // Build a wrapper to extract the new card content
+  var wrapper = document.createElement('div');
+  wrapper.innerHTML = fresh;
+  var newCard = wrapper.querySelector('#rfp-rent-unit-card');
+  if (newCard) card.parentNode.replaceChild(newCard, card);
+}
+
 // ===== REVIEW FORM =====
+var _rfpReviewState = null;
 function rfpShowReviewForm(terms, meta) {
   if (_rfpModal) { _rfpModal.remove(); _rfpModal = null; }
+  // Store live terms object so the rent-unit card override handlers can mutate it
+  _rfpReviewState = { terms: terms, meta: meta };
 
   var fields = [
     { key: 'rsf', label: 'RSF (Rentable Sq Ft)', type: 'number' },
@@ -16418,6 +16578,11 @@ function rfpShowReviewForm(terms, meta) {
         (f.placeholder ? ' placeholder="' + f.placeholder + '"' : '') + ' />';
     }
     formHtml += '</div>';
+
+    // After Base Rent field, render the rent-unit detection card
+    if (f.key === 'baseRent') {
+      formHtml += rfpBuildRentUnitCard(terms);
+    }
 
     // Insert TI Disbursement section after tiConstructionCost field
     if (f.key === 'tiConstructionCost') {
@@ -16548,7 +16713,21 @@ function rfpShowReviewForm(terms, meta) {
   var baseRentInput = document.getElementById('rfp-field-baseRent');
   var rsfInput = document.getElementById('rfp-field-rsf');
   if (totalRentInput) totalRentInput.addEventListener('input', function() { rfpAutoComputeRent('fromTotal'); });
-  if (baseRentInput) baseRentInput.addEventListener('input', function() { rfpAutoComputeRent('fromBase'); });
+  if (baseRentInput) baseRentInput.addEventListener('input', function() {
+    rfpAutoComputeRent('fromBase');
+    // Keep rent-unit card display in sync with manual edits to Base Rent.
+    // Editing the field is treated as user confirming the canonical annual value.
+    if (_rfpReviewState && _rfpReviewState.terms) {
+      var v = parseFloat(baseRentInput.value) || 0;
+      _rfpReviewState.terms.baseRent = v;
+      var u = (_rfpReviewState.terms.baseRentUnit || 'year').toLowerCase();
+      _rfpReviewState.terms.baseRentSourceValue = u === 'month' ? (v / 12) : v;
+      _rfpReviewState.terms.baseRentUserConfirmed = true;
+      _rfpReviewState.terms.baseRentDetectionConfidence = 1.0;
+      _rfpReviewState.terms.baseRentUnitWarning = '';
+      rfpRefreshRentUnitCard();
+    }
+  });
   if (rsfInput) rsfInput.addEventListener('input', function() {
     // If total annual rent has a value, recompute base rent from it
     var totalEl = document.getElementById('rfp-field-totalAnnualRent');
@@ -16622,6 +16801,18 @@ function rfpConfirmFromForm() {
   // If totalAnnualRent is set and baseRent is not, compute base rent per RSF
   if (terms.totalAnnualRent && terms.rsf && !terms.baseRent) {
     terms.baseRent = Math.round(terms.totalAnnualRent / terms.rsf * 100) / 100;
+  }
+
+  // Pull through rent-unit detection metadata from the live review state.
+  // Saved as snake_case in deal_terms JSONB so it round-trips through the API.
+  if (_rfpReviewState && _rfpReviewState.terms) {
+    var rs = _rfpReviewState.terms;
+    terms.base_rent_unit = rs.baseRentUnit || 'year';
+    terms.base_rent_source_value = rs.baseRentSourceValue || 0;
+    terms.base_rent_source_quote = rs.baseRentSourceQuote || '';
+    terms.base_rent_detection_confidence = (rs.baseRentDetectionConfidence !== undefined && rs.baseRentDetectionConfidence !== null) ? rs.baseRentDetectionConfidence : 1.0;
+    terms.base_rent_user_confirmed = !!rs.baseRentUserConfirmed;
+    terms.base_rent_unit_warning = rs.baseRentUnitWarning || '';
   }
   // Store total annual rent for reference
   if (terms.totalAnnualRent) {

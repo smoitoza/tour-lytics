@@ -91,6 +91,13 @@ export async function POST(req: Request) {
     amortized_ti_rate: rawTerms.amortized_ti_rate ?? rawTerms.amortizedTIRate ?? 0,
     amortized_ti_term_months: rawTerms.amortized_ti_term_months ?? rawTerms.amortizedTITermMonths ?? 0,
     management_fee_pct: rawTerms.management_fee_pct ?? rawTerms.managementFeePct ?? 0,
+    // Rent unit detection metadata - pass-through from extractor or user override.
+    base_rent_unit: rawTerms.base_rent_unit ?? rawTerms.baseRentUnit ?? 'year',
+    base_rent_source_value: rawTerms.base_rent_source_value ?? rawTerms.baseRentSourceValue ?? 0,
+    base_rent_source_quote: rawTerms.base_rent_source_quote ?? rawTerms.baseRentSourceQuote ?? '',
+    base_rent_detection_confidence: rawTerms.base_rent_detection_confidence ?? rawTerms.baseRentDetectionConfidence ?? 1.0,
+    base_rent_user_confirmed: rawTerms.base_rent_user_confirmed ?? rawTerms.baseRentUserConfirmed ?? false,
+    base_rent_unit_warning: rawTerms.base_rent_unit_warning ?? rawTerms.baseRentUnitWarning ?? '',
     rent_basis: rawTerms.rent_basis ?? rawTerms.rentBasis ?? '',
     structure: rawTerms.structure ?? '',
     landlord: rawTerms.landlord ?? '',
@@ -313,6 +320,15 @@ interface DealTerms {
   // Applied to the contracted base rent each month. Scales with escalations.
   // During free rent, fee is reduced proportionally so it's zero on fully-abated months.
   management_fee_pct?: number
+  // Rent unit detection metadata (per spec).
+  // base_rent_rsf is ALWAYS canonical $/RSF/year. These fields preserve
+  // the original quoted unit so the UI can show both and flag low-confidence detections.
+  base_rent_unit?: 'month' | 'year' | string
+  base_rent_source_value?: number
+  base_rent_source_quote?: string
+  base_rent_detection_confidence?: number
+  base_rent_user_confirmed?: boolean
+  base_rent_unit_warning?: string
   rent_basis?: string
   structure?: string
   landlord?: string
