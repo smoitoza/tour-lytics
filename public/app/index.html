@@ -16095,6 +16095,7 @@ function rfpMapTerms(raw) {
     rentPeriods: raw.rent_periods || raw.rentPeriods || null,
     rentPeriodsUnitCorrected: raw.rent_periods_unit_corrected || raw.rentPeriodsUnitCorrected || false,
     rentPeriodsAutoExtended: raw.rent_periods_auto_extended || raw.rentPeriodsAutoExtended || false,
+    rentPeriodsAlignmentCorrected: raw.rent_periods_alignment_corrected || raw.rentPeriodsAlignmentCorrected || false,
     tiAllowancePerRSF: raw.ti_allowance_rsf || raw.tiAllowancePerRSF || '',
     tiAllowanceTotal: raw.ti_allowance_total || raw.tiAllowanceTotal || '',
     opexRSF: raw.opex_rsf_yr || raw.opexRSF || '',
@@ -16236,12 +16237,14 @@ function rfpRentPeriodRow(index, period, priorAnnualOverride) {
   // Esc % column: implied escalation from the prior PAID period's rate. Period 0 always shows dash.
   // priorAnnualOverride is passed in by rfpBuildRentPeriodsUI during initial render.
   // For DOM-based recompute we fall back to walking the live DOM via rfpReadPriorPeriodAnnual.
+  // Round to 1 decimal so common values display cleanly (3.5, 3.0, 2.5) without
+  // visual noise from LLM rounding drift in the underlying $/RSF values.
   var escDisplay = '';
   if (index !== 0 && annualVal != null && annualVal > 0) {
     var prevAnnual = (priorAnnualOverride != null) ? priorAnnualOverride : rfpReadPriorPeriodAnnual(index);
     if (prevAnnual && prevAnnual > 0) {
       var pct = ((annualVal / prevAnnual) - 1) * 100;
-      escDisplay = pct.toFixed(2);
+      escDisplay = pct.toFixed(1);
     }
   }
   var escIsDash = (index === 0);
@@ -16373,7 +16376,8 @@ function rfpRecomputeRowEsc(index) {
     return;
   }
   var pct = ((annual / prior) - 1) * 100;
-  escEl.value = pct.toFixed(2);
+  // Round to 1 decimal so 3.49% displays as 3.5, matching the initial render
+  escEl.value = pct.toFixed(1);
 }
 
 function rfpAddRentPeriod() {
@@ -16834,6 +16838,12 @@ function rfpShowReviewForm(terms, meta) {
       if (terms.rentPeriodsAutoExtended) {
         formHtml += '<div style="margin-bottom:8px;padding:6px 10px;font-size:var(--text-xs);color:#1e40af;background:rgba(30,64,175,0.08);border-radius:4px;">' +
           '\u2139 Schedule didn\u2019t cover the full lease term. Auto-extended at ' + (terms.annualEscalation || 3) + '% annual escalation. Edit any row to adjust.' +
+        '</div>';
+      }
+      // Alignment correction notice: first paid rate was off by one escalation step
+      if (terms.rentPeriodsAlignmentCorrected) {
+        formHtml += '<div style="margin-bottom:8px;padding:6px 10px;font-size:var(--text-xs);color:#b45309;background:rgba(180,83,9,0.08);border-radius:4px;">' +
+          '\u26A0 Schedule was offset by one year (extracted rates were one escalation step too high). Auto-corrected by de-escalating to align period 1 with the base rent. Verify values below.' +
         '</div>';
       }
       formHtml += '<div id="rfp-rent-periods-container" style="' + (hasRentPeriods ? '' : 'display:none') + '">';

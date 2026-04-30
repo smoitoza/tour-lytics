@@ -76,7 +76,7 @@ IF THE DOCUMENT COVERS A SINGLE BUILDING/PREMISES, return:
   "rent_basis": <string - "Full Service Gross", "Modified Gross", "NNN", etc.>,
   "annual_escalation_pct": <number - annual rent escalation percentage>,
   "free_rent_months": <number - months of free/abated rent>,
-  "rent_periods": <array or null - ONLY include if the lease has different base rent rates for different time periods (stepped/graduated rent) OR different billable square footage per period (phased RSF). Each entry: {"from_month": <number>, "to_month": <number>, "rent_rsf_yr": <number - ALWAYS the ANNUAL rate per RSF, even if the source quotes it monthly. If a stepped schedule is quoted as $4.70/mo escalating 3%, return rent_rsf_yr values of 56.40, 58.09, 59.83 (annualized).>, "billable_rsf": <number or null>, "label": <string>}. Use rent_rsf_yr=0 for free rent periods. CRITICAL: rent_periods MUST cover the ENTIRE lease term from month 1 to lease_term_months. The to_month of the last entry MUST equal lease_term_months. If the document only specifies escalation rules ("3% annual escalation") rather than itemized rates per year, you MUST still expand them out into one entry per escalation period for the full term. For a 144-month lease with year-1 rate $X and 3% annual escalations, return 12 entries (one per year) with appropriately escalated rates.>,
+  "rent_periods": <array or null - ONLY include if the lease has different base rent rates for different time periods (stepped/graduated rent) OR different billable square footage per period (phased RSF). Each entry: {"from_month": <number>, "to_month": <number>, "rent_rsf_yr": <number - ALWAYS the ANNUAL rate per RSF, even if the source quotes it monthly. If a stepped schedule is quoted as $4.70/mo escalating 3%, return rent_rsf_yr values of 56.40, 58.09, 59.83 (annualized).>, "billable_rsf": <number or null>, "label": <string>}. Use rent_rsf_yr=0 for free rent periods. CRITICAL: rent_periods MUST cover the ENTIRE lease term from month 1 to lease_term_months. The to_month of the last entry MUST equal lease_term_months. If the document only specifies escalation rules ("3% annual escalation") rather than itemized rates per year, you MUST still expand them out into one entry per escalation period for the full term. For a 144-month lease with year-1 rate $X and 3% annual escalations, return 12 entries (one per year) with appropriately escalated rates. CRITICAL ALIGNMENT: If there is a free-rent period at the start (e.g. months 1-12), the FIRST PAID period (typically months 13+) MUST use the year-1 base rent rate without any escalation applied (because the tenant hasn't completed a full paid year yet). Then the SECOND paid period applies the year-1-to-year-2 escalation, and so on. Example: free rent months 1-12, base rent $4.70/mo with 3% escalations. Periods should be: 1-12 ($0), 13-24 ($56.40 = $4.70*12), 25-36 ($58.09), 37-48 ($59.83), etc. The first paid period's rate MUST equal base_rent_rsf, NOT base_rent_rsf escalated by one year.>,
   "ti_allowance_rsf": <number - tenant improvement allowance per RSF>,
   "ti_allowance_total": <number - total TI allowance in dollars>,
   "security_deposit": <number - security deposit amount>,
@@ -216,6 +216,36 @@ function cleanNulls(obj: any) {
     }
   }
 
+  // Alignment check: first paid period's rate should equal base_rent_rsf (year 1 rate).
+  // If the LLM put the year-2 escalated rate in the first paid period (off-by-one error),
+  // shift the entire schedule back by de-escalating each rate by one year.
+  if (annualRent > 0 && Array.isArray(obj.rent_periods) && obj.rent_periods.length > 0) {
+    const periods = obj.rent_periods as any[]
+    const sortedAsc = [...periods].sort((a, b) => Number(a.from_month) - Number(b.from_month))
+    const firstPaid = sortedAsc.find(p => Number(p.rent_rsf_yr) > 0)
+    if (firstPaid) {
+      const escalation = Number(obj.annual_escalation_pct || 0) / 100
+      const firstPaidRate = Number(firstPaid.rent_rsf_yr)
+      // If the first paid rate is within 0.5% of (base_rent_rsf * (1 + escalation)) but NOT
+      // within 0.5% of base_rent_rsf, the LLM applied one extra escalation. Fix by de-escalating.
+      if (escalation > 0) {
+        const expectedY1 = annualRent
+        const expectedY2 = annualRent * (1 + escalation)
+        const distFromY1 = Math.abs(firstPaidRate - expectedY1) / expectedY1
+        const distFromY2 = Math.abs(firstPaidRate - expectedY2) / expectedY2
+        if (distFromY1 > 0.005 && distFromY2 < 0.005) {
+          // Off-by-one shift detected. De-escalate every paid rate by one year.
+          periods.forEach(p => {
+            const r = Number(p.rent_rsf_yr)
+            if (r > 0) p.rent_rsf_yr = Math.round((r / (1 + escalation)) * 100) / 100
+          })
+          obj.rent_periods = periods
+          obj.rent_periods_alignment_corrected = true
+        }
+      }
+    }
+  }
+
   // Auto-extend rent_periods to cover the full lease term.
   // If the LLM only gave the first few periods, fill out the rest by escalating
   // the last paid rate forward at annual_escalation_pct.
@@ -236,20 +266,20 @@ function cleanNulls(obj: any) {
       }
       const escalation = Number(obj.annual_escalation_pct || 0) / 100
 
-      // Fill 12-month chunks from lastTo+1 onward
+      // Fill 12-month chunks from lastTo+1 onward.
+      // Use UN-rounded internal arithmetic to avoid drift across many years.
       let chunkStart = lastTo + 1
-      let currentRate = lastPaidRate
+      let currentRateFloat = lastPaidRate
       while (chunkStart <= termMonths) {
-        // Apply escalation if this chunk crosses an anniversary
-        // Each new 12-month chunk gets one escalation step
-        if (escalation > 0 && currentRate > 0) {
-          currentRate = Math.round(currentRate * (1 + escalation) * 100) / 100
+        // Apply one escalation step per new 12-month chunk
+        if (escalation > 0 && currentRateFloat > 0) {
+          currentRateFloat = currentRateFloat * (1 + escalation)
         }
         const chunkEnd = Math.min(chunkStart + 11, termMonths)
         periods.push({
           from_month: chunkStart,
           to_month: chunkEnd,
-          rent_rsf_yr: currentRate,
+          rent_rsf_yr: Math.round(currentRateFloat * 100) / 100,
           label: 'Auto-extended'
         })
         chunkStart = chunkEnd + 1
