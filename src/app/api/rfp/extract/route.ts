@@ -76,7 +76,7 @@ IF THE DOCUMENT COVERS A SINGLE BUILDING/PREMISES, return:
   "rent_basis": <string - "Full Service Gross", "Modified Gross", "NNN", etc.>,
   "annual_escalation_pct": <number - annual rent escalation percentage>,
   "free_rent_months": <number - months of free/abated rent>,
-  "rent_periods": <array or null - ONLY include if the lease has different base rent rates for different time periods (stepped/graduated rent) OR different billable square footage per period (phased RSF). Each entry: {"from_month": <number>, "to_month": <number>, "rent_rsf_yr": <number - annual rate per RSF>, "billable_rsf": <number or null>, "label": <string>}. Use rent_rsf_yr=0 for free rent periods.>,
+  "rent_periods": <array or null - ONLY include if the lease has different base rent rates for different time periods (stepped/graduated rent) OR different billable square footage per period (phased RSF). Each entry: {"from_month": <number>, "to_month": <number>, "rent_rsf_yr": <number - ALWAYS the ANNUAL rate per RSF, even if the source quotes it monthly. If a stepped schedule is quoted as $4.70/mo escalating 3%, return rent_rsf_yr values of 56.40, 58.09, 59.83 (annualized).>, "billable_rsf": <number or null>, "label": <string>}. Use rent_rsf_yr=0 for free rent periods.>,
   "ti_allowance_rsf": <number - tenant improvement allowance per RSF>,
   "ti_allowance_total": <number - total TI allowance in dollars>,
   "security_deposit": <number - security deposit amount>,
@@ -94,6 +94,8 @@ IMPORTANT:
 - Convert all rates to annual $/RSF if given monthly (multiply monthly by 12), but ALSO record the original unit in base_rent_unit and the raw quoted number in base_rent_source_value so the user can verify.
 - A rent quoted as "$7.00/RSF/month" → base_rent_rsf=84, base_rent_unit="month", base_rent_source_value=7
 - A rent quoted as "$84.00/RSF/year" → base_rent_rsf=84, base_rent_unit="year", base_rent_source_value=84
+- CRITICAL: rent_periods entries also use ANNUAL rates. If the schedule is quoted as $4.70/mo year 1, $4.84/mo year 2, $4.99/mo year 3, you MUST return rent_rsf_yr values of 56.40, 58.08, 59.88 (each monthly value multiplied by 12). NEVER put monthly numbers in rent_rsf_yr - downstream cash flow math treats this field as annual and will under-rent the deal by 12x if you put monthly numbers there.
+- Cross-check: the base_rent_rsf and the first paid rent_periods rate (de-escalated to year 1 if needed) should match within rounding. If they don't, you have a unit error.
 - For ambiguous cases (no explicit time qualifier), default to "year" for office deals (industry standard), default to "month" for industrial/flex deals, and set base_rent_detection_confidence below 0.65 so the user is prompted to confirm.
 - If a lease term is given in years, convert to months
 - If TI is given as $/RSF, also calculate the total (RSF x TI/RSF)
@@ -178,5 +180,36 @@ function cleanNulls(obj: any) {
     const currentConfidence = Number(obj.base_rent_detection_confidence) || 0.5
     obj.base_rent_detection_confidence = Math.min(currentConfidence, 0.4)
     obj.base_rent_unit_warning = `Annualized rent of $${annualRent.toFixed(2)}/RSF/yr is outside typical bands ($5-$300). Verify the per-month vs per-year unit.`
+  }
+
+  // Cross-check rent_periods schedule rates against base_rent_rsf.
+  // If the LLM correctly annualized base_rent_rsf but left rent_periods rates
+  // as monthly numbers, we'll see a ~12x mismatch. Auto-fix by multiplying
+  // schedule rates by 12, since base_rent_rsf is the more reliable signal
+  // (it has the explicit "convert to annual" instruction in the prompt).
+  if (annualRent > 0 && Array.isArray(obj.rent_periods) && obj.rent_periods.length > 0) {
+    const periods = obj.rent_periods as any[]
+    const firstPaid = periods.find(p => Number(p.rent_rsf_yr) > 0)
+    if (firstPaid) {
+      const firstPaidRate = Number(firstPaid.rent_rsf_yr)
+      const escalation = Number(obj.annual_escalation_pct || 0) / 100
+      // De-escalate first paid period back to year 1 to compare apples-to-apples
+      const paidYear = Math.ceil(Number(firstPaid.from_month || 1) / 12)
+      const yearsBack = Math.max(0, paidYear - 1)
+      const deEscalated = escalation > 0
+        ? firstPaidRate / Math.pow(1 + escalation, yearsBack)
+        : firstPaidRate
+      const ratio = annualRent / deEscalated
+      // If base_rent_rsf is roughly 12x the schedule rate, schedule is monthly - fix it
+      if (ratio > 8 && ratio < 16) {
+        periods.forEach(p => {
+          if (Number(p.rent_rsf_yr) > 0) {
+            p.rent_rsf_yr = Math.round(Number(p.rent_rsf_yr) * 12 * 100) / 100
+          }
+        })
+        obj.rent_periods = periods
+        obj.rent_periods_unit_corrected = true
+      }
+    }
   }
 }

@@ -16093,6 +16093,7 @@ function rfpMapTerms(raw) {
     annualEscalation: raw.annual_escalation_pct || raw.annualEscalation || '',
     freeRent: raw.free_rent_months || raw.freeRent || '',
     rentPeriods: raw.rent_periods || raw.rentPeriods || null,
+    rentPeriodsUnitCorrected: raw.rent_periods_unit_corrected || raw.rentPeriodsUnitCorrected || false,
     tiAllowancePerRSF: raw.ti_allowance_rsf || raw.tiAllowancePerRSF || '',
     tiAllowanceTotal: raw.ti_allowance_total || raw.tiAllowanceTotal || '',
     opexRSF: raw.opex_rsf_yr || raw.opexRSF || '',
@@ -16193,6 +16194,9 @@ function rfpMultiBuildingNext() {
 }
 
 // ===== STEPPED RENT PERIODS UI =====
+// Schedule rates are ALWAYS stored as annual ($/RSF/yr) in rent_rsf_yr.
+// When the active rent unit is 'month', the rate column displays the value
+// as monthly (annual / 12) and converts back to annual on save.
 function rfpBuildRentPeriodsUI(periods) {
   var html = '<div id="rfp-rent-periods-list">';
   if (periods && periods.length > 0) {
@@ -16205,8 +16209,24 @@ function rfpBuildRentPeriodsUI(periods) {
   return html;
 }
 
+// Returns 'month' if the active rent unit is monthly, else 'year'.
+function rfpCurrentRentUnit() {
+  if (_rfpReviewState && _rfpReviewState.terms) {
+    return ((_rfpReviewState.terms.baseRentUnit || 'year').toLowerCase() === 'month') ? 'month' : 'year';
+  }
+  return 'year';
+}
+
 function rfpRentPeriodRow(index, period) {
   var p = period || { from_month: '', to_month: '', rent_rsf_yr: '', billable_rsf: '', label: '' };
+  var unit = rfpCurrentRentUnit();
+  var headerLabel = unit === 'month' ? 'Rate/RSF/mo' : 'Rate/RSF/yr';
+  // Stored value is always annual; display as monthly when unit is month
+  var annualVal = (p.rent_rsf_yr != null && p.rent_rsf_yr !== '') ? Number(p.rent_rsf_yr) : null;
+  var displayVal = '';
+  if (annualVal != null) {
+    displayVal = (unit === 'month' ? (annualVal / 12) : annualVal).toFixed(2);
+  }
   return '<div class="rfp-rent-period-row" data-index="' + index + '" style="display:grid;grid-template-columns:1fr 1fr 1.2fr 1fr 1.5fr auto;gap:6px;align-items:end;margin-bottom:6px">' +
     '<div>' +
       (index === 0 ? '<label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">From Mo.</label>' : '') +
@@ -16217,8 +16237,8 @@ function rfpRentPeriodRow(index, period) {
       '<input class="rfp-form-input" type="number" min="1" value="' + (p.to_month || '') + '" data-field="to_month" style="padding:6px 8px;font-size:var(--text-sm)" />' +
     '</div>' +
     '<div>' +
-      (index === 0 ? '<label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">Rate/RSF/yr</label>' : '') +
-      '<input class="rfp-form-input" type="number" step="0.01" min="0" value="' + (p.rent_rsf_yr != null ? p.rent_rsf_yr : '') + '" data-field="rent_rsf_yr" placeholder="0 = free" style="padding:6px 8px;font-size:var(--text-sm)" />' +
+      (index === 0 ? '<label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">' + headerLabel + '</label>' : '') +
+      '<input class="rfp-form-input rfp-period-rate" type="number" step="0.01" min="0" value="' + displayVal + '" data-field="rent_rsf_yr" data-display-unit="' + unit + '" placeholder="0 = free" style="padding:6px 8px;font-size:var(--text-sm)" />' +
     '</div>' +
     '<div>' +
       (index === 0 ? '<label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">Billable RSF</label>' : '') +
@@ -16315,11 +16335,16 @@ function rfpCollectRentPeriods() {
     var rate = rateEl ? parseFloat(rateEl.value) : 0;
     var billableRSF = billableEl && billableEl.value ? parseInt(billableEl.value) : null;
     var label = labelEl ? labelEl.value.trim() : '';
+    // If the field was displayed in monthly units, convert back to annual for storage
+    var displayUnit = rateEl ? rateEl.getAttribute('data-display-unit') : 'year';
+    if (!isNaN(rate) && rate > 0 && displayUnit === 'month') {
+      rate = rate * 12;
+    }
     if (fromMonth > 0 && toMonth > 0) {
       var entry = {
         from_month: fromMonth,
         to_month: toMonth,
-        rent_rsf_yr: isNaN(rate) ? 0 : rate,
+        rent_rsf_yr: isNaN(rate) ? 0 : Math.round(rate * 100) / 100,
         label: label
       };
       if (billableRSF && billableRSF > 0) entry.billable_rsf = billableRSF;
@@ -16521,6 +16546,43 @@ function rfpRefreshRentUnitCard() {
   wrapper.innerHTML = fresh;
   var newCard = wrapper.querySelector('#rfp-rent-unit-card');
   if (newCard) card.parentNode.replaceChild(newCard, card);
+  // Also re-render the rent schedule (if active) so column header and values
+  // flip between monthly/annual display.
+  rfpRefreshRentScheduleDisplay();
+}
+
+// Rebuild the rent-schedule rows from current DOM state, preserving user edits,
+// so the column header and per-row values flip between $/yr and $/mo display.
+// We collect the current annual rates from each row (using the row's data-display-unit
+// to interpret the visible value), then re-render with the new active unit.
+function rfpRefreshRentScheduleDisplay() {
+  var list = document.getElementById('rfp-rent-periods-list');
+  if (!list) return;
+  var existingRows = list.querySelectorAll('.rfp-rent-period-row');
+  if (existingRows.length === 0) return;
+  // Snapshot current state -> always-annual canonical values
+  var snapshot = [];
+  existingRows.forEach(function(row) {
+    var fromEl = row.querySelector('[data-field="from_month"]');
+    var toEl = row.querySelector('[data-field="to_month"]');
+    var rateEl = row.querySelector('[data-field="rent_rsf_yr"]');
+    var billableEl = row.querySelector('[data-field="billable_rsf"]');
+    var labelEl = row.querySelector('[data-field="label"]');
+    var rate = rateEl ? parseFloat(rateEl.value) : 0;
+    var displayUnit = rateEl ? rateEl.getAttribute('data-display-unit') : 'year';
+    if (!isNaN(rate) && rate > 0 && displayUnit === 'month') rate = rate * 12;
+    snapshot.push({
+      from_month: fromEl ? parseInt(fromEl.value) || '' : '',
+      to_month: toEl ? parseInt(toEl.value) || '' : '',
+      rent_rsf_yr: isNaN(rate) ? 0 : Math.round(rate * 100) / 100,
+      billable_rsf: billableEl && billableEl.value ? parseInt(billableEl.value) : '',
+      label: labelEl ? labelEl.value : ''
+    });
+  });
+  // Re-render rows using the new active unit
+  var newHtml = '';
+  snapshot.forEach(function(p, i) { newHtml += rfpRentPeriodRow(i, p); });
+  list.innerHTML = newHtml;
 }
 
 // ===== REVIEW FORM =====
@@ -16636,6 +16698,12 @@ function rfpShowReviewForm(terms, meta) {
       formHtml += hasRentPeriods ? 'Use single rate' : 'Use stepped rates';
       formHtml += '</button>';
       formHtml += '</div>';
+      // Auto-correction notice: schedule rates were monthly, we converted them to annual
+      if (terms.rentPeriodsUnitCorrected) {
+        formHtml += '<div style="margin-bottom:8px;padding:6px 10px;font-size:var(--text-xs);color:#b45309;background:rgba(180,83,9,0.08);border-radius:4px;">' +
+          '\u26A0 Schedule rates appeared to be quoted monthly. Auto-converted to annual ($/RSF/yr) to match the cash-flow engine. Verify the values below.' +
+        '</div>';
+      }
       formHtml += '<div id="rfp-rent-periods-container" style="' + (hasRentPeriods ? '' : 'display:none') + '">';
       formHtml += rfpBuildRentPeriodsUI(hasRentPeriods ? terms.rentPeriods : []);
       formHtml += '</div>';
