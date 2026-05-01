@@ -91,6 +91,13 @@ export async function POST(req: Request) {
     amortized_ti_rate: rawTerms.amortized_ti_rate ?? rawTerms.amortizedTIRate ?? 0,
     amortized_ti_term_months: rawTerms.amortized_ti_term_months ?? rawTerms.amortizedTITermMonths ?? 0,
     management_fee_pct: rawTerms.management_fee_pct ?? rawTerms.managementFeePct ?? 0,
+    // Generalized free-rent schedule (optional)
+    free_rent_type: rawTerms.free_rent_type ?? rawTerms.freeRentType ?? undefined,
+    free_rent_months_count: rawTerms.free_rent_months_count ?? rawTerms.freeRentMonthsCount ?? undefined,
+    free_rent_from: rawTerms.free_rent_from ?? rawTerms.freeRentFrom ?? undefined,
+    free_rent_to: rawTerms.free_rent_to ?? rawTerms.freeRentTo ?? undefined,
+    free_rent_month_of_year: rawTerms.free_rent_month_of_year ?? rawTerms.freeRentMonthOfYear ?? undefined,
+    free_rent_custom: rawTerms.free_rent_custom ?? rawTerms.freeRentCustom ?? undefined,
     // Rent unit detection metadata - pass-through from extractor or user override.
     base_rent_unit: rawTerms.base_rent_unit ?? rawTerms.baseRentUnit ?? 'year',
     base_rent_source_value: rawTerms.base_rent_source_value ?? rawTerms.baseRentSourceValue ?? 0,
@@ -321,6 +328,19 @@ interface DealTerms {
   // Applied to the contracted base rent each month. Scales with escalations.
   // During free rent, fee is reduced proportionally so it's zero on fully-abated months.
   management_fee_pct?: number
+  // Generalized free rent schedule (new, preferred over legacy free_rent_months/is_free_rent).
+  // Four types:
+  //   'first_n'        -> abate first free_rent_months_count months
+  //   'range'          -> abate months [free_rent_from .. free_rent_to]
+  //   'month_of_year'  -> abate one month per year (e.g. every Dec = month 12, 24, 36, ...)
+  //   'custom'         -> abate exactly the months listed in free_rent_custom
+  //   undefined        -> use legacy behavior (free_rent_months first-N or is_free_rent on periods)
+  free_rent_type?: 'first_n' | 'range' | 'month_of_year' | 'custom' | string
+  free_rent_months_count?: number
+  free_rent_from?: number
+  free_rent_to?: number
+  free_rent_month_of_year?: number
+  free_rent_custom?: number[]
   // Rent unit detection metadata (per spec).
   // base_rent_rsf is ALWAYS canonical $/RSF/year. These fields preserve
   // the original quoted unit so the UI can show both and flag low-confidence detections.
@@ -388,6 +408,39 @@ function getRentForMonth(
   return { rentRSFYr: currentRentRSFYr, isFreeRent: false, billableRSF: defaultRSF }
 }
 
+// Resolve the set of abated months from the generalized free_rent_schedule fields.
+// Returns an empty set if no generalized schedule is set. Legacy free_rent_months and
+// per-period is_free_rent are NOT handled here; they're handled via existing code paths.
+function resolveFreeRentMonths(terms: DealTerms, termMonths: number): Set<number> {
+  const out = new Set<number>()
+  const t = terms.free_rent_type
+  if (!t) return out
+  if (t === 'first_n') {
+    const n = terms.free_rent_months_count || 0
+    for (let i = 1; i <= Math.min(n, termMonths); i++) out.add(i)
+  } else if (t === 'range') {
+    const from = Math.max(1, terms.free_rent_from || 1)
+    const to = Math.min(termMonths, terms.free_rent_to || 0)
+    for (let i = from; i <= to; i++) out.add(i)
+  } else if (t === 'month_of_year') {
+    // N = 12 means month 12 of every year (12, 24, 36, ...)
+    // N = 1 means month 1 of every year (1, 13, 25, ...)
+    const monthN = terms.free_rent_month_of_year || 12
+    if (monthN >= 1 && monthN <= 12) {
+      for (let y = 0; y * 12 + monthN <= termMonths; y++) {
+        out.add(y * 12 + monthN)
+      }
+    }
+  } else if (t === 'custom') {
+    const list = terms.free_rent_custom || []
+    list.forEach(m => {
+      const n = Number(m)
+      if (n >= 1 && n <= termMonths) out.add(n)
+    })
+  }
+  return out
+}
+
 function generateFinancialAnalysis(terms: DealTerms) {
   const rsf = terms.rsf || 0
   const termMonths = terms.lease_term_months || 60
@@ -396,6 +449,8 @@ function generateFinancialAnalysis(terms: DealTerms) {
   const freeMonths = terms.free_rent_months || 0
   const rentPeriods = terms.rent_periods
   const useSteppedRent = rentPeriods && rentPeriods.length > 0
+  // Generalized free-rent schedule (new). Computed once up front.
+  const generalizedFreeMonths = resolveFreeRentMonths(terms, termMonths)
   const tiRSF = terms.ti_allowance_rsf || 0
   const tiTotal = terms.ti_allowance_total || (tiRSF * rsf)
   const opexMonthly = terms.opex_monthly || 0
@@ -490,8 +545,12 @@ function generateFinancialAnalysis(terms: DealTerms) {
       billableRSF = result.billableRSF
       // Use billable RSF (not full premises RSF) for rent calculation
       monthlyBaseRent = (currentRentRSF * billableRSF) / 12
-      // Free rent: explicit is_free_rent flag (preferred) OR legacy rate=0 fallback.
-      if (result.isFreeRent) {
+      // Generalized free rent wins: if this month is in the generalized schedule,
+      // credit the full base rent regardless of the period's is_free_rent flag.
+      const isGeneralizedFree = generalizedFreeMonths.has(m)
+      if (isGeneralizedFree && currentRentRSF > 0) {
+        freeRentCredit = monthlyBaseRent
+      } else if (result.isFreeRent) {
         // If the period has a real contractual rate, use it directly.
         // Otherwise (legacy rate=0 case), de-escalate from the next paid period.
         if (currentRentRSF > 0) {
@@ -521,11 +580,14 @@ function generateFinancialAnalysis(terms: DealTerms) {
       currentRentRSF = baseRentRSF * yearMultiplier
       monthlyBaseRent = (currentRentRSF * rsf) / 12
 
-      // Free rent (supports fractional months, e.g. 0.5 = half month free)
-      if (m <= Math.floor(freeMonths)) {
-        freeRentCredit = monthlyBaseRent // full free month
+      // Generalized free rent schedule wins over legacy free_rent_months count
+      if (generalizedFreeMonths.has(m)) {
+        freeRentCredit = monthlyBaseRent
+      } else if (m <= Math.floor(freeMonths)) {
+        // Legacy free-rent count: free_rent_months at start of lease
+        freeRentCredit = monthlyBaseRent
       } else if (m === Math.floor(freeMonths) + 1 && freeMonths % 1 > 0) {
-        freeRentCredit = monthlyBaseRent * (freeMonths % 1) // partial free month
+        freeRentCredit = monthlyBaseRent * (freeMonths % 1)
       }
     }
     // Apply proration to partial months (first/last month of lease)
