@@ -83,6 +83,22 @@ export async function POST(req: Request) {
     ti_allowance_total: rawTerms.ti_allowance_total ?? rawTerms.tiAllowanceTotal ?? 0,
     opex_rsf_yr: rawTerms.opex_rsf_yr ?? rawTerms.opexRSF ?? 0,
     opex_monthly: rawTerms.opex_monthly ?? rawTerms.opex ?? 0,
+    opex_periods: rawTerms.opex_periods ?? rawTerms.opexPeriods ?? undefined,
+    opex_annual_escalation_pct: rawTerms.opex_annual_escalation_pct ?? rawTerms.opexAnnualEscalation ?? 0,
+    // OPEX unit detection metadata (parallel to base rent)
+    opex_unit: rawTerms.opex_unit ?? rawTerms.opexUnit ?? 'year',
+    opex_source_value: rawTerms.opex_source_value ?? rawTerms.opexSourceValue ?? 0,
+    opex_source_quote: rawTerms.opex_source_quote ?? rawTerms.opexSourceQuote ?? '',
+    opex_detection_confidence: rawTerms.opex_detection_confidence ?? rawTerms.opexDetectionConfidence ?? 1.0,
+    opex_user_confirmed: rawTerms.opex_user_confirmed ?? rawTerms.opexUserConfirmed ?? false,
+    opex_unit_warning: rawTerms.opex_unit_warning ?? rawTerms.opexUnitWarning ?? '',
+    // Generalized free-OPEX schedule
+    free_opex_type: rawTerms.free_opex_type ?? rawTerms.freeOpexType ?? undefined,
+    free_opex_months_count: rawTerms.free_opex_months_count ?? rawTerms.freeOpexMonthsCount ?? undefined,
+    free_opex_from: rawTerms.free_opex_from ?? rawTerms.freeOpexFrom ?? undefined,
+    free_opex_to: rawTerms.free_opex_to ?? rawTerms.freeOpexTo ?? undefined,
+    free_opex_month_of_year: rawTerms.free_opex_month_of_year ?? rawTerms.freeOpexMonthOfYear ?? undefined,
+    free_opex_custom: rawTerms.free_opex_custom ?? rawTerms.freeOpexCustom ?? undefined,
     parking_spots: rawTerms.parking_spots ?? rawTerms.parkingSpots ?? 0,
     parking_rate_monthly: rawTerms.parking_rate_monthly ?? rawTerms.parkingRate ?? 0,
     parking_escalation_pct: rawTerms.parking_escalation_pct ?? rawTerms.parkingEscalation ?? 0,
@@ -91,6 +107,8 @@ export async function POST(req: Request) {
     amortized_ti_rate: rawTerms.amortized_ti_rate ?? rawTerms.amortizedTIRate ?? 0,
     amortized_ti_term_months: rawTerms.amortized_ti_term_months ?? rawTerms.amortizedTITermMonths ?? 0,
     management_fee_pct: rawTerms.management_fee_pct ?? rawTerms.managementFeePct ?? 0,
+    management_fee_basis: rawTerms.management_fee_basis ?? rawTerms.managementFeeBasis ?? undefined,
+    management_fee_amount: rawTerms.management_fee_amount ?? rawTerms.managementFeeAmount ?? 0,
     // Generalized free-rent schedule (optional)
     free_rent_type: rawTerms.free_rent_type ?? rawTerms.freeRentType ?? undefined,
     free_rent_months_count: rawTerms.free_rent_months_count ?? rawTerms.freeRentMonthsCount ?? undefined,
@@ -304,6 +322,18 @@ interface RentPeriod {
   is_free_rent?: boolean    // When true, the rate is fully abated (free rent credit = full base rent)
 }
 
+// Stepped OPEX schedule (mirrors RentPeriod). Each row is a contiguous month range
+// with its own OPEX rate. is_free_opex marks abated rows; opex_rsf_yr is always the
+// CONTRACTUAL annual rate per RSF, even on abated rows (so the rate keeps escalating
+// behind the abatement and downstream display always has a real number).
+interface OpexPeriod {
+  from_month: number
+  to_month: number
+  opex_rsf_yr: number
+  label?: string
+  is_free_opex?: boolean
+}
+
 interface DealTerms {
   rsf?: number
   lease_term_months?: number
@@ -317,6 +347,29 @@ interface DealTerms {
   ti_allowance_total?: number
   opex_rsf_yr?: number
   opex_monthly?: number
+  // Stepped OPEX schedule. When opex_periods is non-empty, the cash flow engine
+  // uses it instead of the flat opex_monthly + opex_annual_escalation_pct path.
+  opex_periods?: OpexPeriod[]
+  // Global OPEX escalation (e.g. 1% per year as inflation guess). Applied to
+  // opex_monthly when opex_periods is not used. Stored as whole-number percent.
+  opex_annual_escalation_pct?: number
+  // OPEX unit detection metadata (mirrors base_rent_unit/etc).
+  // opex_rsf_yr is always canonical $/RSF/year. These fields preserve the original
+  // quoted unit from the document so the UI can show both per-mo and per-yr.
+  opex_unit?: 'month' | 'year' | string
+  opex_source_value?: number
+  opex_source_quote?: string
+  opex_detection_confidence?: number
+  opex_user_confirmed?: boolean
+  opex_unit_warning?: string
+  // Generalized free-OPEX schedule (independent from free rent).
+  // Same four shapes as free_rent_*: first_n / range / month_of_year / custom.
+  free_opex_type?: 'first_n' | 'range' | 'month_of_year' | 'custom' | string
+  free_opex_months_count?: number
+  free_opex_from?: number
+  free_opex_to?: number
+  free_opex_month_of_year?: number
+  free_opex_custom?: number[]
   parking_spots?: number
   parking_rate_monthly?: number
   parking_escalation_pct?: number
@@ -324,10 +377,17 @@ interface DealTerms {
   amortized_ti_rsf?: number
   amortized_ti_rate?: number
   amortized_ti_term_months?: number
-  // Management fee charged as % of base rent (e.g. 3 = 3%).
-  // Applied to the contracted base rent each month. Scales with escalations.
-  // During free rent, fee is reduced proportionally so it's zero on fully-abated months.
+  // Management fee.
+  // basis = 'pct' (% of base rent), 'rsf_yr' ($ per RSF per year), 'rsf_mo' ($ per RSF per month), 'flat' ($ flat per month).
+  // - 'pct' uses management_fee_pct (legacy field, stored as whole-number e.g. 3 = 3%)
+  // - other bases use management_fee_amount (the dollar value in the chosen basis)
+  // - When basis is unset, falls back to legacy management_fee_pct only.
+  // - For 'pct': fee scales with rent escalations and abates with free rent.
+  // - For dollar bases: fee is constant (no escalation, no free-rent abatement).
+  //   This matches how landlords actually invoice flat fees.
   management_fee_pct?: number
+  management_fee_basis?: 'pct' | 'rsf_yr' | 'rsf_mo' | 'flat' | string
+  management_fee_amount?: number
   // Generalized free rent schedule (new, preferred over legacy free_rent_months/is_free_rent).
   // Four types:
   //   'first_n'        -> abate first free_rent_months_count months
@@ -408,6 +468,54 @@ function getRentForMonth(
   return { rentRSFYr: currentRentRSFYr, isFreeRent: false, billableRSF: defaultRSF }
 }
 
+// Resolve a single month's OPEX contractual rate from stepped opex_periods.
+// Returns { opexRSFYr, isFreeOpex }. Falls back to the provided baseOpexRSF with
+// global escalation if no period matches (shouldn't happen when periods span full term).
+function getOpexForMonth(
+  month: number,
+  opexPeriods: OpexPeriod[] | undefined,
+  baseOpexRSF: number,
+  globalEsc: number
+): { opexRSFYr: number; isFreeOpex: boolean } {
+  if (opexPeriods && opexPeriods.length > 0) {
+    const sorted = [...opexPeriods].sort((a, b) => a.from_month - b.from_month)
+    for (const p of sorted) {
+      if (month >= p.from_month && month <= p.to_month) {
+        const free = !!p.is_free_opex || p.opex_rsf_yr === 0
+        return { opexRSFYr: p.opex_rsf_yr, isFreeOpex: free }
+      }
+    }
+  }
+  // Legacy flat-with-escalation path. Lease year 1 gets base; year 2 gets base * (1 + esc); etc.
+  const leaseYear = Math.ceil(month / 12)
+  const escMultiplier = Math.pow(1 + globalEsc, leaseYear - 1)
+  return { opexRSFYr: baseOpexRSF * escMultiplier, isFreeOpex: false }
+}
+
+// Resolve the set of abated OPEX months from the generalized free_opex_* schedule.
+function resolveFreeOpexMonths(terms: DealTerms, termMonths: number): Set<number> {
+  const out = new Set<number>()
+  const t = terms.free_opex_type
+  if (!t) return out
+  if (t === 'first_n') {
+    const n = terms.free_opex_months_count || 0
+    for (let i = 1; i <= Math.min(n, termMonths); i++) out.add(i)
+  } else if (t === 'range') {
+    const from = Math.max(1, terms.free_opex_from || 1)
+    const to = Math.min(termMonths, terms.free_opex_to || 0)
+    for (let i = from; i <= to; i++) out.add(i)
+  } else if (t === 'month_of_year') {
+    const monthN = terms.free_opex_month_of_year || 12
+    if (monthN >= 1 && monthN <= 12) {
+      for (let y = 0; y * 12 + monthN <= termMonths; y++) out.add(y * 12 + monthN)
+    }
+  } else if (t === 'custom') {
+    const list = terms.free_opex_custom || []
+    list.forEach(m => { const n = Number(m); if (n >= 1 && n <= termMonths) out.add(n) })
+  }
+  return out
+}
+
 // Resolve the set of abated months from the generalized free_rent_schedule fields.
 // Returns an empty set if no generalized schedule is set. Legacy free_rent_months and
 // per-period is_free_rent are NOT handled here; they're handled via existing code paths.
@@ -454,13 +562,33 @@ function generateFinancialAnalysis(terms: DealTerms) {
   const tiRSF = terms.ti_allowance_rsf || 0
   const tiTotal = terms.ti_allowance_total || (tiRSF * rsf)
   const opexMonthly = terms.opex_monthly || 0
+  // OPEX schedule: stepped opex_periods OR flat with optional global escalation.
+  // baseOpexRSF is the canonical year-1 $/RSF/yr value used by the flat path and
+  // by getOpexForMonth's fallback. We derive it from opex_rsf_yr when set, else
+  // back-calculate from opex_monthly so legacy submissions still work.
+  const opexPeriods = terms.opex_periods
+  const useSteppedOpex = opexPeriods && opexPeriods.length > 0
+  const opexEsc = (terms.opex_annual_escalation_pct || 0) / 100
+  const baseOpexRSF = (terms.opex_rsf_yr && terms.opex_rsf_yr > 0)
+    ? terms.opex_rsf_yr
+    : (rsf > 0 && opexMonthly > 0 ? (opexMonthly * 12) / rsf : 0)
+  const generalizedFreeOpexMonths = resolveFreeOpexMonths(terms, termMonths)
   const parkingSpots = terms.parking_spots || 0
   const parkingRate = terms.parking_rate_monthly || 0
   const parkingEsc = (terms.parking_escalation_pct || 0) / 100
   const amortTIRSF = terms.amortized_ti_rsf || 0
   const amortTIRate = (terms.amortized_ti_rate || 0) / 100
-  // Management fee: % of contracted base rent. Stored as whole-number percent (3 = 3%).
+  // Management fee. Resolves any of four basis modes into a per-month dollar figure.
+  // 'pct' is the legacy percent-of-rent mode; the others are flat dollar values.
+  const mgmtFeeBasis = terms.management_fee_basis || (terms.management_fee_pct ? 'pct' : undefined)
   const mgmtFeePct = (terms.management_fee_pct || 0) / 100
+  const mgmtFeeAmount = terms.management_fee_amount || 0
+  // Pre-compute the monthly dollar fee for non-pct bases so the loop can use it directly.
+  // For 'pct', fee is computed inside the loop because it depends on netCashRent each month.
+  let mgmtFeeFlatMonthly = 0
+  if (mgmtFeeBasis === 'rsf_yr') mgmtFeeFlatMonthly = (mgmtFeeAmount * rsf) / 12
+  else if (mgmtFeeBasis === 'rsf_mo') mgmtFeeFlatMonthly = mgmtFeeAmount * rsf
+  else if (mgmtFeeBasis === 'flat') mgmtFeeFlatMonthly = mgmtFeeAmount
   const amortTITermMonths = (terms.amortized_ti_term_months || 0) > 0 ? terms.amortized_ti_term_months! : termMonths
   const amortTIPrincipal = amortTIRSF * rsf
   let amortTIMonthlyPayment = 0
@@ -595,15 +723,44 @@ function generateFinancialAnalysis(terms: DealTerms) {
     freeRentCredit = freeRentCredit * proration
     const netCashRent = monthlyBaseRent - freeRentCredit
 
-    // Management fee: % of CONTRACTUAL base rent (monthlyBaseRent before free-rent credit).
-    // Does NOT abate during free rent - mirrors OPEX behavior. Landlords typically continue
-    // charging their management fee even while base rent is abated, since the fee covers
-    // property-level services that run regardless of who is paying rent.
-    // Scales with escalations automatically because monthlyBaseRent already includes escalation.
-    const mgmtFee = monthlyBaseRent * mgmtFeePct
+    // Management fee: per-month dollar amount based on basis.
+    // - 'pct': % of CONTRACTUAL base rent (monthlyBaseRent before free-rent credit).
+    //   Does NOT abate during free rent - mirrors OPEX behavior. Landlords typically continue
+    //   charging their management fee even while base rent is abated, since the fee covers
+    //   property-level services that run regardless of who is paying rent.
+    //   Scales with escalations automatically because monthlyBaseRent already includes escalation.
+    // - 'rsf_yr' / 'rsf_mo' / 'flat': constant flat amount (no abatement, no escalation)
+    let mgmtFee = 0
+    if (mgmtFeeBasis === 'pct' || (!mgmtFeeBasis && mgmtFeePct > 0)) {
+      mgmtFee = monthlyBaseRent * mgmtFeePct
+    } else if (mgmtFeeFlatMonthly > 0) {
+      mgmtFee = mgmtFeeFlatMonthly * proration
+    }
 
-    // OpEx (constant, user-defined) - prorated for partial months
-    const opex = opexMonthly * proration
+    // OPEX. Three paths:
+    //   1. Stepped opex_periods: getOpexForMonth returns rate for this month.
+    //   2. Flat with optional global escalation: baseOpexRSF * (1+esc)^year * RSF / 12.
+    //   3. Legacy: opexMonthly applied flat (no escalation, no periods).
+    // Free OPEX schedule (generalized OR period is_free_opex flag) credits 100% of opex.
+    let opexThisMonth = 0
+    let opexIsFree = false
+    if (useSteppedOpex) {
+      const opexResult = getOpexForMonth(m, opexPeriods, baseOpexRSF, opexEsc)
+      opexThisMonth = (opexResult.opexRSFYr * rsf) / 12
+      opexIsFree = opexResult.isFreeOpex
+    } else if (baseOpexRSF > 0 && opexEsc > 0) {
+      // Flat OPEX with global escalation
+      const yMul = Math.pow(1 + opexEsc, leaseYear - 1)
+      opexThisMonth = (baseOpexRSF * yMul * rsf) / 12
+    } else {
+      // Legacy flat (no escalation)
+      opexThisMonth = opexMonthly
+    }
+    // Apply abatement: free OPEX months credit the full amount
+    if (generalizedFreeOpexMonths.has(m) || opexIsFree) {
+      opexThisMonth = 0
+    }
+    const opex = opexThisMonth * proration
 
     // Parking with escalation (starts year 2 typically) - prorated for partial months
     const parkYearMultiplier = m <= 12 ? 1 : Math.pow(1 + parkingEsc, leaseYear - 1)
@@ -811,6 +968,8 @@ function generateFinancialAnalysis(terms: DealTerms) {
         totalNetRent: Math.round(totalNetRent),
         totalManagementFee: Math.round(totalMgmtFee),
         managementFeePct: terms.management_fee_pct || 0,
+        managementFeeBasis: terms.management_fee_basis || (terms.management_fee_pct ? 'pct' : ''),
+        managementFeeAmount: terms.management_fee_amount || 0,
         totalOpex: Math.round(totalOpex),
         totalParking: Math.round(totalParking),
         totalAmortizedTI: Math.round(totalAmortTI),
@@ -830,6 +989,8 @@ function generateFinancialAnalysis(terms: DealTerms) {
         straightLineAnnualRent: Math.round(straightLineAnnualRent),
         totalManagementFee: Math.round(totalMgmtFee),
         managementFeePct: terms.management_fee_pct || 0,
+        managementFeeBasis: terms.management_fee_basis || (terms.management_fee_pct ? 'pct' : ''),
+        managementFeeAmount: terms.management_fee_amount || 0,
         monthlyManagementFee: termMonths > 0 ? Math.round(totalMgmtFee / termMonths) : 0,
         effectiveRentRSF,
         totalCostPerRSFPerYear,

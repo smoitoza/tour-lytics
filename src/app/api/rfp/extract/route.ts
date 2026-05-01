@@ -84,6 +84,13 @@ IF THE DOCUMENT COVERS A SINGLE BUILDING/PREMISES, return:
   "parking_rate_monthly": <number - per spot per month>,
   "parking_escalation_pct": <number>,
   "opex_monthly": <number - estimated monthly operational expenses if mentioned>,
+  "opex_rsf_yr": <number - operating expenses per RSF per YEAR (annualized). For NNN deals usually means tax + CAM + insurance pass-through estimate.>,
+  "opex_unit": <string - "month" or "year" - the ORIGINAL unit as quoted in the document, BEFORE annualization>,
+  "opex_source_value": <number - the EXACT OPEX number as written in the source document>,
+  "opex_source_quote": <string - exact phrase from the document mentioning OPEX, max 200 chars>,
+  "opex_detection_confidence": <number 0.0-1.0 - confidence in the OPEX unit detection. Same scale as base_rent: 0.95+ explicit, 0.70-0.85 implied, below 0.60 ambiguous.>,
+  "opex_periods": <array or null - ONLY include if the lease has stepped/graduated OPEX rates. Same structure as rent_periods but with opex_rsf_yr (annual rate per RSF). Each entry: {"from_month": <number>, "to_month": <number>, "opex_rsf_yr": <number - ANNUAL>, "is_free_opex": <boolean if abated>, "label": <string>}. MUST cover full lease term if used. Otherwise null.>,
+  "opex_annual_escalation_pct": <number - if the lease specifies a flat annual OPEX escalator (e.g. 1% inflation, 2.5% CPI cap), put it here. Common in long-term deals. Else 0.>,
   "structure": <string - "Direct Lease", "Sublease", etc.>,
   "landlord": <string - landlord or sublandlord name>,
   "notes": <string - any other important terms, conditions, or deal points>
@@ -100,6 +107,8 @@ IMPORTANT:
 - Verify before returning: sum the (to_month - from_month + 1) values across all rent_periods entries. The sum MUST equal lease_term_months. If it doesn't, your schedule is incomplete - add the missing periods.
 - Verify before returning: confirm the LAST entry's to_month equals lease_term_months. If it doesn't, extend the last period to lease_term_months.
 - For ambiguous cases (no explicit time qualifier), default to "year" for office deals (industry standard), default to "month" for industrial/flex deals, and set base_rent_detection_confidence below 0.65 so the user is prompted to confirm.
+- OPEX unit detection follows the same rules as base rent. "$0.50/RSF/month NNN" -> opex_rsf_yr=6, opex_unit="month", opex_source_value=0.50. "$18/RSF/year" -> opex_rsf_yr=18, opex_unit="year", opex_source_value=18. opex_monthly should still be filled for backward compat (= opex_rsf_yr * RSF / 12).
+- If the document mentions a CPI/inflation cap on OPEX (e.g. "OPEX increases capped at 3% per year"), set opex_annual_escalation_pct to that cap value as a planning assumption. Don't invent escalation if the document doesn't mention one - use 0.
 - If a lease term is given in years, convert to months
 - If TI is given as $/RSF, also calculate the total (RSF x TI/RSF)
 - For dates, estimate if only month/year is given (use the 1st of the month)
@@ -165,7 +174,7 @@ ${documentText.substring(0, 15000)}`
 }
 
 function cleanNulls(obj: any) {
-  const numericFields = ['rsf', 'lease_term_months', 'base_rent_rsf', 'annual_escalation_pct', 'free_rent_months', 'ti_allowance_rsf', 'ti_allowance_total', 'security_deposit', 'parking_spots', 'parking_rate_monthly', 'parking_escalation_pct', 'opex_monthly', 'base_rent_source_value', 'base_rent_detection_confidence']
+  const numericFields = ['rsf', 'lease_term_months', 'base_rent_rsf', 'annual_escalation_pct', 'free_rent_months', 'ti_allowance_rsf', 'ti_allowance_total', 'security_deposit', 'parking_spots', 'parking_rate_monthly', 'parking_escalation_pct', 'opex_monthly', 'opex_rsf_yr', 'opex_source_value', 'opex_detection_confidence', 'opex_annual_escalation_pct', 'base_rent_source_value', 'base_rent_detection_confidence']
   Object.keys(obj).forEach(key => {
     if (obj[key] === null || obj[key] === 'null') {
       if (numericFields.includes(key)) {

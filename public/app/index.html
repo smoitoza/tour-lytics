@@ -16107,11 +16107,29 @@ function rfpMapTerms(raw) {
     tiAllowanceTotal: raw.ti_allowance_total || raw.tiAllowanceTotal || '',
     opexRSF: raw.opex_rsf_yr || raw.opexRSF || '',
     opex: raw.opex_monthly || raw.opex || '',
+    // OPEX schedule + escalation + unit detection (parallel to base rent)
+    opexPeriods: raw.opex_periods || raw.opexPeriods || null,
+    opexAnnualEscalation: raw.opex_annual_escalation_pct || raw.opexAnnualEscalation || '',
+    opexUnit: raw.opex_unit || raw.opexUnit || 'year',
+    opexSourceValue: raw.opex_source_value || raw.opexSourceValue || 0,
+    opexSourceQuote: raw.opex_source_quote || raw.opexSourceQuote || '',
+    opexDetectionConfidence: (raw.opex_detection_confidence !== undefined ? raw.opex_detection_confidence : (raw.opexDetectionConfidence !== undefined ? raw.opexDetectionConfidence : 1.0)),
+    opexUserConfirmed: raw.opex_user_confirmed || raw.opexUserConfirmed || false,
+    opexUnitWarning: raw.opex_unit_warning || raw.opexUnitWarning || '',
+    // Generalized free OPEX schedule (independent from free rent)
+    freeOpexType: raw.free_opex_type || raw.freeOpexType || '',
+    freeOpexMonthsCount: raw.free_opex_months_count || raw.freeOpexMonthsCount || '',
+    freeOpexFrom: raw.free_opex_from || raw.freeOpexFrom || '',
+    freeOpexTo: raw.free_opex_to || raw.freeOpexTo || '',
+    freeOpexMonthOfYear: raw.free_opex_month_of_year || raw.freeOpexMonthOfYear || '',
+    freeOpexCustom: raw.free_opex_custom || raw.freeOpexCustom || '',
     parkingSpots: raw.parking_spots || raw.parkingSpots || '',
     parkingRate: raw.parking_rate_monthly || raw.parkingRate || '',
     parkingEscalation: raw.parking_escalation_pct || raw.parkingEscalation || '',
     securityDeposit: raw.security_deposit || raw.securityDeposit || '',
     managementFeePct: raw.management_fee_pct || raw.managementFeePct || '',
+    managementFeeBasis: raw.management_fee_basis || raw.managementFeeBasis || '',
+    managementFeeAmount: raw.management_fee_amount || raw.managementFeeAmount || '',
     structure: raw.structure || '',
     landlord: raw.landlord || '',
     notes: raw.notes || '',
@@ -16200,6 +16218,409 @@ function rfpMultiBuildingNext() {
   _multiBuildingQueue.currentIndex++;
   _multiBuildingQueue.completed++;
   rfpShowNextMultiBuildingComponent();
+}
+
+// ===== MANAGEMENT FEE UI =====
+// Unified widget: basis selector + amount field. Four basis modes:
+//   pct    -> % of base rent (legacy, uses management_fee_pct)
+//   rsf_yr -> $ per RSF per year (flat)
+//   rsf_mo -> $ per RSF per month (flat)
+//   flat   -> $ flat per month (lump)
+// Amount field label updates to match the selected basis.
+function rfpBuildMgmtFeeUI(terms) {
+  // Resolve the effective basis from saved terms. Legacy submissions have pct
+  // without an explicit basis - default to 'pct' if only management_fee_pct is set.
+  var basis = terms.managementFeeBasis || '';
+  if (!basis && (terms.managementFeePct != null && terms.managementFeePct !== '' && Number(terms.managementFeePct) !== 0)) {
+    basis = 'pct';
+  }
+  if (!basis) basis = 'pct'; // default for empty
+  // Amount: if basis is pct, amount = managementFeePct; else = managementFeeAmount
+  var amount = '';
+  if (basis === 'pct') amount = terms.managementFeePct || '';
+  else amount = terms.managementFeeAmount || '';
+
+  var html = '<div style="display:flex;gap:6px;align-items:stretch">';
+  html += '<select id="rfp-field-mgmtFeeBasis" class="rfp-form-input" onchange="rfpMgmtFeeBasisChanged()" style="flex:0 0 150px;">';
+  var opts = [
+    { v: 'pct',    l: '% of base rent' },
+    { v: 'rsf_yr', l: '$ / RSF / year' },
+    { v: 'rsf_mo', l: '$ / RSF / month' },
+    { v: 'flat',   l: '$ flat / month' }
+  ];
+  opts.forEach(function(o) {
+    html += '<option value="' + o.v + '"' + (basis === o.v ? ' selected' : '') + '>' + o.l + '</option>';
+  });
+  html += '</select>';
+  html += '<input class="rfp-form-input" id="rfp-field-mgmtFeeAmount" type="number" step="0.01" min="0" value="' + amount + '" placeholder="' + rfpMgmtFeePlaceholder(basis) + '" style="flex:1" />';
+  html += '</div>';
+  html += '<div id="rfp-mgmt-fee-hint" style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:3px">' + rfpMgmtFeeHint(basis) + '</div>';
+  return html;
+}
+
+function rfpMgmtFeePlaceholder(basis) {
+  if (basis === 'pct') return 'e.g. 3 for 3%';
+  if (basis === 'rsf_yr') return 'e.g. 0.50 per RSF/yr';
+  if (basis === 'rsf_mo') return 'e.g. 0.04 per RSF/mo';
+  if (basis === 'flat') return 'e.g. 2500 per month';
+  return '';
+}
+
+function rfpMgmtFeeHint(basis) {
+  if (basis === 'pct')    return 'Scales with rent escalations; fee abates when rent is free.';
+  if (basis === 'rsf_yr') return 'Flat annual rate per RSF. Divided by 12 for monthly cash flow. No escalation, no abatement.';
+  if (basis === 'rsf_mo') return 'Flat monthly rate per RSF. No escalation, no abatement.';
+  if (basis === 'flat')   return 'Flat dollar amount per month. No escalation, no abatement.';
+  return '';
+}
+
+function rfpMgmtFeeBasisChanged() {
+  var sel = document.getElementById('rfp-field-mgmtFeeBasis');
+  var amt = document.getElementById('rfp-field-mgmtFeeAmount');
+  var hint = document.getElementById('rfp-mgmt-fee-hint');
+  if (!sel || !amt || !hint) return;
+  var basis = sel.value;
+  amt.placeholder = rfpMgmtFeePlaceholder(basis);
+  hint.textContent = rfpMgmtFeeHint(basis);
+  // Don't clear the amount - user may want to keep it when switching units
+}
+
+// ===== OPEX ADVANCED SECTION =====
+// Bundles: OPEX unit detection card + optional stepped schedule + global escalation +
+// generalized free-OPEX schedule. All collapsed by default when no data is set so the
+// main form stays clean. Mirrors the base-rent pattern so users don't have to learn a
+// new paradigm.
+function rfpBuildOpexSection(terms) {
+  var html = '<div class="full-width" style="grid-column:1/-1;margin:6px 0 12px;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;font-size:var(--text-sm);">';
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">';
+  html += '<label class="rfp-form-label" style="margin:0;font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-accent)">OPEX Details (advanced)</label>';
+  html += '<button type="button" id="rfp-toggle-opex-adv" onclick="rfpToggleOpexAdvanced()" style="font-size:var(--text-xs);color:var(--color-accent);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline">Show unit / escalation / stepped / free OPEX</button>';
+  html += '</div>';
+
+  // Unit detection card (always shown when OPEX has a value)
+  html += rfpBuildOpexUnitCard(terms);
+
+  // Advanced block (collapsed by default)
+  var hasAdv = (terms.opexAnnualEscalation && Number(terms.opexAnnualEscalation) > 0) ||
+               (terms.opexPeriods && Array.isArray(terms.opexPeriods) && terms.opexPeriods.length > 0) ||
+               !!terms.freeOpexType;
+  html += '<div id="rfp-opex-advanced" style="' + (hasAdv ? '' : 'display:none') + ';margin-top:10px">';
+
+  // Annual escalation input (single global %)
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">';
+  html += '<div>';
+  html += '<label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">OPEX Annual Escalation %</label>';
+  html += '<input type="number" step="0.01" min="0" id="rfp-field-opexAnnualEscalation" value="' + (terms.opexAnnualEscalation || '') + '" placeholder="e.g. 1 for 1% inflation" style="padding:6px 8px;font-size:var(--text-sm);border:1px solid #cbd5e1;border-radius:4px;width:100%;box-sizing:border-box;" />';
+  html += '<div style="font-size:10px;color:var(--color-text-muted);margin-top:3px">Flat annual escalator when using simple OPEX (not stepped). Typical planning values: 1-3%. Leave 0 for no inflation assumption.</div>';
+  html += '</div>';
+  html += '<div></div>';
+  html += '</div>';
+
+  // OPEX stepped schedule (collapsed, opens on click)
+  html += rfpBuildOpexPeriodsUI(terms.opexPeriods);
+
+  // Free OPEX schedule (independent from free rent)
+  html += rfpBuildFreeOpexScheduleUI(terms);
+
+  html += '</div>'; // advanced block
+  html += '</div>'; // wrapper
+  return html;
+}
+
+function rfpToggleOpexAdvanced() {
+  var adv = document.getElementById('rfp-opex-advanced');
+  var btn = document.getElementById('rfp-toggle-opex-adv');
+  if (!adv || !btn) return;
+  var hidden = adv.style.display === 'none';
+  if (hidden) {
+    adv.style.display = '';
+    btn.textContent = 'Hide advanced';
+  } else {
+    adv.style.display = 'none';
+    btn.textContent = 'Show unit / escalation / stepped / free OPEX';
+  }
+}
+
+// OPEX unit detection card (compact version - mirrors rent unit card)
+function rfpBuildOpexUnitCard(terms) {
+  var annualOpex = parseFloat(terms.opexRSF) || 0;
+  // Back-calculate from monthly if opexRSF not set but opex + rsf are
+  if (!annualOpex && terms.opex && terms.rsf) {
+    annualOpex = (parseFloat(terms.opex) * 12) / parseFloat(terms.rsf);
+  }
+  if (annualOpex <= 0) return '';
+  var unit = (terms.opexUnit || 'year').toLowerCase();
+  var sourceQuote = terms.opexSourceQuote || '';
+  var confidence = (terms.opexDetectionConfidence !== undefined && terms.opexDetectionConfidence !== null)
+    ? Number(terms.opexDetectionConfidence) : 1.0;
+  var confirmed = !!terms.opexUserConfirmed;
+
+  var monthlyRSF = annualOpex / 12;
+  var badgeColor = '#16a34a', badgeBg = 'rgba(22,163,74,0.1)', badgeLabel = 'High confidence';
+  if (confidence < 0.5) { badgeColor = '#dc2626'; badgeBg = 'rgba(220,38,38,0.1)'; badgeLabel = 'Low confidence'; }
+  else if (confidence < 0.85) { badgeColor = '#b45309'; badgeBg = 'rgba(180,83,9,0.1)'; badgeLabel = 'Please verify'; }
+  if (confirmed) { badgeColor = '#16a34a'; badgeBg = 'rgba(22,163,74,0.1)'; badgeLabel = 'Confirmed'; }
+
+  var s = '<div id="rfp-opex-unit-card" style="padding:10px 12px;background:#fff;border:1px solid #e2e8f0;border-radius:4px;">';
+  s += '<div style="display:flex;gap:24px;align-items:baseline;flex-wrap:wrap;margin-bottom:6px">';
+  s += '<div><div style="font-size:var(--text-xs);color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.05em">$ / RSF / MONTH</div>' +
+       '<div style="font-weight:600;' + (unit === 'month' ? 'color:#2563eb' : 'color:var(--color-text)') + '">$' + monthlyRSF.toFixed(2) + (unit === 'month' ? ' \u25C0\uFE0F as quoted' : '') + '</div></div>';
+  s += '<div><div style="font-size:var(--text-xs);color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.05em">$ / RSF / YEAR</div>' +
+       '<div style="font-weight:600;' + (unit === 'year' ? 'color:#2563eb' : 'color:var(--color-text)') + '">$' + annualOpex.toFixed(2) + (unit === 'year' ? ' \u25C0\uFE0F as quoted' : '') + '</div><div style="font-size:var(--text-xs);color:var(--color-text-muted)">used in cash flow</div></div>';
+  s += '</div>';
+  s += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">';
+  s += '<span style="font-size:var(--text-xs);color:var(--color-text-muted)">Detected unit: <strong style="color:var(--color-text)">per ' + unit + '</strong></span>';
+  s += '<span style="display:inline-block;padding:2px 8px;border-radius:10px;background:' + badgeBg + ';color:' + badgeColor + ';font-size:var(--text-xs);font-weight:600">' + badgeLabel + ' (' + Math.round(confidence * 100) + '%)</span>';
+  s += '</div>';
+  if (sourceQuote) {
+    s += '<div style="font-size:var(--text-xs);color:var(--color-text-muted);font-style:italic;margin:4px 0;padding:4px 8px;background:#f8fafc;border-left:3px solid #cbd5e1;border-radius:2px">\u201C' + String(sourceQuote).replace(/</g, '&lt;').slice(0, 200) + '\u201D</div>';
+  }
+  s += '<input type="hidden" id="rfp-field-opexUnit" value="' + unit + '" />';
+  s += '<input type="hidden" id="rfp-field-opexSourceValue" value="' + (terms.opexSourceValue || '') + '" />';
+  s += '<input type="hidden" id="rfp-field-opexSourceQuote" value="' + String(sourceQuote).replace(/"/g, '&quot;') + '" />';
+  s += '<input type="hidden" id="rfp-field-opexDetectionConfidence" value="' + confidence + '" />';
+  s += '<input type="hidden" id="rfp-field-opexUserConfirmed" value="' + (confirmed ? '1' : '0') + '" />';
+  s += '</div>';
+  return s;
+}
+
+// OPEX stepped periods UI. Collapsible. Each row has From / To / Rate/RSF/yr / FREE / Label.
+// No Esc % column (OPEX uses a single global escalation, not per-row).
+function rfpBuildOpexPeriodsUI(periods) {
+  var has = periods && Array.isArray(periods) && periods.length > 0;
+  var html = '<div style="margin-top:10px">';
+  html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">';
+  html += '<label class="rfp-form-label" style="margin:0;font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-accent)">OPEX Schedule (stepped)</label>';
+  html += '<button type="button" id="rfp-toggle-opex-periods" onclick="rfpToggleOpexPeriods()" style="font-size:var(--text-xs);color:var(--color-accent);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline">';
+  html += has ? 'Use single rate' : 'Use stepped rates';
+  html += '</button>';
+  html += '</div>';
+  html += '<div id="rfp-opex-periods-container" style="' + (has ? '' : 'display:none') + '">';
+  html += '<div id="rfp-opex-periods-list">';
+  if (has) periods.forEach(function(p, i) { html += rfpOpexPeriodRow(i, p); });
+  html += '</div>';
+  html += '<button type="button" onclick="rfpAddOpexPeriod()" style="font-size:var(--text-xs);color:var(--color-accent);background:none;border:1px dashed var(--color-border);border-radius:6px;cursor:pointer;padding:6px 12px;margin-top:4px;width:100%">+ Add Period</button>';
+  html += '</div>';
+  html += '</div>';
+  return html;
+}
+
+function rfpOpexPeriodRow(index, period) {
+  var p = period || { from_month: '', to_month: '', opex_rsf_yr: '', label: '', is_free_opex: false };
+  var annualVal = (p.opex_rsf_yr != null && p.opex_rsf_yr !== '') ? Number(p.opex_rsf_yr) : null;
+  var displayVal = annualVal != null ? annualVal.toFixed(2) : '';
+  var isFree = !!p.is_free_opex;
+  var rowBg = isFree ? 'background:rgba(22,163,74,0.05);' : '';
+  var freeStyle = isFree
+    ? 'background:#16a34a;color:#fff;border:1px solid #16a34a;'
+    : 'background:#fff;color:#94a3b8;border:1px solid #cbd5e1;';
+  return '<div class="rfp-opex-period-row" data-index="' + index + '" style="display:grid;grid-template-columns:0.85fr 0.85fr 1.05fr 0.55fr 1.2fr auto;gap:6px;align-items:end;margin-bottom:6px;padding:4px 6px;border-radius:4px;' + rowBg + '">' +
+    '<div>' + (index === 0 ? '<label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">From Mo.</label>' : '') +
+      '<input class="rfp-form-input" type="number" min="1" value="' + (p.from_month || '') + '" data-field="from_month" style="padding:6px 8px;font-size:var(--text-sm)" /></div>' +
+    '<div>' + (index === 0 ? '<label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">To Mo.</label>' : '') +
+      '<input class="rfp-form-input" type="number" min="1" value="' + (p.to_month || '') + '" data-field="to_month" style="padding:6px 8px;font-size:var(--text-sm)" /></div>' +
+    '<div>' + (index === 0 ? '<label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">Rate/RSF/yr</label>' : '') +
+      '<input class="rfp-form-input" type="number" step="0.01" min="0" value="' + displayVal + '" data-field="opex_rsf_yr" placeholder="0" style="padding:6px 8px;font-size:var(--text-sm)" /></div>' +
+    '<div>' + (index === 0 ? '<label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">Free?</label>' : '') +
+      '<button type="button" data-field="is_free_opex" data-value="' + (isFree ? '1' : '0') + '" onclick="rfpToggleFreeOpexRow(this)" style="' + freeStyle + 'padding:6px 8px;font-size:var(--text-xs);font-weight:600;border-radius:4px;cursor:pointer;width:100%;">' + (isFree ? 'FREE' : 'paid') + '</button></div>' +
+    '<div>' + (index === 0 ? '<label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">Label</label>' : '') +
+      '<input class="rfp-form-input" type="text" value="' + (p.label || '') + '" data-field="label" placeholder="Year 1..." style="padding:6px 8px;font-size:var(--text-sm)" /></div>' +
+    '<div>' + (index === 0 ? '<label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">&nbsp;</label>' : '') +
+      '<button type="button" onclick="rfpRemoveOpexPeriod(' + index + ')" title="Remove" style="background:none;border:none;cursor:pointer;padding:6px 8px;color:var(--color-text-muted);font-size:14px">\u00D7</button></div>' +
+  '</div>';
+}
+
+function rfpToggleOpexPeriods() {
+  var container = document.getElementById('rfp-opex-periods-container');
+  var btn = document.getElementById('rfp-toggle-opex-periods');
+  if (!container || !btn) return;
+  var hidden = container.style.display === 'none';
+  if (hidden) {
+    container.style.display = '';
+    btn.textContent = 'Use single rate';
+    // Seed with a single full-term row if empty
+    var list = document.getElementById('rfp-opex-periods-list');
+    if (list && list.children.length === 0) {
+      var termEl = document.getElementById('rfp-field-leaseTerm');
+      var term = termEl ? (parseInt(termEl.value) || 60) : 60;
+      var rsfEl = document.getElementById('rfp-field-opexRSF');
+      var rate = rsfEl ? (parseFloat(rsfEl.value) || 0) : 0;
+      list.innerHTML = rfpOpexPeriodRow(0, { from_month: 1, to_month: term, opex_rsf_yr: rate, label: '', is_free_opex: false });
+    }
+  } else {
+    container.style.display = 'none';
+    btn.textContent = 'Use stepped rates';
+  }
+}
+
+function rfpAddOpexPeriod() {
+  var list = document.getElementById('rfp-opex-periods-list');
+  if (!list) return;
+  var rows = list.querySelectorAll('.rfp-opex-period-row');
+  var lastTo = 0;
+  if (rows.length > 0) {
+    var lastRow = rows[rows.length - 1];
+    var toEl = lastRow.querySelector('[data-field="to_month"]');
+    if (toEl) lastTo = parseInt(toEl.value) || 0;
+  }
+  var wrapper = document.createElement('div');
+  wrapper.innerHTML = rfpOpexPeriodRow(rows.length, { from_month: lastTo + 1, to_month: lastTo + 12, opex_rsf_yr: '', label: '', is_free_opex: false });
+  var newRow = wrapper.firstChild;
+  list.appendChild(newRow);
+}
+
+function rfpRemoveOpexPeriod(index) {
+  var list = document.getElementById('rfp-opex-periods-list');
+  if (!list) return;
+  var rows = list.querySelectorAll('.rfp-opex-period-row');
+  if (rows[index]) rows[index].remove();
+  // Re-index remaining rows
+  var remaining = list.querySelectorAll('.rfp-opex-period-row');
+  remaining.forEach(function(row, i) { row.setAttribute('data-index', i); });
+}
+
+function rfpToggleFreeOpexRow(btn) {
+  var row = btn.closest('.rfp-opex-period-row');
+  if (!row) return;
+  var current = btn.getAttribute('data-value') === '1';
+  var next = !current;
+  btn.setAttribute('data-value', next ? '1' : '0');
+  btn.textContent = next ? 'FREE' : 'paid';
+  if (next) {
+    btn.style.cssText = 'background:#16a34a;color:#fff;border:1px solid #16a34a;padding:6px 8px;font-size:var(--text-xs);font-weight:600;border-radius:4px;cursor:pointer;width:100%;';
+    row.style.background = 'rgba(22,163,74,0.05)';
+  } else {
+    btn.style.cssText = 'background:#fff;color:#94a3b8;border:1px solid #cbd5e1;padding:6px 8px;font-size:var(--text-xs);font-weight:600;border-radius:4px;cursor:pointer;width:100%;';
+    row.style.background = '';
+  }
+}
+
+function rfpCollectOpexPeriods() {
+  var list = document.getElementById('rfp-opex-periods-list');
+  if (!list) return null;
+  var container = document.getElementById('rfp-opex-periods-container');
+  if (container && container.style.display === 'none') return null;
+  var rows = list.querySelectorAll('.rfp-opex-period-row');
+  if (rows.length === 0) return null;
+  var periods = [];
+  rows.forEach(function(row) {
+    var fromEl = row.querySelector('[data-field="from_month"]');
+    var toEl = row.querySelector('[data-field="to_month"]');
+    var rateEl = row.querySelector('[data-field="opex_rsf_yr"]');
+    var labelEl = row.querySelector('[data-field="label"]');
+    var freeEl = row.querySelector('[data-field="is_free_opex"]');
+    var fromMonth = fromEl ? parseInt(fromEl.value) : 0;
+    var toMonth = toEl ? parseInt(toEl.value) : 0;
+    var rate = rateEl ? parseFloat(rateEl.value) : 0;
+    var label = labelEl ? labelEl.value.trim() : '';
+    var isFree = freeEl ? (freeEl.getAttribute('data-value') === '1') : false;
+    if (fromMonth > 0 && toMonth > 0) {
+      var entry = {
+        from_month: fromMonth,
+        to_month: toMonth,
+        opex_rsf_yr: isNaN(rate) ? 0 : Math.round(rate * 100) / 100,
+        label: label
+      };
+      if (isFree) entry.is_free_opex = true;
+      periods.push(entry);
+    }
+  });
+  return periods.length > 0 ? periods : null;
+}
+
+// Generalized free-OPEX schedule UI (same four shapes as free rent but INDEPENDENT).
+function rfpBuildFreeOpexScheduleUI(terms) {
+  var t = terms.freeOpexType || '';
+  var hasSchedule = !!t;
+  var n = terms.freeOpexMonthsCount || '';
+  var from = terms.freeOpexFrom || '';
+  var to = terms.freeOpexTo || '';
+  var mOfY = terms.freeOpexMonthOfYear || '';
+  var custom = terms.freeOpexCustom || '';
+  if (Array.isArray(custom)) custom = custom.join(', ');
+
+  var html = '<div id="rfp-freeopex-schedule" style="margin-top:10px;padding:10px 12px;background:#fff;border:1px solid #e2e8f0;border-radius:6px">';
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">';
+  html += '<label class="rfp-form-label" style="margin:0;font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-accent)">Free OPEX Schedule</label>';
+  html += '<button type="button" id="rfp-toggle-freeopex" onclick="rfpToggleFreeOpexSchedule()" style="font-size:var(--text-xs);color:var(--color-accent);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline">';
+  html += hasSchedule ? 'Clear free OPEX' : 'Add free OPEX schedule';
+  html += '</button></div>';
+  html += '<div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:6px">Independent from free rent. Use this when OPEX is abated on a different schedule than base rent.</div>';
+  html += '<div id="rfp-freeopex-fields" style="' + (hasSchedule ? '' : 'display:none') + '">';
+
+  html += '<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">';
+  var types = [
+    { v: 'first_n', label: 'First N months' },
+    { v: 'range', label: 'Range of months' },
+    { v: 'month_of_year', label: 'Month of every year' },
+    { v: 'custom', label: 'Custom list' }
+  ];
+  types.forEach(function(opt) {
+    var active = (t === opt.v);
+    html += '<button type="button" data-freeopex-type="' + opt.v + '" onclick="rfpSetFreeOpexType(\'' + opt.v + '\')" style="padding:5px 10px;font-size:var(--text-xs);font-weight:600;border-radius:4px;cursor:pointer;border:1px solid ' + (active ? 'var(--color-accent)' : '#cbd5e1') + ';background:' + (active ? 'var(--color-accent)' : '#fff') + ';color:' + (active ? '#fff' : '#475569') + ';">' + opt.label + '</button>';
+  });
+  html += '</div>';
+  html += '<input type="hidden" id="rfp-field-freeOpexType" value="' + t + '" />';
+
+  var inputBase = 'padding:6px 8px;font-size:var(--text-sm);border:1px solid #cbd5e1;border-radius:4px;width:100%;box-sizing:border-box;';
+
+  html += '<div data-freeopex-section="first_n" style="display:' + (t === 'first_n' ? 'grid' : 'none') + ';grid-template-columns:1fr;gap:6px">';
+  html += '<div><label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">Number of free OPEX months at start</label>';
+  html += '<input type="number" min="0" id="rfp-field-freeOpexMonthsCount" value="' + (n || '') + '" placeholder="e.g. 12" style="' + inputBase + '" /></div></div>';
+
+  html += '<div data-freeopex-section="range" style="display:' + (t === 'range' ? 'grid' : 'none') + ';grid-template-columns:1fr 1fr;gap:6px">';
+  html += '<div><label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">From month</label>';
+  html += '<input type="number" min="1" id="rfp-field-freeOpexFrom" value="' + (from || '') + '" placeholder="e.g. 1" style="' + inputBase + '" /></div>';
+  html += '<div><label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">To month</label>';
+  html += '<input type="number" min="1" id="rfp-field-freeOpexTo" value="' + (to || '') + '" placeholder="e.g. 12" style="' + inputBase + '" /></div></div>';
+
+  html += '<div data-freeopex-section="month_of_year" style="display:' + (t === 'month_of_year' ? 'grid' : 'none') + ';grid-template-columns:1fr;gap:6px">';
+  html += '<div><label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">Which month of each lease year? (1-12)</label>';
+  html += '<input type="number" min="1" max="12" id="rfp-field-freeOpexMonthOfYear" value="' + (mOfY || '') + '" placeholder="e.g. 12" style="' + inputBase + '" /></div></div>';
+
+  html += '<div data-freeopex-section="custom" style="display:' + (t === 'custom' ? 'grid' : 'none') + ';grid-template-columns:1fr;gap:6px">';
+  html += '<div><label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">Specific abated OPEX months (comma-separated)</label>';
+  html += '<input type="text" id="rfp-field-freeOpexCustom" value="' + (custom || '') + '" placeholder="e.g. 1, 2, 3" style="' + inputBase + '" /></div></div>';
+
+  html += '</div></div>';
+  return html;
+}
+
+function rfpToggleFreeOpexSchedule() {
+  var fields = document.getElementById('rfp-freeopex-fields');
+  var btn = document.getElementById('rfp-toggle-freeopex');
+  if (!fields || !btn) return;
+  var hidden = fields.style.display === 'none';
+  if (hidden) {
+    fields.style.display = '';
+    btn.textContent = 'Clear free OPEX';
+    var typeEl = document.getElementById('rfp-field-freeOpexType');
+    if (typeEl && !typeEl.value) rfpSetFreeOpexType('first_n');
+  } else {
+    fields.style.display = 'none';
+    btn.textContent = 'Add free OPEX schedule';
+    var typeEl2 = document.getElementById('rfp-field-freeOpexType');
+    if (typeEl2) typeEl2.value = '';
+    document.querySelectorAll('[data-freeopex-type]').forEach(function(b) {
+      b.style.background = '#fff';
+      b.style.color = '#475569';
+      b.style.borderColor = '#cbd5e1';
+    });
+  }
+}
+
+function rfpSetFreeOpexType(type) {
+  var typeEl = document.getElementById('rfp-field-freeOpexType');
+  if (typeEl) typeEl.value = type;
+  document.querySelectorAll('[data-freeopex-type]').forEach(function(b) {
+    var active = b.getAttribute('data-freeopex-type') === type;
+    b.style.background = active ? 'var(--color-accent)' : '#fff';
+    b.style.color = active ? '#fff' : '#475569';
+    b.style.borderColor = active ? 'var(--color-accent)' : '#cbd5e1';
+  });
+  document.querySelectorAll('[data-freeopex-section]').forEach(function(s) {
+    s.style.display = (s.getAttribute('data-freeopex-section') === type) ? 'grid' : 'none';
+  });
 }
 
 // ===== FREE RENT SCHEDULE UI =====
@@ -16954,7 +17375,7 @@ function rfpShowReviewForm(terms, meta) {
     { key: 'tiConstructionCost', label: 'Est. Construction Cost (optional)', type: 'number', placeholder: 'Total buildout cost estimate' },
     { key: 'opexRSF', label: 'OpEx/Tax/CAM (per RSF/yr)', type: 'number', step: '0.01', placeholder: 'e.g. 18.00' },
     { key: 'opex', label: 'OpEx (monthly override)', type: 'number', placeholder: 'Auto-calculated if per RSF entered' },
-    { key: 'managementFeePct', label: 'Management Fee (% of base rent)', type: 'number', step: '0.01', placeholder: 'e.g. 3 for 3%' },
+    { key: 'managementFee', label: 'Management Fee', type: 'custom_mgmt_fee' },
     { key: 'parkingSpots', label: 'Parking Spots', type: 'number' },
     { key: 'parkingRate', label: 'Parking Rate (per spot/mo)', type: 'number', step: '0.01' },
     { key: 'parkingEscalation', label: 'Parking Escalation %', type: 'number', step: '0.01' },
@@ -16977,6 +17398,8 @@ function rfpShowReviewForm(terms, meta) {
     formHtml += '<label class="rfp-form-label">' + f.label + '</label>';
     if (f.type === 'textarea') {
       formHtml += '<textarea class="rfp-form-input rfp-textarea" id="rfp-field-' + f.key + '" placeholder="' + (f.placeholder || '') + '">' + val + '</textarea>';
+    } else if (f.type === 'custom_mgmt_fee') {
+      formHtml += rfpBuildMgmtFeeUI(terms);
     } else {
       formHtml += '<input class="rfp-form-input" id="rfp-field-' + f.key + '" type="' + f.type + '"' +
         (f.step ? ' step="' + f.step + '"' : '') +
@@ -16988,6 +17411,12 @@ function rfpShowReviewForm(terms, meta) {
     // After Base Rent field, render the rent-unit detection card
     if (f.key === 'baseRent') {
       formHtml += rfpBuildRentUnitCard(terms);
+    }
+
+    // After OPEX (monthly) field, render the OPEX advanced section (unit detection +
+    // schedule + escalation + free-opex schedule). All collapsible so the form stays clean.
+    if (f.key === 'opex') {
+      formHtml += rfpBuildOpexSection(terms);
     }
 
     // Insert TI Disbursement section after tiConstructionCost field
@@ -17244,6 +17673,28 @@ function rfpConfirmFromForm() {
     terms.total_annual_rent = terms.totalAnnualRent;
   }
 
+  // Management fee: collect basis + amount, store the right field based on basis.
+  // The custom widget renders mgmtFeeBasis (select) + mgmtFeeAmount (number).
+  // For 'pct' we map amount -> management_fee_pct (legacy). For other bases we use
+  // management_fee_amount + management_fee_basis. We always set both to keep
+  // the schema unambiguous.
+  var mgmtBasisEl = document.getElementById('rfp-field-mgmtFeeBasis');
+  var mgmtAmountEl = document.getElementById('rfp-field-mgmtFeeAmount');
+  if (mgmtBasisEl && mgmtAmountEl) {
+    var mgmtBasis = mgmtBasisEl.value || 'pct';
+    var mgmtAmount = parseFloat(mgmtAmountEl.value) || 0;
+    terms.management_fee_basis = mgmtBasis;
+    if (mgmtBasis === 'pct') {
+      terms.management_fee_pct = mgmtAmount;
+      terms.management_fee_amount = 0;
+    } else {
+      terms.management_fee_pct = 0;
+      terms.management_fee_amount = mgmtAmount;
+    }
+    // Remove the camelCase placeholder set by the field loop
+    delete terms.managementFee;
+  }
+
   // Generalized free-rent schedule: read from UI inputs if an advanced type is selected.
   // When type is empty or the section is collapsed, we intentionally leave these fields unset
   // so the API falls back to the simple free_rent_months count.
@@ -17277,6 +17728,54 @@ function rfpConfirmFromForm() {
   // Store opexRSF for reference in the saved terms
   if (terms.opexRSF) {
     terms.opex_rsf_yr = terms.opexRSF;
+  }
+
+  // OPEX advanced fields. Collect annual escalation, stepped periods, unit metadata,
+  // and free-OPEX schedule. All optional; missing fields fall back to legacy single-rate behavior.
+  var opexEscEl = document.getElementById('rfp-field-opexAnnualEscalation');
+  if (opexEscEl) {
+    var opexEscVal = parseFloat(opexEscEl.value);
+    if (!isNaN(opexEscVal) && opexEscVal > 0) terms.opex_annual_escalation_pct = opexEscVal;
+  }
+
+  // Stepped OPEX periods (collected only when the schedule UI is open)
+  var opexPeriods = rfpCollectOpexPeriods();
+  if (opexPeriods) terms.opex_periods = opexPeriods;
+
+  // OPEX unit detection metadata (hidden inputs)
+  var ouEl = document.getElementById('rfp-field-opexUnit');
+  if (ouEl) terms.opex_unit = ouEl.value || 'year';
+  var ouVEl = document.getElementById('rfp-field-opexSourceValue');
+  if (ouVEl && ouVEl.value) terms.opex_source_value = parseFloat(ouVEl.value) || 0;
+  var ouQEl = document.getElementById('rfp-field-opexSourceQuote');
+  if (ouQEl) terms.opex_source_quote = ouQEl.value || '';
+  var ouCEl = document.getElementById('rfp-field-opexDetectionConfidence');
+  if (ouCEl && ouCEl.value) terms.opex_detection_confidence = parseFloat(ouCEl.value);
+  var ouUEl = document.getElementById('rfp-field-opexUserConfirmed');
+  if (ouUEl) terms.opex_user_confirmed = ouUEl.value === '1';
+
+  // Generalized free-OPEX schedule (parallel to free rent)
+  var freeOpexTypeEl = document.getElementById('rfp-field-freeOpexType');
+  var selectedFreeOpexType = freeOpexTypeEl ? freeOpexTypeEl.value : '';
+  if (selectedFreeOpexType) {
+    terms.free_opex_type = selectedFreeOpexType;
+    if (selectedFreeOpexType === 'first_n') {
+      var elO = document.getElementById('rfp-field-freeOpexMonthsCount');
+      terms.free_opex_months_count = elO ? (parseInt(elO.value) || 0) : 0;
+    } else if (selectedFreeOpexType === 'range') {
+      var elOF = document.getElementById('rfp-field-freeOpexFrom');
+      var elOT = document.getElementById('rfp-field-freeOpexTo');
+      terms.free_opex_from = elOF ? (parseInt(elOF.value) || 0) : 0;
+      terms.free_opex_to = elOT ? (parseInt(elOT.value) || 0) : 0;
+    } else if (selectedFreeOpexType === 'month_of_year') {
+      var elOMY = document.getElementById('rfp-field-freeOpexMonthOfYear');
+      terms.free_opex_month_of_year = elOMY ? (parseInt(elOMY.value) || 0) : 0;
+    } else if (selectedFreeOpexType === 'custom') {
+      var elOC = document.getElementById('rfp-field-freeOpexCustom');
+      if (elOC && elOC.value) {
+        terms.free_opex_custom = elOC.value.split(',').map(function(s) { return parseInt(s.trim()); }).filter(function(n) { return !isNaN(n) && n > 0; });
+      }
+    }
   }
 
   rfpConfirmAndSave(meta, terms);
@@ -17888,7 +18387,14 @@ function rfpBuildCombinedView(componentMap, address) {
   compRow('TI Allowance/RSF', compTerms.map(function(t) { return t.ti_allowance_rsf || t.tiAllowancePerRSF || 0; }), 'curr_dec', '', 'Landlord contribution toward build-out, per RSF');
   compRow('TI Total', compTerms.map(function(t) { return t.ti_allowance_total || t.tiAllowanceTotal || 0; }), 'curr', '', 'Total tenant improvement allowance (RSF x TI/RSF)');
   compRow('OpEx (monthly)', compTerms.map(function(t) { return t.opex_monthly || t.opex || 0; }), 'curr', '', 'Operating expenses, taxes, CAM, insurance');
-  compRow('Management Fee %', compTerms.map(function(t) { return t.management_fee_pct || t.managementFeePct || 0; }), 'plain', '', 'Landlord management fee as % of base rent');
+  compRow('Management Fee', compTerms.map(function(t) {
+    var basis = t.management_fee_basis || t.managementFeeBasis || (t.management_fee_pct || t.managementFeePct ? 'pct' : '');
+    if (basis === 'pct') return (t.management_fee_pct || t.managementFeePct || 0) + '%';
+    if (basis === 'rsf_yr') return '$' + (t.management_fee_amount || t.managementFeeAmount || 0) + '/RSF/yr';
+    if (basis === 'rsf_mo') return '$' + (t.management_fee_amount || t.managementFeeAmount || 0) + '/RSF/mo';
+    if (basis === 'flat') return '$' + (t.management_fee_amount || t.managementFeeAmount || 0) + '/mo';
+    return 0;
+  }), 'plain', '', 'Landlord management fee (basis varies by deal)');
   compRow('Parking Spots', compTerms.map(function(t) { return t.parking_spots || t.parkingSpots || 0; }), 'plain');
   compRow('Parking Rate', compTerms.map(function(t) { return t.parking_rate_monthly || t.parkingRate || 0; }), 'curr_dec', '', 'Per spot per month');
   compRow('Security Deposit', compTerms.map(function(t) { return t.security_deposit || t.securityDeposit || 0; }), 'curr', '', 'Refundable deposit at lease commencement');
@@ -18174,7 +18680,14 @@ function rfpBuildCombinedExcelSheet(wb, cd) {
   addRow('TI Allowance/RSF', terms.map(function(t) { return t.ti_allowance_rsf || t.tiAllowancePerRSF || 0; }), 'curr_dec', 'curr_dec', 'Landlord contribution toward build-out, per RSF');
   addRow('TI Total', terms.map(function(t) { return t.ti_allowance_total || t.tiAllowanceTotal || 0; }), 'curr', 'curr', 'Total tenant improvement allowance (RSF x TI/RSF)');
   addRow('OpEx (monthly)', terms.map(function(t) { return t.opex_monthly || t.opex || 0; }), 'curr', 'curr', 'Operating expenses, taxes, CAM, insurance');
-  addRow('Management Fee %', terms.map(function(t) { return t.management_fee_pct || t.managementFeePct || 0; }), 'plain', 'plain', 'Landlord management fee as % of base rent');
+  addRow('Management Fee', terms.map(function(t) {
+    var basis = t.management_fee_basis || t.managementFeeBasis || (t.management_fee_pct || t.managementFeePct ? 'pct' : '');
+    if (basis === 'pct') return (t.management_fee_pct || t.managementFeePct || 0) + '%';
+    if (basis === 'rsf_yr') return '$' + (t.management_fee_amount || t.managementFeeAmount || 0) + '/RSF/yr';
+    if (basis === 'rsf_mo') return '$' + (t.management_fee_amount || t.managementFeeAmount || 0) + '/RSF/mo';
+    if (basis === 'flat') return '$' + (t.management_fee_amount || t.managementFeeAmount || 0) + '/mo';
+    return 0;
+  }), 'plain', 'plain', 'Landlord management fee (basis varies by deal)');
   addRow('Parking Spots', terms.map(function(t) { return t.parking_spots || t.parkingSpots || 0; }), 'plain', 'plain');
   addRow('Parking Rate', terms.map(function(t) { return t.parking_rate_monthly || t.parkingRate || 0; }), 'curr_dec', 'curr_dec', 'Per spot per month');
   addRow('Security Deposit', terms.map(function(t) { return t.security_deposit || t.securityDeposit || 0; }), 'curr', 'curr', 'Refundable deposit at lease commencement');
@@ -18743,6 +19256,8 @@ function rfpShowVersionComparison(buildingAddress) {
       opexRSF: t.opex_rsf_yr || t.opexRSF || 0,
       opex: t.opex_monthly || t.opex || 0,
       managementFeePct: t.management_fee_pct || t.managementFeePct || 0,
+      managementFeeBasis: t.management_fee_basis || t.managementFeeBasis || '',
+      managementFeeAmount: t.management_fee_amount || t.managementFeeAmount || 0,
       parkingSpots: t.parking_spots || t.parkingSpots || 0,
       parkingRate: t.parking_rate_monthly || t.parkingRate || 0,
       amortizedTIRSF: t.amortized_ti_rsf || t.amortizedTIRSF || 0,
@@ -18919,6 +19434,8 @@ function rfpBuildTermsTable(terms) {
     tiAllowanceTotal: terms.ti_allowance_total || terms.tiAllowanceTotal || 0,
     opex: terms.opex_monthly || terms.opex || 0,
     managementFeePct: terms.management_fee_pct || terms.managementFeePct || 0,
+    managementFeeBasis: terms.management_fee_basis || terms.managementFeeBasis || '',
+    managementFeeAmount: terms.management_fee_amount || terms.managementFeeAmount || 0,
     parkingSpots: terms.parking_spots || terms.parkingSpots || 0,
     parkingRate: terms.parking_rate_monthly || terms.parkingRate || 0,
     parkingEscalation: terms.parking_escalation_pct || terms.parkingEscalation || 0,
@@ -18983,8 +19500,18 @@ function rfpBuildTermsTable(terms) {
     ['OpEx (monthly)', rfpFmtCurrencyPlain(t.opex)],
     ['OpEx/SF/mo', (t.opex && t.rsf) ? rfpFmtCurrencyDecimals(t.opex / t.rsf) : '--'],
   ]);
-  if (t.managementFeePct || t.management_fee_pct) {
-    rows.push(['Management Fee', (t.managementFeePct || t.management_fee_pct) + '% of base rent']);
+  // Management fee - display in whatever basis was selected for the deal
+  var mfBasis = t.managementFeeBasis || t.management_fee_basis || ((t.managementFeePct || t.management_fee_pct) ? 'pct' : '');
+  var mfPct = t.managementFeePct || t.management_fee_pct || 0;
+  var mfAmt = t.managementFeeAmount || t.management_fee_amount || 0;
+  if (mfBasis === 'pct' && mfPct) {
+    rows.push(['Management Fee', mfPct + '% of base rent']);
+  } else if (mfBasis === 'rsf_yr' && mfAmt) {
+    rows.push(['Management Fee', rfpFmtCurrencyDecimals(mfAmt) + '/RSF/yr (flat)']);
+  } else if (mfBasis === 'rsf_mo' && mfAmt) {
+    rows.push(['Management Fee', rfpFmtCurrencyDecimals(mfAmt) + '/RSF/mo (flat)']);
+  } else if (mfBasis === 'flat' && mfAmt) {
+    rows.push(['Management Fee', rfpFmtCurrencyPlain(mfAmt) + '/mo flat']);
   }
   rows = rows.concat([
     ['Parking Spots', t.parkingSpots || '--'],
@@ -19734,6 +20261,16 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
   // term gives the correct SL equivalent.
   var mgmtFeeMonthly_sl = (cfTotals_sl.totalManagementFee || 0) / termMo_sl;
   var mgmtFeePct_sl = cfTotals_sl.managementFeePct || 0;
+  var mgmtFeeBasis_sl = cfTotals_sl.managementFeeBasis || (mgmtFeePct_sl > 0 ? 'pct' : '');
+  var mgmtFeeAmount_sl = cfTotals_sl.managementFeeAmount || 0;
+  // Build the human-readable description used in the SL row.
+  function rfpMgmtFeeDescription() {
+    if (mgmtFeeBasis_sl === 'pct') return mgmtFeePct_sl + '% of base rent, straight-line avg over term';
+    if (mgmtFeeBasis_sl === 'rsf_yr') return rfpFmtCurrencyDecimals(mgmtFeeAmount_sl) + '/RSF/yr (flat)';
+    if (mgmtFeeBasis_sl === 'rsf_mo') return rfpFmtCurrencyDecimals(mgmtFeeAmount_sl) + '/RSF/mo (flat)';
+    if (mgmtFeeBasis_sl === 'flat') return rfpFmtCurrencyPlain(mgmtFeeAmount_sl) + '/mo flat';
+    return '';
+  }
   var slMonthlyAllIn = slMonthlyRent + opexMonthly_sl + parkingMonthly_sl + mgmtFeeMonthly_sl + (slHasAmortTI ? slAmortTIMonthly : 0);
   var brokerMonthlyImpact = slBrokerFee.hasBrokerFee ? slBrokerFee.slMonthlyImpact : 0;
 
@@ -19810,7 +20347,7 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
   if (rsf_sl > 0) html += '<td style="padding:6px 0;text-align:right;font-weight:600;">' + rfpFmtCurrencyDecimals(totals.effectiveRentRSF) + '/RSF</td>';
   html += '</tr>';
   if (opexMonthly_sl > 0) slBuildRow('OpEx', opexMonthly_sl, '', 'Taxes, CAM, insurance');
-  if (mgmtFeeMonthly_sl > 0) slBuildRow('Management Fee', mgmtFeeMonthly_sl, '', mgmtFeePct_sl + '% of base rent, straight-line avg over term');
+  if (mgmtFeeMonthly_sl > 0) slBuildRow('Management Fee', mgmtFeeMonthly_sl, '', rfpMgmtFeeDescription());
   if (parkingMonthly_sl > 0) slBuildRow('Parking', parkingMonthly_sl, '');
   if (slHasAmortTI) slBuildRow('Amortized TI', slAmortTIMonthly, 'color:#dc2626;', rfpFmtCurrencyPlain(totals.amortizedTIPrincipal || 0) + ' principal at ' + (totals.amortizedTIRate || 0) + '% over ' + (totals.amortizedTITermMonths || 0) + ' months');
   if (capex.hasCapex) {
