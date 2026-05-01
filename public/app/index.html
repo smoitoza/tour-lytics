@@ -1292,6 +1292,48 @@ body {
   box-shadow: var(--shadow-md);
   font-family: var(--font-body);
   min-width: 180px;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+.map-legend::-webkit-scrollbar { width: 6px; }
+.map-legend::-webkit-scrollbar-track { background: transparent; }
+.map-legend::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+.map-legend::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* Collapsible section header (used for Survey Buildings) */
+.legend-section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  padding: 2px 0;
+  margin-bottom: var(--space-1);
+}
+.legend-section-toggle:hover .legend-section-label {
+  color: var(--color-text);
+}
+.legend-section-toggle .legend-caret {
+  font-size: 10px;
+  color: var(--color-text-faint);
+  transition: transform 0.15s ease;
+  display: inline-block;
+  line-height: 1;
+}
+.legend-section-toggle.collapsed .legend-caret {
+  transform: rotate(-90deg);
+}
+.legend-section-collapsible {
+  overflow: hidden;
+  max-height: 1000px;
+  transition: max-height 0.2s ease;
+}
+.legend-section-collapsible.collapsed {
+  max-height: 0;
 }
 
 .legend-title {
@@ -11538,9 +11580,19 @@ function buildLegendHTML() {
   var canToggle = hasTypes && hasCities;
 
   // Flat numbered list matching survey order -- no submarket grouping
+  // Auto-collapsed when > 8 buildings to keep the legend compact; user can expand.
+  // Persist expanded/collapsed state across re-renders via window._surveyLegendExpanded.
   if (surveyCount > 0) {
+    if (typeof window._surveyLegendExpanded === 'undefined') {
+      window._surveyLegendExpanded = surveyCount <= 8;
+    }
+    var collapsed = !window._surveyLegendExpanded;
     html += '<div class="legend-section">';
-    html += '<div class="legend-section-label">Survey Buildings (' + surveyCount + ')</div>';
+    html += '<div class="legend-section-toggle' + (collapsed ? ' collapsed' : '') + '" onclick="toggleSurveyLegend()">' +
+      '<span class="legend-section-label" style="margin-bottom:0;">Survey Buildings (' + surveyCount + ')</span>' +
+      '<span class="legend-caret">\u25BE</span>' +
+    '</div>';
+    html += '<div class="legend-section-collapsible' + (collapsed ? ' collapsed' : '') + '" id="survey-legend-list">';
     var sortedBuildings = SURVEY_BUILDINGS.filter(function(b) { return !b.not_interested; }).slice().sort(function(a, b) { return a.num - b.num; });
     sortedBuildings.forEach(function(b) {
       var label = b.name || b.address || ('Building ' + b.num);
@@ -11549,6 +11601,7 @@ function buildLegendHTML() {
       html += '<span class="legend-label" style="font-size:0.7rem;">' + (b.name ? b.name : b.address) + '</span>';
       html += '</div>';
     });
+    html += '</div>';
     html += '</div>';
   }
 
@@ -11567,6 +11620,23 @@ function buildLegendHTML() {
 function refreshLegend() {
   var legendDiv = document.querySelector('.map-legend');
   if (legendDiv) legendDiv.innerHTML = buildLegendHTML();
+}
+
+// Toggle the Survey Buildings list expanded/collapsed.
+// Avoids re-rendering the whole legend so scroll position is preserved.
+function toggleSurveyLegend() {
+  window._surveyLegendExpanded = !window._surveyLegendExpanded;
+  var toggle = document.querySelector('.map-legend .legend-section-toggle');
+  var list = document.getElementById('survey-legend-list');
+  if (toggle && list) {
+    if (window._surveyLegendExpanded) {
+      toggle.classList.remove('collapsed');
+      list.classList.remove('collapsed');
+    } else {
+      toggle.classList.add('collapsed');
+      list.classList.add('collapsed');
+    }
+  }
 }
 
 legend.onAdd = function(map) {
@@ -16011,11 +16081,28 @@ function rfpMapTerms(raw) {
     commencementDate: raw.commencement_date || raw.commencementDate || '',
     leaseEndDate: raw.lease_end_date || raw.leaseEndDate || '',
     baseRent: raw.base_rent_rsf || raw.baseRent || '',
+    // Rent unit detection metadata - used by review form to show dual display + confidence flag
+    baseRentUnit: raw.base_rent_unit || raw.baseRentUnit || 'year',
+    baseRentSourceValue: raw.base_rent_source_value || raw.baseRentSourceValue || 0,
+    baseRentSourceQuote: raw.base_rent_source_quote || raw.baseRentSourceQuote || '',
+    baseRentDetectionConfidence: (raw.base_rent_detection_confidence !== undefined ? raw.base_rent_detection_confidence : (raw.baseRentDetectionConfidence !== undefined ? raw.baseRentDetectionConfidence : 1.0)),
+    baseRentUserConfirmed: raw.base_rent_user_confirmed || raw.baseRentUserConfirmed || false,
+    baseRentUnitWarning: raw.base_rent_unit_warning || raw.baseRentUnitWarning || '',
     totalAnnualRent: raw.total_annual_rent || raw.totalAnnualRent || '',
     rentBasis: raw.rent_basis || raw.rentBasis || '',
     annualEscalation: raw.annual_escalation_pct || raw.annualEscalation || '',
     freeRent: raw.free_rent_months || raw.freeRent || '',
     rentPeriods: raw.rent_periods || raw.rentPeriods || null,
+    rentPeriodsUnitCorrected: raw.rent_periods_unit_corrected || raw.rentPeriodsUnitCorrected || false,
+    rentPeriodsAutoExtended: raw.rent_periods_auto_extended || raw.rentPeriodsAutoExtended || false,
+    rentPeriodsAlignmentCorrected: raw.rent_periods_alignment_corrected || raw.rentPeriodsAlignmentCorrected || false,
+    // Generalized free-rent schedule
+    freeRentType: raw.free_rent_type || raw.freeRentType || '',
+    freeRentMonthsCount: raw.free_rent_months_count || raw.freeRentMonthsCount || '',
+    freeRentFrom: raw.free_rent_from || raw.freeRentFrom || '',
+    freeRentTo: raw.free_rent_to || raw.freeRentTo || '',
+    freeRentMonthOfYear: raw.free_rent_month_of_year || raw.freeRentMonthOfYear || '',
+    freeRentCustom: raw.free_rent_custom || raw.freeRentCustom || '',
     tiAllowancePerRSF: raw.ti_allowance_rsf || raw.tiAllowancePerRSF || '',
     tiAllowanceTotal: raw.ti_allowance_total || raw.tiAllowanceTotal || '',
     opexRSF: raw.opex_rsf_yr || raw.opexRSF || '',
@@ -16024,6 +16111,7 @@ function rfpMapTerms(raw) {
     parkingRate: raw.parking_rate_monthly || raw.parkingRate || '',
     parkingEscalation: raw.parking_escalation_pct || raw.parkingEscalation || '',
     securityDeposit: raw.security_deposit || raw.securityDeposit || '',
+    managementFeePct: raw.management_fee_pct || raw.managementFeePct || '',
     structure: raw.structure || '',
     landlord: raw.landlord || '',
     notes: raw.notes || '',
@@ -16114,12 +16202,143 @@ function rfpMultiBuildingNext() {
   rfpShowNextMultiBuildingComponent();
 }
 
+// ===== FREE RENT SCHEDULE UI =====
+// Renders a CAPEX-style payout selector for free rent. Four shapes:
+//  - first_n        : first N months free (e.g. "first 9 months")
+//  - range          : months X through Y free (e.g. "months 7-12")
+//  - month_of_year  : one month per year free (e.g. "month 12 of every year")
+//  - custom         : exact list of abated month numbers (comma-separated input)
+//
+// Stores values in deal_terms via rfp-field-freeRentType/Count/From/To/MonthOfYear/Custom.
+// On save, rfpReadFreeRentSchedule (called from rfpConfirmFromForm) packs them into
+// snake_case fields the API maps to DealTerms.
+function rfpBuildFreeRentScheduleUI(terms) {
+  var t = terms.freeRentType || '';
+  // Default visibility: collapsed unless one of the new fields is set
+  var hasSchedule = !!t;
+  var n = terms.freeRentMonthsCount || '';
+  var from = terms.freeRentFrom || '';
+  var to = terms.freeRentTo || '';
+  var mOfY = terms.freeRentMonthOfYear || '';
+  var custom = terms.freeRentCustom || '';
+  if (Array.isArray(custom)) custom = custom.join(', ');
+
+  var html = '<div class="full-width" id="rfp-freerent-schedule" style="grid-column:1/-1;margin:6px 0 4px;padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;">';
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">';
+  html += '<label class="rfp-form-label" style="margin:0;font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-accent)">Free Rent Schedule (advanced)</label>';
+  html += '<button type="button" id="rfp-toggle-freerent" onclick="rfpToggleFreeRentSchedule()" style="font-size:var(--text-xs);color:var(--color-accent);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline">';
+  html += hasSchedule ? 'Use simple count above' : 'Use advanced schedule';
+  html += '</button>';
+  html += '</div>';
+  html += '<div id="rfp-freerent-fields" style="' + (hasSchedule ? '' : 'display:none') + '">';
+  html += '<div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:6px">Use this when free rent isn\u2019t just \u201Cfirst N months\u201D - e.g. partial first year, mid-lease abatements, or one month per year.</div>';
+
+  // Type selector
+  html += '<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">';
+  var types = [
+    { v: 'first_n', label: 'First N months' },
+    { v: 'range', label: 'Range of months' },
+    { v: 'month_of_year', label: 'Month of every year' },
+    { v: 'custom', label: 'Custom list' }
+  ];
+  types.forEach(function(opt) {
+    var active = (t === opt.v);
+    html += '<button type="button" data-freerent-type="' + opt.v + '" onclick="rfpSetFreeRentType(\'' + opt.v + '\')" style="padding:5px 10px;font-size:var(--text-xs);font-weight:600;border-radius:4px;cursor:pointer;border:1px solid ' + (active ? 'var(--color-accent)' : '#cbd5e1') + ';background:' + (active ? 'var(--color-accent)' : '#fff') + ';color:' + (active ? '#fff' : '#475569') + ';">' + opt.label + '</button>';
+  });
+  html += '</div>';
+  html += '<input type="hidden" id="rfp-field-freeRentType" value="' + t + '" />';
+
+  // Type-specific inputs (only the relevant one shown)
+  var inputBase = 'padding:6px 8px;font-size:var(--text-sm);border:1px solid #cbd5e1;border-radius:4px;width:100%;box-sizing:border-box;';
+
+  // first_n
+  html += '<div data-freerent-section="first_n" style="' + (t === 'first_n' ? '' : 'display:none') + ';display:' + (t === 'first_n' ? 'grid' : 'none') + ';grid-template-columns:1fr;gap:6px">';
+  html += '<div><label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">Number of free months at start</label>';
+  html += '<input type="number" min="0" id="rfp-field-freeRentMonthsCount" value="' + (n || '') + '" placeholder="e.g. 9" style="' + inputBase + '" />';
+  html += '</div></div>';
+
+  // range
+  html += '<div data-freerent-section="range" style="display:' + (t === 'range' ? 'grid' : 'none') + ';grid-template-columns:1fr 1fr;gap:6px">';
+  html += '<div><label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">From month</label>';
+  html += '<input type="number" min="1" id="rfp-field-freeRentFrom" value="' + (from || '') + '" placeholder="e.g. 7" style="' + inputBase + '" /></div>';
+  html += '<div><label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">To month</label>';
+  html += '<input type="number" min="1" id="rfp-field-freeRentTo" value="' + (to || '') + '" placeholder="e.g. 12" style="' + inputBase + '" /></div>';
+  html += '</div>';
+
+  // month_of_year
+  html += '<div data-freerent-section="month_of_year" style="display:' + (t === 'month_of_year' ? 'grid' : 'none') + ';grid-template-columns:1fr;gap:6px">';
+  html += '<div><label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">Which month of each lease year? (1-12)</label>';
+  html += '<input type="number" min="1" max="12" id="rfp-field-freeRentMonthOfYear" value="' + (mOfY || '') + '" placeholder="e.g. 12 = abate Dec each year" style="' + inputBase + '" />';
+  html += '<div style="font-size:10px;color:var(--color-text-muted);margin-top:3px">Abates that month in every lease year (months 12, 24, 36, ...)</div>';
+  html += '</div></div>';
+
+  // custom
+  html += '<div data-freerent-section="custom" style="display:' + (t === 'custom' ? 'grid' : 'none') + ';grid-template-columns:1fr;gap:6px">';
+  html += '<div><label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">Specific abated months (comma-separated)</label>';
+  html += '<input type="text" id="rfp-field-freeRentCustom" value="' + (custom || '') + '" placeholder="e.g. 1, 2, 3, 13, 25" style="' + inputBase + '" />';
+  html += '<div style="font-size:10px;color:var(--color-text-muted);margin-top:3px">Lists exact month numbers from lease commencement.</div>';
+  html += '</div></div>';
+
+  html += '</div>'; // close fields
+  html += '</div>'; // close container
+  return html;
+}
+
+function rfpToggleFreeRentSchedule() {
+  var fields = document.getElementById('rfp-freerent-fields');
+  var btn = document.getElementById('rfp-toggle-freerent');
+  if (!fields || !btn) return;
+  var hidden = fields.style.display === 'none';
+  if (hidden) {
+    fields.style.display = '';
+    btn.textContent = 'Use simple count above';
+    // If no type selected yet, default to first_n
+    var typeEl = document.getElementById('rfp-field-freeRentType');
+    if (typeEl && !typeEl.value) rfpSetFreeRentType('first_n');
+  } else {
+    fields.style.display = 'none';
+    btn.textContent = 'Use advanced schedule';
+    // Clear the type so the simple count above takes effect again
+    var typeEl2 = document.getElementById('rfp-field-freeRentType');
+    if (typeEl2) typeEl2.value = '';
+    document.querySelectorAll('[data-freerent-type]').forEach(function(b) {
+      b.style.background = '#fff';
+      b.style.color = '#475569';
+      b.style.borderColor = '#cbd5e1';
+    });
+  }
+}
+
+function rfpSetFreeRentType(type) {
+  var typeEl = document.getElementById('rfp-field-freeRentType');
+  if (typeEl) typeEl.value = type;
+  // Toggle selector buttons
+  document.querySelectorAll('[data-freerent-type]').forEach(function(b) {
+    var active = b.getAttribute('data-freerent-type') === type;
+    b.style.background = active ? 'var(--color-accent)' : '#fff';
+    b.style.color = active ? '#fff' : '#475569';
+    b.style.borderColor = active ? 'var(--color-accent)' : '#cbd5e1';
+  });
+  // Show only the matching section
+  document.querySelectorAll('[data-freerent-section]').forEach(function(s) {
+    s.style.display = (s.getAttribute('data-freerent-section') === type) ? 'grid' : 'none';
+  });
+}
+
 // ===== STEPPED RENT PERIODS UI =====
+// Schedule rates are ALWAYS stored as annual ($/RSF/yr) in rent_rsf_yr.
+// When the active rent unit is 'month', the rate column displays the value
+// as monthly (annual / 12) and converts back to annual on save.
 function rfpBuildRentPeriodsUI(periods) {
   var html = '<div id="rfp-rent-periods-list">';
   if (periods && periods.length > 0) {
+    // Pass each row the prior PAID rate so it can compute Esc % at build time
+    // (we cannot rely on DOM walk during HTML string construction).
+    var lastPaidAnnual = null;
     periods.forEach(function(p, i) {
-      html += rfpRentPeriodRow(i, p);
+      html += rfpRentPeriodRow(i, p, lastPaidAnnual);
+      var thisAnnual = (p && p.rent_rsf_yr != null && p.rent_rsf_yr !== '') ? Number(p.rent_rsf_yr) : null;
+      if (thisAnnual != null && thisAnnual > 0) lastPaidAnnual = thisAnnual;
     });
   }
   html += '</div>';
@@ -16127,9 +16346,44 @@ function rfpBuildRentPeriodsUI(periods) {
   return html;
 }
 
-function rfpRentPeriodRow(index, period) {
-  var p = period || { from_month: '', to_month: '', rent_rsf_yr: '', billable_rsf: '', label: '' };
-  return '<div class="rfp-rent-period-row" data-index="' + index + '" style="display:grid;grid-template-columns:1fr 1fr 1.2fr 1fr 1.5fr auto;gap:6px;align-items:end;margin-bottom:6px">' +
+// Returns 'month' if the active rent unit is monthly, else 'year'.
+function rfpCurrentRentUnit() {
+  if (_rfpReviewState && _rfpReviewState.terms) {
+    return ((_rfpReviewState.terms.baseRentUnit || 'year').toLowerCase() === 'month') ? 'month' : 'year';
+  }
+  return 'year';
+}
+
+function rfpRentPeriodRow(index, period, priorAnnualOverride) {
+  var p = period || { from_month: '', to_month: '', rent_rsf_yr: '', billable_rsf: '', label: '', is_free_rent: false };
+  var unit = rfpCurrentRentUnit();
+  var headerLabel = unit === 'month' ? 'Rate/RSF/mo' : 'Rate/RSF/yr';
+  // Stored value is always annual; display as monthly when unit is month
+  var annualVal = (p.rent_rsf_yr != null && p.rent_rsf_yr !== '') ? Number(p.rent_rsf_yr) : null;
+  var displayVal = '';
+  if (annualVal != null) {
+    displayVal = (unit === 'month' ? (annualVal / 12) : annualVal).toFixed(2);
+  }
+  var isFree = !!p.is_free_rent;
+  // Esc % column: implied escalation from the prior period's rate.
+  // priorAnnualOverride is passed in by rfpBuildRentPeriodsUI during initial render.
+  // For DOM-based recompute we fall back to walking the live DOM via rfpReadPriorPeriodAnnual.
+  // Round to 1 decimal so common values display cleanly (3.5, 3.0, 2.5) without
+  // visual noise from LLM rounding drift in the underlying $/RSF values.
+  var escDisplay = '';
+  var prevAnnual = (priorAnnualOverride != null) ? priorAnnualOverride : rfpReadPriorPeriodAnnual(index);
+  if (annualVal != null && annualVal > 0 && prevAnnual && prevAnnual > 0) {
+    var pct = ((annualVal / prevAnnual) - 1) * 100;
+    escDisplay = pct.toFixed(1);
+  }
+  // Period shows dash for Esc % only when there is truly no prior period to compare to
+  var escIsDash = !prevAnnual || prevAnnual <= 0;
+  // Free toggle button: green when active, gray pill when inactive
+  var freeBtnStyle = isFree
+    ? 'background:#16a34a;color:#fff;border:1px solid #16a34a;'
+    : 'background:#fff;color:#94a3b8;border:1px solid #cbd5e1;';
+  var rowBg = isFree ? 'background:rgba(22,163,74,0.05);' : '';
+  return '<div class="rfp-rent-period-row" data-index="' + index + '" data-free="' + (isFree ? '1' : '0') + '" style="display:grid;grid-template-columns:0.85fr 0.85fr 1.05fr 0.85fr 1fr 0.55fr 1.2fr auto;gap:6px;align-items:end;margin-bottom:6px;padding:4px 6px;border-radius:4px;' + rowBg + '">' +
     '<div>' +
       (index === 0 ? '<label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">From Mo.</label>' : '') +
       '<input class="rfp-form-input" type="number" min="1" value="' + (p.from_month || '') + '" data-field="from_month" style="padding:6px 8px;font-size:var(--text-sm)" />' +
@@ -16139,8 +16393,19 @@ function rfpRentPeriodRow(index, period) {
       '<input class="rfp-form-input" type="number" min="1" value="' + (p.to_month || '') + '" data-field="to_month" style="padding:6px 8px;font-size:var(--text-sm)" />' +
     '</div>' +
     '<div>' +
-      (index === 0 ? '<label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">Rate/RSF/yr</label>' : '') +
-      '<input class="rfp-form-input" type="number" step="0.01" min="0" value="' + (p.rent_rsf_yr != null ? p.rent_rsf_yr : '') + '" data-field="rent_rsf_yr" placeholder="0 = free" style="padding:6px 8px;font-size:var(--text-sm)" />' +
+      (index === 0 ? '<label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">' + headerLabel + '</label>' : '') +
+      '<input class="rfp-form-input rfp-period-rate" type="number" step="0.01" min="0" value="' + displayVal + '" data-field="rent_rsf_yr" data-display-unit="' + unit + '" placeholder="0" style="padding:6px 8px;font-size:var(--text-sm)" oninput="rfpOnRateInput(this)" />' +
+    '</div>' +
+    '<div>' +
+      (index === 0 ? '<label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">Esc %</label>' : '') +
+      (escIsDash
+        ? '<input class="rfp-form-input" type="text" value="\u2014" data-field="escalation_pct" disabled style="padding:6px 8px;font-size:var(--text-sm);text-align:center;color:var(--color-text-muted);background:#f8fafc" />'
+        : '<input class="rfp-form-input rfp-period-esc" type="number" step="0.01" value="' + escDisplay + '" data-field="escalation_pct" placeholder="—" style="padding:6px 8px;font-size:var(--text-sm)" oninput="rfpOnEscInput(this)" />'
+      ) +
+    '</div>' +
+    '<div>' +
+      (index === 0 ? '<label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">Free?</label>' : '') +
+      '<button type="button" data-field="is_free_rent" data-value="' + (isFree ? '1' : '0') + '" onclick="rfpToggleFreeRent(this)" style="' + freeBtnStyle + 'padding:6px 8px;font-size:var(--text-xs);font-weight:600;border-radius:4px;cursor:pointer;width:100%;" title="Mark this period as free rent (no cash due, but rate still escalates)">' + (isFree ? 'FREE' : 'paid') + '</button>' +
     '</div>' +
     '<div>' +
       (index === 0 ? '<label class="rfp-form-label" style="font-size:10px;margin-bottom:2px">Billable RSF</label>' : '') +
@@ -16154,6 +16419,174 @@ function rfpRentPeriodRow(index, period) {
       '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
     '</button>' +
   '</div>';
+}
+
+// Read the prior period's annual contractual rate (canonical) by walking back through the DOM.
+// Returns the rate regardless of free-rent status, since contractual rates are always meaningful.
+function rfpReadPriorPeriodAnnual(currentIndex) {
+  var list = document.getElementById('rfp-rent-periods-list');
+  if (!list) return null;
+  var rows = list.querySelectorAll('.rfp-rent-period-row');
+  for (var i = currentIndex - 1; i >= 0; i--) {
+    if (!rows[i]) continue;
+    var rateEl = rows[i].querySelector('[data-field="rent_rsf_yr"]');
+    if (!rateEl) continue;
+    var v = parseFloat(rateEl.value);
+    if (isNaN(v) || v <= 0) continue;
+    var displayUnit = rateEl.getAttribute('data-display-unit') || 'year';
+    return displayUnit === 'month' ? v * 12 : v;
+  }
+  return null;
+}
+
+function rfpReadNextPeriodAnnual(currentIndex) {
+  var list = document.getElementById('rfp-rent-periods-list');
+  if (!list) return null;
+  var rows = list.querySelectorAll('.rfp-rent-period-row');
+  for (var i = currentIndex + 1; i < rows.length; i++) {
+    if (!rows[i]) continue;
+    var rateEl = rows[i].querySelector('[data-field="rent_rsf_yr"]');
+    if (!rateEl) continue;
+    var v = parseFloat(rateEl.value);
+    if (isNaN(v) || v <= 0) continue;
+    var displayUnit = rateEl.getAttribute('data-display-unit') || 'year';
+    return displayUnit === 'month' ? v * 12 : v;
+  }
+  return null;
+}
+
+// Toggle a row between FREE and paid. Updates the button visual + row background
+// and the data-free attribute. Storage: rfpCollectRentPeriods reads is_free_rent
+// from the data-value attribute when serializing.
+function rfpToggleFreeRent(btn) {
+  var row = btn.closest('.rfp-rent-period-row');
+  if (!row) return;
+  var current = btn.getAttribute('data-value') === '1';
+  var nextVal = !current;
+  btn.setAttribute('data-value', nextVal ? '1' : '0');
+  btn.textContent = nextVal ? 'FREE' : 'paid';
+  row.setAttribute('data-free', nextVal ? '1' : '0');
+  if (nextVal) {
+    btn.style.cssText = 'background:#16a34a;color:#fff;border:1px solid #16a34a;padding:6px 8px;font-size:var(--text-xs);font-weight:600;border-radius:4px;cursor:pointer;width:100%;';
+    row.style.background = 'rgba(22,163,74,0.05)';
+  } else {
+    btn.style.cssText = 'background:#fff;color:#94a3b8;border:1px solid #cbd5e1;padding:6px 8px;font-size:var(--text-xs);font-weight:600;border-radius:4px;cursor:pointer;width:100%;';
+    row.style.background = '';
+  }
+}
+
+// User edits a rate in row N. Refresh row N's Esc % display, then cascade-down:
+// each row below uses its OWN current Esc % to re-escalate from the new prior rate.
+// This preserves the user's intent: "if year 6 was 3%, year 6 stays 3% relative
+// to year 5's new value" - editing one rate ripples cleanly without resetting later years.
+function rfpOnRateInput(rateEl) {
+  var row = rateEl.closest('.rfp-rent-period-row');
+  if (!row) return;
+  var index = parseInt(row.getAttribute('data-index')) || 0;
+  rfpRecomputeRowEsc(index);   // refresh this row's Esc display
+  rfpCascadeRecompute(index + 1); // walk forward, re-escalate each row by its own Esc %
+}
+
+// User edits an Esc % in row N. Recompute row N's rate from prior_rate * (1 + esc/100),
+// then cascade-down: each row below uses its OWN Esc % to re-escalate from the new prior.
+function rfpOnEscInput(escEl) {
+  var row = escEl.closest('.rfp-rent-period-row');
+  if (!row) return;
+  var index = parseInt(row.getAttribute('data-index')) || 0;
+  if (index === 0) return; // period 1 has no prior
+  var pct = parseFloat(escEl.value);
+  if (isNaN(pct)) return;
+  var prior = rfpReadPriorPeriodAnnual(index);
+  if (!prior || prior <= 0) return;
+  var newAnnual = prior * (1 + pct / 100);
+  // Write back into the rate input in its display unit
+  var list = document.getElementById('rfp-rent-periods-list');
+  if (!list) return;
+  var rows = list.querySelectorAll('.rfp-rent-period-row');
+  if (!rows[index]) return;
+  var rateEl = rows[index].querySelector('[data-field="rent_rsf_yr"]');
+  if (!rateEl) return;
+  var displayUnit = rateEl.getAttribute('data-display-unit') || 'year';
+  var displayVal = displayUnit === 'month' ? newAnnual / 12 : newAnnual;
+  rateEl.value = displayVal.toFixed(2);
+  // Cascade-down: each row below re-escalates using its own existing Esc %
+  rfpCascadeRecompute(index + 1);
+}
+
+// Cascade-down recompute: walk from startIndex to end. For each row, READ its
+// current displayed Esc %, then compute newRate = priorAnnual * (1 + esc/100)
+// and write it back to the rate input. After updating the rate, the row's Esc %
+// display stays the same (because we used it as the input). The next row sees
+// the updated rate as its prior.
+//
+// Rows in free-rent state get their contractual rate updated too (the rate is
+// what would be charged if not abated, so it must continue to escalate).
+//
+// If a row has no Esc % set (e.g. user cleared it) or it's not a number, we
+// leave that row's rate unchanged and continue cascading from there. This handles
+// edge cases like a non-escalating period in the middle of the schedule.
+function rfpCascadeRecompute(startIndex) {
+  var list = document.getElementById('rfp-rent-periods-list');
+  if (!list) return;
+  var rows = list.querySelectorAll('.rfp-rent-period-row');
+  for (var i = startIndex; i < rows.length; i++) {
+    var rowEl = rows[i];
+    if (!rowEl) continue;
+    var rateEl = rowEl.querySelector('[data-field="rent_rsf_yr"]');
+    var escEl = rowEl.querySelector('[data-field="escalation_pct"]');
+    if (!rateEl) continue;
+    var prior = rfpReadPriorPeriodAnnual(i);
+    if (!prior || prior <= 0) {
+      // No prior rate available - skip this row (Esc % is undefined here),
+      // and just refresh display. Don't cascade past it.
+      rfpRecomputeRowEsc(i);
+      continue;
+    }
+    // Use the row's CURRENT Esc % (its existing escalation factor, preserved).
+    var pct = NaN;
+    if (escEl && !escEl.disabled) {
+      pct = parseFloat(escEl.value);
+    }
+    if (isNaN(pct)) {
+      // Row has no Esc % (e.g. disabled-dash row, or user cleared it).
+      // Leave its rate untouched and refresh display so the dashboard stays consistent.
+      rfpRecomputeRowEsc(i);
+      continue;
+    }
+    var newAnnual = prior * (1 + pct / 100);
+    var displayUnit = rateEl.getAttribute('data-display-unit') || 'year';
+    var displayVal = displayUnit === 'month' ? newAnnual / 12 : newAnnual;
+    rateEl.value = displayVal.toFixed(2);
+    // Esc % stays as-is; we used it as input. Just normalize display in case it had drift.
+    rfpRecomputeRowEsc(i);
+  }
+}
+
+// Recompute a single row's Esc % display from its current rate vs prior rate.
+function rfpRecomputeRowEsc(index) {
+  if (index <= 0) return; // period 1 stays as dash
+  var list = document.getElementById('rfp-rent-periods-list');
+  if (!list) return;
+  var rows = list.querySelectorAll('.rfp-rent-period-row');
+  if (!rows[index]) return;
+  var rateEl = rows[index].querySelector('[data-field="rent_rsf_yr"]');
+  var escEl = rows[index].querySelector('[data-field="escalation_pct"]');
+  if (!rateEl || !escEl) return;
+  var rate = parseFloat(rateEl.value);
+  if (isNaN(rate) || rate <= 0) {
+    escEl.value = '';
+    return;
+  }
+  var displayUnit = rateEl.getAttribute('data-display-unit') || 'year';
+  var annual = displayUnit === 'month' ? rate * 12 : rate;
+  var prior = rfpReadPriorPeriodAnnual(index);
+  if (!prior || prior <= 0) {
+    escEl.value = '';
+    return;
+  }
+  var pct = ((annual / prior) - 1) * 100;
+  // Round to 1 decimal so 3.49% displays as 3.5, matching the initial render
+  escEl.value = pct.toFixed(1);
 }
 
 function rfpAddRentPeriod() {
@@ -16232,18 +16665,26 @@ function rfpCollectRentPeriods() {
     var rateEl = row.querySelector('[data-field="rent_rsf_yr"]');
     var billableEl = row.querySelector('[data-field="billable_rsf"]');
     var labelEl = row.querySelector('[data-field="label"]');
+    var freeEl = row.querySelector('[data-field="is_free_rent"]');
     var fromMonth = fromEl ? parseInt(fromEl.value) : 0;
     var toMonth = toEl ? parseInt(toEl.value) : 0;
     var rate = rateEl ? parseFloat(rateEl.value) : 0;
     var billableRSF = billableEl && billableEl.value ? parseInt(billableEl.value) : null;
     var label = labelEl ? labelEl.value.trim() : '';
+    var isFree = freeEl ? (freeEl.getAttribute('data-value') === '1') : false;
+    // If the field was displayed in monthly units, convert back to annual for storage
+    var displayUnit = rateEl ? rateEl.getAttribute('data-display-unit') : 'year';
+    if (!isNaN(rate) && rate > 0 && displayUnit === 'month') {
+      rate = rate * 12;
+    }
     if (fromMonth > 0 && toMonth > 0) {
       var entry = {
         from_month: fromMonth,
         to_month: toMonth,
-        rent_rsf_yr: isNaN(rate) ? 0 : rate,
+        rent_rsf_yr: isNaN(rate) ? 0 : Math.round(rate * 100) / 100,
         label: label
       };
+      if (isFree) entry.is_free_rent = true;
       if (billableRSF && billableRSF > 0) entry.billable_rsf = billableRSF;
       periods.push(entry);
     }
@@ -16295,9 +16736,205 @@ function rfpCollectTIMilestones() {
   return milestones.length > 0 ? milestones : null;
 }
 
+// ===== RENT UNIT DETECTION CARD =====
+// Renders the dual-display ($/RSF/month + $/RSF/yr) + confidence badge + override toggle
+// that appears below the Base Rent input in the review form.
+function rfpBuildRentUnitCard(terms) {
+  var annualRent = parseFloat(terms.baseRent) || 0;
+  if (annualRent <= 0) {
+    // No rent data yet - hide the card entirely (e.g. blank counter-proposal)
+    return '';
+  }
+  var unit = (terms.baseRentUnit || 'year').toLowerCase();
+  var sourceQuote = terms.baseRentSourceQuote || '';
+  var confidence = (terms.baseRentDetectionConfidence !== undefined && terms.baseRentDetectionConfidence !== null)
+    ? Number(terms.baseRentDetectionConfidence) : 1.0;
+  var confirmed = !!terms.baseRentUserConfirmed;
+  var warning = terms.baseRentUnitWarning || '';
+
+  var monthlyRSF = annualRent / 12;
+  var asQuoted = unit === 'month' ? monthlyRSF : annualRent;
+
+  // Confidence styling
+  var badgeColor = '#16a34a';   // green
+  var badgeBg = 'rgba(22,163,74,0.1)';
+  var badgeLabel = 'High confidence';
+  if (confidence < 0.5) {
+    badgeColor = '#dc2626'; badgeBg = 'rgba(220,38,38,0.1)'; badgeLabel = 'Low confidence';
+  } else if (confidence < 0.85) {
+    badgeColor = '#b45309'; badgeBg = 'rgba(180,83,9,0.1)'; badgeLabel = 'Please verify';
+  }
+  if (confirmed) {
+    badgeColor = '#16a34a'; badgeBg = 'rgba(22,163,74,0.1)'; badgeLabel = 'Confirmed';
+  }
+
+  var s = '<div class="full-width" id="rfp-rent-unit-card" style="grid-column:1/-1;margin:8px 0 12px;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;font-size:var(--text-sm);">';
+
+  // Top row: dual display
+  s += '<div style="display:flex;gap:24px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px;">';
+  s += '<div>' +
+    '<div style="font-size:var(--text-xs);color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.05em;">$ / RSF / month</div>' +
+    '<div id="rfp-rent-display-month" style="font-weight:600;font-size:var(--text-base);' + (unit === 'month' ? 'color:#2563eb' : 'color:var(--color-text)') + '">$' + monthlyRSF.toFixed(2) + (unit === 'month' ? ' \u25C0\uFE0F as quoted' : '') + '</div>' +
+  '</div>';
+  s += '<div>' +
+    '<div style="font-size:var(--text-xs);color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.05em;">$ / RSF / year</div>' +
+    '<div id="rfp-rent-display-year" style="font-weight:600;font-size:var(--text-base);' + (unit === 'year' ? 'color:#2563eb' : 'color:var(--color-text)') + '">$' + annualRent.toFixed(2) + (unit === 'year' ? ' \u25C0\uFE0F as quoted' : '') + '</div>' +
+    '<div style="font-size:var(--text-xs);color:var(--color-text-muted);">used in cash flow</div>' +
+  '</div>';
+  s += '</div>';
+
+  // Detection info row
+  s += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">';
+  s += '<span id="rfp-rent-detected-label" style="font-size:var(--text-xs);color:var(--color-text-muted);">Detected unit: <strong style="color:var(--color-text);">per ' + unit + '</strong></span>';
+  s += '<span id="rfp-rent-confidence-badge" style="display:inline-block;padding:2px 8px;border-radius:10px;background:' + badgeBg + ';color:' + badgeColor + ';font-size:var(--text-xs);font-weight:600;">' + badgeLabel + ' (' + Math.round(confidence * 100) + '%)</span>';
+  s += '</div>';
+
+  // Source quote (if any)
+  if (sourceQuote) {
+    s += '<div style="font-size:var(--text-xs);color:var(--color-text-muted);font-style:italic;margin-bottom:6px;padding:4px 8px;background:#fff;border-left:3px solid #cbd5e1;border-radius:2px;">' +
+      '\u201C' + String(sourceQuote).replace(/</g, '&lt;').slice(0, 200) + '\u201D' +
+    '</div>';
+  }
+
+  // Warning banner for outlier validation
+  if (warning) {
+    s += '<div style="font-size:var(--text-xs);color:#b45309;background:rgba(180,83,9,0.08);padding:4px 8px;border-radius:4px;margin-bottom:6px;">\u26A0 ' + warning + '</div>';
+  }
+
+  // Override action: "Switch to per year/month"
+  var otherUnit = unit === 'month' ? 'year' : 'month';
+  s += '<div style="display:flex;gap:8px;flex-wrap:wrap;">';
+  if (!confirmed) {
+    s += '<button type="button" onclick="rfpConfirmRentUnit()" style="padding:5px 12px;background:#16a34a;color:#fff;border:none;border-radius:4px;font-size:var(--text-xs);font-weight:600;cursor:pointer;">\u2713 Confirm: per ' + unit + '</button>';
+  }
+  s += '<button type="button" onclick="rfpToggleRentUnit()" style="padding:5px 12px;background:#fff;color:#475569;border:1px solid #cbd5e1;border-radius:4px;font-size:var(--text-xs);font-weight:600;cursor:pointer;">Switch to per ' + otherUnit + '</button>';
+  s += '</div>';
+
+  s += '</div>';
+  return s;
+}
+
+// User clicks Confirm. Mark as user-confirmed (sets confidence to 1.0 visually).
+function rfpConfirmRentUnit() {
+  if (!_rfpReviewState) return;
+  _rfpReviewState.terms.baseRentUserConfirmed = true;
+  _rfpReviewState.terms.baseRentDetectionConfidence = 1.0;
+  rfpRefreshRentUnitCard();
+}
+
+// User clicks "Switch to per year/month".
+// Per spec Option B: this means "the LLM was wrong about how to interpret the source number".
+// We flip the unit and recompute the canonical $/RSF/yr from the source value.
+//   - If switching to "year": the source value IS the annual rate. baseRent (annual) = source_value.
+//   - If switching to "month": the source value is monthly. baseRent (annual) = source_value * 12.
+// If we don't have a stored source value (e.g. legacy submission), we infer it from the current
+// canonical annual rate: switching from year->month assumes the user means the current value
+// was monthly all along (so annual = current * 12), and vice versa.
+function rfpToggleRentUnit() {
+  if (!_rfpReviewState) return;
+  var t = _rfpReviewState.terms;
+  var currentUnit = (t.baseRentUnit || 'year').toLowerCase();
+  var newUnit = currentUnit === 'month' ? 'year' : 'month';
+
+  // Preferred path: use the stored source value if present
+  var sourceVal = parseFloat(t.baseRentSourceValue) || 0;
+  var currentAnnual = parseFloat(t.baseRent) || 0;
+
+  if (sourceVal > 0) {
+    // Source value is the raw quoted number; reinterpret it under the new unit
+    if (newUnit === 'year') {
+      t.baseRent = sourceVal;
+    } else {
+      t.baseRent = sourceVal * 12;
+    }
+  } else if (currentAnnual > 0) {
+    // Legacy / no source value: interpret current annual as if it had been quoted under the new unit
+    if (newUnit === 'month') {
+      // User says "current number was actually monthly" -> annual = current * 12
+      t.baseRent = currentAnnual * 12;
+    } else {
+      // User says "current number was actually annual already" - no change to canonical (it already is annual)
+      // But to make the toggle have visible effect, we treat the current annual as the new source value
+      t.baseRent = currentAnnual;
+    }
+  }
+
+  t.baseRentUnit = newUnit;
+  t.baseRentSourceValue = newUnit === 'month' ? (parseFloat(t.baseRent) / 12) : parseFloat(t.baseRent);
+  t.baseRentUserConfirmed = true;
+  t.baseRentDetectionConfidence = 1.0;
+  // Clear validation warning since user has explicitly chosen
+  t.baseRentUnitWarning = '';
+
+  // Update the visible Base Rent input field too
+  var rentInput = document.getElementById('rfp-field-baseRent');
+  if (rentInput) rentInput.value = parseFloat(t.baseRent).toFixed(2);
+
+  rfpRefreshRentUnitCard();
+}
+
+// Re-render just the rent unit card without rebuilding the whole modal
+function rfpRefreshRentUnitCard() {
+  if (!_rfpReviewState) return;
+  var card = document.getElementById('rfp-rent-unit-card');
+  if (!card) return;
+  var fresh = rfpBuildRentUnitCard(_rfpReviewState.terms);
+  // Build a wrapper to extract the new card content
+  var wrapper = document.createElement('div');
+  wrapper.innerHTML = fresh;
+  var newCard = wrapper.querySelector('#rfp-rent-unit-card');
+  if (newCard) card.parentNode.replaceChild(newCard, card);
+  // Also re-render the rent schedule (if active) so column header and values
+  // flip between monthly/annual display.
+  rfpRefreshRentScheduleDisplay();
+}
+
+// Rebuild the rent-schedule rows from current DOM state, preserving user edits,
+// so the column header and per-row values flip between $/yr and $/mo display.
+// We collect the current annual rates from each row (using the row's data-display-unit
+// to interpret the visible value), then re-render with the new active unit.
+function rfpRefreshRentScheduleDisplay() {
+  var list = document.getElementById('rfp-rent-periods-list');
+  if (!list) return;
+  var existingRows = list.querySelectorAll('.rfp-rent-period-row');
+  if (existingRows.length === 0) return;
+  // Snapshot current state -> always-annual canonical values
+  var snapshot = [];
+  existingRows.forEach(function(row) {
+    var fromEl = row.querySelector('[data-field="from_month"]');
+    var toEl = row.querySelector('[data-field="to_month"]');
+    var rateEl = row.querySelector('[data-field="rent_rsf_yr"]');
+    var billableEl = row.querySelector('[data-field="billable_rsf"]');
+    var labelEl = row.querySelector('[data-field="label"]');
+    var freeEl = row.querySelector('[data-field="is_free_rent"]');
+    var rate = rateEl ? parseFloat(rateEl.value) : 0;
+    var displayUnit = rateEl ? rateEl.getAttribute('data-display-unit') : 'year';
+    if (!isNaN(rate) && rate > 0 && displayUnit === 'month') rate = rate * 12;
+    snapshot.push({
+      from_month: fromEl ? parseInt(fromEl.value) || '' : '',
+      to_month: toEl ? parseInt(toEl.value) || '' : '',
+      rent_rsf_yr: isNaN(rate) ? 0 : Math.round(rate * 100) / 100,
+      billable_rsf: billableEl && billableEl.value ? parseInt(billableEl.value) : '',
+      is_free_rent: freeEl ? (freeEl.getAttribute('data-value') === '1') : false,
+      label: labelEl ? labelEl.value : ''
+    });
+  });
+  // Re-render rows using the new active unit. Pass the running prior-paid rate.
+  var newHtml = '';
+  var lastPaidAnnual = null;
+  snapshot.forEach(function(p, i) {
+    newHtml += rfpRentPeriodRow(i, p, lastPaidAnnual);
+    if (p.rent_rsf_yr != null && Number(p.rent_rsf_yr) > 0) lastPaidAnnual = Number(p.rent_rsf_yr);
+  });
+  list.innerHTML = newHtml;
+}
+
 // ===== REVIEW FORM =====
+var _rfpReviewState = null;
 function rfpShowReviewForm(terms, meta) {
   if (_rfpModal) { _rfpModal.remove(); _rfpModal = null; }
+  // Store live terms object so the rent-unit card override handlers can mutate it
+  _rfpReviewState = { terms: terms, meta: meta };
 
   var fields = [
     { key: 'rsf', label: 'RSF (Rentable Sq Ft)', type: 'number' },
@@ -16317,6 +16954,7 @@ function rfpShowReviewForm(terms, meta) {
     { key: 'tiConstructionCost', label: 'Est. Construction Cost (optional)', type: 'number', placeholder: 'Total buildout cost estimate' },
     { key: 'opexRSF', label: 'OpEx/Tax/CAM (per RSF/yr)', type: 'number', step: '0.01', placeholder: 'e.g. 18.00' },
     { key: 'opex', label: 'OpEx (monthly override)', type: 'number', placeholder: 'Auto-calculated if per RSF entered' },
+    { key: 'managementFeePct', label: 'Management Fee (% of base rent)', type: 'number', step: '0.01', placeholder: 'e.g. 3 for 3%' },
     { key: 'parkingSpots', label: 'Parking Spots', type: 'number' },
     { key: 'parkingRate', label: 'Parking Rate (per spot/mo)', type: 'number', step: '0.01' },
     { key: 'parkingEscalation', label: 'Parking Escalation %', type: 'number', step: '0.01' },
@@ -16346,6 +16984,11 @@ function rfpShowReviewForm(terms, meta) {
         (f.placeholder ? ' placeholder="' + f.placeholder + '"' : '') + ' />';
     }
     formHtml += '</div>';
+
+    // After Base Rent field, render the rent-unit detection card
+    if (f.key === 'baseRent') {
+      formHtml += rfpBuildRentUnitCard(terms);
+    }
 
     // Insert TI Disbursement section after tiConstructionCost field
     if (f.key === 'tiConstructionCost') {
@@ -16390,8 +17033,9 @@ function rfpShowReviewForm(terms, meta) {
       formHtml += '</div>';
     }
 
-    // Insert Rent Schedule section after freeRent field
+    // Insert Free Rent Schedule + Rent Schedule sections after freeRent field
     if (f.key === 'freeRent') {
+      formHtml += rfpBuildFreeRentScheduleUI(terms);
       formHtml += '<div class="full-width" style="grid-column:1/-1;margin:4px 0 8px">';
       formHtml += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">';
       formHtml += '<label class="rfp-form-label" style="margin:0;font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.05em;color:var(--color-accent)">Rent Schedule</label>';
@@ -16399,6 +17043,24 @@ function rfpShowReviewForm(terms, meta) {
       formHtml += hasRentPeriods ? 'Use single rate' : 'Use stepped rates';
       formHtml += '</button>';
       formHtml += '</div>';
+      // Auto-correction notice: schedule rates were monthly, we converted them to annual
+      if (terms.rentPeriodsUnitCorrected) {
+        formHtml += '<div style="margin-bottom:8px;padding:6px 10px;font-size:var(--text-xs);color:#b45309;background:rgba(180,83,9,0.08);border-radius:4px;">' +
+          '\u26A0 Schedule rates appeared to be quoted monthly. Auto-converted to annual ($/RSF/yr) to match the cash-flow engine. Verify the values below.' +
+        '</div>';
+      }
+      // Auto-extended notice: schedule was incomplete, we filled to lease term
+      if (terms.rentPeriodsAutoExtended) {
+        formHtml += '<div style="margin-bottom:8px;padding:6px 10px;font-size:var(--text-xs);color:#1e40af;background:rgba(30,64,175,0.08);border-radius:4px;">' +
+          '\u2139 Schedule didn\u2019t cover the full lease term. Auto-extended at ' + (terms.annualEscalation || 3) + '% annual escalation. Edit any row to adjust.' +
+        '</div>';
+      }
+      // Alignment correction notice: first paid rate was off by one escalation step
+      if (terms.rentPeriodsAlignmentCorrected) {
+        formHtml += '<div style="margin-bottom:8px;padding:6px 10px;font-size:var(--text-xs);color:#b45309;background:rgba(180,83,9,0.08);border-radius:4px;">' +
+          '\u26A0 Schedule was offset by one year (extracted rates were one escalation step too high). Auto-corrected by de-escalating to align period 1 with the base rent. Verify values below.' +
+        '</div>';
+      }
       formHtml += '<div id="rfp-rent-periods-container" style="' + (hasRentPeriods ? '' : 'display:none') + '">';
       formHtml += rfpBuildRentPeriodsUI(hasRentPeriods ? terms.rentPeriods : []);
       formHtml += '</div>';
@@ -16410,7 +17072,7 @@ function rfpShowReviewForm(terms, meta) {
   var modal = document.createElement('div');
   modal.className = 'rfp-modal';
   modal.innerHTML =
-    '<div class="rfp-modal-inner" style="max-width:700px">' +
+    '<div class="rfp-modal-inner" style="max-width:min(1100px, 92vw)">' +
       '<button class="rfp-modal-close" onclick="rfpCloseModal()" title="Close">' +
         '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
       '</button>' +
@@ -16476,7 +17138,21 @@ function rfpShowReviewForm(terms, meta) {
   var baseRentInput = document.getElementById('rfp-field-baseRent');
   var rsfInput = document.getElementById('rfp-field-rsf');
   if (totalRentInput) totalRentInput.addEventListener('input', function() { rfpAutoComputeRent('fromTotal'); });
-  if (baseRentInput) baseRentInput.addEventListener('input', function() { rfpAutoComputeRent('fromBase'); });
+  if (baseRentInput) baseRentInput.addEventListener('input', function() {
+    rfpAutoComputeRent('fromBase');
+    // Keep rent-unit card display in sync with manual edits to Base Rent.
+    // Editing the field is treated as user confirming the canonical annual value.
+    if (_rfpReviewState && _rfpReviewState.terms) {
+      var v = parseFloat(baseRentInput.value) || 0;
+      _rfpReviewState.terms.baseRent = v;
+      var u = (_rfpReviewState.terms.baseRentUnit || 'year').toLowerCase();
+      _rfpReviewState.terms.baseRentSourceValue = u === 'month' ? (v / 12) : v;
+      _rfpReviewState.terms.baseRentUserConfirmed = true;
+      _rfpReviewState.terms.baseRentDetectionConfidence = 1.0;
+      _rfpReviewState.terms.baseRentUnitWarning = '';
+      rfpRefreshRentUnitCard();
+    }
+  });
   if (rsfInput) rsfInput.addEventListener('input', function() {
     // If total annual rent has a value, recompute base rent from it
     var totalEl = document.getElementById('rfp-field-totalAnnualRent');
@@ -16551,9 +17227,47 @@ function rfpConfirmFromForm() {
   if (terms.totalAnnualRent && terms.rsf && !terms.baseRent) {
     terms.baseRent = Math.round(terms.totalAnnualRent / terms.rsf * 100) / 100;
   }
+
+  // Pull through rent-unit detection metadata from the live review state.
+  // Saved as snake_case in deal_terms JSONB so it round-trips through the API.
+  if (_rfpReviewState && _rfpReviewState.terms) {
+    var rs = _rfpReviewState.terms;
+    terms.base_rent_unit = rs.baseRentUnit || 'year';
+    terms.base_rent_source_value = rs.baseRentSourceValue || 0;
+    terms.base_rent_source_quote = rs.baseRentSourceQuote || '';
+    terms.base_rent_detection_confidence = (rs.baseRentDetectionConfidence !== undefined && rs.baseRentDetectionConfidence !== null) ? rs.baseRentDetectionConfidence : 1.0;
+    terms.base_rent_user_confirmed = !!rs.baseRentUserConfirmed;
+    terms.base_rent_unit_warning = rs.baseRentUnitWarning || '';
+  }
   // Store total annual rent for reference
   if (terms.totalAnnualRent) {
     terms.total_annual_rent = terms.totalAnnualRent;
+  }
+
+  // Generalized free-rent schedule: read from UI inputs if an advanced type is selected.
+  // When type is empty or the section is collapsed, we intentionally leave these fields unset
+  // so the API falls back to the simple free_rent_months count.
+  var freeRentTypeEl = document.getElementById('rfp-field-freeRentType');
+  var selectedFreeRentType = freeRentTypeEl ? freeRentTypeEl.value : '';
+  if (selectedFreeRentType) {
+    terms.free_rent_type = selectedFreeRentType;
+    if (selectedFreeRentType === 'first_n') {
+      var el = document.getElementById('rfp-field-freeRentMonthsCount');
+      terms.free_rent_months_count = el ? (parseInt(el.value) || 0) : 0;
+    } else if (selectedFreeRentType === 'range') {
+      var elF = document.getElementById('rfp-field-freeRentFrom');
+      var elT = document.getElementById('rfp-field-freeRentTo');
+      terms.free_rent_from = elF ? (parseInt(elF.value) || 0) : 0;
+      terms.free_rent_to = elT ? (parseInt(elT.value) || 0) : 0;
+    } else if (selectedFreeRentType === 'month_of_year') {
+      var elMY = document.getElementById('rfp-field-freeRentMonthOfYear');
+      terms.free_rent_month_of_year = elMY ? (parseInt(elMY.value) || 0) : 0;
+    } else if (selectedFreeRentType === 'custom') {
+      var elC = document.getElementById('rfp-field-freeRentCustom');
+      if (elC && elC.value) {
+        terms.free_rent_custom = elC.value.split(',').map(function(s) { return parseInt(s.trim()); }).filter(function(n) { return !isNaN(n) && n > 0; });
+      }
+    }
   }
 
   // If opexRSF is set, auto-calculate monthly opex from it: (opexRSF * RSF) / 12
@@ -17174,6 +17888,7 @@ function rfpBuildCombinedView(componentMap, address) {
   compRow('TI Allowance/RSF', compTerms.map(function(t) { return t.ti_allowance_rsf || t.tiAllowancePerRSF || 0; }), 'curr_dec', '', 'Landlord contribution toward build-out, per RSF');
   compRow('TI Total', compTerms.map(function(t) { return t.ti_allowance_total || t.tiAllowanceTotal || 0; }), 'curr', '', 'Total tenant improvement allowance (RSF x TI/RSF)');
   compRow('OpEx (monthly)', compTerms.map(function(t) { return t.opex_monthly || t.opex || 0; }), 'curr', '', 'Operating expenses, taxes, CAM, insurance');
+  compRow('Management Fee %', compTerms.map(function(t) { return t.management_fee_pct || t.managementFeePct || 0; }), 'plain', '', 'Landlord management fee as % of base rent');
   compRow('Parking Spots', compTerms.map(function(t) { return t.parking_spots || t.parkingSpots || 0; }), 'plain');
   compRow('Parking Rate', compTerms.map(function(t) { return t.parking_rate_monthly || t.parkingRate || 0; }), 'curr_dec', '', 'Per spot per month');
   compRow('Security Deposit', compTerms.map(function(t) { return t.security_deposit || t.securityDeposit || 0; }), 'curr', '', 'Refundable deposit at lease commencement');
@@ -17459,6 +18174,7 @@ function rfpBuildCombinedExcelSheet(wb, cd) {
   addRow('TI Allowance/RSF', terms.map(function(t) { return t.ti_allowance_rsf || t.tiAllowancePerRSF || 0; }), 'curr_dec', 'curr_dec', 'Landlord contribution toward build-out, per RSF');
   addRow('TI Total', terms.map(function(t) { return t.ti_allowance_total || t.tiAllowanceTotal || 0; }), 'curr', 'curr', 'Total tenant improvement allowance (RSF x TI/RSF)');
   addRow('OpEx (monthly)', terms.map(function(t) { return t.opex_monthly || t.opex || 0; }), 'curr', 'curr', 'Operating expenses, taxes, CAM, insurance');
+  addRow('Management Fee %', terms.map(function(t) { return t.management_fee_pct || t.managementFeePct || 0; }), 'plain', 'plain', 'Landlord management fee as % of base rent');
   addRow('Parking Spots', terms.map(function(t) { return t.parking_spots || t.parkingSpots || 0; }), 'plain', 'plain');
   addRow('Parking Rate', terms.map(function(t) { return t.parking_rate_monthly || t.parkingRate || 0; }), 'curr_dec', 'curr_dec', 'Per spot per month');
   addRow('Security Deposit', terms.map(function(t) { return t.security_deposit || t.securityDeposit || 0; }), 'curr', 'curr', 'Refundable deposit at lease commencement');
@@ -17840,6 +18556,7 @@ function rfpShowVersionComparison(buildingAddress) {
     { key: 'opexRSF', label: 'OpEx/Tax/CAM (per RSF/yr)', fmt: 'currency_dec' },
     { key: 'opexPerSFMo', label: 'OpEx/SF/mo', fmt: 'currency_dec', computed: 'opexPerSFMo' },
     { key: 'opex', label: 'OpEx (monthly total)', fmt: 'currency' },
+    { key: 'managementFeePct', label: 'Management Fee %', fmt: 'plain' },
     // Full service gross
     { key: 'fsgPerSFMo', label: 'Full Service Gross/SF/mo', fmt: 'currency_dec', computed: 'fsgPerSFMo' },
     // Parking
@@ -18025,6 +18742,7 @@ function rfpShowVersionComparison(buildingAddress) {
       tiAllowanceTotal: t.ti_allowance_total || t.tiAllowanceTotal || 0,
       opexRSF: t.opex_rsf_yr || t.opexRSF || 0,
       opex: t.opex_monthly || t.opex || 0,
+      managementFeePct: t.management_fee_pct || t.managementFeePct || 0,
       parkingSpots: t.parking_spots || t.parkingSpots || 0,
       parkingRate: t.parking_rate_monthly || t.parkingRate || 0,
       amortizedTIRSF: t.amortized_ti_rsf || t.amortizedTIRSF || 0,
@@ -18200,6 +18918,7 @@ function rfpBuildTermsTable(terms) {
     tiAllowancePerRSF: terms.ti_allowance_rsf || terms.tiAllowancePerRSF || 0,
     tiAllowanceTotal: terms.ti_allowance_total || terms.tiAllowanceTotal || 0,
     opex: terms.opex_monthly || terms.opex || 0,
+    managementFeePct: terms.management_fee_pct || terms.managementFeePct || 0,
     parkingSpots: terms.parking_spots || terms.parkingSpots || 0,
     parkingRate: terms.parking_rate_monthly || terms.parkingRate || 0,
     parkingEscalation: terms.parking_escalation_pct || terms.parkingEscalation || 0,
@@ -18263,6 +18982,11 @@ function rfpBuildTermsTable(terms) {
   rows = rows.concat([
     ['OpEx (monthly)', rfpFmtCurrencyPlain(t.opex)],
     ['OpEx/SF/mo', (t.opex && t.rsf) ? rfpFmtCurrencyDecimals(t.opex / t.rsf) : '--'],
+  ]);
+  if (t.managementFeePct || t.management_fee_pct) {
+    rows.push(['Management Fee', (t.managementFeePct || t.management_fee_pct) + '% of base rent']);
+  }
+  rows = rows.concat([
     ['Parking Spots', t.parkingSpots || '--'],
     ['Parking Rate', t.parkingRate ? rfpFmtCurrencyDecimals(t.parkingRate) + '/spot/mo' : '--'],
     ['Parking Escalation', t.parkingEscalation ? t.parkingEscalation + '%' : '--'],
@@ -18487,6 +19211,7 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
   var hasPhasedRSF = monthly.some(function(r) { return r.billableRSF && r.usableRSF && r.billableRSF !== r.usableRSF; });
   var hasAmortTI = (totals.totalAmortizedTI || 0) > 0;
   var hasTIReceived = ((totals.totalTIReceived || 0) + (totals.totalAmortTIReceived || 0)) > 0;
+  var hasMgmtFee = (totals.totalManagementFee || 0) > 0;
 
   // Internal operating costs from assumptions
   var cfAssumKey = (buildingAddr || '') + (componentLabel ? '::' + componentLabel : '');
@@ -18520,6 +19245,7 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
     (hasTIReceived ? '<th class="cell-currency" style="color:#16a34a">TI Received</th>' : '') +
     '<th class="cell-currency">Net Cash Rent</th>' +
     '<th class="cell-currency">OpEx</th>' +
+    (hasMgmtFee ? '<th class="cell-currency">Mgmt Fee</th>' : '') +
     '<th class="cell-currency">Parking</th>' +
     (hasAmortTI ? '<th class="cell-currency" style="color:#dc2626">Amort. TI</th>' : '') +
     (capex.hasCapex ? '<th class="cell-currency" style="color:#7c3aed">CAPEX</th>' : '') +
@@ -18559,6 +19285,7 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
       (hasTIReceived ? '<td class="cell-currency" style="color:#16a34a">' + (((row.tiReceived || 0) + (row.amortTIReceived || 0)) > 0 ? rfpFmtCurrency((row.tiReceived || 0) + (row.amortTIReceived || 0)) : '') + '</td>' : '') +
       '<td class="cell-currency">' + rfpFmtCurrency(row.netCashRent) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.opex) + '</td>' +
+      (hasMgmtFee ? '<td class="cell-currency">' + ((row.managementFee || 0) > 0 ? rfpFmtCurrency(row.managementFee) : '') + '</td>' : '') +
       '<td class="cell-currency">' + rfpFmtCurrency(row.parking) + '</td>' +
       (hasAmortTI ? '<td class="cell-currency" style="color:#dc2626">' + (row.amortizedTI ? rfpFmtCurrency(row.amortizedTI) : '') + '</td>' : '') +
       (capex.hasCapex ? '<td class="cell-currency" style="color:#7c3aed">' + (capexThisMonth > 0 ? rfpFmtCurrency(capexThisMonth) : '') + '</td>' : '') +
@@ -19001,7 +19728,12 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
   var cfTotals_sl = (analysis.cash_flow && analysis.cash_flow.totals) ? analysis.cash_flow.totals : {};
   var opexMonthly_sl = (cfTotals_sl.totalOpex || 0) / termMo_sl;
   var parkingMonthly_sl = (cfTotals_sl.totalParking || 0) / termMo_sl;
-  var slMonthlyAllIn = slMonthlyRent + opexMonthly_sl + parkingMonthly_sl + (slHasAmortTI ? slAmortTIMonthly : 0);
+  // Management fee: straight-line average across the lease term.
+  // totals.totalManagementFee accounts for escalations and free-rent abatement, so dividing
+  // by termMo gives an accurate SL equivalent regardless of how the fee scales month-to-month.
+  var mgmtFeeMonthly_sl = (cfTotals_sl.totalManagementFee || 0) / termMo_sl;
+  var mgmtFeePct_sl = cfTotals_sl.managementFeePct || 0;
+  var slMonthlyAllIn = slMonthlyRent + opexMonthly_sl + parkingMonthly_sl + mgmtFeeMonthly_sl + (slHasAmortTI ? slAmortTIMonthly : 0);
   var brokerMonthlyImpact = slBrokerFee.hasBrokerFee ? slBrokerFee.slMonthlyImpact : 0;
 
   // Internal assumptions (F&B, Workplace Experience, Maintenance, custom items)
@@ -19077,6 +19809,7 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
   if (rsf_sl > 0) html += '<td style="padding:6px 0;text-align:right;font-weight:600;">' + rfpFmtCurrencyDecimals(totals.effectiveRentRSF) + '/RSF</td>';
   html += '</tr>';
   if (opexMonthly_sl > 0) slBuildRow('OpEx', opexMonthly_sl, '', 'Taxes, CAM, insurance');
+  if (mgmtFeeMonthly_sl > 0) slBuildRow('Management Fee', mgmtFeeMonthly_sl, '', mgmtFeePct_sl + '% of base rent, straight-line avg over term');
   if (parkingMonthly_sl > 0) slBuildRow('Parking', parkingMonthly_sl, '');
   if (slHasAmortTI) slBuildRow('Amortized TI', slAmortTIMonthly, 'color:#dc2626;', rfpFmtCurrencyPlain(totals.amortizedTIPrincipal || 0) + ' principal at ' + (totals.amortizedTIRate || 0) + '% over ' + (totals.amortizedTITermMonths || 0) + ' months');
   if (capex.hasCapex) {

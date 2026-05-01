@@ -90,6 +90,21 @@ export async function POST(req: Request) {
     amortized_ti_rsf: rawTerms.amortized_ti_rsf ?? rawTerms.amortizedTIRSF ?? 0,
     amortized_ti_rate: rawTerms.amortized_ti_rate ?? rawTerms.amortizedTIRate ?? 0,
     amortized_ti_term_months: rawTerms.amortized_ti_term_months ?? rawTerms.amortizedTITermMonths ?? 0,
+    management_fee_pct: rawTerms.management_fee_pct ?? rawTerms.managementFeePct ?? 0,
+    // Generalized free-rent schedule (optional)
+    free_rent_type: rawTerms.free_rent_type ?? rawTerms.freeRentType ?? undefined,
+    free_rent_months_count: rawTerms.free_rent_months_count ?? rawTerms.freeRentMonthsCount ?? undefined,
+    free_rent_from: rawTerms.free_rent_from ?? rawTerms.freeRentFrom ?? undefined,
+    free_rent_to: rawTerms.free_rent_to ?? rawTerms.freeRentTo ?? undefined,
+    free_rent_month_of_year: rawTerms.free_rent_month_of_year ?? rawTerms.freeRentMonthOfYear ?? undefined,
+    free_rent_custom: rawTerms.free_rent_custom ?? rawTerms.freeRentCustom ?? undefined,
+    // Rent unit detection metadata - pass-through from extractor or user override.
+    base_rent_unit: rawTerms.base_rent_unit ?? rawTerms.baseRentUnit ?? 'year',
+    base_rent_source_value: rawTerms.base_rent_source_value ?? rawTerms.baseRentSourceValue ?? 0,
+    base_rent_source_quote: rawTerms.base_rent_source_quote ?? rawTerms.baseRentSourceQuote ?? '',
+    base_rent_detection_confidence: rawTerms.base_rent_detection_confidence ?? rawTerms.baseRentDetectionConfidence ?? 1.0,
+    base_rent_user_confirmed: rawTerms.base_rent_user_confirmed ?? rawTerms.baseRentUserConfirmed ?? false,
+    base_rent_unit_warning: rawTerms.base_rent_unit_warning ?? rawTerms.baseRentUnitWarning ?? '',
     rent_basis: rawTerms.rent_basis ?? rawTerms.rentBasis ?? '',
     structure: rawTerms.structure ?? '',
     landlord: rawTerms.landlord ?? '',
@@ -283,9 +298,10 @@ export async function DELETE(req: Request) {
 interface RentPeriod {
   from_month: number
   to_month: number
-  rent_rsf_yr: number
+  rent_rsf_yr: number       // Contractual rate. For free-rent periods this is what would be paid absent the abatement.
   billable_rsf?: number
   label?: string
+  is_free_rent?: boolean    // When true, the rate is fully abated (free rent credit = full base rent)
 }
 
 interface DealTerms {
@@ -308,6 +324,32 @@ interface DealTerms {
   amortized_ti_rsf?: number
   amortized_ti_rate?: number
   amortized_ti_term_months?: number
+  // Management fee charged as % of base rent (e.g. 3 = 3%).
+  // Applied to the contracted base rent each month. Scales with escalations.
+  // During free rent, fee is reduced proportionally so it's zero on fully-abated months.
+  management_fee_pct?: number
+  // Generalized free rent schedule (new, preferred over legacy free_rent_months/is_free_rent).
+  // Four types:
+  //   'first_n'        -> abate first free_rent_months_count months
+  //   'range'          -> abate months [free_rent_from .. free_rent_to]
+  //   'month_of_year'  -> abate one month per year (e.g. every Dec = month 12, 24, 36, ...)
+  //   'custom'         -> abate exactly the months listed in free_rent_custom
+  //   undefined        -> use legacy behavior (free_rent_months first-N or is_free_rent on periods)
+  free_rent_type?: 'first_n' | 'range' | 'month_of_year' | 'custom' | string
+  free_rent_months_count?: number
+  free_rent_from?: number
+  free_rent_to?: number
+  free_rent_month_of_year?: number
+  free_rent_custom?: number[]
+  // Rent unit detection metadata (per spec).
+  // base_rent_rsf is ALWAYS canonical $/RSF/year. These fields preserve
+  // the original quoted unit so the UI can show both and flag low-confidence detections.
+  base_rent_unit?: 'month' | 'year' | string
+  base_rent_source_value?: number
+  base_rent_source_quote?: string
+  base_rent_detection_confidence?: number
+  base_rent_user_confirmed?: boolean
+  base_rent_unit_warning?: string
   rent_basis?: string
   structure?: string
   landlord?: string
@@ -336,9 +378,11 @@ function getRentForMonth(
     // Check if month falls within a defined period
     for (const p of sorted) {
       if (month >= p.from_month && month <= p.to_month) {
+        // A period is free rent when the explicit flag is set OR (legacy) the rate is zero.
+        const free = !!p.is_free_rent || p.rent_rsf_yr === 0
         return {
           rentRSFYr: p.rent_rsf_yr,
-          isFreeRent: p.rent_rsf_yr === 0,
+          isFreeRent: free,
           billableRSF: p.billable_rsf || defaultRSF
         }
       }
@@ -364,6 +408,39 @@ function getRentForMonth(
   return { rentRSFYr: currentRentRSFYr, isFreeRent: false, billableRSF: defaultRSF }
 }
 
+// Resolve the set of abated months from the generalized free_rent_schedule fields.
+// Returns an empty set if no generalized schedule is set. Legacy free_rent_months and
+// per-period is_free_rent are NOT handled here; they're handled via existing code paths.
+function resolveFreeRentMonths(terms: DealTerms, termMonths: number): Set<number> {
+  const out = new Set<number>()
+  const t = terms.free_rent_type
+  if (!t) return out
+  if (t === 'first_n') {
+    const n = terms.free_rent_months_count || 0
+    for (let i = 1; i <= Math.min(n, termMonths); i++) out.add(i)
+  } else if (t === 'range') {
+    const from = Math.max(1, terms.free_rent_from || 1)
+    const to = Math.min(termMonths, terms.free_rent_to || 0)
+    for (let i = from; i <= to; i++) out.add(i)
+  } else if (t === 'month_of_year') {
+    // N = 12 means month 12 of every year (12, 24, 36, ...)
+    // N = 1 means month 1 of every year (1, 13, 25, ...)
+    const monthN = terms.free_rent_month_of_year || 12
+    if (monthN >= 1 && monthN <= 12) {
+      for (let y = 0; y * 12 + monthN <= termMonths; y++) {
+        out.add(y * 12 + monthN)
+      }
+    }
+  } else if (t === 'custom') {
+    const list = terms.free_rent_custom || []
+    list.forEach(m => {
+      const n = Number(m)
+      if (n >= 1 && n <= termMonths) out.add(n)
+    })
+  }
+  return out
+}
+
 function generateFinancialAnalysis(terms: DealTerms) {
   const rsf = terms.rsf || 0
   const termMonths = terms.lease_term_months || 60
@@ -372,6 +449,8 @@ function generateFinancialAnalysis(terms: DealTerms) {
   const freeMonths = terms.free_rent_months || 0
   const rentPeriods = terms.rent_periods
   const useSteppedRent = rentPeriods && rentPeriods.length > 0
+  // Generalized free-rent schedule (new). Computed once up front.
+  const generalizedFreeMonths = resolveFreeRentMonths(terms, termMonths)
   const tiRSF = terms.ti_allowance_rsf || 0
   const tiTotal = terms.ti_allowance_total || (tiRSF * rsf)
   const opexMonthly = terms.opex_monthly || 0
@@ -380,6 +459,8 @@ function generateFinancialAnalysis(terms: DealTerms) {
   const parkingEsc = (terms.parking_escalation_pct || 0) / 100
   const amortTIRSF = terms.amortized_ti_rsf || 0
   const amortTIRate = (terms.amortized_ti_rate || 0) / 100
+  // Management fee: % of contracted base rent. Stored as whole-number percent (3 = 3%).
+  const mgmtFeePct = (terms.management_fee_pct || 0) / 100
   const amortTITermMonths = (terms.amortized_ti_term_months || 0) > 0 ? terms.amortized_ti_term_months! : termMonths
   const amortTIPrincipal = amortTIRSF * rsf
   let amortTIMonthlyPayment = 0
@@ -441,6 +522,7 @@ function generateFinancialAnalysis(terms: DealTerms) {
   let totalAmortTI = 0
   let totalTIReceived = 0
   let totalAmortTIReceived = 0
+  let totalMgmtFee = 0
 
   for (let m = 1; m <= termMonths; m++) {
     const leaseYear = Math.ceil(m / 12)
@@ -463,30 +545,34 @@ function generateFinancialAnalysis(terms: DealTerms) {
       billableRSF = result.billableRSF
       // Use billable RSF (not full premises RSF) for rent calculation
       monthlyBaseRent = (currentRentRSF * billableRSF) / 12
-      // In stepped mode, $0 periods are "free rent" -- show the shadow rent as base
-      // and an equal free rent credit so Net Cash Rent = $0
-      if (currentRentRSF === 0) {
-        const sorted = [...rentPeriods!].sort((a, b) => a.from_month - b.from_month)
-        const firstPaidPeriod = sorted.find(p => p.rent_rsf_yr > 0)
-        const shadowRSF = firstPaidPeriod?.billable_rsf || rsf
-        // De-escalate the first paid period's rate back to what year 1 rate would be.
-        // The first paid period starts at firstPaidPeriod.from_month; figure out how many
-        // escalation years separate the current free month from that paid period.
-        let shadowRent = baseRentRSF
-        if (firstPaidPeriod && escalation > 0) {
-          const freeYear = Math.ceil(m / 12) // which lease year this free month is in
-          const paidYear = Math.ceil(firstPaidPeriod.from_month / 12) // lease year of first paid period
-          // De-escalate from the paid period's rate back to the free month's lease year
-          const yearsBack = paidYear - freeYear
-          shadowRent = firstPaidPeriod.rent_rsf_yr / Math.pow(1 + escalation, yearsBack)
-        } else if (firstPaidPeriod) {
-          shadowRent = firstPaidPeriod.rent_rsf_yr
-        }
-        // Show the contractual rent as base rent (what would be owed)
-        currentRentRSF = Math.round(shadowRent * 100) / 100
-        monthlyBaseRent = (currentRentRSF * shadowRSF) / 12
-        // Free rent credit offsets it fully so net cash rent = $0
+      // Generalized free rent wins: if this month is in the generalized schedule,
+      // credit the full base rent regardless of the period's is_free_rent flag.
+      const isGeneralizedFree = generalizedFreeMonths.has(m)
+      if (isGeneralizedFree && currentRentRSF > 0) {
         freeRentCredit = monthlyBaseRent
+      } else if (result.isFreeRent) {
+        // If the period has a real contractual rate, use it directly.
+        // Otherwise (legacy rate=0 case), de-escalate from the next paid period.
+        if (currentRentRSF > 0) {
+          // is_free_rent=true with contractual rate already set; just credit fully
+          freeRentCredit = monthlyBaseRent
+        } else {
+          const sorted = [...rentPeriods!].sort((a, b) => a.from_month - b.from_month)
+          const firstPaidPeriod = sorted.find(p => !p.is_free_rent && p.rent_rsf_yr > 0)
+          const shadowRSF = firstPaidPeriod?.billable_rsf || rsf
+          let shadowRent = baseRentRSF
+          if (firstPaidPeriod && escalation > 0) {
+            const freeYear = Math.ceil(m / 12)
+            const paidYear = Math.ceil(firstPaidPeriod.from_month / 12)
+            const yearsBack = paidYear - freeYear
+            shadowRent = firstPaidPeriod.rent_rsf_yr / Math.pow(1 + escalation, yearsBack)
+          } else if (firstPaidPeriod) {
+            shadowRent = firstPaidPeriod.rent_rsf_yr
+          }
+          currentRentRSF = Math.round(shadowRent * 100) / 100
+          monthlyBaseRent = (currentRentRSF * shadowRSF) / 12
+          freeRentCredit = monthlyBaseRent
+        }
       }
     } else {
       // Legacy mode: single base rent + escalation
@@ -494,17 +580,25 @@ function generateFinancialAnalysis(terms: DealTerms) {
       currentRentRSF = baseRentRSF * yearMultiplier
       monthlyBaseRent = (currentRentRSF * rsf) / 12
 
-      // Free rent (supports fractional months, e.g. 0.5 = half month free)
-      if (m <= Math.floor(freeMonths)) {
-        freeRentCredit = monthlyBaseRent // full free month
+      // Generalized free rent schedule wins over legacy free_rent_months count
+      if (generalizedFreeMonths.has(m)) {
+        freeRentCredit = monthlyBaseRent
+      } else if (m <= Math.floor(freeMonths)) {
+        // Legacy free-rent count: free_rent_months at start of lease
+        freeRentCredit = monthlyBaseRent
       } else if (m === Math.floor(freeMonths) + 1 && freeMonths % 1 > 0) {
-        freeRentCredit = monthlyBaseRent * (freeMonths % 1) // partial free month
+        freeRentCredit = monthlyBaseRent * (freeMonths % 1)
       }
     }
     // Apply proration to partial months (first/last month of lease)
     monthlyBaseRent = monthlyBaseRent * proration
     freeRentCredit = freeRentCredit * proration
     const netCashRent = monthlyBaseRent - freeRentCredit
+
+    // Management fee: % of NET cash rent so that fully-abated months = $0 fee.
+    // This matches how most tenant-rep pro formas treat it. Scales with escalations
+    // automatically because monthlyBaseRent already includes escalation.
+    const mgmtFee = netCashRent * mgmtFeePct
 
     // OpEx (constant, user-defined) - prorated for partial months
     const opex = opexMonthly * proration
@@ -521,7 +615,7 @@ function generateFinancialAnalysis(terms: DealTerms) {
     const amortTIReceived = getTIReceivedForMonth(m, amortTIPrincipal)
 
     // Total monthly cost: TI received REDUCES net cash out
-    const totalMonthlyCost = netCashRent + opex + monthlyParking + amortTI - tiReceived - amortTIReceived
+    const totalMonthlyCost = netCashRent + mgmtFee + opex + monthlyParking + amortTI - tiReceived - amortTIReceived
     cumulativeCash += totalMonthlyCost
 
     totalBaseRent += monthlyBaseRent
@@ -531,6 +625,7 @@ function generateFinancialAnalysis(terms: DealTerms) {
     totalAmortTI += amortTI
     totalTIReceived += tiReceived
     totalAmortTIReceived += amortTIReceived
+    totalMgmtFee += mgmtFee
 
     monthly.push({
       month: m,
@@ -542,6 +637,7 @@ function generateFinancialAnalysis(terms: DealTerms) {
       monthlyBaseRent: Math.round(monthlyBaseRent),
       freeRentCredit: Math.round(freeRentCredit),
       netCashRent: Math.round(netCashRent),
+      managementFee: Math.round(mgmtFee),
       opex: Math.round(opex),
       parking: Math.round(monthlyParking),
       amortizedTI: Math.round(amortTI),
@@ -563,6 +659,7 @@ function generateFinancialAnalysis(terms: DealTerms) {
         baseRent: 0,
         freeRent: 0,
         netRent: 0,
+        managementFee: 0,
         opex: 0,
         parking: 0,
         amortizedTI: 0,
@@ -576,6 +673,7 @@ function generateFinancialAnalysis(terms: DealTerms) {
     yr.baseRent += m.monthlyBaseRent
     yr.freeRent += m.freeRentCredit
     yr.netRent += m.netCashRent
+    yr.managementFee += (m.managementFee || 0)
     yr.opex += m.opex
     yr.parking += m.parking
     yr.amortizedTI += m.amortizedTI
@@ -588,6 +686,7 @@ function generateFinancialAnalysis(terms: DealTerms) {
     baseRent: Math.round(yr.baseRent),
     freeRent: Math.round(yr.freeRent),
     netRent: Math.round(yr.netRent),
+    managementFee: Math.round(yr.managementFee),
     opex: Math.round(yr.opex),
     parking: Math.round(yr.parking),
     amortizedTI: Math.round(yr.amortizedTI),
@@ -708,6 +807,8 @@ function generateFinancialAnalysis(terms: DealTerms) {
         totalBaseRent: Math.round(totalBaseRent),
         totalFreeRentValue: Math.round(totalFreeRentValue),
         totalNetRent: Math.round(totalNetRent),
+        totalManagementFee: Math.round(totalMgmtFee),
+        managementFeePct: terms.management_fee_pct || 0,
         totalOpex: Math.round(totalOpex),
         totalParking: Math.round(totalParking),
         totalAmortizedTI: Math.round(totalAmortTI),
@@ -725,6 +826,9 @@ function generateFinancialAnalysis(terms: DealTerms) {
       totals: {
         straightLineMonthlyRent: Math.round(straightLineMonthlyRent),
         straightLineAnnualRent: Math.round(straightLineAnnualRent),
+        totalManagementFee: Math.round(totalMgmtFee),
+        managementFeePct: terms.management_fee_pct || 0,
+        monthlyManagementFee: termMonths > 0 ? Math.round(totalMgmtFee / termMonths) : 0,
         effectiveRentRSF,
         totalCostPerRSFPerYear,
         tiAllowanceTotal: tiTotal,
