@@ -724,11 +724,15 @@ function generateFinancialAnalysis(terms: DealTerms) {
     const netCashRent = monthlyBaseRent - freeRentCredit
 
     // Management fee: per-month dollar amount based on basis.
-    // - 'pct': % of net cash rent (free rent abates the fee, escalations scale it)
+    // - 'pct': % of CONTRACTUAL base rent (monthlyBaseRent before free-rent credit).
+    //   Does NOT abate during free rent - mirrors OPEX behavior. Landlords typically continue
+    //   charging their management fee even while base rent is abated, since the fee covers
+    //   property-level services that run regardless of who is paying rent.
+    //   Scales with escalations automatically because monthlyBaseRent already includes escalation.
     // - 'rsf_yr' / 'rsf_mo' / 'flat': constant flat amount (no abatement, no escalation)
     let mgmtFee = 0
     if (mgmtFeeBasis === 'pct' || (!mgmtFeeBasis && mgmtFeePct > 0)) {
-      mgmtFee = netCashRent * mgmtFeePct
+      mgmtFee = monthlyBaseRent * mgmtFeePct
     } else if (mgmtFeeFlatMonthly > 0) {
       mgmtFee = mgmtFeeFlatMonthly * proration
     }
