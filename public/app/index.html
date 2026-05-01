@@ -16345,18 +16345,20 @@ function rfpToggleFreeRent(btn) {
   }
 }
 
-// User edits a rate. Recompute that row's Esc % from the prior rate, and the
-// next row's Esc % since the comparison base just changed.
+// User edits a rate in row N. Refresh row N's Esc % display, then cascade-down:
+// each row below uses its OWN current Esc % to re-escalate from the new prior rate.
+// This preserves the user's intent: "if year 6 was 3%, year 6 stays 3% relative
+// to year 5's new value" - editing one rate ripples cleanly without resetting later years.
 function rfpOnRateInput(rateEl) {
   var row = rateEl.closest('.rfp-rent-period-row');
   if (!row) return;
   var index = parseInt(row.getAttribute('data-index')) || 0;
   rfpRecomputeRowEsc(index);   // refresh this row's Esc display
-  rfpRecomputeRowEsc(index + 1); // refresh next row (its base just changed)
+  rfpCascadeRecompute(index + 1); // walk forward, re-escalate each row by its own Esc %
 }
 
-// User edits an Esc %. Recompute the row's rate from prior_rate * (1 + esc/100),
-// then refresh next row's Esc % since this row's rate changed.
+// User edits an Esc % in row N. Recompute row N's rate from prior_rate * (1 + esc/100),
+// then cascade-down: each row below uses its OWN Esc % to re-escalate from the new prior.
 function rfpOnEscInput(escEl) {
   var row = escEl.closest('.rfp-rent-period-row');
   if (!row) return;
@@ -16377,8 +16379,57 @@ function rfpOnEscInput(escEl) {
   var displayUnit = rateEl.getAttribute('data-display-unit') || 'year';
   var displayVal = displayUnit === 'month' ? newAnnual / 12 : newAnnual;
   rateEl.value = displayVal.toFixed(2);
-  // Now refresh the NEXT row's Esc since this row's rate changed
-  rfpRecomputeRowEsc(index + 1);
+  // Cascade-down: each row below re-escalates using its own existing Esc %
+  rfpCascadeRecompute(index + 1);
+}
+
+// Cascade-down recompute: walk from startIndex to end. For each row, READ its
+// current displayed Esc %, then compute newRate = priorAnnual * (1 + esc/100)
+// and write it back to the rate input. After updating the rate, the row's Esc %
+// display stays the same (because we used it as the input). The next row sees
+// the updated rate as its prior.
+//
+// Rows in free-rent state get their contractual rate updated too (the rate is
+// what would be charged if not abated, so it must continue to escalate).
+//
+// If a row has no Esc % set (e.g. user cleared it) or it's not a number, we
+// leave that row's rate unchanged and continue cascading from there. This handles
+// edge cases like a non-escalating period in the middle of the schedule.
+function rfpCascadeRecompute(startIndex) {
+  var list = document.getElementById('rfp-rent-periods-list');
+  if (!list) return;
+  var rows = list.querySelectorAll('.rfp-rent-period-row');
+  for (var i = startIndex; i < rows.length; i++) {
+    var rowEl = rows[i];
+    if (!rowEl) continue;
+    var rateEl = rowEl.querySelector('[data-field="rent_rsf_yr"]');
+    var escEl = rowEl.querySelector('[data-field="escalation_pct"]');
+    if (!rateEl) continue;
+    var prior = rfpReadPriorPeriodAnnual(i);
+    if (!prior || prior <= 0) {
+      // No prior rate available - skip this row (Esc % is undefined here),
+      // and just refresh display. Don't cascade past it.
+      rfpRecomputeRowEsc(i);
+      continue;
+    }
+    // Use the row's CURRENT Esc % (its existing escalation factor, preserved).
+    var pct = NaN;
+    if (escEl && !escEl.disabled) {
+      pct = parseFloat(escEl.value);
+    }
+    if (isNaN(pct)) {
+      // Row has no Esc % (e.g. disabled-dash row, or user cleared it).
+      // Leave its rate untouched and refresh display so the dashboard stays consistent.
+      rfpRecomputeRowEsc(i);
+      continue;
+    }
+    var newAnnual = prior * (1 + pct / 100);
+    var displayUnit = rateEl.getAttribute('data-display-unit') || 'year';
+    var displayVal = displayUnit === 'month' ? newAnnual / 12 : newAnnual;
+    rateEl.value = displayVal.toFixed(2);
+    // Esc % stays as-is; we used it as input. Just normalize display in case it had drift.
+    rfpRecomputeRowEsc(i);
+  }
 }
 
 // Recompute a single row's Esc % display from its current rate vs prior rate.
