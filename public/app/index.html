@@ -19069,7 +19069,8 @@ function rfpShowVersionComparison(buildingAddress) {
     { key: 'opexRSF', label: 'OpEx/Tax/CAM (per RSF/yr)', fmt: 'currency_dec' },
     { key: 'opexPerSFMo', label: 'OpEx/SF/mo', fmt: 'currency_dec', computed: 'opexPerSFMo' },
     { key: 'opex', label: 'OpEx (monthly total)', fmt: 'currency' },
-    { key: 'managementFeePct', label: 'Management Fee %', fmt: 'plain' },
+    { key: 'mgmtFeePerSFYr', label: 'Mgmt Fee/RSF/yr', fmt: 'currency_dec', computed: 'mgmtFeePerSFYr' },
+    { key: 'mgmtFeePerSFMo', label: 'Mgmt Fee/SF/mo', fmt: 'currency_dec', computed: 'mgmtFeePerSFMo' },
     // Full service gross
     { key: 'fsgPerSFMo', label: 'Full Service Gross/SF/mo', fmt: 'currency_dec', computed: 'fsgPerSFMo' },
     // Parking
@@ -19134,6 +19135,18 @@ function rfpShowVersionComparison(buildingAddress) {
       }
       if (field.computed === 'opexPerSFMo') return Math.round((cf2.totalOpex || 0) / termMo2 / rsf2 * 100) / 100;
       if (field.computed === 'fsgPerSFMo') return Math.round(((cf2.totalBaseRent || 0) + (cf2.totalOpex || 0)) / termMo2 / rsf2 * 100) / 100;
+      return 0;
+    }
+    // Management fee per RSF/yr and per SF/mo (blended over full term, basis-agnostic)
+    if (field.computed === 'mgmtFeePerSFYr' || field.computed === 'mgmtFeePerSFMo') {
+      var mfSm = (sub.analysis && sub.analysis.summary) || {};
+      var mfCf = (sub.analysis && sub.analysis.cash_flow && sub.analysis.cash_flow.totals) || {};
+      var mfRsf = mfSm.rsf || 0;
+      var mfTermMo = mfSm.termMonths || 1;
+      var mfTotal = mfCf.totalManagementFee || 0;
+      if (mfRsf === 0 || mfTotal === 0) return 0;
+      if (field.computed === 'mgmtFeePerSFYr') return Math.round((mfTotal / mfTermMo * 12) / mfRsf * 100) / 100;
+      if (field.computed === 'mgmtFeePerSFMo') return Math.round((mfTotal / mfTermMo) / mfRsf * 100) / 100;
       return 0;
     }
     // Total All-in Cost (gross = base rent + opex)
