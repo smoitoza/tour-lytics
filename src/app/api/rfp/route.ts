@@ -91,6 +91,8 @@ export async function POST(req: Request) {
     amortized_ti_rate: rawTerms.amortized_ti_rate ?? rawTerms.amortizedTIRate ?? 0,
     amortized_ti_term_months: rawTerms.amortized_ti_term_months ?? rawTerms.amortizedTITermMonths ?? 0,
     management_fee_pct: rawTerms.management_fee_pct ?? rawTerms.managementFeePct ?? 0,
+    management_fee_basis: rawTerms.management_fee_basis ?? rawTerms.managementFeeBasis ?? undefined,
+    management_fee_amount: rawTerms.management_fee_amount ?? rawTerms.managementFeeAmount ?? 0,
     // Generalized free-rent schedule (optional)
     free_rent_type: rawTerms.free_rent_type ?? rawTerms.freeRentType ?? undefined,
     free_rent_months_count: rawTerms.free_rent_months_count ?? rawTerms.freeRentMonthsCount ?? undefined,
@@ -324,10 +326,17 @@ interface DealTerms {
   amortized_ti_rsf?: number
   amortized_ti_rate?: number
   amortized_ti_term_months?: number
-  // Management fee charged as % of base rent (e.g. 3 = 3%).
-  // Applied to the contracted base rent each month. Scales with escalations.
-  // During free rent, fee is reduced proportionally so it's zero on fully-abated months.
+  // Management fee.
+  // basis = 'pct' (% of base rent), 'rsf_yr' ($ per RSF per year), 'rsf_mo' ($ per RSF per month), 'flat' ($ flat per month).
+  // - 'pct' uses management_fee_pct (legacy field, stored as whole-number e.g. 3 = 3%)
+  // - other bases use management_fee_amount (the dollar value in the chosen basis)
+  // - When basis is unset, falls back to legacy management_fee_pct only.
+  // - For 'pct': fee scales with rent escalations and abates with free rent.
+  // - For dollar bases: fee is constant (no escalation, no free-rent abatement).
+  //   This matches how landlords actually invoice flat fees.
   management_fee_pct?: number
+  management_fee_basis?: 'pct' | 'rsf_yr' | 'rsf_mo' | 'flat' | string
+  management_fee_amount?: number
   // Generalized free rent schedule (new, preferred over legacy free_rent_months/is_free_rent).
   // Four types:
   //   'first_n'        -> abate first free_rent_months_count months
@@ -459,8 +468,17 @@ function generateFinancialAnalysis(terms: DealTerms) {
   const parkingEsc = (terms.parking_escalation_pct || 0) / 100
   const amortTIRSF = terms.amortized_ti_rsf || 0
   const amortTIRate = (terms.amortized_ti_rate || 0) / 100
-  // Management fee: % of contracted base rent. Stored as whole-number percent (3 = 3%).
+  // Management fee. Resolves any of four basis modes into a per-month dollar figure.
+  // 'pct' is the legacy percent-of-rent mode; the others are flat dollar values.
+  const mgmtFeeBasis = terms.management_fee_basis || (terms.management_fee_pct ? 'pct' : undefined)
   const mgmtFeePct = (terms.management_fee_pct || 0) / 100
+  const mgmtFeeAmount = terms.management_fee_amount || 0
+  // Pre-compute the monthly dollar fee for non-pct bases so the loop can use it directly.
+  // For 'pct', fee is computed inside the loop because it depends on netCashRent each month.
+  let mgmtFeeFlatMonthly = 0
+  if (mgmtFeeBasis === 'rsf_yr') mgmtFeeFlatMonthly = (mgmtFeeAmount * rsf) / 12
+  else if (mgmtFeeBasis === 'rsf_mo') mgmtFeeFlatMonthly = mgmtFeeAmount * rsf
+  else if (mgmtFeeBasis === 'flat') mgmtFeeFlatMonthly = mgmtFeeAmount
   const amortTITermMonths = (terms.amortized_ti_term_months || 0) > 0 ? terms.amortized_ti_term_months! : termMonths
   const amortTIPrincipal = amortTIRSF * rsf
   let amortTIMonthlyPayment = 0
@@ -595,10 +613,15 @@ function generateFinancialAnalysis(terms: DealTerms) {
     freeRentCredit = freeRentCredit * proration
     const netCashRent = monthlyBaseRent - freeRentCredit
 
-    // Management fee: % of NET cash rent so that fully-abated months = $0 fee.
-    // This matches how most tenant-rep pro formas treat it. Scales with escalations
-    // automatically because monthlyBaseRent already includes escalation.
-    const mgmtFee = netCashRent * mgmtFeePct
+    // Management fee: per-month dollar amount based on basis.
+    // - 'pct': % of net cash rent (free rent abates the fee, escalations scale it)
+    // - 'rsf_yr' / 'rsf_mo' / 'flat': constant flat amount (no abatement, no escalation)
+    let mgmtFee = 0
+    if (mgmtFeeBasis === 'pct' || (!mgmtFeeBasis && mgmtFeePct > 0)) {
+      mgmtFee = netCashRent * mgmtFeePct
+    } else if (mgmtFeeFlatMonthly > 0) {
+      mgmtFee = mgmtFeeFlatMonthly * proration
+    }
 
     // OpEx (constant, user-defined) - prorated for partial months
     const opex = opexMonthly * proration
@@ -809,6 +832,8 @@ function generateFinancialAnalysis(terms: DealTerms) {
         totalNetRent: Math.round(totalNetRent),
         totalManagementFee: Math.round(totalMgmtFee),
         managementFeePct: terms.management_fee_pct || 0,
+        managementFeeBasis: terms.management_fee_basis || (terms.management_fee_pct ? 'pct' : ''),
+        managementFeeAmount: terms.management_fee_amount || 0,
         totalOpex: Math.round(totalOpex),
         totalParking: Math.round(totalParking),
         totalAmortizedTI: Math.round(totalAmortTI),
@@ -828,6 +853,8 @@ function generateFinancialAnalysis(terms: DealTerms) {
         straightLineAnnualRent: Math.round(straightLineAnnualRent),
         totalManagementFee: Math.round(totalMgmtFee),
         managementFeePct: terms.management_fee_pct || 0,
+        managementFeeBasis: terms.management_fee_basis || (terms.management_fee_pct ? 'pct' : ''),
+        managementFeeAmount: terms.management_fee_amount || 0,
         monthlyManagementFee: termMonths > 0 ? Math.round(totalMgmtFee / termMonths) : 0,
         effectiveRentRSF,
         totalCostPerRSFPerYear,

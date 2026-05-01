@@ -16112,6 +16112,8 @@ function rfpMapTerms(raw) {
     parkingEscalation: raw.parking_escalation_pct || raw.parkingEscalation || '',
     securityDeposit: raw.security_deposit || raw.securityDeposit || '',
     managementFeePct: raw.management_fee_pct || raw.managementFeePct || '',
+    managementFeeBasis: raw.management_fee_basis || raw.managementFeeBasis || '',
+    managementFeeAmount: raw.management_fee_amount || raw.managementFeeAmount || '',
     structure: raw.structure || '',
     landlord: raw.landlord || '',
     notes: raw.notes || '',
@@ -16200,6 +16202,71 @@ function rfpMultiBuildingNext() {
   _multiBuildingQueue.currentIndex++;
   _multiBuildingQueue.completed++;
   rfpShowNextMultiBuildingComponent();
+}
+
+// ===== MANAGEMENT FEE UI =====
+// Unified widget: basis selector + amount field. Four basis modes:
+//   pct    -> % of base rent (legacy, uses management_fee_pct)
+//   rsf_yr -> $ per RSF per year (flat)
+//   rsf_mo -> $ per RSF per month (flat)
+//   flat   -> $ flat per month (lump)
+// Amount field label updates to match the selected basis.
+function rfpBuildMgmtFeeUI(terms) {
+  // Resolve the effective basis from saved terms. Legacy submissions have pct
+  // without an explicit basis - default to 'pct' if only management_fee_pct is set.
+  var basis = terms.managementFeeBasis || '';
+  if (!basis && (terms.managementFeePct != null && terms.managementFeePct !== '' && Number(terms.managementFeePct) !== 0)) {
+    basis = 'pct';
+  }
+  if (!basis) basis = 'pct'; // default for empty
+  // Amount: if basis is pct, amount = managementFeePct; else = managementFeeAmount
+  var amount = '';
+  if (basis === 'pct') amount = terms.managementFeePct || '';
+  else amount = terms.managementFeeAmount || '';
+
+  var html = '<div style="display:flex;gap:6px;align-items:stretch">';
+  html += '<select id="rfp-field-mgmtFeeBasis" class="rfp-form-input" onchange="rfpMgmtFeeBasisChanged()" style="flex:0 0 150px;">';
+  var opts = [
+    { v: 'pct',    l: '% of base rent' },
+    { v: 'rsf_yr', l: '$ / RSF / year' },
+    { v: 'rsf_mo', l: '$ / RSF / month' },
+    { v: 'flat',   l: '$ flat / month' }
+  ];
+  opts.forEach(function(o) {
+    html += '<option value="' + o.v + '"' + (basis === o.v ? ' selected' : '') + '>' + o.l + '</option>';
+  });
+  html += '</select>';
+  html += '<input class="rfp-form-input" id="rfp-field-mgmtFeeAmount" type="number" step="0.01" min="0" value="' + amount + '" placeholder="' + rfpMgmtFeePlaceholder(basis) + '" style="flex:1" />';
+  html += '</div>';
+  html += '<div id="rfp-mgmt-fee-hint" style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:3px">' + rfpMgmtFeeHint(basis) + '</div>';
+  return html;
+}
+
+function rfpMgmtFeePlaceholder(basis) {
+  if (basis === 'pct') return 'e.g. 3 for 3%';
+  if (basis === 'rsf_yr') return 'e.g. 0.50 per RSF/yr';
+  if (basis === 'rsf_mo') return 'e.g. 0.04 per RSF/mo';
+  if (basis === 'flat') return 'e.g. 2500 per month';
+  return '';
+}
+
+function rfpMgmtFeeHint(basis) {
+  if (basis === 'pct')    return 'Scales with rent escalations; fee abates when rent is free.';
+  if (basis === 'rsf_yr') return 'Flat annual rate per RSF. Divided by 12 for monthly cash flow. No escalation, no abatement.';
+  if (basis === 'rsf_mo') return 'Flat monthly rate per RSF. No escalation, no abatement.';
+  if (basis === 'flat')   return 'Flat dollar amount per month. No escalation, no abatement.';
+  return '';
+}
+
+function rfpMgmtFeeBasisChanged() {
+  var sel = document.getElementById('rfp-field-mgmtFeeBasis');
+  var amt = document.getElementById('rfp-field-mgmtFeeAmount');
+  var hint = document.getElementById('rfp-mgmt-fee-hint');
+  if (!sel || !amt || !hint) return;
+  var basis = sel.value;
+  amt.placeholder = rfpMgmtFeePlaceholder(basis);
+  hint.textContent = rfpMgmtFeeHint(basis);
+  // Don't clear the amount - user may want to keep it when switching units
 }
 
 // ===== FREE RENT SCHEDULE UI =====
@@ -16954,7 +17021,7 @@ function rfpShowReviewForm(terms, meta) {
     { key: 'tiConstructionCost', label: 'Est. Construction Cost (optional)', type: 'number', placeholder: 'Total buildout cost estimate' },
     { key: 'opexRSF', label: 'OpEx/Tax/CAM (per RSF/yr)', type: 'number', step: '0.01', placeholder: 'e.g. 18.00' },
     { key: 'opex', label: 'OpEx (monthly override)', type: 'number', placeholder: 'Auto-calculated if per RSF entered' },
-    { key: 'managementFeePct', label: 'Management Fee (% of base rent)', type: 'number', step: '0.01', placeholder: 'e.g. 3 for 3%' },
+    { key: 'managementFee', label: 'Management Fee', type: 'custom_mgmt_fee' },
     { key: 'parkingSpots', label: 'Parking Spots', type: 'number' },
     { key: 'parkingRate', label: 'Parking Rate (per spot/mo)', type: 'number', step: '0.01' },
     { key: 'parkingEscalation', label: 'Parking Escalation %', type: 'number', step: '0.01' },
@@ -16977,6 +17044,8 @@ function rfpShowReviewForm(terms, meta) {
     formHtml += '<label class="rfp-form-label">' + f.label + '</label>';
     if (f.type === 'textarea') {
       formHtml += '<textarea class="rfp-form-input rfp-textarea" id="rfp-field-' + f.key + '" placeholder="' + (f.placeholder || '') + '">' + val + '</textarea>';
+    } else if (f.type === 'custom_mgmt_fee') {
+      formHtml += rfpBuildMgmtFeeUI(terms);
     } else {
       formHtml += '<input class="rfp-form-input" id="rfp-field-' + f.key + '" type="' + f.type + '"' +
         (f.step ? ' step="' + f.step + '"' : '') +
@@ -17242,6 +17311,28 @@ function rfpConfirmFromForm() {
   // Store total annual rent for reference
   if (terms.totalAnnualRent) {
     terms.total_annual_rent = terms.totalAnnualRent;
+  }
+
+  // Management fee: collect basis + amount, store the right field based on basis.
+  // The custom widget renders mgmtFeeBasis (select) + mgmtFeeAmount (number).
+  // For 'pct' we map amount -> management_fee_pct (legacy). For other bases we use
+  // management_fee_amount + management_fee_basis. We always set both to keep
+  // the schema unambiguous.
+  var mgmtBasisEl = document.getElementById('rfp-field-mgmtFeeBasis');
+  var mgmtAmountEl = document.getElementById('rfp-field-mgmtFeeAmount');
+  if (mgmtBasisEl && mgmtAmountEl) {
+    var mgmtBasis = mgmtBasisEl.value || 'pct';
+    var mgmtAmount = parseFloat(mgmtAmountEl.value) || 0;
+    terms.management_fee_basis = mgmtBasis;
+    if (mgmtBasis === 'pct') {
+      terms.management_fee_pct = mgmtAmount;
+      terms.management_fee_amount = 0;
+    } else {
+      terms.management_fee_pct = 0;
+      terms.management_fee_amount = mgmtAmount;
+    }
+    // Remove the camelCase placeholder set by the field loop
+    delete terms.managementFee;
   }
 
   // Generalized free-rent schedule: read from UI inputs if an advanced type is selected.
@@ -17888,7 +17979,14 @@ function rfpBuildCombinedView(componentMap, address) {
   compRow('TI Allowance/RSF', compTerms.map(function(t) { return t.ti_allowance_rsf || t.tiAllowancePerRSF || 0; }), 'curr_dec', '', 'Landlord contribution toward build-out, per RSF');
   compRow('TI Total', compTerms.map(function(t) { return t.ti_allowance_total || t.tiAllowanceTotal || 0; }), 'curr', '', 'Total tenant improvement allowance (RSF x TI/RSF)');
   compRow('OpEx (monthly)', compTerms.map(function(t) { return t.opex_monthly || t.opex || 0; }), 'curr', '', 'Operating expenses, taxes, CAM, insurance');
-  compRow('Management Fee %', compTerms.map(function(t) { return t.management_fee_pct || t.managementFeePct || 0; }), 'plain', '', 'Landlord management fee as % of base rent');
+  compRow('Management Fee', compTerms.map(function(t) {
+    var basis = t.management_fee_basis || t.managementFeeBasis || (t.management_fee_pct || t.managementFeePct ? 'pct' : '');
+    if (basis === 'pct') return (t.management_fee_pct || t.managementFeePct || 0) + '%';
+    if (basis === 'rsf_yr') return '$' + (t.management_fee_amount || t.managementFeeAmount || 0) + '/RSF/yr';
+    if (basis === 'rsf_mo') return '$' + (t.management_fee_amount || t.managementFeeAmount || 0) + '/RSF/mo';
+    if (basis === 'flat') return '$' + (t.management_fee_amount || t.managementFeeAmount || 0) + '/mo';
+    return 0;
+  }), 'plain', '', 'Landlord management fee (basis varies by deal)');
   compRow('Parking Spots', compTerms.map(function(t) { return t.parking_spots || t.parkingSpots || 0; }), 'plain');
   compRow('Parking Rate', compTerms.map(function(t) { return t.parking_rate_monthly || t.parkingRate || 0; }), 'curr_dec', '', 'Per spot per month');
   compRow('Security Deposit', compTerms.map(function(t) { return t.security_deposit || t.securityDeposit || 0; }), 'curr', '', 'Refundable deposit at lease commencement');
@@ -18174,7 +18272,14 @@ function rfpBuildCombinedExcelSheet(wb, cd) {
   addRow('TI Allowance/RSF', terms.map(function(t) { return t.ti_allowance_rsf || t.tiAllowancePerRSF || 0; }), 'curr_dec', 'curr_dec', 'Landlord contribution toward build-out, per RSF');
   addRow('TI Total', terms.map(function(t) { return t.ti_allowance_total || t.tiAllowanceTotal || 0; }), 'curr', 'curr', 'Total tenant improvement allowance (RSF x TI/RSF)');
   addRow('OpEx (monthly)', terms.map(function(t) { return t.opex_monthly || t.opex || 0; }), 'curr', 'curr', 'Operating expenses, taxes, CAM, insurance');
-  addRow('Management Fee %', terms.map(function(t) { return t.management_fee_pct || t.managementFeePct || 0; }), 'plain', 'plain', 'Landlord management fee as % of base rent');
+  addRow('Management Fee', terms.map(function(t) {
+    var basis = t.management_fee_basis || t.managementFeeBasis || (t.management_fee_pct || t.managementFeePct ? 'pct' : '');
+    if (basis === 'pct') return (t.management_fee_pct || t.managementFeePct || 0) + '%';
+    if (basis === 'rsf_yr') return '$' + (t.management_fee_amount || t.managementFeeAmount || 0) + '/RSF/yr';
+    if (basis === 'rsf_mo') return '$' + (t.management_fee_amount || t.managementFeeAmount || 0) + '/RSF/mo';
+    if (basis === 'flat') return '$' + (t.management_fee_amount || t.managementFeeAmount || 0) + '/mo';
+    return 0;
+  }), 'plain', 'plain', 'Landlord management fee (basis varies by deal)');
   addRow('Parking Spots', terms.map(function(t) { return t.parking_spots || t.parkingSpots || 0; }), 'plain', 'plain');
   addRow('Parking Rate', terms.map(function(t) { return t.parking_rate_monthly || t.parkingRate || 0; }), 'curr_dec', 'curr_dec', 'Per spot per month');
   addRow('Security Deposit', terms.map(function(t) { return t.security_deposit || t.securityDeposit || 0; }), 'curr', 'curr', 'Refundable deposit at lease commencement');
@@ -18743,6 +18848,8 @@ function rfpShowVersionComparison(buildingAddress) {
       opexRSF: t.opex_rsf_yr || t.opexRSF || 0,
       opex: t.opex_monthly || t.opex || 0,
       managementFeePct: t.management_fee_pct || t.managementFeePct || 0,
+      managementFeeBasis: t.management_fee_basis || t.managementFeeBasis || '',
+      managementFeeAmount: t.management_fee_amount || t.managementFeeAmount || 0,
       parkingSpots: t.parking_spots || t.parkingSpots || 0,
       parkingRate: t.parking_rate_monthly || t.parkingRate || 0,
       amortizedTIRSF: t.amortized_ti_rsf || t.amortizedTIRSF || 0,
@@ -18919,6 +19026,8 @@ function rfpBuildTermsTable(terms) {
     tiAllowanceTotal: terms.ti_allowance_total || terms.tiAllowanceTotal || 0,
     opex: terms.opex_monthly || terms.opex || 0,
     managementFeePct: terms.management_fee_pct || terms.managementFeePct || 0,
+    managementFeeBasis: terms.management_fee_basis || terms.managementFeeBasis || '',
+    managementFeeAmount: terms.management_fee_amount || terms.managementFeeAmount || 0,
     parkingSpots: terms.parking_spots || terms.parkingSpots || 0,
     parkingRate: terms.parking_rate_monthly || terms.parkingRate || 0,
     parkingEscalation: terms.parking_escalation_pct || terms.parkingEscalation || 0,
@@ -18983,8 +19092,18 @@ function rfpBuildTermsTable(terms) {
     ['OpEx (monthly)', rfpFmtCurrencyPlain(t.opex)],
     ['OpEx/SF/mo', (t.opex && t.rsf) ? rfpFmtCurrencyDecimals(t.opex / t.rsf) : '--'],
   ]);
-  if (t.managementFeePct || t.management_fee_pct) {
-    rows.push(['Management Fee', (t.managementFeePct || t.management_fee_pct) + '% of base rent']);
+  // Management fee - display in whatever basis was selected for the deal
+  var mfBasis = t.managementFeeBasis || t.management_fee_basis || ((t.managementFeePct || t.management_fee_pct) ? 'pct' : '');
+  var mfPct = t.managementFeePct || t.management_fee_pct || 0;
+  var mfAmt = t.managementFeeAmount || t.management_fee_amount || 0;
+  if (mfBasis === 'pct' && mfPct) {
+    rows.push(['Management Fee', mfPct + '% of base rent']);
+  } else if (mfBasis === 'rsf_yr' && mfAmt) {
+    rows.push(['Management Fee', rfpFmtCurrencyDecimals(mfAmt) + '/RSF/yr (flat)']);
+  } else if (mfBasis === 'rsf_mo' && mfAmt) {
+    rows.push(['Management Fee', rfpFmtCurrencyDecimals(mfAmt) + '/RSF/mo (flat)']);
+  } else if (mfBasis === 'flat' && mfAmt) {
+    rows.push(['Management Fee', rfpFmtCurrencyPlain(mfAmt) + '/mo flat']);
   }
   rows = rows.concat([
     ['Parking Spots', t.parkingSpots || '--'],
@@ -19733,6 +19852,16 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
   // by termMo gives an accurate SL equivalent regardless of how the fee scales month-to-month.
   var mgmtFeeMonthly_sl = (cfTotals_sl.totalManagementFee || 0) / termMo_sl;
   var mgmtFeePct_sl = cfTotals_sl.managementFeePct || 0;
+  var mgmtFeeBasis_sl = cfTotals_sl.managementFeeBasis || (mgmtFeePct_sl > 0 ? 'pct' : '');
+  var mgmtFeeAmount_sl = cfTotals_sl.managementFeeAmount || 0;
+  // Build the human-readable description used in the SL row.
+  function rfpMgmtFeeDescription() {
+    if (mgmtFeeBasis_sl === 'pct') return mgmtFeePct_sl + '% of base rent, straight-line avg over term';
+    if (mgmtFeeBasis_sl === 'rsf_yr') return rfpFmtCurrencyDecimals(mgmtFeeAmount_sl) + '/RSF/yr (flat)';
+    if (mgmtFeeBasis_sl === 'rsf_mo') return rfpFmtCurrencyDecimals(mgmtFeeAmount_sl) + '/RSF/mo (flat)';
+    if (mgmtFeeBasis_sl === 'flat') return rfpFmtCurrencyPlain(mgmtFeeAmount_sl) + '/mo flat';
+    return '';
+  }
   var slMonthlyAllIn = slMonthlyRent + opexMonthly_sl + parkingMonthly_sl + mgmtFeeMonthly_sl + (slHasAmortTI ? slAmortTIMonthly : 0);
   var brokerMonthlyImpact = slBrokerFee.hasBrokerFee ? slBrokerFee.slMonthlyImpact : 0;
 
@@ -19809,7 +19938,7 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
   if (rsf_sl > 0) html += '<td style="padding:6px 0;text-align:right;font-weight:600;">' + rfpFmtCurrencyDecimals(totals.effectiveRentRSF) + '/RSF</td>';
   html += '</tr>';
   if (opexMonthly_sl > 0) slBuildRow('OpEx', opexMonthly_sl, '', 'Taxes, CAM, insurance');
-  if (mgmtFeeMonthly_sl > 0) slBuildRow('Management Fee', mgmtFeeMonthly_sl, '', mgmtFeePct_sl + '% of base rent, straight-line avg over term');
+  if (mgmtFeeMonthly_sl > 0) slBuildRow('Management Fee', mgmtFeeMonthly_sl, '', rfpMgmtFeeDescription());
   if (parkingMonthly_sl > 0) slBuildRow('Parking', parkingMonthly_sl, '');
   if (slHasAmortTI) slBuildRow('Amortized TI', slAmortTIMonthly, 'color:#dc2626;', rfpFmtCurrencyPlain(totals.amortizedTIPrincipal || 0) + ' principal at ' + (totals.amortizedTIRate || 0) + '% over ' + (totals.amortizedTITermMonths || 0) + ' months');
   if (capex.hasCapex) {
