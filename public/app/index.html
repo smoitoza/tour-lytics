@@ -19729,8 +19729,9 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
   var opexMonthly_sl = (cfTotals_sl.totalOpex || 0) / termMo_sl;
   var parkingMonthly_sl = (cfTotals_sl.totalParking || 0) / termMo_sl;
   // Management fee: straight-line average across the lease term.
-  // totals.totalManagementFee accounts for escalations and free-rent abatement, so dividing
-  // by termMo gives an accurate SL equivalent regardless of how the fee scales month-to-month.
+  // totals.totalManagementFee already reflects the actual per-month fees (which scale with
+  // contractual base rent + escalations, and do NOT abate with free rent), so dividing by
+  // term gives the correct SL equivalent.
   var mgmtFeeMonthly_sl = (cfTotals_sl.totalManagementFee || 0) / termMo_sl;
   var mgmtFeePct_sl = cfTotals_sl.managementFeePct || 0;
   var slMonthlyAllIn = slMonthlyRent + opexMonthly_sl + parkingMonthly_sl + mgmtFeeMonthly_sl + (slHasAmortTI ? slAmortTIMonthly : 0);
@@ -20165,6 +20166,23 @@ function rfpExportExcel() {
     ['OpEx/Tax/CAM (per RSF/yr)', n(terms.opex_rsf_yr), 'curr_dec', 'input'],
     ['OpEx (Monthly)', n(terms.opex_monthly), 'curr', 'input'],
     ['OpEx/SF/mo', (n(terms.opex_monthly) > 0 && n(terms.rsf) > 0) ? n(terms.opex_monthly) / n(terms.rsf) : 0, 'curr_dec', 'readonly'],
+  ]);
+  // Management fee row: display based on basis. Only include when fee is set.
+  var dtMfPct = n(terms.management_fee_pct);
+  var dtMfAmt = n(terms.management_fee_amount);
+  var dtMfBasis = terms.management_fee_basis || (dtMfPct > 0 ? 'pct' : '');
+  if ((dtMfBasis === 'pct' && dtMfPct > 0) || (dtMfBasis && dtMfBasis !== 'pct' && dtMfAmt > 0)) {
+    if (dtMfBasis === 'pct') {
+      dtFields.push(['Management Fee (% of base rent)', dtMfPct / 100, 'pct', 'input']);
+    } else if (dtMfBasis === 'rsf_yr') {
+      dtFields.push(['Management Fee ($/RSF/yr)', dtMfAmt, 'curr_dec', 'input']);
+    } else if (dtMfBasis === 'rsf_mo') {
+      dtFields.push(['Management Fee ($/RSF/mo)', dtMfAmt, 'curr_dec', 'input']);
+    } else if (dtMfBasis === 'flat') {
+      dtFields.push(['Management Fee ($/mo flat)', dtMfAmt, 'curr', 'input']);
+    }
+  }
+  dtFields = dtFields.concat([
     ['Parking Spots', n(terms.parking_spots), 'num', 'input'],
     ['Parking Rate (per mo)', n(terms.parking_rate_monthly), 'curr', 'input'],
     ['Parking Escalation', n(terms.parking_escalation_pct) / 100, 'pct', 'input'],
@@ -20836,10 +20854,14 @@ function rfpExportExcel() {
     // Security deposit from deal terms
     var cfExSecDep = parseFloat((selected.deal_terms || selected.dealTerms || {}).security_deposit || (selected.deal_terms || selected.dealTerms || {}).securityDeposit || 0);
     var cfHasSecDep = cfExSecDep > 0;
+    // Management fee - new column when total fee > 0
+    var cfTotMgmtFee = (analysis.cash_flow && analysis.cash_flow.totals && analysis.cash_flow.totals.totalManagementFee) || 0;
+    var cfHasMgmtFee = cfTotMgmtFee > 0;
     var cfExTermMonths = cfData.length;
     var cfBaseCols = exHasPhasedRSF ? 12 : 11;
     var cfCols = cfBaseCols;
     if (cfHasTIReceived) cfCols++;
+    if (cfHasMgmtFee) cfCols++;
     if (cfHasAmortTI) cfCols++;
     if (cfBF.hasBrokerFee) cfCols++;
     if (cfHasCapex) cfCols++;
@@ -20851,6 +20873,7 @@ function rfpExportExcel() {
     cfColWidths = cfColWidths.concat([{ wch: 12 }, { wch: 16 }, { wch: 16 }]);
     if (cfHasTIReceived) cfColWidths.push({ wch: 16 });
     cfColWidths = cfColWidths.concat([{ wch: 16 }, { wch: 12 }, { wch: 12 }]);
+    if (cfHasMgmtFee) cfColWidths.push({ wch: 12 });
     if (cfHasAmortTI) cfColWidths.push({ wch: 16 });
     if (cfBF.hasBrokerFee) cfColWidths.push({ wch: 16 });
     if (cfHasCapex) cfColWidths.push({ wch: 16 });
@@ -20867,6 +20890,7 @@ function rfpExportExcel() {
     cfHeaders = cfHeaders.concat(['Rent/RSF', 'Base Rent', 'Free Rent']);
     if (cfHasTIReceived) cfHeaders.push('TI Received');
     cfHeaders = cfHeaders.concat(['Net Cash Rent', 'OpEx', 'Parking']);
+    if (cfHasMgmtFee) cfHeaders.push('Mgmt Fee');
     if (cfHasAmortTI) cfHeaders.push('Amort. TI');
     if (cfBF.hasBrokerFee) cfHeaders.push(cfBF.type === 'credit' ? 'Broker Credit' : 'Broker Fee');
     if (cfHasCapex) cfHeaders.push('CAPEX');
@@ -20875,6 +20899,7 @@ function rfpExportExcel() {
     cfHeaders = cfHeaders.concat(['Total Monthly', 'Cumulative']);
     var cfO = exHasPhasedRSF ? 1 : 0; // column offset for Billable RSF column
     var cfTRO = cfHasTIReceived ? 1 : 0; // column offset for TI Received column
+    var cfMFO = cfHasMgmtFee ? 1 : 0; // column offset for management fee column
     var cfATO = cfHasAmortTI ? 1 : 0; // column offset for amortized TI column
     var cfBFO = cfBF.hasBrokerFee ? 1 : 0; // column offset for broker fee column
     var cfCXO = cfHasCapex ? 1 : 0; // column offset for CAPEX column
@@ -20947,56 +20972,66 @@ function rfpExportExcel() {
       // Col I+cfO+cfTRO: Parking = Spots * Rate
       setFormula(cfWS, r, 8 + cfO + cfTRO, cfDT + dtRefs.parking_spots + '*' + cfDT + dtRefs.parking_rate, Object.assign({}, formulaStyle, rowFill));
 
+      // Management fee column: per-month value from analysis (already reflects basis + escalation, no abatement).
+      if (cfHasMgmtFee) {
+        var mfStyle = Object.assign({}, currStyle, rowFill, { font: { name: 'Calibri', sz: 10, color: { rgb: 'B45309' } } });
+        setCell(cfWS, r, 9 + cfO + cfTRO, Math.round(row.managementFee || 0), mfStyle);
+      }
+
       // Amortized TI column: fixed monthly payment, stops after amort term
       if (cfHasAmortTI) {
         var atVal = (row.month <= cfAmortTITermMonths) ? cfAmortTIMonthly : 0;
         var atStyle = Object.assign({}, currStyle, rowFill, { font: { name: 'Calibri', sz: 10, color: { rgb: 'DC2626' } } });
-        setCell(cfWS, r, 9 + cfO + cfTRO, Math.round(atVal), atStyle);
+        setCell(cfWS, r, 9 + cfO + cfTRO + cfMFO, Math.round(atVal), atStyle);
       }
 
       // Broker fee column: lump sum in month 1 only
       if (cfBF.hasBrokerFee) {
         var bfCFVal = (i === 0) ? cfBF.cashFlowImpact : 0;
         var bfCFStyle = Object.assign({}, currStyle, rowFill, { font: { name: 'Calibri', sz: 10, color: { rgb: 'B45309' } } });
-        setCell(cfWS, r, 9 + cfO + cfTRO + cfATO, bfCFVal, bfCFStyle);
+        setCell(cfWS, r, 9 + cfO + cfTRO + cfMFO + cfATO, bfCFVal, bfCFStyle);
       }
 
       // CAPEX column: payout schedule
       if (cfHasCapex) {
         var cfCapexVal = getCapexPaymentForMonth(cfCapex, row.month);
         var cfCapexStyle = Object.assign({}, currStyle, rowFill, { font: { name: 'Calibri', sz: 10, color: { rgb: '7C3AED' } } });
-        setCell(cfWS, r, 9 + cfO + cfTRO + cfATO + cfBFO, cfCapexVal, cfCapexStyle);
+        setCell(cfWS, r, 9 + cfO + cfTRO + cfMFO + cfATO + cfBFO, cfCapexVal, cfCapexStyle);
       }
 
-      // Total Monthly = Net Rent + OpEx + Parking [+ Amort TI] [+ Broker Fee] [+ CAPEX] [- TI Received]
+      // Total Monthly = Net Rent + OpEx + Parking [+ Mgmt Fee] [+ Amort TI] [+ Broker Fee] [+ CAPEX] [- TI Received]
       var netCol = XLSX.utils.encode_col(6 + cfO + cfTRO);
       var opexCol = XLSX.utils.encode_col(7 + cfO + cfTRO);
       var parkCol = XLSX.utils.encode_col(8 + cfO + cfTRO);
       var cfTotalFormula = netCol + er + '+' + opexCol + er + '+' + parkCol + er;
+      if (cfHasMgmtFee) {
+        var mfCol = XLSX.utils.encode_col(9 + cfO + cfTRO);
+        cfTotalFormula += '+' + mfCol + er;
+      }
       if (cfHasAmortTI) {
-        var atCol = XLSX.utils.encode_col(9 + cfO + cfTRO);
+        var atCol = XLSX.utils.encode_col(9 + cfO + cfTRO + cfMFO);
         cfTotalFormula += '+' + atCol + er;
       }
       if (cfBF.hasBrokerFee) {
-        var bfCol = XLSX.utils.encode_col(9 + cfO + cfTRO + cfATO);
+        var bfCol = XLSX.utils.encode_col(9 + cfO + cfTRO + cfMFO + cfATO);
         cfTotalFormula += '+' + bfCol + er;
       }
       if (cfHasCapex) {
-        var cxCol = XLSX.utils.encode_col(9 + cfO + cfTRO + cfATO + cfBFO);
+        var cxCol = XLSX.utils.encode_col(9 + cfO + cfTRO + cfMFO + cfATO + cfBFO);
         cfTotalFormula += '+' + cxCol + er;
       }
       if (cfHasInternal) {
-        var intCol = XLSX.utils.encode_col(9 + cfO + cfTRO + cfATO + cfBFO + cfCXO);
-        setCell(cfWS, r, 9 + cfO + cfTRO + cfATO + cfBFO + cfCXO, cfExInternalOpex, Object.assign({}, Object.assign({}, currStyle, { font: { name: 'Calibri', sz: 10, color: { rgb: '2563EB' } } }), rowFill));
+        var intCol = XLSX.utils.encode_col(9 + cfO + cfTRO + cfMFO + cfATO + cfBFO + cfCXO);
+        setCell(cfWS, r, 9 + cfO + cfTRO + cfMFO + cfATO + cfBFO + cfCXO, cfExInternalOpex, Object.assign({}, Object.assign({}, currStyle, { font: { name: 'Calibri', sz: 10, color: { rgb: '2563EB' } } }), rowFill));
         cfTotalFormula += '+' + intCol + er;
       }
       if (cfHasSecDep) {
-        var sdCol = XLSX.utils.encode_col(9 + cfO + cfTRO + cfATO + cfBFO + cfCXO + cfINO);
+        var sdCol = XLSX.utils.encode_col(9 + cfO + cfTRO + cfMFO + cfATO + cfBFO + cfCXO + cfINO);
         var sdVal = 0;
         if (i === 0) sdVal = cfExSecDep;
         if (i === cfData.length - 1) sdVal = -cfExSecDep;
         if (sdVal !== 0) {
-          setCell(cfWS, r, 9 + cfO + cfTRO + cfATO + cfBFO + cfCXO + cfINO, sdVal, Object.assign({}, currStyle, rowFill));
+          setCell(cfWS, r, 9 + cfO + cfTRO + cfMFO + cfATO + cfBFO + cfCXO + cfINO, sdVal, Object.assign({}, currStyle, rowFill));
           cfTotalFormula += '+' + sdCol + er;
         }
       }
@@ -21004,15 +21039,15 @@ function rfpExportExcel() {
         var tiRecCol = XLSX.utils.encode_col(6 + cfO);
         cfTotalFormula += '-' + tiRecCol + er;
       }
-      setFormula(cfWS, r, 9 + cfO + cfTRO + cfATO + cfBFO + cfCXO + cfINO + cfSDO, cfTotalFormula, Object.assign({}, currBoldStyle, rowFill));
+      setFormula(cfWS, r, 9 + cfO + cfTRO + cfMFO + cfATO + cfBFO + cfCXO + cfINO + cfSDO, cfTotalFormula, Object.assign({}, currBoldStyle, rowFill));
 
       // Cumulative = previous cumulative + this month total
-      var totalCol = XLSX.utils.encode_col(9 + cfO + cfTRO + cfATO + cfBFO + cfCXO + cfINO + cfSDO);
-      var cumCol = XLSX.utils.encode_col(10 + cfO + cfTRO + cfATO + cfBFO + cfCXO + cfINO + cfSDO);
+      var totalCol = XLSX.utils.encode_col(9 + cfO + cfTRO + cfMFO + cfATO + cfBFO + cfCXO + cfINO + cfSDO);
+      var cumCol = XLSX.utils.encode_col(10 + cfO + cfTRO + cfMFO + cfATO + cfBFO + cfCXO + cfINO + cfSDO);
       if (i === 0) {
-        setFormula(cfWS, r, 10 + cfO + cfTRO + cfATO + cfBFO + cfCXO + cfINO + cfSDO, totalCol + er, Object.assign({}, formulaStyle, rowFill));
+        setFormula(cfWS, r, 10 + cfO + cfTRO + cfMFO + cfATO + cfBFO + cfCXO + cfINO + cfSDO, totalCol + er, Object.assign({}, formulaStyle, rowFill));
       } else {
-        setFormula(cfWS, r, 10 + cfO + cfTRO + cfATO + cfBFO + cfCXO + cfINO + cfSDO, cumCol + (er - 1) + '+' + totalCol + er, Object.assign({}, formulaStyle, rowFill));
+        setFormula(cfWS, r, 10 + cfO + cfTRO + cfMFO + cfATO + cfBFO + cfCXO + cfINO + cfSDO, cumCol + (er - 1) + '+' + totalCol + er, Object.assign({}, formulaStyle, rowFill));
       }
     });
 
@@ -21020,11 +21055,11 @@ function rfpExportExcel() {
     var cfTotalRow = cfStartRow + cfData.length;
     setCell(cfWS, cfTotalRow, 0, 'TOTALS', totalLabelStyle);
     for (var cfPad = 1; cfPad <= 3 + cfO; cfPad++) setCell(cfWS, cfTotalRow, cfPad, '', totalLabelStyle);
-    for (var cc = 4 + cfO; cc <= 9 + cfO + cfTRO + cfATO + cfBFO + cfCXO + cfINO + cfSDO; cc++) {
+    for (var cc = 4 + cfO; cc <= 9 + cfO + cfTRO + cfMFO + cfATO + cfBFO + cfCXO + cfINO + cfSDO; cc++) {
       var cLetter = XLSX.utils.encode_cell({ r: 0, c: cc }).replace(/\d+/, '');
       setFormula(cfWS, cfTotalRow, cc, 'SUM(' + cLetter + (cfStartRow + 1) + ':' + cLetter + cfTotalRow + ')', totalRowStyle);
     }
-    setCell(cfWS, cfTotalRow, 10 + cfO + cfTRO + cfATO + cfBFO + cfCXO + cfINO + cfSDO, '', totalLabelStyle);
+    setCell(cfWS, cfTotalRow, 10 + cfO + cfTRO + cfMFO + cfATO + cfBFO + cfCXO + cfINO + cfSDO, '', totalLabelStyle);
 
     cfWS['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: cfTotalRow, c: cfCols - 1 } });
     cfWS['!freeze'] = { xSplit: 0, ySplit: 3 };
@@ -21034,9 +21069,15 @@ function rfpExportExcel() {
       var tiRecHdrRef = cellRef(2, tiRecHdrCol);
       if (cfWS[tiRecHdrRef]) cfWS[tiRecHdrRef].s = Object.assign({}, headerStyle, { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '16A34A' } }, fill: { fgColor: { rgb: 'F0FDF4' } } });
     }
+    // Style Mgmt Fee header in amber
+    if (cfHasMgmtFee) {
+      var mfHdrCol = 9 + cfO + cfTRO;
+      var mfHdrRef = cellRef(2, mfHdrCol);
+      if (cfWS[mfHdrRef]) cfWS[mfHdrRef].s = Object.assign({}, headerStyle, { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: 'B45309' } }, fill: { fgColor: { rgb: 'FFFBEB' } } });
+    }
     // Style CAPEX header in purple
     if (cfHasCapex) {
-      var cxHdrCol = 9 + cfO + cfTRO + cfATO + cfBFO;
+      var cxHdrCol = 9 + cfO + cfTRO + cfMFO + cfATO + cfBFO;
       var cxHdrRef = cellRef(2, cxHdrCol);
       if (cfWS[cxHdrRef]) cfWS[cxHdrRef].s = Object.assign({}, headerStyle, { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '7C3AED' } }, fill: { fgColor: { rgb: 'F5F3FF' } } });
     }

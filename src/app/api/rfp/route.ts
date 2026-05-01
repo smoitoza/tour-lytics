@@ -595,10 +595,12 @@ function generateFinancialAnalysis(terms: DealTerms) {
     freeRentCredit = freeRentCredit * proration
     const netCashRent = monthlyBaseRent - freeRentCredit
 
-    // Management fee: % of NET cash rent so that fully-abated months = $0 fee.
-    // This matches how most tenant-rep pro formas treat it. Scales with escalations
-    // automatically because monthlyBaseRent already includes escalation.
-    const mgmtFee = netCashRent * mgmtFeePct
+    // Management fee: % of CONTRACTUAL base rent (monthlyBaseRent before free-rent credit).
+    // Does NOT abate during free rent - mirrors OPEX behavior. Landlords typically continue
+    // charging their management fee even while base rent is abated, since the fee covers
+    // property-level services that run regardless of who is paying rent.
+    // Scales with escalations automatically because monthlyBaseRent already includes escalation.
+    const mgmtFee = monthlyBaseRent * mgmtFeePct
 
     // OpEx (constant, user-defined) - prorated for partial months
     const opex = opexMonthly * proration
