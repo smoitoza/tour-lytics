@@ -19069,7 +19069,8 @@ function rfpShowVersionComparison(buildingAddress) {
     { key: 'opexRSF', label: 'OpEx/Tax/CAM (per RSF/yr)', fmt: 'currency_dec' },
     { key: 'opexPerSFMo', label: 'OpEx/SF/mo', fmt: 'currency_dec', computed: 'opexPerSFMo' },
     { key: 'opex', label: 'OpEx (monthly total)', fmt: 'currency' },
-    { key: 'managementFeePct', label: 'Management Fee %', fmt: 'plain' },
+    { key: 'mgmtFeePerSFYr', label: 'Mgmt Fee/RSF/yr', fmt: 'currency_dec', computed: 'mgmtFeePerSFYr' },
+    { key: 'mgmtFeePerSFMo', label: 'Mgmt Fee/SF/mo', fmt: 'currency_dec', computed: 'mgmtFeePerSFMo' },
     // Full service gross
     { key: 'fsgPerSFMo', label: 'Full Service Gross/SF/mo', fmt: 'currency_dec', computed: 'fsgPerSFMo' },
     // Parking
@@ -19134,6 +19135,18 @@ function rfpShowVersionComparison(buildingAddress) {
       }
       if (field.computed === 'opexPerSFMo') return Math.round((cf2.totalOpex || 0) / termMo2 / rsf2 * 100) / 100;
       if (field.computed === 'fsgPerSFMo') return Math.round(((cf2.totalBaseRent || 0) + (cf2.totalOpex || 0)) / termMo2 / rsf2 * 100) / 100;
+      return 0;
+    }
+    // Management fee per RSF/yr and per SF/mo (blended over full term, basis-agnostic)
+    if (field.computed === 'mgmtFeePerSFYr' || field.computed === 'mgmtFeePerSFMo') {
+      var mfSm = (sub.analysis && sub.analysis.summary) || {};
+      var mfCf = (sub.analysis && sub.analysis.cash_flow && sub.analysis.cash_flow.totals) || {};
+      var mfRsf = mfSm.rsf || 0;
+      var mfTermMo = mfSm.termMonths || 1;
+      var mfTotal = mfCf.totalManagementFee || 0;
+      if (mfRsf === 0 || mfTotal === 0) return 0;
+      if (field.computed === 'mgmtFeePerSFYr') return Math.round((mfTotal / mfTermMo * 12) / mfRsf * 100) / 100;
+      if (field.computed === 'mgmtFeePerSFMo') return Math.round((mfTotal / mfTermMo) / mfRsf * 100) / 100;
       return 0;
     }
     // Total All-in Cost (gross = base rent + opex)
@@ -20190,6 +20203,9 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
   var slHasAmortTI = (totals.totalAmortizedTI || 0) > 0;
   var slAmortTIMonthly = (totals.amortizedTIMonthlyPayment || 0);
 
+  // Management fee (from cash flow totals - basis-agnostic)
+  var slHasMgmtFee = (totals.totalManagementFee || 0) > 0;
+
   var html = '<div class="fin-table-wrap"><table class="fin-table">';
   html += '<thead><tr>' +
     '<th class="cell-label">Year</th>' +
@@ -20200,6 +20216,7 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
     '<th class="cell-currency">Net Rent</th>' +
     '<th class="cell-currency">OpEx</th>' +
     '<th class="cell-currency">Parking</th>' +
+    (slHasMgmtFee ? '<th class="cell-currency" style="color:#b45309">Mgmt Fee</th>' : '') +
     (slHasAmortTI ? '<th class="cell-currency" style="color:#dc2626">Amort. TI</th>' : '') +
     (capex.hasCapex ? '<th class="cell-currency" style="color:#7c3aed">LHI Dep.</th>' : '') +
     (slBrokerFee.hasBrokerFee ? '<th class="cell-currency" style="color:#b45309">Broker ' + (slBrokerFee.type === 'credit' ? 'Credit' : 'Fee') + '</th>' : '') +
@@ -20215,7 +20232,9 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
     var slNetRent = Math.round(row.baseRent - slFreeRentYr - slTICreditYr);
     // Amortized TI for this year (actual cash payments from annual rollup)
     var slAmortTIYr = slHasAmortTI ? (row.amortizedTI || 0) : 0;
-    var slTotalCost = slNetRent + (row.opex || 0) + (row.parking || 0) + slAmortTIYr;
+    // Mgmt fee for this year (sum of monthly fees as actually charged)
+    var slMgmtFeeYr = slHasMgmtFee ? Math.round(row.managementFee || 0) : 0;
+    var slTotalCost = slNetRent + (row.opex || 0) + (row.parking || 0) + slMgmtFeeYr + slAmortTIYr;
     // LHI Dep: only for months >= in-service month
     var lhiDep = 0;
     if (capex.hasCapex) {
@@ -20238,6 +20257,7 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
       '<td class="cell-currency">' + rfpFmtCurrency(slNetRent) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.opex) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.parking) + '</td>' +
+      (slHasMgmtFee ? '<td class="cell-currency" style="color:#b45309">' + (slMgmtFeeYr ? rfpFmtCurrency(slMgmtFeeYr) : '') + '</td>' : '') +
       (slHasAmortTI ? '<td class="cell-currency" style="color:#dc2626">' + (slAmortTIYr ? rfpFmtCurrency(slAmortTIYr) : '') + '</td>' : '') +
       (capex.hasCapex ? '<td class="cell-currency" style="color:#7c3aed">' + rfpFmtCurrency(Math.round(lhiDep)) + '</td>' : '') +
       (slBrokerFee.hasBrokerFee ? '<td class="cell-currency" style="color:#b45309">' + (brokerAmort < 0 ? '(' + rfpFmtCurrency(Math.abs(Math.round(brokerAmort))) + ')' : rfpFmtCurrency(Math.round(brokerAmort))) + '</td>' : '') +
@@ -20463,6 +20483,10 @@ function rfpBuildGAAPTable(analysis, buildingAddr, componentLabel) {
   var gaapTermMonths = (analysis.summary && analysis.summary.termMonths) ? analysis.summary.termMonths : 0;
   var capex = buildingAddr ? getCapexForBuilding(buildingAddr, gaapTermMonths, componentLabel) : { hasCapex: false, grandTotal: 0, monthlyDepreciation: 0 };
   var gaapBrokerFee = buildingAddr ? getBrokerFeeForBuilding(buildingAddr, gaapTermMonths, componentLabel) : { hasBrokerFee: false, amount: 0, slMonthlyImpact: 0 };
+  // Per-month management fee comes from cash flow (handles all 4 bases + escalation, no abatement)
+  var gaapCfMonthly = (analysis.cash_flow && analysis.cash_flow.monthly) || [];
+  var gaapCfTotals = (analysis.cash_flow && analysis.cash_flow.totals) || {};
+  var gaapHasMgmtFee = (gaapCfTotals.totalManagementFee || 0) > 0;
 
   // ASC 842: Adjust ROU Asset for broker fee
   // Expense (Initial Direct Cost) = increases ROU Asset
@@ -20517,6 +20541,7 @@ function rfpBuildGAAPTable(analysis, buildingAddr, componentLabel) {
     '<th class="cell-currency">ROU Amortization</th>' +
     '<th class="cell-currency">ROU Asset</th>' +
     '<th class="cell-currency">SL Expense</th>' +
+    (gaapHasMgmtFee ? '<th class="cell-currency" style="color:#b45309">Mgmt Fee</th>' : '') +
     (capex.hasCapex ? '<th class="cell-currency" style="color:#7c3aed">LHI Dep.</th>' : '') +
     '<th class="cell-currency">Total GAAP Expense</th>' +
   '</tr></thead><tbody>';
@@ -20526,10 +20551,11 @@ function rfpBuildGAAPTable(analysis, buildingAddr, componentLabel) {
   schedule.forEach(function(row, idx) {
     var lhiDep = (capex.hasCapex && row.month >= (capex.inServiceMonth || 1)) ? capex.monthlyDepreciation : 0;
     var brokerAmortGAAP = gaapBrokerFee.hasBrokerFee ? gaapBrokerFee.slMonthlyImpact : 0;
+    var mgmtFeeMo = gaapHasMgmtFee ? ((gaapCfMonthly[idx] && gaapCfMonthly[idx].managementFee) || 0) : 0;
     // Adjusted ROU amortization and remaining ROU asset
     var adjROUAmort = adjustedROUMonthlyAmort;
     adjRemainingROU = Math.max(0, adjRemainingROU - adjROUAmort);
-    var adjustedGAAP = row.totalGAAPExpense + lhiDep + brokerAmortGAAP;
+    var adjustedGAAP = row.totalGAAPExpense + lhiDep + brokerAmortGAAP + mgmtFeeMo;
     html += '<tr>' +
       '<td class="cell-label">' + (row.month || '') + '</td>' +
       '<td>' + (row.period || '') + '</td>' +
@@ -20540,6 +20566,7 @@ function rfpBuildGAAPTable(analysis, buildingAddr, componentLabel) {
       '<td class="cell-currency">' + rfpFmtCurrency(adjROUAmort) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(Math.round(adjRemainingROU)) + '</td>' +
       '<td class="cell-currency">' + rfpFmtCurrency(row.straightLineExpense) + '</td>' +
+      (gaapHasMgmtFee ? '<td class="cell-currency" style="color:#b45309">' + rfpFmtCurrency(Math.round(mgmtFeeMo)) + '</td>' : '') +
       (capex.hasCapex ? '<td class="cell-currency" style="color:#7c3aed">' + rfpFmtCurrency(lhiDep) + '</td>' : '') +
       '<td class="cell-currency">' + rfpFmtCurrency(Math.round(adjustedGAAP)) + '</td>' +
     '</tr>';
@@ -20911,8 +20938,11 @@ function rfpExportExcel() {
     var slAmortTIMonthlyEx = (slTotals.amortizedTIMonthlyPayment || 0);
     var slExCapex = getCapexForBuilding(address, slTermMonths, compLabel);
     var slHasCapexEx = slExCapex.hasCapex;
+    var slExMgmtFeeTotal = (slTotals.totalManagementFee || 0);
+    var slHasMgmtFeeEx = slExMgmtFeeTotal > 0;
     var slCols = 8; // Base: Year, Months, Base Rent, Free Rent, Net Rent, OpEx, Parking, Total Cost
     if (slHasTIEx) slCols++;
+    if (slHasMgmtFeeEx) slCols++;
     if (slHasAmortTIEx) slCols++;
     if (slBF.hasBrokerFee) slCols++;
     if (slHasCapexEx) slCols++;
@@ -20922,6 +20952,7 @@ function rfpExportExcel() {
     slColWidths.push({ wch: 16 }); // Net Rent
     slColWidths.push({ wch: 14 }); // OpEx
     slColWidths.push({ wch: 14 }); // Parking
+    if (slHasMgmtFeeEx) slColWidths.push({ wch: 14 }); // Mgmt Fee
     if (slHasAmortTIEx) slColWidths.push({ wch: 16 }); // Amort. TI
     if (slBF.hasBrokerFee) slColWidths.push({ wch: 16 });
     if (slHasCapexEx) slColWidths.push({ wch: 16 }); // LHI Dep.
@@ -20936,6 +20967,7 @@ function rfpExportExcel() {
     var slHeaders = ['Year', 'Months', 'Base Rent', 'Free Rent'];
     if (slHasTIEx) slHeaders.push('TI Credit');
     slHeaders.push('Net Rent', 'OpEx', 'Parking');
+    if (slHasMgmtFeeEx) slHeaders.push('Mgmt Fee');
     if (slHasAmortTIEx) slHeaders.push('Amort. TI');
     if (slBF.hasBrokerFee) slHeaders.push(slBrokerLabel);
     if (slHasCapexEx) slHeaders.push('LHI Dep.');
@@ -20951,6 +20983,7 @@ function rfpExportExcel() {
     slColIdx.netRent = slNextCol; slNextCol++;
     slColIdx.opex = slNextCol; slNextCol++;
     slColIdx.parking = slNextCol; slNextCol++;
+    if (slHasMgmtFeeEx) { slColIdx.mgmtFee = slNextCol; slNextCol++; }
     if (slHasAmortTIEx) { slColIdx.amortTI = slNextCol; slNextCol++; }
     if (slBF.hasBrokerFee) { slColIdx.broker = slNextCol; slNextCol++; }
     if (slHasCapexEx) { slColIdx.lhiDep = slNextCol; slNextCol++; }
@@ -20960,6 +20993,11 @@ function rfpExportExcel() {
     if (slHasCapexEx) {
       var lhiHdrRef = cellRef(2, slColIdx.lhiDep);
       if (slWS[lhiHdrRef]) slWS[lhiHdrRef].s = Object.assign({}, headerStyle, { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '7C3AED' } }, fill: { fgColor: { rgb: 'F5F3FF' } } });
+    }
+    // Style Mgmt Fee header in amber
+    if (slHasMgmtFeeEx) {
+      var mfHdrRef = cellRef(2, slColIdx.mgmtFee);
+      if (slWS[mfHdrRef]) slWS[mfHdrRef].s = Object.assign({}, headerStyle, { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: 'B45309' } }, fill: { fgColor: { rgb: 'FFFBEB' } } });
     }
 
     // Helper to get column letter from index
@@ -21027,6 +21065,13 @@ function rfpExportExcel() {
       // Parking = Spots * Rate * Months
       setFormula(slWS, r, slColIdx.parking, dtParkingSpots + '*' + dtParkingRate + '*' + slCol('months') + excelRow, Object.assign({}, formulaStyle, rowFill));
 
+      // Management Fee per year (sum of monthly fees as actually charged)
+      if (slHasMgmtFeeEx) {
+        var mfYrVal = Math.round(row.managementFee || 0);
+        var mfStyle = Object.assign({}, currStyle, rowFill, { font: { name: 'Calibri', sz: 10, color: { rgb: 'B45309' } } });
+        setCell(slWS, r, slColIdx.mgmtFee, mfYrVal, mfStyle);
+      }
+
       // Amortized TI (actual cash payments per year)
       if (slHasAmortTIEx) {
         var amortTIYrVal = row.amortizedTI || 0;
@@ -21054,8 +21099,9 @@ function rfpExportExcel() {
         setCell(slWS, r, slColIdx.lhiDep, slLhiVal, slLhiStyle);
       }
 
-      // Total Cost = Net Rent + OpEx + Parking [+ Amort TI] [+ Broker Fee] [+ LHI Dep]
+      // Total Cost = Net Rent + OpEx + Parking [+ Mgmt Fee] [+ Amort TI] [+ Broker Fee] [+ LHI Dep]
       var slTotalFormula = slCol('netRent') + excelRow + '+' + slCol('opex') + excelRow + '+' + slCol('parking') + excelRow;
+      if (slHasMgmtFeeEx) slTotalFormula += '+' + slCol('mgmtFee') + excelRow;
       if (slHasAmortTIEx) slTotalFormula += '+' + slCol('amortTI') + excelRow;
       if (slBF.hasBrokerFee) slTotalFormula += '+' + slCol('broker') + excelRow;
       if (slHasCapexEx) slTotalFormula += '+' + slCol('lhiDep') + excelRow;
@@ -21625,12 +21671,16 @@ function rfpExportExcel() {
   if (analysis.gaap) {
     var gaapSummary = analysis.gaap.summary || {};
     var gaapSchedule = analysis.gaap.schedule || [];
-    // Check for CAPEX/LHI depreciation early for column count
+    // Check for CAPEX/LHI depreciation and mgmt fee early for column count
     var gCapexEarly = (typeof getCapexForBuilding === 'function') ? getCapexForBuilding(address, (analysis.summary && analysis.summary.termMonths) || 0, compLabel) : { hasCapex: false };
     var gHasLHIEarly = gCapexEarly.hasCapex;
-    var gCols = gHasLHIEarly ? 11 : 10;
+    var gMgmtFeeTotalEarly = (analysis.cash_flow && analysis.cash_flow.totals && analysis.cash_flow.totals.totalManagementFee) || 0;
+    var gHasMgmtFeeEarly = gMgmtFeeTotalEarly > 0;
+    // Base = 10 (Mo, Period, Cash Pay, Interest, Principal, Liability, ROU Amort, ROU Asset, SL Exp, Total)
+    var gCols = 10 + (gHasMgmtFeeEarly ? 1 : 0) + (gHasLHIEarly ? 1 : 0);
     var gWS = XLSX.utils.aoa_to_sheet([['']]);
     var gColWidths = [{ wch: 8 }, { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 18 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 14 }];
+    if (gHasMgmtFeeEarly) gColWidths.push({ wch: 14 }); // Mgmt Fee
     if (gHasLHIEarly) gColWidths.push({ wch: 16 }); // LHI Dep.
     gColWidths.push({ wch: 18 }); // Total GAAP Exp
     gWS['!cols'] = gColWidths;
@@ -21698,13 +21748,17 @@ function rfpExportExcel() {
     var gHasLHI = gCapex.hasCapex;
     var gLHIMonthly = gHasLHI ? (gCapex.monthlyDepreciation || 0) : 0;
     var gInServiceMonth = gHasLHI ? (gCapex.inServiceMonth || 1) : 1;
+    var gMgmtFeeTotal = (analysis.cash_flow && analysis.cash_flow.totals && analysis.cash_flow.totals.totalManagementFee) || 0;
+    var gHasMgmtFee = gMgmtFeeTotal > 0;
     var gHeaders = ['Mo', 'Period', 'Cash Payment', 'Interest Exp', 'Principal Red.', 'Lease Liability', 'ROU Amort.', 'ROU Asset', 'SL Expense'];
+    if (gHasMgmtFee) gHeaders.push('Mgmt Fee');
     if (gHasLHI) gHeaders.push('LHI Dep.');
     gHeaders.push('Total GAAP Exp');
     var gCols = gHeaders.length;
     gHeaders.forEach(function(h, i) {
       var style = (i < 2) ? headerLeftStyle : headerStyle;
       if (gHasLHI && h === 'LHI Dep.') style = Object.assign({}, headerStyle, { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: '7C3AED' } } });
+      if (gHasMgmtFee && h === 'Mgmt Fee') style = Object.assign({}, headerStyle, { font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: 'B45309' } }, fill: { fgColor: { rgb: 'FFFBEB' } } });
       setCell(gWS, gHdrRow, i, h, style);
     });
 
@@ -21752,19 +21806,31 @@ function rfpExportExcel() {
       // Col I: SL Expense (straight-line - kept as value for now)
       setCell(gWS, r, 8, n(row.straightLineExpense), Object.assign({}, currStyle, rowFill));
 
-      // Col J (or K): LHI Depreciation (if CAPEX exists), then Total GAAP Expense
+      // Col J (Mgmt Fee if present), then LHI Depreciation, then Total GAAP Expense
+      var gMFOffset = gHasMgmtFee ? 1 : 0;
       var gLHIOffset = gHasLHI ? 1 : 0;
+      if (gHasMgmtFee) {
+        // Pull from cash_flow.monthly when available; fall back to per-term average
+        var gCfMonthly = (analysis.cash_flow && analysis.cash_flow.monthly) ? analysis.cash_flow.monthly : [];
+        var gMfThisMonth = (gCfMonthly[i] && gCfMonthly[i].managementFee) || 0;
+        var mfStyle = Object.assign({}, currStyle, { font: { name: 'Calibri', sz: 10, color: { rgb: 'B45309' } } });
+        setCell(gWS, r, 9, Math.round(gMfThisMonth), Object.assign({}, mfStyle, rowFill));
+      }
       if (gHasLHI) {
         var lhiVal = (row.month >= gInServiceMonth) ? Math.round(gLHIMonthly) : 0;
         var lhiStyle = Object.assign({}, currStyle, { font: { name: 'Calibri', sz: 10, color: { rgb: '7C3AED' } } });
-        setCell(gWS, r, 9, lhiVal, Object.assign({}, lhiStyle, rowFill));
+        setCell(gWS, r, 9 + gMFOffset, lhiVal, Object.assign({}, lhiStyle, rowFill));
       }
 
-      // Total GAAP Expense = Interest + ROU Amortization [+ LHI Dep]
-      var gTotalCol = 9 + gLHIOffset;
+      // Total GAAP Expense = Interest + ROU Amortization [+ Mgmt Fee] [+ LHI Dep]
+      var gTotalCol = 9 + gMFOffset + gLHIOffset;
       var gTotalFormula = 'D' + er + '+G' + er;
-      if (gHasLHI) {
+      if (gHasMgmtFee) {
         gTotalFormula += '+J' + er;
+      }
+      if (gHasLHI) {
+        var gLHIColLetter = XLSX.utils.encode_col(9 + gMFOffset);
+        gTotalFormula += '+' + gLHIColLetter + er;
       }
       setFormula(gWS, r, gTotalCol, gTotalFormula, Object.assign({}, currBoldStyle, rowFill));
     });
@@ -21935,6 +22001,9 @@ function rfpExportExcel() {
       { key: 'opex_rsf_yr', label: 'OpEx/Tax/CAM (per RSF/yr)', type: 'curr_dec', src: 'terms' },
       { key: 'opexPerSFMo', label: 'OpEx/SF/mo', type: 'curr_dec', src: 'computed' },
       { key: 'opex_monthly', label: 'OpEx (monthly total)', type: 'curr', src: 'terms' },
+      // Management Fee (basis-agnostic, blended over term)
+      { key: 'mgmtFeePerSFYr', label: 'Mgmt Fee/RSF/yr', type: 'curr_dec', src: 'computed' },
+      { key: 'mgmtFeePerSFMo', label: 'Mgmt Fee/SF/mo', type: 'curr_dec', src: 'computed' },
       // Full service gross
       { key: 'fsgPerSFMo', label: 'Full Service Gross/SF/mo', type: 'curr_dec', src: 'computed' },
       // Parking
@@ -22010,6 +22079,12 @@ function rfpExportExcel() {
             val = cRsf > 0 ? Math.round((cCf.totalOpex || 0) / cTermMo / cRsf * 100) / 100 : 0;
           } else if (f.key === 'fsgPerSFMo') {
             val = cRsf > 0 ? Math.round(((cCf.totalBaseRent || 0) + (cCf.totalOpex || 0)) / cTermMo / cRsf * 100) / 100 : 0;
+          } else if (f.key === 'mgmtFeePerSFYr') {
+            var mfTotal = cCf.totalManagementFee || 0;
+            val = (cRsf > 0 && mfTotal > 0) ? Math.round((mfTotal / cTermMo * 12) / cRsf * 100) / 100 : 0;
+          } else if (f.key === 'mgmtFeePerSFMo') {
+            var mfTotal2 = cCf.totalManagementFee || 0;
+            val = (cRsf > 0 && mfTotal2 > 0) ? Math.round((mfTotal2 / cTermMo) / cRsf * 100) / 100 : 0;
           } else { val = 0; }
         } else if (f.src === 'computed_int') {
           // Internal OpEx from assumptions (same for all versions)
