@@ -1,0 +1,322 @@
+/* ============================================================
+   LEASE REVIEW v1
+   ============================================================ */
+
+/* ---- Modal ---- */
+.lease-modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999;
+  font-family: 'DM Sans', sans-serif;
+}
+.lease-modal-card {
+  background: #ffffff;
+  border-radius: 14px;
+  width: 560px; max-width: 92vw;
+  max-height: 90vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 25px 60px rgba(15,23,42,0.25);
+}
+.lease-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.lease-modal-title { font-size: 1.1rem; font-weight: 700; color: #0f172a; }
+.lease-modal-close {
+  border: none; background: transparent; cursor: pointer;
+  font-size: 1.6rem; line-height: 1; color: #64748b;
+  padding: 0 6px;
+}
+.lease-modal-close:hover { color: #0f172a; }
+.lease-modal-body { padding: 18px 22px; overflow-y: auto; }
+.lease-modal-footer {
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 14px 22px 18px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.lease-form-group { margin-bottom: 14px; }
+.lease-form-label {
+  display: block;
+  font-size: 0.8125rem; font-weight: 600;
+  color: #334155;
+  margin-bottom: 6px;
+}
+.lease-form-input {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  background: #fff;
+}
+.lease-form-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+.lease-form-hint {
+  font-size: 0.75rem; color: #64748b;
+  margin-top: 5px;
+}
+
+.lease-btn-primary {
+  background: #2563eb; color: #fff;
+  border: none; border-radius: 8px;
+  padding: 9px 18px;
+  font-size: 0.875rem; font-weight: 600;
+  cursor: pointer;
+}
+.lease-btn-primary:hover:not(:disabled) { background: #1d4ed8; }
+.lease-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.lease-btn-secondary {
+  background: #fff; color: #475569;
+  border: 1px solid #cbd5e1; border-radius: 8px;
+  padding: 9px 16px;
+  font-size: 0.875rem; font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+.lease-btn-secondary:hover { background: #f1f5f9; }
+
+.lease-upload-status {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  background: #f8fafc; color: #334155;
+  display: flex; align-items: center; gap: 8px;
+}
+.lease-status-info    { background: #eff6ff; color: #1e40af; }
+.lease-status-success { background: #f0fdf4; color: #15803d; }
+.lease-status-error   { background: #fef2f2; color: #b91c1c; }
+
+.lease-spinner {
+  width: 14px; height: 14px;
+  border: 2px solid currentColor; border-top-color: transparent;
+  border-radius: 50%;
+  animation: lease-spin 0.7s linear infinite;
+  display: inline-block;
+}
+@keyframes lease-spin { to { transform: rotate(360deg); } }
+
+/* ---- Summary overlay ---- */
+.lease-summary-overlay {
+  position: fixed; inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  z-index: 9999;
+  font-family: 'DM Sans', sans-serif;
+  overflow-y: auto;
+  padding: 32px 16px;
+}
+.lease-summary-card {
+  background: #f8fafc;
+  border-radius: 16px;
+  width: 1100px; max-width: 96vw;
+  margin: 0 auto;
+  box-shadow: 0 25px 60px rgba(15,23,42,0.25);
+}
+.lease-summary-full { padding: 24px 28px 32px; }
+.lease-summary-loading,
+.lease-summary-error {
+  padding: 60px 32px;
+  text-align: center;
+  font-size: 0.9375rem;
+}
+.lease-summary-error {
+  color: #b91c1c;
+  background: #fff;
+  border-radius: 16px;
+}
+
+.lease-summary-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 18px;
+}
+.lease-summary-eyebrow {
+  font-size: 0.75rem; font-weight: 600;
+  color: #2563eb; text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+.lease-summary-title { font-size: 1.5rem; font-weight: 700; color: #0f172a; }
+.lease-summary-subtitle { font-size: 0.875rem; color: #64748b; margin-top: 4px; }
+.lease-summary-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+/* ---- Headline grid ---- */
+.lease-headline-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+@media (max-width: 900px) {
+  .lease-headline-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+.lease-headline-cell {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.lease-headline-label {
+  font-size: 0.6875rem; font-weight: 600;
+  color: #64748b; text-transform: uppercase; letter-spacing: 0.4px;
+  margin-bottom: 3px;
+}
+.lease-headline-value {
+  font-size: 0.9375rem; font-weight: 600; color: #0f172a;
+}
+
+/* ---- Risk strip ---- */
+.lease-risk-strip {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.lease-risk-pill {
+  font-size: 0.75rem; font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+.lease-risk-pill.lease-risk-high   { background: #FEF2F2; color: #B91C1C; }
+.lease-risk-pill.lease-risk-medium { background: #FFFBEB; color: #B45309; }
+.lease-risk-pill.lease-risk-low    { background: #F0FDF4; color: #15803D; }
+.lease-risk-meta { font-size: 0.8125rem; color: #64748b; margin-left: auto; }
+
+/* ---- Top risks callout ---- */
+.lease-top-risks {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 22px;
+}
+.lease-section-title {
+  font-size: 0.875rem; font-weight: 700; color: #991B1B;
+  margin-bottom: 8px;
+}
+.lease-risk-list {
+  list-style: none; padding: 0; margin: 0;
+}
+.lease-risk-list li {
+  padding: 6px 0;
+  border-top: 1px solid #FECACA;
+  font-size: 0.875rem; color: #7F1D1D;
+}
+.lease-risk-list li:first-child { border-top: none; }
+.lease-risk-section { color: #B91C1C; font-weight: 500; font-size: 0.8125rem; }
+.lease-risk-rationale { font-size: 0.8125rem; color: #991B1B; margin-top: 2px; }
+
+/* ---- Clause groups ---- */
+.lease-group { margin-bottom: 24px; }
+.lease-group-header {
+  font-size: 0.875rem; font-weight: 700;
+  color: #0f172a;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.lease-group-count {
+  background: #e2e8f0; color: #475569;
+  padding: 1px 8px; border-radius: 999px;
+  font-size: 0.6875rem; font-weight: 600;
+}
+.lease-clause-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 12px;
+}
+@media (max-width: 900px) {
+  .lease-clause-list { grid-template-columns: 1fr; }
+}
+
+.lease-clause-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.lease-clause-head {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.lease-clause-type {
+  font-size: 0.8125rem; font-weight: 700; color: #0f172a;
+}
+.lease-clause-section {
+  font-size: 0.75rem; color: #64748b;
+  background: #f1f5f9; padding: 2px 7px; border-radius: 6px;
+}
+.lease-clause-risk {
+  font-size: 0.6875rem; font-weight: 600;
+  padding: 3px 8px; border-radius: 999px;
+  margin-left: auto;
+}
+.lease-clause-heading {
+  font-size: 0.8125rem; font-weight: 600; color: #334155;
+  margin-bottom: 6px;
+}
+.lease-clause-summary {
+  font-size: 0.875rem; color: #1e293b;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+.lease-clause-keyterms {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  margin: 8px 0;
+}
+.lease-keyterm { font-size: 0.75rem; }
+.lease-keyterm-key {
+  display: block;
+  color: #64748b;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+.lease-keyterm-val {
+  display: block;
+  color: #0f172a;
+  font-weight: 600;
+}
+.lease-clause-quote-wrap {
+  margin: 8px 0;
+  font-size: 0.8125rem;
+}
+.lease-clause-quote-wrap summary {
+  cursor: pointer;
+  color: #2563eb;
+  font-weight: 600;
+}
+.lease-clause-quote {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border-left: 3px solid #cbd5e1;
+  border-radius: 0 6px 6px 0;
+  font-size: 0.8125rem;
+  color: #334155;
+  font-style: italic;
+}
+.lease-clause-rationale {
+  font-size: 0.75rem; color: #475569;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed #e2e8f0;
+}
+.lease-clause-rationale-label {
+  font-weight: 700; color: #334155;
+}
