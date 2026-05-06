@@ -878,6 +878,11 @@
           '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' +
           'Google Sheets' +
         '</button>' +
+        '<button class="lease-btn-secondary" data-action="open-word-menu" title="Word document exports" style="position:relative;">' +
+          '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>' +
+          'Word' +
+          '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-left:4px;"><polyline points="6 9 12 15 18 9"/></svg>' +
+        '</button>' +
         '<button class="lease-btn-secondary" data-action="regenerate" title="Regenerate AI summary with a fresh pass">' +
           '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>' +
           'Regenerate' +
@@ -989,7 +994,7 @@
     '</button>'
   }
 
-  // Per-clause notes textarea + last-updated metadata
+  // Per-clause notes textarea + last-updated metadata + counter language (if exists)
   function renderNegotiationWorkspace(clauseType, status, notes, negotiation) {
     var lastUpdated = ''
     if (negotiation && negotiation.updated_at) {
@@ -1000,10 +1005,38 @@
         if (negotiation.status_changes && negotiation.status_changes > 1) lastUpdated += ' · ' + negotiation.status_changes + ' status changes'
       } catch (e) { /* skip */ }
     }
+
+    // Existing counter language (if it was previously generated and saved)
+    var counterBlock = ''
+    var hasCounter = negotiation && negotiation.counter_language
+    if (hasCounter) {
+      var src = negotiation.counter_source || 'manual'
+      var sourceLabel = src === 'ai_generated' ? 'AI-generated' : (src === 'ai_edited' ? 'AI-edited' : 'Manual')
+      counterBlock = '<div class="lease-cmp-counter-result">' +
+        '<div class="lease-cmp-counter-label">Counter language <span class="lease-cmp-counter-badge">' + escapeHtml(sourceLabel) + '</span></div>' +
+        (negotiation.counter_rationale ? '<div class="lease-cmp-counter-rationale"><strong>Why:</strong> ' + escapeHtml(negotiation.counter_rationale) + '</div>' : '') +
+        '<div class="lease-cmp-counter-text">' + escapeHtml(negotiation.counter_language) + '</div>' +
+      '</div>'
+    }
+
+    // Suggest button - only when no counter exists yet, and status is not resolved
+    var statusMeta = NEG_STATUS_BY_KEY[status] || NEG_STATUS_BY_KEY.open_issue
+    var suggestBtn = ''
+    if (!hasCounter && !statusMeta.isResolved) {
+      suggestBtn = '<button class="lease-cmp-suggest-counter-btn" data-action="suggest-counter" data-clause-type="' + escapeHtml(clauseType) + '">' +
+        '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M12 2v4"/><path d="M12 18v4"/><path d="m4.93 4.93 2.83 2.83"/><path d="m16.24 16.24 2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="m4.93 19.07 2.83-2.83"/><path d="m16.24 7.76 2.83-2.83"/></svg>' +
+        'Suggest Counter (AI)' +
+      '</button>'
+    }
+
     return '<div class="lease-cmp-neg-workspace" data-clause-type="' + escapeHtml(clauseType) + '">' +
-      '<div class="lease-cmp-neg-workspace-label">Negotiation Notes' + lastUpdated + '</div>' +
+      '<div class="lease-cmp-neg-workspace-header">' +
+        '<div class="lease-cmp-neg-workspace-label">Negotiation Notes' + lastUpdated + '</div>' +
+        suggestBtn +
+      '</div>' +
       '<textarea class="lease-cmp-neg-notes" data-action="save-neg-notes" data-clause-type="' + escapeHtml(clauseType) + '" ' +
         'placeholder="Add notes: counter terms, reasoning, next steps...">' + escapeHtml(notes || '') + '</textarea>' +
+      counterBlock +
     '</div>'
   }
 
@@ -1138,6 +1171,21 @@
     // Export to Google Sheets
     overlay.querySelectorAll('[data-action="export-sheets"]').forEach(function (b) {
       b.addEventListener('click', function () { exportCompareToWorkbook(overlay.__compareData, 'sheets', overlay.__negotiationMap) })
+    })
+    // Word menu (3 export options)
+    overlay.querySelectorAll('[data-action="open-word-menu"]').forEach(function (b) {
+      b.addEventListener('click', function (e) {
+        e.stopPropagation()
+        showWordExportMenu(overlay, b)
+      })
+    })
+    // Suggest counter buttons (per clause)
+    overlay.querySelectorAll('[data-action="suggest-counter"]').forEach(function (b) {
+      b.addEventListener('click', function (e) {
+        e.stopPropagation()
+        var clauseType = b.getAttribute('data-clause-type')
+        suggestCounter(overlay, clauseType, b)
+      })
     })
     // Toggle row expand
     overlay.querySelectorAll('[data-action="toggle-row"]').forEach(function (head) {
@@ -1319,6 +1367,175 @@
     var resolvedBtn = overlay.querySelector('.lease-compare-filter-btn[data-filter="resolved"]')
     if (openBtn) openBtn.textContent = 'Open issues (' + openCount + ')'
     if (resolvedBtn) resolvedBtn.textContent = 'Resolved (' + resolvedCount + ')'
+  }
+
+  // ================================================================
+  // WORD EXPORT MENU
+  // ================================================================
+  function showWordExportMenu(overlay, btnEl) {
+    var existing = document.querySelector('.lease-cmp-word-menu')
+    if (existing) existing.remove()
+
+    var v1Id = overlay.__compareV1Id
+    var v2Id = overlay.__compareV2Id
+
+    var menu = document.createElement('div')
+    menu.className = 'lease-cmp-word-menu lease-cmp-neg-dropdown'  // reuse dropdown styling
+    menu.innerHTML =
+      '<button class="lease-cmp-word-menu-item" data-word-action="redline">' +
+        '<div class="lease-cmp-word-menu-title">Landlord Redline</div>' +
+        '<div class="lease-cmp-word-menu-desc">v1 → v2 changes as native Word track changes</div>' +
+      '</button>' +
+      '<button class="lease-cmp-word-menu-item" data-word-action="counter">' +
+        '<div class="lease-cmp-word-menu-title">Tenant Counter Proposal</div>' +
+        '<div class="lease-cmp-word-menu-desc">Your counters as track changes against v2</div>' +
+      '</button>' +
+      '<button class="lease-cmp-word-menu-item" data-word-action="memo">' +
+        '<div class="lease-cmp-word-menu-title">Negotiation Memo</div>' +
+        '<div class="lease-cmp-word-menu-desc">Executive summary by clause + status (no markup)</div>' +
+      '</button>'
+
+    var rect = btnEl.getBoundingClientRect()
+    menu.style.position = 'fixed'
+    menu.style.top = (rect.bottom + 6) + 'px'
+    menu.style.right = (window.innerWidth - rect.right) + 'px'
+    menu.style.minWidth = '320px'
+    menu.style.zIndex = '10001'
+    document.body.appendChild(menu)
+
+    var closeIt = function (e) {
+      if (e && menu.contains(e.target)) return
+      menu.remove()
+      document.removeEventListener('click', closeIt, true)
+    }
+    setTimeout(function () { document.addEventListener('click', closeIt, true) }, 0)
+
+    menu.querySelectorAll('[data-word-action]').forEach(function (item) {
+      item.addEventListener('click', function () {
+        var action = item.getAttribute('data-word-action')
+        menu.remove()
+        document.removeEventListener('click', closeIt, true)
+        downloadWordExport(action, v1Id, v2Id)
+      })
+    })
+  }
+
+  async function downloadWordExport(kind, v1Id, v2Id) {
+    var endpoint, body, fileNameHint
+    if (kind === 'redline') {
+      endpoint = '/api/lease/export-redline'
+      body = { v1Id: v1Id, v2Id: v2Id }
+      fileNameHint = 'Lease Redline'
+    } else if (kind === 'counter') {
+      endpoint = '/api/lease/export-counter'
+      body = { v2Id: v2Id }
+      fileNameHint = 'Tenant Counter'
+    } else if (kind === 'memo') {
+      endpoint = '/api/lease/export-memo'
+      body = { v1Id: v1Id, v2Id: v2Id }
+      fileNameHint = 'Negotiation Memo'
+    } else {
+      return
+    }
+
+    // Show a non-blocking toast
+    var toast = showToast('Generating Word document...')
+    try {
+      var resp = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!resp.ok) {
+        var errData
+        try { errData = await resp.json() } catch (e) { errData = { error: resp.statusText } }
+        toast.update('Word export failed: ' + (errData.error || 'Unknown error'), 'error')
+        return
+      }
+      var blob = await resp.blob()
+      var url = URL.createObjectURL(blob)
+      var fileName = fileNameHint + ' - ' + new Date().toISOString().slice(0, 10) + '.docx'
+      var a = document.createElement('a')
+      a.href = url
+      a.download = fileName
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      setTimeout(function () { URL.revokeObjectURL(url) }, 5000)
+      toast.update('Word document downloaded.', 'success')
+      setTimeout(function () { toast.dismiss() }, 2000)
+    } catch (e) {
+      toast.update('Network error: ' + e.message, 'error')
+    }
+  }
+
+  function showToast(text) {
+    var existing = document.querySelector('.lease-toast')
+    if (existing) existing.remove()
+    var t = document.createElement('div')
+    t.className = 'lease-toast'
+    t.innerHTML = '<div class="lease-spinner"></div><span class="lease-toast-text">' + escapeHtml(text) + '</span>'
+    document.body.appendChild(t)
+    return {
+      update: function (newText, kind) {
+        t.className = 'lease-toast' + (kind ? ' lease-toast-' + kind : '')
+        t.innerHTML = '<span class="lease-toast-text">' + escapeHtml(newText) + '</span>'
+      },
+      dismiss: function () { try { t.remove() } catch (e) { /* ignore */ } },
+    }
+  }
+
+  // ================================================================
+  // SUGGEST COUNTER (AI)
+  // ================================================================
+  async function suggestCounter(overlay, clauseType, btnEl) {
+    var v2Id = overlay.__compareV2Id
+    if (!v2Id || !clauseType) return
+
+    btnEl.disabled = true
+    btnEl.innerHTML = '<div class="lease-spinner" style="display:inline-block;width:11px;height:11px;border-width:1.5px;"></div> Generating...'
+
+    try {
+      var resp = await fetch('/api/lease/counter-suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ v2Id: v2Id, clauseType: clauseType, userEmail: getUserEmail() }),
+      })
+      var data = await resp.json()
+      if (!resp.ok) throw new Error(data.error || 'Counter generation failed')
+
+      // Show inline result (or no-counter-needed message)
+      var row = overlay.querySelector('.lease-cmp-row[data-clause-type="' + clauseType + '"]')
+      var workspace = row && row.querySelector('.lease-cmp-neg-workspace')
+      if (data.no_counter_needed) {
+        if (workspace) {
+          var msg = document.createElement('div')
+          msg.className = 'lease-cmp-counter-result lease-cmp-counter-none'
+          msg.innerHTML = '<strong>AI: no counter recommended.</strong> ' + escapeHtml(data.rationale || '')
+          workspace.appendChild(msg)
+        }
+      } else {
+        // Insert counter language card under the workspace
+        if (workspace) {
+          var card = document.createElement('div')
+          card.className = 'lease-cmp-counter-result'
+          card.innerHTML =
+            '<div class="lease-cmp-counter-label">AI-generated counter <span class="lease-cmp-counter-badge">' + escapeHtml(data.counter_ai_model || 'AI') + '</span></div>' +
+            (data.counter_rationale ? '<div class="lease-cmp-counter-rationale"><strong>Why:</strong> ' + escapeHtml(data.counter_rationale) + '</div>' : '') +
+            '<div class="lease-cmp-counter-text">' + escapeHtml(data.counter_language) + '</div>' +
+            '<div class="lease-cmp-counter-hint">Status auto-updated to <strong>Counter Pending</strong>. Use the Word menu → Tenant Counter Proposal to export this as a track-changes DOCX.</div>'
+          workspace.appendChild(card)
+        }
+        // Bump status pill optimistically
+        applyOptimisticStatus(overlay, clauseType, 'counter_pending')
+      }
+
+      btnEl.style.display = 'none'
+    } catch (e) {
+      btnEl.disabled = false
+      btnEl.textContent = 'Suggest Counter'
+      alert('Counter generation failed: ' + e.message)
+    }
   }
 
   // ================================================================
