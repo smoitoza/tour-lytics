@@ -618,11 +618,17 @@
           '<div class="lease-tile-versions-label">Versions</div>' +
           b.versions.map(renderVersionRow).join('') +
         '</div>' +
-        (canUpload
-          ? '<div class="lease-tile-footer">' +
-              '<button class="lease-tile-add-btn" data-action="add-version" data-address="' + escapeHtml(b.address) + '">+ Add new version for this building</button>' +
-            '</div>'
-          : '') +
+        '<div class="lease-tile-footer">' +
+          (b.versions.length >= 2
+            ? '<button class="lease-tile-compare-btn" data-action="compare" data-address="' + escapeHtml(b.address) + '">' +
+                '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>' +
+                'Compare Versions' +
+              '</button>'
+            : '') +
+          (canUpload
+            ? '<button class="lease-tile-add-btn" data-action="add-version" data-address="' + escapeHtml(b.address) + '">+ Add new version for this building</button>'
+            : '') +
+        '</div>' +
       '</div>'
     })
     html += '</div>'
@@ -677,6 +683,340 @@
         e.stopPropagation()
         var addr = btn.getAttribute('data-address')
         leaseShowUploadModal({ presetBuildingAddress: addr })
+      })
+    })
+    // Compare versions button
+    root.querySelectorAll('[data-action="compare"]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation()
+        var addr = btn.getAttribute('data-address')
+        leaseShowComparePicker(addr)
+      })
+    })
+  }
+
+  // ================================================================
+  // COMPARE VERSIONS
+  // ================================================================
+  // Picker: choose which two versions to compare for this building
+  function leaseShowComparePicker(buildingAddress) {
+    fetch('/api/lease?projectId=' + encodeURIComponent(getProjectId()) + '&buildingAddress=' + encodeURIComponent(buildingAddress))
+      .then(function (r) { return r.json() })
+      .then(function (versions) {
+        if (!Array.isArray(versions) || versions.length < 2) {
+          alert('Need at least 2 versions to compare for this building.')
+          return
+        }
+        // Default: newest (v2) compared to second-newest (v1)
+        var sorted = versions.slice().sort(function (a, b) { return b.version_number - a.version_number })
+        var newer = sorted[0]
+        var older = sorted[1]
+
+        // If exactly 2, skip picker and go straight to compare
+        if (sorted.length === 2) {
+          leaseRunCompare(older.id, newer.id)
+          return
+        }
+
+        // Build picker modal
+        var modal = document.createElement('div')
+        modal.className = 'lease-modal-overlay'
+        var optsHtml = sorted.map(function (v) {
+          return '<option value="' + escapeHtml(v.id) + '">' + escapeHtml(v.version_label || ('v' + v.version_number)) + ' — ' + escapeHtml(DOC_TYPE_LABELS[v.doc_type] || v.doc_type) + '</option>'
+        }).join('')
+        modal.innerHTML = '<div class="lease-modal-card" style="width:520px">' +
+          '<div class="lease-modal-header"><div class="lease-modal-title">Compare Versions</div><button class="lease-modal-close">×</button></div>' +
+          '<div class="lease-modal-body">' +
+            '<div class="lease-form-group"><label class="lease-form-label">Earlier version (v1)</label><select id="lease-cmp-v1" class="lease-form-input">' + optsHtml + '</select></div>' +
+            '<div class="lease-form-group"><label class="lease-form-label">Later version (v2)</label><select id="lease-cmp-v2" class="lease-form-input">' + optsHtml + '</select></div>' +
+          '</div>' +
+          '<div class="lease-modal-footer">' +
+            '<button class="lease-btn-secondary" data-action="cancel">Cancel</button>' +
+            '<button class="lease-btn-primary" data-action="go">Run comparison</button>' +
+          '</div>' +
+        '</div>'
+        document.body.appendChild(modal)
+        modal.querySelector('#lease-cmp-v1').value = older.id
+        modal.querySelector('#lease-cmp-v2').value = newer.id
+        var close = function () { modal.remove() }
+        modal.querySelector('.lease-modal-close').addEventListener('click', close)
+        modal.querySelector('[data-action="cancel"]').addEventListener('click', close)
+        modal.querySelector('[data-action="go"]').addEventListener('click', function () {
+          var a = modal.querySelector('#lease-cmp-v1').value
+          var b = modal.querySelector('#lease-cmp-v2').value
+          if (a === b) { alert('Pick two different versions'); return }
+          modal.remove()
+          leaseRunCompare(a, b)
+        })
+      })
+  }
+
+  // Run comparison and show overlay
+  async function leaseRunCompare(v1Id, v2Id) {
+    var overlay = document.createElement('div')
+    overlay.className = 'lease-summary-overlay'
+    overlay.innerHTML = '<div class="lease-summary-card"><div class="lease-summary-loading"><div class="lease-spinner"></div> Comparing versions and generating change summary (30–60 sec)...</div></div>'
+    document.body.appendChild(overlay)
+
+    try {
+      var resp = await fetch('/api/lease/compare', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ v1Id: v1Id, v2Id: v2Id }),
+      })
+      var data = await resp.json()
+      if (!resp.ok) throw new Error(data.error || 'Compare failed')
+      overlay.innerHTML = renderCompareHtml(data)
+      bindCompareHandlers(overlay)
+    } catch (e) {
+      overlay.innerHTML = '<div class="lease-summary-card"><div class="lease-summary-error">Compare failed: ' + escapeHtml(e.message) + '<br><br><button class="lease-btn-secondary" onclick="this.closest(\'.lease-summary-overlay\').remove()">Close</button></div></div>'
+    }
+  }
+
+  function renderCompareHtml(diff) {
+    var clauseDiffs = diff.clauseDiffs || []
+    var counts = diff.counts || {}
+    var risk = diff.riskDelta || {}
+
+    var html = '<div class="lease-summary-card lease-summary-full lease-compare-card">'
+
+    // Header
+    html += '<div class="lease-summary-header">' +
+      '<div>' +
+        '<div class="lease-summary-eyebrow">Compare Versions</div>' +
+        '<div class="lease-summary-title">' + escapeHtml(diff.v1_label || 'v1') + ' → ' + escapeHtml(diff.v2_label || 'v2') + '</div>' +
+        '<div class="lease-summary-subtitle">' + escapeHtml(DOC_TYPE_LABELS[diff.v1_doc_type] || diff.v1_doc_type || '') + ' → ' + escapeHtml(DOC_TYPE_LABELS[diff.v2_doc_type] || diff.v2_doc_type || '') + '</div>' +
+      '</div>' +
+      '<div class="lease-summary-actions">' +
+        '<button class="lease-btn-secondary" data-action="close">Close</button>' +
+      '</div>' +
+    '</div>'
+
+    // AI summary
+    if (diff.ai_summary) {
+      html += '<div class="lease-compare-ai">' +
+        '<div class="lease-compare-ai-label">AI Change Summary</div>' +
+        '<div class="lease-compare-ai-text">' + diff.ai_summary.split(/\n\n+/).map(function (p) { return '<p>' + escapeHtml(p) + '</p>' }).join('') + '</div>' +
+      '</div>'
+    }
+
+    // Headline strip
+    var netLabel = ''
+    var netClass = 'lease-compare-headline-neutral'
+    if (risk.net_high_risk_change > 0) {
+      netLabel = '+' + risk.net_high_risk_change + ' new high-risk clause' + (risk.net_high_risk_change > 1 ? 's' : '')
+      netClass = 'lease-compare-headline-worse'
+    } else if (risk.net_high_risk_change < 0) {
+      netLabel = Math.abs(risk.net_high_risk_change) + ' high-risk clause' + (Math.abs(risk.net_high_risk_change) > 1 ? 's' : '') + ' resolved'
+      netClass = 'lease-compare-headline-better'
+    } else {
+      netLabel = 'No change in high-risk count'
+    }
+
+    html += '<div class="lease-compare-headline ' + netClass + '">' +
+      '<div class="lease-compare-headline-cells">' +
+        '<div class="lease-compare-headline-cell"><div class="lease-compare-headline-label">Modified</div><div class="lease-compare-headline-value">' + (counts.modified || 0) + '</div></div>' +
+        '<div class="lease-compare-headline-cell"><div class="lease-compare-headline-label">Added</div><div class="lease-compare-headline-value" style="color:#15803D">' + (counts.added || 0) + '</div></div>' +
+        '<div class="lease-compare-headline-cell"><div class="lease-compare-headline-label">Removed</div><div class="lease-compare-headline-value" style="color:#B91C1C">' + (counts.removed || 0) + '</div></div>' +
+        '<div class="lease-compare-headline-cell"><div class="lease-compare-headline-label">Unchanged</div><div class="lease-compare-headline-value" style="color:#64748B">' + (counts.unchanged || 0) + '</div></div>' +
+        '<div class="lease-compare-headline-cell"><div class="lease-compare-headline-label">Risk Worse</div><div class="lease-compare-headline-value" style="color:#B91C1C">' + (risk.worse || 0) + '</div></div>' +
+        '<div class="lease-compare-headline-cell"><div class="lease-compare-headline-label">Risk Better</div><div class="lease-compare-headline-value" style="color:#15803D">' + (risk.better || 0) + '</div></div>' +
+        '<div class="lease-compare-headline-cell lease-compare-headline-net"><div class="lease-compare-headline-label">Net</div><div class="lease-compare-headline-value">' + escapeHtml(netLabel) + '</div></div>' +
+      '</div>' +
+    '</div>'
+
+    // Filter toggle
+    html += '<div class="lease-compare-filter">' +
+      '<button class="lease-compare-filter-btn active" data-filter="all">All (' + clauseDiffs.length + ')</button>' +
+      '<button class="lease-compare-filter-btn" data-filter="changed">Changed only (' + ((counts.modified || 0) + (counts.added || 0) + (counts.removed || 0)) + ')</button>' +
+      '<button class="lease-compare-filter-btn" data-filter="high">Risk worsened (' + (risk.worse || 0) + ')</button>' +
+    '</div>'
+
+    // Clause diff rows
+    html += '<div class="lease-compare-list">'
+    clauseDiffs.forEach(function (cd, idx) {
+      html += renderClauseDiffRow(cd, idx, diff)
+    })
+    html += '</div>'
+
+    html += '</div>'
+    return html
+  }
+
+  function renderClauseDiffRow(cd, idx, diff) {
+    var label = clauseTypeLabel(cd.type)
+    var statusBadge = renderStatusBadge(cd.status, cd.riskDelta)
+    var section = (cd.v1 && cd.v1.section) || (cd.v2 && cd.v2.section) || ''
+    var risk1 = (cd.v1 && cd.v1.risk_level) || ''
+    var risk2 = (cd.v2 && cd.v2.risk_level) || ''
+
+    var rowClass = 'lease-cmp-row lease-cmp-row-' + cd.status
+    if (cd.status === 'modified' && (cd.riskDelta || 0) > 0) rowClass += ' lease-cmp-row-worse'
+    if (cd.status === 'modified' && (cd.riskDelta || 0) < 0) rowClass += ' lease-cmp-row-better'
+
+    var html = '<div class="' + rowClass + '" data-status="' + cd.status + '" data-risk-delta="' + (cd.riskDelta || 0) + '">' +
+      '<div class="lease-cmp-row-head" data-action="toggle-row" data-row-idx="' + idx + '">' +
+        '<div class="lease-cmp-row-head-left">' +
+          statusBadge +
+          '<div class="lease-cmp-row-label">' + escapeHtml(label) + '</div>' +
+          (section ? '<div class="lease-cmp-row-section">' + escapeHtml(section) + '</div>' : '') +
+        '</div>' +
+        '<div class="lease-cmp-row-head-right">' +
+          (risk1 || risk2 ? renderRiskMovement(risk1, risk2) : '') +
+          '<svg class="lease-cmp-row-chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>' +
+        '</div>' +
+      '</div>' +
+      '<div class="lease-cmp-row-body">' +
+        renderClauseDiffBody(cd) +
+      '</div>' +
+    '</div>'
+    return html
+  }
+
+  function renderStatusBadge(status, riskDelta) {
+    var styles = {
+      unchanged: { bg: '#F1F5F9', fg: '#64748B', label: 'Unchanged' },
+      modified:  { bg: '#FFFBEB', fg: '#B45309', label: 'Modified' },
+      added:     { bg: '#F0FDF4', fg: '#15803D', label: 'Added' },
+      removed:   { bg: '#FEF2F2', fg: '#B91C1C', label: 'Removed' },
+    }
+    var s = styles[status] || styles.unchanged
+    return '<span class="lease-cmp-status-badge" style="background:' + s.bg + ';color:' + s.fg + '">' + s.label + '</span>'
+  }
+
+  function renderRiskMovement(r1, r2) {
+    if (!r1 && !r2) return ''
+    if (r1 === r2) return '<span class="lease-cmp-risk-badge">' + (r2 || r1) + '</span>'
+    var arrow = '→'
+    var rankOrder = { unknown: 0, low: 1, medium: 2, high: 3 }
+    var d = (rankOrder[r2] || 0) - (rankOrder[r1] || 0)
+    var color = d > 0 ? '#B91C1C' : (d < 0 ? '#15803D' : '#64748B')
+    return '<span class="lease-cmp-risk-badge" style="color:' + color + '">' + (r1 || '—') + ' ' + arrow + ' ' + (r2 || '—') + '</span>'
+  }
+
+  function renderClauseDiffBody(cd) {
+    if (cd.status === 'added') {
+      return '<div class="lease-cmp-side-only"><div class="lease-cmp-side-label">Added in later version</div>' +
+        renderSingleClause(cd.v2, 'added') +
+      '</div>'
+    }
+    if (cd.status === 'removed') {
+      return '<div class="lease-cmp-side-only"><div class="lease-cmp-side-label">Removed in later version</div>' +
+        renderSingleClause(cd.v1, 'removed') +
+      '</div>'
+    }
+
+    var html = ''
+
+    // Heading + section side by side
+    html += '<div class="lease-cmp-twocol">' +
+      '<div class="lease-cmp-col"><div class="lease-cmp-col-label">Earlier</div>' +
+        '<div class="lease-cmp-col-heading">' + escapeHtml(cd.v1.heading || '') + '</div>' +
+      '</div>' +
+      '<div class="lease-cmp-col"><div class="lease-cmp-col-label">Later</div>' +
+        '<div class="lease-cmp-col-heading">' + escapeHtml(cd.v2.heading || '') + '</div>' +
+      '</div>' +
+    '</div>'
+
+    // Summary diff (single inline)
+    if (cd.summaryOps && cd.summaryOps.some(function (o) { return o.op !== 'eq' })) {
+      html += '<div class="lease-cmp-section">' +
+        '<div class="lease-cmp-section-label">Summary changes</div>' +
+        '<div class="lease-cmp-inline-diff">' + renderInlineOps(cd.summaryOps) + '</div>' +
+      '</div>'
+    } else if (cd.v2.summary) {
+      html += '<div class="lease-cmp-section">' +
+        '<div class="lease-cmp-section-label">Summary (unchanged)</div>' +
+        '<div class="lease-cmp-quiet">' + escapeHtml(cd.v2.summary) + '</div>' +
+      '</div>'
+    }
+
+    // Key terms diff
+    var changedKeys = (cd.keyTermsDiff || []).filter(function (k) { return k.changed })
+    if (changedKeys.length > 0) {
+      html += '<div class="lease-cmp-section"><div class="lease-cmp-section-label">Key term changes</div>' +
+        '<table class="lease-cmp-keyterms-table"><thead><tr><th>Term</th><th>Earlier</th><th>Later</th></tr></thead><tbody>'
+      changedKeys.forEach(function (k) {
+        var disp = k.key.replace(/_/g, ' ').replace(/\b\w/g, function (m) { return m.toUpperCase() })
+        html += '<tr>' +
+          '<td class="lease-cmp-keyterms-key">' + escapeHtml(disp) + '</td>' +
+          '<td class="lease-cmp-keyterms-old">' + (k.v1 == null ? '<em>(none)</em>' : escapeHtml(typeof k.v1 === 'object' ? JSON.stringify(k.v1) : String(k.v1))) + '</td>' +
+          '<td class="lease-cmp-keyterms-new">' + (k.v2 == null ? '<em>(none)</em>' : escapeHtml(typeof k.v2 === 'object' ? JSON.stringify(k.v2) : String(k.v2))) + '</td>' +
+        '</tr>'
+      })
+      html += '</tbody></table></div>'
+    }
+
+    // Original excerpt diff
+    if (cd.excerptOps && cd.excerptOps.some(function (o) { return o.op !== 'eq' })) {
+      html += '<details class="lease-cmp-excerpt-wrap"><summary>Show language changes</summary>' +
+        '<div class="lease-cmp-inline-diff lease-cmp-excerpt">' + renderInlineOps(cd.excerptOps) + '</div>' +
+      '</details>'
+    }
+
+    // Risk rationale changes
+    if ((cd.v1.risk_rationale || '') !== (cd.v2.risk_rationale || '')) {
+      html += '<div class="lease-cmp-section lease-cmp-section-rationale">' +
+        '<div class="lease-cmp-section-label">Risk rationale</div>' +
+        '<div class="lease-cmp-twocol">' +
+          '<div class="lease-cmp-col"><div class="lease-cmp-col-label">Earlier</div><div class="lease-cmp-quiet">' + escapeHtml(cd.v1.risk_rationale || '—') + '</div></div>' +
+          '<div class="lease-cmp-col"><div class="lease-cmp-col-label">Later</div><div class="lease-cmp-quiet">' + escapeHtml(cd.v2.risk_rationale || '—') + '</div></div>' +
+        '</div>' +
+      '</div>'
+    }
+
+    return html
+  }
+
+  function renderSingleClause(c, kind) {
+    if (!c) return ''
+    return '<div class="lease-cmp-single">' +
+      (c.heading ? '<div class="lease-cmp-col-heading">' + escapeHtml(c.heading) + '</div>' : '') +
+      (c.summary ? '<div class="lease-cmp-summary">' + escapeHtml(c.summary) + '</div>' : '') +
+      (c.original_excerpt ? '<details><summary>Show source language</summary><blockquote class="lease-clause-quote">' + escapeHtml(c.original_excerpt) + '</blockquote></details>' : '') +
+    '</div>'
+  }
+
+  function renderInlineOps(ops) {
+    return ops.map(function (o) {
+      if (o.op === 'eq') return '<span>' + escapeHtml(o.text) + '</span>'
+      if (o.op === 'ins') return '<ins class="lease-cmp-ins">' + escapeHtml(o.text) + '</ins>'
+      return '<del class="lease-cmp-del">' + escapeHtml(o.text) + '</del>'
+    }).join('')
+  }
+
+  function bindCompareHandlers(overlay) {
+    overlay.querySelectorAll('[data-action="close"]').forEach(function (b) {
+      b.addEventListener('click', function () { overlay.remove() })
+    })
+    // Toggle row expand
+    overlay.querySelectorAll('[data-action="toggle-row"]').forEach(function (head) {
+      head.addEventListener('click', function () {
+        var row = head.closest('.lease-cmp-row')
+        if (row) row.classList.toggle('lease-cmp-row-open')
+      })
+    })
+    // Expand changed rows by default
+    overlay.querySelectorAll('.lease-cmp-row').forEach(function (row) {
+      var s = row.getAttribute('data-status')
+      if (s !== 'unchanged') row.classList.add('lease-cmp-row-open')
+    })
+    // Filter buttons
+    overlay.querySelectorAll('.lease-compare-filter-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        overlay.querySelectorAll('.lease-compare-filter-btn').forEach(function (b) { b.classList.remove('active') })
+        btn.classList.add('active')
+        var f = btn.getAttribute('data-filter')
+        overlay.querySelectorAll('.lease-cmp-row').forEach(function (row) {
+          var st = row.getAttribute('data-status')
+          var rd = parseInt(row.getAttribute('data-risk-delta') || '0')
+          var show
+          if (f === 'all') show = true
+          else if (f === 'changed') show = (st !== 'unchanged')
+          else if (f === 'high') show = (st === 'modified' && rd > 0) || (st === 'added' && row.querySelector('[data-action="toggle-row"]'))
+          else show = true
+          row.style.display = show ? '' : 'none'
+        })
       })
     })
   }
