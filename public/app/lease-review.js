@@ -771,7 +771,12 @@
       var resp = await fetch('/api/lease/compare', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ v1Id: v1Id, v2Id: v2Id, regenerateAi: !!opts.regenerate }),
+        body: JSON.stringify({
+          v1Id: v1Id,
+          v2Id: v2Id,
+          regenerateAi: !!opts.regenerate,
+          userEmail: getUserEmail(),
+        }),
       })
       var data = await resp.json()
       if (!resp.ok) throw new Error(data.error || 'Compare failed')
@@ -801,9 +806,12 @@
         cachedAtStr = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' at ' + dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
       } catch (e) { cachedAtStr = '' }
     }
+    var genCount = diff.generation_count || 1
+    var staleNote = diff.was_stale ? ' (refreshed - source extraction changed)' : ''
+    var genCountSuffix = genCount > 1 ? ' · ' + genCount + 'x' : ''
     var fromCacheBadge = diff.from_cache
-      ? '<span class="lease-cmp-cache-badge" title="Loaded from cache - regenerate to refresh AI summary">Cached' + (cachedAtStr ? ' · ' + escapeHtml(cachedAtStr) : '') + '</span>'
-      : (diff.cached_at ? '<span class="lease-cmp-cache-badge lease-cmp-cache-fresh">Fresh · ' + escapeHtml(cachedAtStr) + '</span>' : '')
+      ? '<span class="lease-cmp-cache-badge" title="Loaded from saved comparison. Click Regenerate to refresh.">Saved' + (cachedAtStr ? ' · ' + escapeHtml(cachedAtStr) : '') + genCountSuffix + '</span>'
+      : (diff.cached_at ? '<span class="lease-cmp-cache-badge lease-cmp-cache-fresh" title="Just generated' + escapeHtml(staleNote) + '">Fresh · ' + escapeHtml(cachedAtStr) + genCountSuffix + '</span>' : '')
 
     html += '<div class="lease-summary-header">' +
       '<div>' +
