@@ -1006,38 +1006,106 @@
       } catch (e) { /* skip */ }
     }
 
-    // Existing counter language (if it was previously generated and saved)
-    var counterBlock = ''
-    var hasCounter = negotiation && negotiation.counter_language
-    if (hasCounter) {
-      var src = negotiation.counter_source || 'manual'
-      var sourceLabel = src === 'ai_generated' ? 'AI-generated' : (src === 'ai_edited' ? 'AI-edited' : 'Manual')
-      counterBlock = '<div class="lease-cmp-counter-result">' +
-        '<div class="lease-cmp-counter-label">Counter language <span class="lease-cmp-counter-badge">' + escapeHtml(sourceLabel) + '</span></div>' +
-        (negotiation.counter_rationale ? '<div class="lease-cmp-counter-rationale"><strong>Why:</strong> ' + escapeHtml(negotiation.counter_rationale) + '</div>' : '') +
-        '<div class="lease-cmp-counter-text">' + escapeHtml(negotiation.counter_language) + '</div>' +
-      '</div>'
-    }
-
-    // Suggest button - only when no counter exists yet, and status is not resolved
     var statusMeta = NEG_STATUS_BY_KEY[status] || NEG_STATUS_BY_KEY.open_issue
-    var suggestBtn = ''
-    if (!hasCounter && !statusMeta.isResolved) {
-      suggestBtn = '<button class="lease-cmp-suggest-counter-btn" data-action="suggest-counter" data-clause-type="' + escapeHtml(clauseType) + '">' +
-        '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M12 2v4"/><path d="M12 18v4"/><path d="m4.93 4.93 2.83 2.83"/><path d="m16.24 16.24 2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="m4.93 19.07 2.83-2.83"/><path d="m16.24 7.76 2.83-2.83"/></svg>' +
-        'Suggest Counter (AI)' +
-      '</button>'
-    }
+    var hasCounter = negotiation && negotiation.counter_language
 
     return '<div class="lease-cmp-neg-workspace" data-clause-type="' + escapeHtml(clauseType) + '">' +
       '<div class="lease-cmp-neg-workspace-header">' +
         '<div class="lease-cmp-neg-workspace-label">Negotiation Notes' + lastUpdated + '</div>' +
-        suggestBtn +
       '</div>' +
       '<textarea class="lease-cmp-neg-notes" data-action="save-neg-notes" data-clause-type="' + escapeHtml(clauseType) + '" ' +
         'placeholder="Add notes: counter terms, reasoning, next steps...">' + escapeHtml(notes || '') + '</textarea>' +
-      counterBlock +
+      renderCounterBuilder(clauseType, negotiation, statusMeta) +
     '</div>'
+  }
+
+  // ================================================================
+  // COUNTER BUILDER (3-tab panel + existing counter card)
+  // ================================================================
+  function renderCounterBuilder(clauseType, negotiation, statusMeta) {
+    var hasCounter = negotiation && negotiation.counter_language
+    var prevInstructions = (negotiation && negotiation.counter_instructions) || ''
+    var prevMode = (negotiation && negotiation.counter_mode) || 'auto'
+
+    if (hasCounter) {
+      var src = negotiation.counter_source || 'manual'
+      var sourceLabel = src === 'ai_generated' ? 'AI-generated' : (src === 'ai_edited' ? 'AI-edited' : 'Manual')
+      var modeBadge = prevMode && prevMode !== 'manual' ? '<span class="lease-cmp-counter-mode-badge">via ' + escapeHtml(prettyMode(prevMode)) + '</span>' : ''
+
+      // Existing counter card with edit/regen/delete actions
+      return '<div class="lease-cmp-counter-result" data-clause-type="' + escapeHtml(clauseType) + '">' +
+        '<div class="lease-cmp-counter-label">Counter language ' +
+          '<span class="lease-cmp-counter-badge">' + escapeHtml(sourceLabel) + '</span>' +
+          modeBadge +
+          '<div class="lease-cmp-counter-actions">' +
+            '<button class="lease-cmp-counter-action" data-action="counter-edit" data-clause-type="' + escapeHtml(clauseType) + '" title="Edit text manually">Edit</button>' +
+            '<button class="lease-cmp-counter-action" data-action="counter-refine" data-clause-type="' + escapeHtml(clauseType) + '" title="Ask AI to refine this counter">Ask AI to refine</button>' +
+            '<button class="lease-cmp-counter-action" data-action="counter-regen" data-clause-type="' + escapeHtml(clauseType) + '" title="Regenerate from scratch">Regenerate</button>' +
+            '<button class="lease-cmp-counter-action lease-cmp-counter-action-danger" data-action="counter-delete" data-clause-type="' + escapeHtml(clauseType) + '" title="Delete this counter">Delete</button>' +
+          '</div>' +
+        '</div>' +
+        (negotiation.counter_rationale ? '<div class="lease-cmp-counter-rationale"><strong>Why:</strong> ' + escapeHtml(negotiation.counter_rationale) + '</div>' : '') +
+        (prevInstructions ? '<div class="lease-cmp-counter-instructions-shown"><strong>Instructions used:</strong> ' + escapeHtml(prevInstructions) + '</div>' : '') +
+        '<div class="lease-cmp-counter-text" data-counter-display>' + escapeHtml(negotiation.counter_language) + '</div>' +
+      '</div>'
+    }
+
+    if (statusMeta.isResolved) return ''
+
+    // No counter yet - show the 3-tab Counter Builder
+    return '<div class="lease-cmp-counter-builder" data-clause-type="' + escapeHtml(clauseType) + '">' +
+      '<div class="lease-cmp-builder-header">' +
+        '<div class="lease-cmp-builder-label">Counter Builder</div>' +
+        '<div class="lease-cmp-builder-tabs">' +
+          '<button class="lease-cmp-builder-tab active" data-builder-tab="auto" data-clause-type="' + escapeHtml(clauseType) + '">AI Suggest</button>' +
+          '<button class="lease-cmp-builder-tab" data-builder-tab="with_instructions" data-clause-type="' + escapeHtml(clauseType) + '">With Instructions</button>' +
+          '<button class="lease-cmp-builder-tab" data-builder-tab="legal_drafter" data-clause-type="' + escapeHtml(clauseType) + '">Legal Drafter</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="lease-cmp-builder-body" data-builder-body>' +
+        renderBuilderModeBody('auto', clauseType, '') +
+      '</div>' +
+    '</div>'
+  }
+
+  function prettyMode(m) {
+    if (m === 'auto') return 'AI Suggest'
+    if (m === 'with_instructions') return 'Instructions'
+    if (m === 'legal_drafter') return 'Legal Drafter'
+    if (m === 'ai_edit') return 'AI refinement'
+    if (m === 'manual') return 'manual edit'
+    return m
+  }
+
+  function renderBuilderModeBody(mode, clauseType, prefilledInstructions) {
+    if (mode === 'auto') {
+      return '<div class="lease-cmp-builder-mode">' +
+        '<div class="lease-cmp-builder-hint">Let AI propose a tenant-favorable counter without further input. AI will read the clause and the risk rationale automatically.</div>' +
+        '<button class="lease-cmp-builder-go" data-action="builder-go" data-mode="auto" data-clause-type="' + escapeHtml(clauseType) + '">' +
+          '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;"><path d="M12 2v4"/><path d="M12 18v4"/><path d="m4.93 4.93 2.83 2.83"/><path d="m16.24 16.24 2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/></svg>' +
+          'Generate Counter' +
+        '</button>' +
+      '</div>'
+    }
+    if (mode === 'with_instructions') {
+      return '<div class="lease-cmp-builder-mode">' +
+        '<div class="lease-cmp-builder-hint">Tell the AI exactly what you want changed. Example: "Reduce lock-in from 6 to 3 months and add a one-time termination right at month 24."</div>' +
+        '<textarea class="lease-cmp-builder-prompt" data-builder-prompt rows="3" placeholder="What do you want to change?">' + escapeHtml(prefilledInstructions || '') + '</textarea>' +
+        '<button class="lease-cmp-builder-go" data-action="builder-go" data-mode="with_instructions" data-clause-type="' + escapeHtml(clauseType) + '">' +
+          'Generate Counter from Instructions' +
+        '</button>' +
+      '</div>'
+    }
+    if (mode === 'legal_drafter') {
+      return '<div class="lease-cmp-builder-mode">' +
+        '<div class="lease-cmp-builder-hint">Describe what you want in plain English - AI will translate into proper lease drafting with defined terms, lease-style construction, and proper cross-references.</div>' +
+        '<textarea class="lease-cmp-builder-prompt" data-builder-prompt rows="3" placeholder="Plain-English goal: e.g. \'We want 12 months free rent up front and a 9-month free-rent bank for years 2-5\'">' + escapeHtml(prefilledInstructions || '') + '</textarea>' +
+        '<button class="lease-cmp-builder-go" data-action="builder-go" data-mode="legal_drafter" data-clause-type="' + escapeHtml(clauseType) + '">' +
+          'Translate to Legal Language' +
+        '</button>' +
+      '</div>'
+    }
+    return ''
   }
 
   function renderStatusBadge(status, riskDelta) {
@@ -1179,14 +1247,7 @@
         showWordExportMenu(overlay, b)
       })
     })
-    // Suggest counter buttons (per clause)
-    overlay.querySelectorAll('[data-action="suggest-counter"]').forEach(function (b) {
-      b.addEventListener('click', function (e) {
-        e.stopPropagation()
-        var clauseType = b.getAttribute('data-clause-type')
-        suggestCounter(overlay, clauseType, b)
-      })
-    })
+    bindCounterBuilderHandlers(overlay)
     // Toggle row expand
     overlay.querySelectorAll('[data-action="toggle-row"]').forEach(function (head) {
       head.addEventListener('click', function () {
@@ -1486,55 +1547,383 @@
   }
 
   // ================================================================
-  // SUGGEST COUNTER (AI)
+  // COUNTER BUILDER HANDLERS
   // ================================================================
-  async function suggestCounter(overlay, clauseType, btnEl) {
+  function bindCounterBuilderHandlers(overlay) {
+    // Tab switching
+    overlay.querySelectorAll('[data-builder-tab]').forEach(function (tab) {
+      tab.addEventListener('click', function (e) {
+        e.stopPropagation()
+        var clauseType = tab.getAttribute('data-clause-type')
+        var mode = tab.getAttribute('data-builder-tab')
+        var builder = overlay.querySelector('.lease-cmp-counter-builder[data-clause-type="' + clauseType + '"]')
+        if (!builder) return
+        // Update active tab
+        builder.querySelectorAll('[data-builder-tab]').forEach(function (t) { t.classList.remove('active') })
+        tab.classList.add('active')
+        // Swap body
+        var body = builder.querySelector('[data-builder-body]')
+        if (body) body.innerHTML = renderBuilderModeBody(mode, clauseType, '')
+        // Re-bind go button + textarea inside new body
+        bindBuilderGoHandlers(overlay, builder)
+      })
+    })
+
+    // Initial wire-up of go buttons + textareas
+    overlay.querySelectorAll('.lease-cmp-counter-builder').forEach(function (builder) {
+      bindBuilderGoHandlers(overlay, builder)
+    })
+
+    // Existing-counter actions: edit / refine / regen / delete
+    overlay.querySelectorAll('[data-action="counter-edit"]').forEach(function (b) {
+      b.addEventListener('click', function (e) {
+        e.stopPropagation()
+        startManualEdit(overlay, b.getAttribute('data-clause-type'))
+      })
+    })
+    overlay.querySelectorAll('[data-action="counter-refine"]').forEach(function (b) {
+      b.addEventListener('click', function (e) {
+        e.stopPropagation()
+        startAiRefine(overlay, b.getAttribute('data-clause-type'))
+      })
+    })
+    overlay.querySelectorAll('[data-action="counter-regen"]').forEach(function (b) {
+      b.addEventListener('click', function (e) {
+        e.stopPropagation()
+        startRegenerate(overlay, b.getAttribute('data-clause-type'))
+      })
+    })
+    overlay.querySelectorAll('[data-action="counter-delete"]').forEach(function (b) {
+      b.addEventListener('click', function (e) {
+        e.stopPropagation()
+        deleteCounter(overlay, b.getAttribute('data-clause-type'))
+      })
+    })
+  }
+
+  function bindBuilderGoHandlers(overlay, builder) {
+    builder.querySelectorAll('[data-action="builder-go"]').forEach(function (b) {
+      // De-dupe handler
+      if (b.__bound) return
+      b.__bound = true
+      b.addEventListener('click', function (e) {
+        e.stopPropagation()
+        var clauseType = b.getAttribute('data-clause-type')
+        var mode = b.getAttribute('data-mode')
+        var promptEl = builder.querySelector('[data-builder-prompt]')
+        var instructions = promptEl ? promptEl.value : ''
+        runCounterGenerate(overlay, clauseType, { mode: mode, instructions: instructions, btnEl: b })
+      })
+    })
+    // Prevent textarea clicks from collapsing the row
+    builder.querySelectorAll('[data-builder-prompt]').forEach(function (ta) {
+      if (ta.__bound) return
+      ta.__bound = true
+      ta.addEventListener('click', function (e) { e.stopPropagation() })
+      ta.addEventListener('mousedown', function (e) { e.stopPropagation() })
+    })
+  }
+
+  // Generate or regenerate via the API, mode-aware
+  async function runCounterGenerate(overlay, clauseType, opts) {
     var v2Id = overlay.__compareV2Id
     if (!v2Id || !clauseType) return
+    var mode = opts.mode || 'auto'
+    var instructions = opts.instructions || ''
+    var currentCounter = opts.currentCounter || ''
+    var btnEl = opts.btnEl
 
-    btnEl.disabled = true
-    btnEl.innerHTML = '<div class="lease-spinner" style="display:inline-block;width:11px;height:11px;border-width:1.5px;"></div> Generating...'
+    if ((mode === 'with_instructions' || mode === 'legal_drafter' || mode === 'ai_edit') && !instructions.trim()) {
+      alert('Please describe what you want changed before generating.')
+      return
+    }
+
+    var origLabel = btnEl ? btnEl.innerHTML : ''
+    if (btnEl) {
+      btnEl.disabled = true
+      btnEl.innerHTML = '<div class="lease-spinner" style="display:inline-block;width:11px;height:11px;border-width:1.5px;color:currentColor;"></div> Generating...'
+    }
 
     try {
       var resp = await fetch('/api/lease/counter-suggest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ v2Id: v2Id, clauseType: clauseType, userEmail: getUserEmail() }),
+        body: JSON.stringify({
+          v2Id: v2Id,
+          clauseType: clauseType,
+          mode: mode,
+          instructions: instructions,
+          currentCounter: currentCounter,
+          userEmail: getUserEmail(),
+        }),
       })
       var data = await resp.json()
       if (!resp.ok) throw new Error(data.error || 'Counter generation failed')
 
-      // Show inline result (or no-counter-needed message)
-      var row = overlay.querySelector('.lease-cmp-row[data-clause-type="' + clauseType + '"]')
-      var workspace = row && row.querySelector('.lease-cmp-neg-workspace')
+      var negMap = overlay.__negotiationMap || {}
+      var existing = negMap[clauseType] || {}
+
       if (data.no_counter_needed) {
+        // Show a small toast / message
+        var row = overlay.querySelector('.lease-cmp-row[data-clause-type="' + clauseType + '"]')
+        var workspace = row && row.querySelector('.lease-cmp-neg-workspace')
         if (workspace) {
           var msg = document.createElement('div')
           msg.className = 'lease-cmp-counter-result lease-cmp-counter-none'
           msg.innerHTML = '<strong>AI: no counter recommended.</strong> ' + escapeHtml(data.rationale || '')
           workspace.appendChild(msg)
+          setTimeout(function () { try { msg.remove() } catch (e) {} }, 8000)
         }
-      } else {
-        // Insert counter language card under the workspace
-        if (workspace) {
-          var card = document.createElement('div')
-          card.className = 'lease-cmp-counter-result'
-          card.innerHTML =
-            '<div class="lease-cmp-counter-label">AI-generated counter <span class="lease-cmp-counter-badge">' + escapeHtml(data.counter_ai_model || 'AI') + '</span></div>' +
-            (data.counter_rationale ? '<div class="lease-cmp-counter-rationale"><strong>Why:</strong> ' + escapeHtml(data.counter_rationale) + '</div>' : '') +
-            '<div class="lease-cmp-counter-text">' + escapeHtml(data.counter_language) + '</div>' +
-            '<div class="lease-cmp-counter-hint">Status auto-updated to <strong>Counter Pending</strong>. Use the Word menu → Tenant Counter Proposal to export this as a track-changes DOCX.</div>'
-          workspace.appendChild(card)
-        }
-        // Bump status pill optimistically
-        applyOptimisticStatus(overlay, clauseType, 'counter_pending')
+        if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = origLabel }
+        return
       }
 
-      btnEl.style.display = 'none'
+      // Update local map
+      negMap[clauseType] = Object.assign({}, existing, {
+        counter_language: data.counter_language,
+        counter_rationale: data.counter_rationale,
+        counter_source: data.counter_source,
+        counter_mode: data.counter_mode,
+        counter_instructions: data.counter_instructions,
+        counter_ai_model: data.counter_ai_model,
+        counter_generated_at: data.counter_generated_at,
+        status: existing.status === 'open_issue' ? 'counter_pending' : (existing.status || 'counter_pending'),
+      })
+      overlay.__negotiationMap = negMap
+
+      // Replace the workspace HTML so the existing-counter card shows
+      reRenderClauseRow(overlay, clauseType)
+      applyOptimisticStatus(overlay, clauseType, negMap[clauseType].status)
     } catch (e) {
-      btnEl.disabled = false
-      btnEl.textContent = 'Suggest Counter'
+      console.error('counter generate failed:', e)
       alert('Counter generation failed: ' + e.message)
+      if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = origLabel }
+    }
+  }
+
+  // Re-render only the workspace inside a clause row (after status/counter update)
+  function reRenderClauseRow(overlay, clauseType) {
+    var row = overlay.querySelector('.lease-cmp-row[data-clause-type="' + clauseType + '"]')
+    if (!row) return
+    var workspace = row.querySelector('.lease-cmp-neg-workspace')
+    if (!workspace) return
+
+    var negMap = overlay.__negotiationMap || {}
+    var negotiation = negMap[clauseType] || null
+    var status = (negotiation && negotiation.status) || 'open_issue'
+    var notes = (negotiation && negotiation.notes) || ''
+
+    // Replace workspace innerHTML using same render function
+    var newHtml = '<div class="lease-cmp-neg-workspace-header"></div>'  // dummy, fully replaced below
+    var fresh = renderNegotiationWorkspace(clauseType, status, notes, negotiation)
+    // fresh starts with <div class="lease-cmp-neg-workspace" ...> - we want only its contents
+    var tmp = document.createElement('div')
+    tmp.innerHTML = fresh
+    var newInner = tmp.firstElementChild
+    if (newInner) {
+      workspace.innerHTML = newInner.innerHTML
+      // Re-attach handlers for newly rendered children
+      bindNotesHandlerForElement(overlay, workspace.querySelector('[data-action="save-neg-notes"]'))
+      bindCounterBuilderHandlers(overlay)
+    }
+  }
+
+  // Re-attach the notes textarea handler (called after re-render)
+  function bindNotesHandlerForElement(overlay, ta) {
+    if (!ta) return
+    var saveTimer = null
+    var save = function () {
+      var clauseType = ta.getAttribute('data-clause-type')
+      saveNegotiation(overlay, clauseType, { notes: ta.value })
+    }
+    ta.addEventListener('input', function () {
+      if (saveTimer) clearTimeout(saveTimer)
+      saveTimer = setTimeout(save, 1200)
+    })
+    ta.addEventListener('blur', function () {
+      if (saveTimer) { clearTimeout(saveTimer); saveTimer = null }
+      save()
+    })
+    ta.addEventListener('click', function (e) { e.stopPropagation() })
+    ta.addEventListener('mousedown', function (e) { e.stopPropagation() })
+  }
+
+  // ===== Existing counter card actions =====
+  function startManualEdit(overlay, clauseType) {
+    var row = overlay.querySelector('.lease-cmp-row[data-clause-type="' + clauseType + '"]')
+    if (!row) return
+    var card = row.querySelector('.lease-cmp-counter-result')
+    if (!card) return
+    var display = card.querySelector('[data-counter-display]')
+    if (!display) return
+    var current = display.textContent
+
+    // Replace display with a textarea + save/cancel
+    display.outerHTML =
+      '<textarea class="lease-cmp-counter-text-edit" data-counter-edit data-clause-type="' + escapeHtml(clauseType) + '">' + escapeHtml(current) + '</textarea>' +
+      '<div class="lease-cmp-counter-edit-actions">' +
+        '<button class="lease-cmp-counter-action lease-cmp-counter-save" data-action="counter-save-edit" data-clause-type="' + escapeHtml(clauseType) + '">Save</button>' +
+        '<button class="lease-cmp-counter-action" data-action="counter-cancel-edit" data-clause-type="' + escapeHtml(clauseType) + '">Cancel</button>' +
+      '</div>'
+
+    // Bind handlers
+    var ta = card.querySelector('[data-counter-edit]')
+    if (ta) {
+      ta.addEventListener('click', function (e) { e.stopPropagation() })
+      ta.addEventListener('mousedown', function (e) { e.stopPropagation() })
+      ta.focus()
+    }
+    var saveBtn = card.querySelector('[data-action="counter-save-edit"]')
+    if (saveBtn) {
+      saveBtn.addEventListener('click', function (e) {
+        e.stopPropagation()
+        saveManualEdit(overlay, clauseType, ta.value)
+      })
+    }
+    var cancelBtn = card.querySelector('[data-action="counter-cancel-edit"]')
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', function (e) {
+        e.stopPropagation()
+        reRenderClauseRow(overlay, clauseType)
+      })
+    }
+  }
+
+  async function saveManualEdit(overlay, clauseType, newText) {
+    var pid = overlay.__projectId
+    var addr = overlay.__buildingAddress
+    if (!pid || !addr) return
+
+    try {
+      var resp = await fetch('/api/lease/counter-suggest', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: pid,
+          buildingAddress: addr,
+          clauseType: clauseType,
+          counter_language: newText,
+          userEmail: getUserEmail(),
+        }),
+      })
+      var data = await resp.json()
+      if (!resp.ok) throw new Error(data.error || 'Save failed')
+
+      // Update local map
+      var negMap = overlay.__negotiationMap || {}
+      negMap[clauseType] = Object.assign({}, negMap[clauseType] || {}, data)
+      overlay.__negotiationMap = negMap
+
+      reRenderClauseRow(overlay, clauseType)
+    } catch (e) {
+      alert('Save failed: ' + e.message)
+    }
+  }
+
+  function startAiRefine(overlay, clauseType) {
+    var row = overlay.querySelector('.lease-cmp-row[data-clause-type="' + clauseType + '"]')
+    if (!row) return
+    var card = row.querySelector('.lease-cmp-counter-result')
+    if (!card) return
+
+    // Insert refinement input after the existing rationale, before the text
+    var existingRefine = card.querySelector('.lease-cmp-counter-refine-panel')
+    if (existingRefine) { existingRefine.querySelector('textarea').focus(); return }
+
+    var negMap = overlay.__negotiationMap || {}
+    var existing = negMap[clauseType] || {}
+    var currentText = existing.counter_language || ''
+
+    var panel = document.createElement('div')
+    panel.className = 'lease-cmp-counter-refine-panel'
+    panel.innerHTML =
+      '<div class="lease-cmp-builder-hint">Tell AI how to refine the existing counter. Example: "Make this more aggressive" or "Use the same defined-term style as the rest of the lease."</div>' +
+      '<textarea class="lease-cmp-builder-prompt" data-refine-prompt rows="2" placeholder="How should AI refine this counter?"></textarea>' +
+      '<div class="lease-cmp-counter-edit-actions">' +
+        '<button class="lease-cmp-builder-go" data-action="counter-refine-go" data-clause-type="' + escapeHtml(clauseType) + '">Refine with AI</button>' +
+        '<button class="lease-cmp-counter-action" data-action="counter-refine-cancel" data-clause-type="' + escapeHtml(clauseType) + '">Cancel</button>' +
+      '</div>'
+
+    // Insert at top of card body (after the counter-label header)
+    card.appendChild(panel)
+
+    var ta = panel.querySelector('textarea')
+    if (ta) {
+      ta.addEventListener('click', function (e) { e.stopPropagation() })
+      ta.addEventListener('mousedown', function (e) { e.stopPropagation() })
+      ta.focus()
+    }
+    panel.querySelector('[data-action="counter-refine-go"]').addEventListener('click', function (e) {
+      e.stopPropagation()
+      var inst = ta.value
+      runCounterGenerate(overlay, clauseType, {
+        mode: 'ai_edit',
+        instructions: inst,
+        currentCounter: currentText,
+        btnEl: panel.querySelector('[data-action="counter-refine-go"]'),
+      })
+    })
+    panel.querySelector('[data-action="counter-refine-cancel"]').addEventListener('click', function (e) {
+      e.stopPropagation()
+      panel.remove()
+    })
+  }
+
+  function startRegenerate(overlay, clauseType) {
+    var negMap = overlay.__negotiationMap || {}
+    var existing = negMap[clauseType] || {}
+    var prevMode = existing.counter_mode || 'auto'
+    var prevInstructions = existing.counter_instructions || ''
+
+    if (prevMode === 'auto' && !prevInstructions) {
+      // No instruction history - just hit auto again
+      if (!confirm('Regenerate this counter from scratch?')) return
+      runCounterGenerate(overlay, clauseType, { mode: 'auto', instructions: '' })
+      return
+    }
+
+    // Open the existing-builder panel pre-filled with previous instruction + mode
+    // Easiest: replace the card with a fresh builder pre-populated
+    var newInstructions = prompt('Regenerate with these instructions (you can edit):', prevInstructions)
+    if (newInstructions === null) return
+    runCounterGenerate(overlay, clauseType, {
+      mode: prevMode === 'manual' ? 'auto' : prevMode,
+      instructions: newInstructions,
+    })
+  }
+
+  async function deleteCounter(overlay, clauseType) {
+    if (!confirm('Delete this counter? You can always generate a new one.')) return
+    var pid = overlay.__projectId
+    var addr = overlay.__buildingAddress
+    if (!pid || !addr) return
+
+    try {
+      var resp = await fetch('/api/lease/counter-suggest', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: pid,
+          buildingAddress: addr,
+          clauseType: clauseType,
+          userEmail: getUserEmail(),
+        }),
+      })
+      if (!resp.ok) {
+        var d = await resp.json().catch(function () { return {} })
+        throw new Error(d.error || 'Delete failed')
+      }
+      // Clear from local map
+      var negMap = overlay.__negotiationMap || {}
+      if (negMap[clauseType]) {
+        delete negMap[clauseType].counter_language
+        delete negMap[clauseType].counter_rationale
+        delete negMap[clauseType].counter_mode
+        delete negMap[clauseType].counter_instructions
+      }
+      reRenderClauseRow(overlay, clauseType)
+    } catch (e) {
+      alert('Delete failed: ' + e.message)
     }
   }
 

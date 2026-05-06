@@ -1014,6 +1014,199 @@
   line-height: 1.35;
 }
 
+/* ============================================================
+   COUNTER BUILDER (3-tab panel + edit/refine/regen actions)
+   ============================================================ */
+.lease-cmp-counter-builder {
+  margin-top: 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.lease-cmp-builder-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.lease-cmp-builder-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.lease-cmp-builder-tabs {
+  display: flex;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+.lease-cmp-builder-tab {
+  background: transparent;
+  border: none;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.lease-cmp-builder-tab:hover { background: #f1f5f9; }
+.lease-cmp-builder-tab.active {
+  background: #2563eb;
+  color: #fff;
+}
+.lease-cmp-builder-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.lease-cmp-builder-hint {
+  font-size: 0.8125rem;
+  color: #475569;
+  line-height: 1.5;
+}
+.lease-cmp-builder-prompt {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: #0f172a;
+  background: #fff;
+  resize: vertical;
+  line-height: 1.5;
+}
+.lease-cmp-builder-prompt:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+.lease-cmp-builder-go {
+  align-self: flex-start;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  font-family: inherit;
+  transition: background 0.12s ease;
+}
+.lease-cmp-builder-go:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+.lease-cmp-builder-go:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Existing-counter actions row */
+.lease-cmp-counter-actions {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: auto;
+}
+.lease-cmp-counter-action {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #475569;
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.lease-cmp-counter-action:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+.lease-cmp-counter-action.lease-cmp-counter-action-danger:hover {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+.lease-cmp-counter-action.lease-cmp-counter-save {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+.lease-cmp-counter-action.lease-cmp-counter-save:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #fff;
+}
+.lease-cmp-counter-mode-badge {
+  font-size: 0.625rem;
+  background: #e0e7ff;
+  color: #4338ca;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: none;
+}
+.lease-cmp-counter-instructions-shown {
+  font-size: 0.75rem;
+  color: #475569;
+  background: #fff;
+  border-left: 3px solid #2563eb;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  border-radius: 0 6px 6px 0;
+  line-height: 1.5;
+}
+
+/* Manual edit textarea + actions inside counter card */
+.lease-cmp-counter-text-edit {
+  width: 100%;
+  min-height: 120px;
+  padding: 10px 12px;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  font-family: 'Calibri', 'Helvetica', sans-serif;
+  font-size: 0.875rem;
+  color: #1e293b;
+  background: #fff;
+  resize: vertical;
+  line-height: 1.55;
+}
+.lease-cmp-counter-text-edit:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+.lease-cmp-counter-edit-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.lease-cmp-counter-refine-panel {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #fde68a;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 /* Toast notification */
 .lease-toast {
   position: fixed;
