@@ -48,7 +48,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Both versions must have completed extraction before comparison' }, { status: 400 })
     }
 
-    // ---- Build the structural diff ----
+    // ---- Cache check: full diff (structural + AI summary) ----
+    // Cache key: v2.summary_json.compare_cache[v1Id] = { diff, summary, generated_at }
+    const cache = (v2.summary_json && v2.summary_json.compare_cache) || {}
+    const cached = cache[v1Id]
+
+    if (!regenerateAi && cached && cached.diff && cached.summary) {
+      // Cache hit - return immediately with version metadata stitched in
+      const out = { ...cached.diff }
+      out.ai_summary = cached.summary
+      out.v1_label = v1.version_label || ('v' + v1.version_number)
+      out.v2_label = v2.version_label || ('v' + v2.version_number)
+      out.v1_doc_type = v1.doc_type
+      out.v2_doc_type = v2.doc_type
+      out.cached_at = cached.generated_at
+      out.from_cache = true
+      return NextResponse.json(out)
+    }
+
+    // ---- Build the structural diff (fresh) ----
     const diff: CompareResult = buildDiff(
       { id: v1Id, clauses: v1Clauses },
       { id: v2Id, clauses: v2Clauses },
@@ -60,28 +78,35 @@ export async function POST(req: Request) {
     ;(diff as any).v1_doc_type = v1.doc_type
     ;(diff as any).v2_doc_type = v2.doc_type
 
-    // ---- AI change summary (with caching) ----
-    // Cache key: stored on v2.summary_json.compare_cache[v1Id]
+    // ---- AI change summary ----
     let aiSummary: string | null = null
-    const cache = (v2.summary_json && v2.summary_json.compare_cache) || {}
-    if (!regenerateAi && cache[v1Id] && cache[v1Id].summary) {
-      aiSummary = cache[v1Id].summary
-    }
-
-    if (!aiSummary) {
-      try {
-        aiSummary = await generateAiSummary(diff, v1, v2)
-        // Persist
-        const newCache = { ...cache, [v1Id]: { summary: aiSummary, generated_at: new Date().toISOString() } }
-        const newSummaryJson = { ...(v2.summary_json || {}), compare_cache: newCache }
-        await supabase.from('lease_documents').update({ summary_json: newSummaryJson }).eq('id', v2Id)
-      } catch (e) {
-        console.warn('AI summary generation failed:', e)
-        aiSummary = null
-      }
+    try {
+      aiSummary = await generateAiSummary(diff, v1, v2)
+    } catch (e) {
+      console.warn('AI summary generation failed:', e)
+      aiSummary = null
     }
 
     if (aiSummary) (diff as any).ai_summary = aiSummary
+
+    // ---- Persist full cache (diff + summary) ----
+    try {
+      const generatedAt = new Date().toISOString()
+      const newCache = {
+        ...cache,
+        [v1Id]: {
+          diff: diff,                     // full structural diff
+          summary: aiSummary,             // AI text (may be null on failure)
+          generated_at: generatedAt,
+        },
+      }
+      const newSummaryJson = { ...(v2.summary_json || {}), compare_cache: newCache }
+      await supabase.from('lease_documents').update({ summary_json: newSummaryJson }).eq('id', v2Id)
+      ;(diff as any).cached_at = generatedAt
+      ;(diff as any).from_cache = false
+    } catch (e) {
+      console.warn('Cache persist failed:', e)
+    }
 
     return NextResponse.json(diff)
   } catch (err) {

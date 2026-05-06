@@ -752,20 +752,33 @@
   }
 
   // Run comparison and show overlay
-  async function leaseRunCompare(v1Id, v2Id) {
-    var overlay = document.createElement('div')
-    overlay.className = 'lease-summary-overlay'
-    overlay.innerHTML = '<div class="lease-summary-card"><div class="lease-summary-loading"><div class="lease-spinner"></div> Comparing versions and generating change summary (30–60 sec)...</div></div>'
-    document.body.appendChild(overlay)
+  async function leaseRunCompare(v1Id, v2Id, opts) {
+    opts = opts || {}
+    var overlay
+    if (opts.replaceOverlay) {
+      overlay = opts.replaceOverlay
+    } else {
+      overlay = document.createElement('div')
+      overlay.className = 'lease-summary-overlay'
+      document.body.appendChild(overlay)
+    }
+    var loadingMsg = opts.regenerate
+      ? 'Regenerating AI summary (30–60 sec)...'
+      : 'Comparing versions and generating change summary (30–60 sec)...'
+    overlay.innerHTML = '<div class="lease-summary-card"><div class="lease-summary-loading"><div class="lease-spinner"></div> ' + loadingMsg + '</div></div>'
 
     try {
       var resp = await fetch('/api/lease/compare', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ v1Id: v1Id, v2Id: v2Id }),
+        body: JSON.stringify({ v1Id: v1Id, v2Id: v2Id, regenerateAi: !!opts.regenerate }),
       })
       var data = await resp.json()
       if (!resp.ok) throw new Error(data.error || 'Compare failed')
+      // Stash for export + regenerate handlers
+      overlay.__compareData = data
+      overlay.__compareV1Id = v1Id
+      overlay.__compareV2Id = v2Id
       overlay.innerHTML = renderCompareHtml(data)
       bindCompareHandlers(overlay)
     } catch (e) {
@@ -780,14 +793,37 @@
 
     var html = '<div class="lease-summary-card lease-summary-full lease-compare-card">'
 
-    // Header
+    // Header (with cache indicator + export/regenerate actions)
+    var cachedAtStr = ''
+    if (diff.cached_at) {
+      try {
+        var dt = new Date(diff.cached_at)
+        cachedAtStr = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' at ' + dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      } catch (e) { cachedAtStr = '' }
+    }
+    var fromCacheBadge = diff.from_cache
+      ? '<span class="lease-cmp-cache-badge" title="Loaded from cache - regenerate to refresh AI summary">Cached' + (cachedAtStr ? ' · ' + escapeHtml(cachedAtStr) : '') + '</span>'
+      : (diff.cached_at ? '<span class="lease-cmp-cache-badge lease-cmp-cache-fresh">Fresh · ' + escapeHtml(cachedAtStr) + '</span>' : '')
+
     html += '<div class="lease-summary-header">' +
       '<div>' +
-        '<div class="lease-summary-eyebrow">Compare Versions</div>' +
+        '<div class="lease-summary-eyebrow">Compare Versions ' + fromCacheBadge + '</div>' +
         '<div class="lease-summary-title">' + escapeHtml(diff.v1_label || 'v1') + ' → ' + escapeHtml(diff.v2_label || 'v2') + '</div>' +
         '<div class="lease-summary-subtitle">' + escapeHtml(DOC_TYPE_LABELS[diff.v1_doc_type] || diff.v1_doc_type || '') + ' → ' + escapeHtml(DOC_TYPE_LABELS[diff.v2_doc_type] || diff.v2_doc_type || '') + '</div>' +
       '</div>' +
       '<div class="lease-summary-actions">' +
+        '<button class="lease-btn-secondary" data-action="export-excel" title="Download as Excel file">' +
+          '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' +
+          'Excel' +
+        '</button>' +
+        '<button class="lease-btn-secondary" data-action="export-sheets" title="Save to Google Sheets">' +
+          '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' +
+          'Google Sheets' +
+        '</button>' +
+        '<button class="lease-btn-secondary" data-action="regenerate" title="Regenerate AI summary with a fresh pass">' +
+          '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>' +
+          'Regenerate' +
+        '</button>' +
         '<button class="lease-btn-secondary" data-action="close">Close</button>' +
       '</div>' +
     '</div>'
@@ -989,6 +1025,22 @@
     overlay.querySelectorAll('[data-action="close"]').forEach(function (b) {
       b.addEventListener('click', function () { overlay.remove() })
     })
+    // Regenerate AI summary
+    overlay.querySelectorAll('[data-action="regenerate"]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var v1 = overlay.__compareV1Id
+        var v2 = overlay.__compareV2Id
+        if (v1 && v2) leaseRunCompare(v1, v2, { regenerate: true, replaceOverlay: overlay })
+      })
+    })
+    // Export to Excel (.xlsx download)
+    overlay.querySelectorAll('[data-action="export-excel"]').forEach(function (b) {
+      b.addEventListener('click', function () { exportCompareToWorkbook(overlay.__compareData, 'excel') })
+    })
+    // Export to Google Sheets
+    overlay.querySelectorAll('[data-action="export-sheets"]').forEach(function (b) {
+      b.addEventListener('click', function () { exportCompareToWorkbook(overlay.__compareData, 'sheets') })
+    })
     // Toggle row expand
     overlay.querySelectorAll('[data-action="toggle-row"]').forEach(function (head) {
       head.addEventListener('click', function () {
@@ -1019,6 +1071,249 @@
         })
       })
     })
+  }
+
+  // ================================================================
+  // EXPORT COMPARE TO EXCEL / GOOGLE SHEETS
+  // ================================================================
+  // Three columns: V1, V2, Summary of Changes - one row per clause
+  // Plus header rows for AI summary and risk delta.
+  function exportCompareToWorkbook(diff, target) {
+    if (!diff || !diff.clauseDiffs) {
+      alert('No comparison data to export.')
+      return
+    }
+    if (typeof XLSX === 'undefined') {
+      alert('Excel library not loaded. Please refresh and try again.')
+      return
+    }
+
+    var v1Label = diff.v1_label || 'v1'
+    var v2Label = diff.v2_label || 'v2'
+    var v1DocType = DOC_TYPE_LABELS[diff.v1_doc_type] || diff.v1_doc_type || ''
+    var v2DocType = DOC_TYPE_LABELS[diff.v2_doc_type] || diff.v2_doc_type || ''
+    var counts = diff.counts || {}
+    var risk = diff.riskDelta || {}
+
+    var wb = XLSX.utils.book_new()
+
+    // ============ SHEET 1: AI Summary + headline ============
+    var summaryRows = []
+    summaryRows.push(['Lease Compare Versions'])
+    summaryRows.push([])
+    summaryRows.push(['Earlier (V1)', v1Label + ' — ' + v1DocType])
+    summaryRows.push(['Later (V2)',   v2Label + ' — ' + v2DocType])
+    summaryRows.push(['Generated',    diff.cached_at ? new Date(diff.cached_at).toLocaleString() : new Date().toLocaleString()])
+    summaryRows.push([])
+    summaryRows.push(['CHANGE COUNTS'])
+    summaryRows.push(['Modified',  counts.modified  || 0])
+    summaryRows.push(['Added',     counts.added     || 0])
+    summaryRows.push(['Removed',   counts.removed   || 0])
+    summaryRows.push(['Unchanged', counts.unchanged || 0])
+    summaryRows.push([])
+    summaryRows.push(['RISK MOVEMENT'])
+    summaryRows.push(['Clauses where risk got worse',    risk.worse  || 0])
+    summaryRows.push(['Clauses where risk improved',     risk.better || 0])
+    summaryRows.push(['Net change in high-risk clauses', risk.net_high_risk_change || 0])
+    summaryRows.push([])
+    summaryRows.push(['AI EXECUTIVE SUMMARY'])
+    if (diff.ai_summary) {
+      diff.ai_summary.split(/\n\n+/).forEach(function (p) {
+        summaryRows.push([p])
+      })
+    } else {
+      summaryRows.push(['(no AI summary available)'])
+    }
+
+    var ws1 = XLSX.utils.aoa_to_sheet(summaryRows)
+    ws1['!cols'] = [{ wch: 38 }, { wch: 70 }]
+    // Style title + section labels
+    if (ws1['A1']) ws1['A1'].s = { font: { bold: true, sz: 14 } }
+    var sectionLabels = ['CHANGE COUNTS', 'RISK MOVEMENT', 'AI EXECUTIVE SUMMARY', 'Earlier (V1)', 'Later (V2)', 'Generated']
+    for (var r = 0; r < summaryRows.length; r++) {
+      var cellRef = XLSX.utils.encode_cell({ r: r, c: 0 })
+      if (ws1[cellRef] && sectionLabels.indexOf(summaryRows[r][0]) >= 0) {
+        ws1[cellRef].s = { font: { bold: true, color: { rgb: '1E40AF' } }, alignment: { vertical: 'top' } }
+      }
+    }
+    // Wrap long AI summary cells
+    summaryRows.forEach(function (row, idx) {
+      var cell = ws1[XLSX.utils.encode_cell({ r: idx, c: 0 })]
+      if (cell && typeof cell.v === 'string' && cell.v.length > 80) {
+        cell.s = Object.assign({}, cell.s || {}, { alignment: { wrapText: true, vertical: 'top' } })
+        ws1['!rows'] = ws1['!rows'] || []
+        ws1['!rows'][idx] = { hpt: Math.min(220, Math.max(40, Math.ceil(cell.v.length / 90) * 18)) }
+      }
+    })
+    XLSX.utils.book_append_sheet(wb, ws1, 'Summary')
+
+    // ============ SHEET 2: Clause-by-clause comparison ============
+    var headers = [
+      'Clause Type',
+      'Section',
+      'Status',
+      v1Label + ' — Heading',
+      v1Label + ' — Summary',
+      v1Label + ' — Key Terms',
+      v1Label + ' — Source Excerpt',
+      v1Label + ' — Risk',
+      v2Label + ' — Heading',
+      v2Label + ' — Summary',
+      v2Label + ' — Key Terms',
+      v2Label + ' — Source Excerpt',
+      v2Label + ' — Risk',
+      'Summary of Changes',
+    ]
+    var dataRows = [headers]
+
+    diff.clauseDiffs.forEach(function (cd) {
+      var label = clauseTypeLabel(cd.type)
+      var section = (cd.v1 && cd.v1.section) || (cd.v2 && cd.v2.section) || ''
+      var v1Heading = (cd.v1 && cd.v1.heading) || ''
+      var v2Heading = (cd.v2 && cd.v2.heading) || ''
+      var v1Summary = (cd.v1 && cd.v1.summary) || ''
+      var v2Summary = (cd.v2 && cd.v2.summary) || ''
+      var v1KT = (cd.v1 && cd.v1.key_terms) ? formatKeyTermsForExport(cd.v1.key_terms) : ''
+      var v2KT = (cd.v2 && cd.v2.key_terms) ? formatKeyTermsForExport(cd.v2.key_terms) : ''
+      var v1Excerpt = (cd.v1 && cd.v1.original_excerpt) || ''
+      var v2Excerpt = (cd.v2 && cd.v2.original_excerpt) || ''
+      var v1Risk = (cd.v1 && cd.v1.risk_level) || ''
+      var v2Risk = (cd.v2 && cd.v2.risk_level) || ''
+      var changeSummary = buildChangeSummary(cd)
+
+      dataRows.push([
+        label,
+        section,
+        cd.status.toUpperCase(),
+        v1Heading, v1Summary, v1KT, v1Excerpt, v1Risk,
+        v2Heading, v2Summary, v2KT, v2Excerpt, v2Risk,
+        changeSummary,
+      ])
+    })
+
+    var ws2 = XLSX.utils.aoa_to_sheet(dataRows)
+    ws2['!cols'] = [
+      { wch: 22 },              // Clause Type
+      { wch: 12 },              // Section
+      { wch: 12 },              // Status
+      { wch: 28 }, { wch: 50 }, { wch: 35 }, { wch: 60 }, { wch: 10 }, // V1 columns
+      { wch: 28 }, { wch: 50 }, { wch: 35 }, { wch: 60 }, { wch: 10 }, // V2 columns
+      { wch: 70 },              // Summary of Changes
+    ]
+    ws2['!freeze'] = { xSplit: 0, ySplit: 1 }
+    // Header row styling
+    var lastCol = headers.length - 1
+    for (var c = 0; c <= lastCol; c++) {
+      var hdrRef = XLSX.utils.encode_cell({ r: 0, c: c })
+      if (ws2[hdrRef]) {
+        ws2[hdrRef].s = {
+          font: { bold: true, color: { rgb: 'FFFFFF' } },
+          fill: { fgColor: { rgb: '1E40AF' } },
+          alignment: { vertical: 'center', horizontal: 'left', wrapText: true },
+        }
+      }
+    }
+    ws2['!rows'] = [{ hpt: 38 }]
+    // Color-code status column + add wrap to long text cells
+    var statusColors = {
+      MODIFIED: { rgb: 'FFFBEB', fontColor: 'B45309' },
+      ADDED:    { rgb: 'F0FDF4', fontColor: '15803D' },
+      REMOVED:  { rgb: 'FEF2F2', fontColor: 'B91C1C' },
+      UNCHANGED:{ rgb: 'F8FAFC', fontColor: '64748B' },
+    }
+    for (var i = 1; i < dataRows.length; i++) {
+      var status = dataRows[i][2]
+      var sc = statusColors[status]
+      if (sc) {
+        var ref = XLSX.utils.encode_cell({ r: i, c: 2 })
+        if (ws2[ref]) {
+          ws2[ref].s = {
+            font: { bold: true, color: { rgb: sc.fontColor } },
+            fill: { fgColor: { rgb: sc.rgb } },
+            alignment: { horizontal: 'center', vertical: 'center' },
+          }
+        }
+      }
+      // Wrap long-text columns
+      ;[4, 6, 9, 11, 13].forEach(function (cc) {
+        var rr = XLSX.utils.encode_cell({ r: i, c: cc })
+        if (ws2[rr] && typeof ws2[rr].v === 'string' && ws2[rr].v.length > 60) {
+          ws2[rr].s = Object.assign({}, ws2[rr].s || {}, { alignment: { wrapText: true, vertical: 'top' } })
+        }
+      })
+      ws2['!rows'].push({ hpt: 80 })
+    }
+    XLSX.utils.book_append_sheet(wb, ws2, 'Clause Compare')
+
+    var fileName = 'Lease Compare ' + v1Label + ' vs ' + v2Label + ' — ' + new Date().toISOString().slice(0, 10) + '.xlsx'
+
+    if (target === 'sheets') {
+      // Reuse the existing rfp Drive helper - identical OAuth flow + Drive upload
+      if (typeof rfpExportComparisonToDrive === 'function') {
+        rfpExportComparisonToDrive(wb, fileName)
+      } else {
+        alert('Google Sheets export not available - please refresh the page.')
+      }
+    } else {
+      XLSX.writeFile(wb, fileName)
+    }
+  }
+
+  function formatKeyTermsForExport(kt) {
+    if (!kt || typeof kt !== 'object') return ''
+    return Object.keys(kt).map(function (k) {
+      var v = kt[k]
+      if (v == null || v === '') return ''
+      var displayKey = k.replace(/_/g, ' ').replace(/\b\w/g, function (m) { return m.toUpperCase() })
+      var displayVal = typeof v === 'object' ? JSON.stringify(v) : String(v)
+      return displayKey + ': ' + displayVal
+    }).filter(Boolean).join('\n')
+  }
+
+  // Build a plain-English summary for the third column of the export.
+  // Includes: status verb, key term changes (with old -> new), risk movement.
+  function buildChangeSummary(cd) {
+    if (cd.status === 'unchanged') return 'No change.'
+    if (cd.status === 'added') {
+      var addedRisk = (cd.v2 && cd.v2.risk_level) || 'unknown'
+      return 'NEW - this clause was added in the later version.'
+        + ((cd.v2 && cd.v2.summary) ? ' ' + cd.v2.summary : '')
+        + ' Risk: ' + addedRisk + '.'
+    }
+    if (cd.status === 'removed') {
+      return 'REMOVED - this clause was removed in the later version.'
+        + ((cd.v1 && cd.v1.summary) ? ' (Was: ' + cd.v1.summary + ')' : '')
+    }
+
+    // Modified - build a list of bullet points
+    var parts = []
+    var changedKT = (cd.keyTermsDiff || []).filter(function (k) { return k.changed })
+    if (changedKT.length > 0) {
+      changedKT.forEach(function (k) {
+        var disp = k.key.replace(/_/g, ' ').replace(/\b\w/g, function (m) { return m.toUpperCase() })
+        var oldV = k.v1 == null ? '(none)' : (typeof k.v1 === 'object' ? JSON.stringify(k.v1) : String(k.v1))
+        var newV = k.v2 == null ? '(none)' : (typeof k.v2 === 'object' ? JSON.stringify(k.v2) : String(k.v2))
+        parts.push('- ' + disp + ': ' + oldV + ' → ' + newV)
+      })
+    }
+
+    var summaryChanged = cd.summaryOps && cd.summaryOps.some(function (o) { return o.op !== 'eq' })
+    if (summaryChanged && (!cd.v1 || !cd.v2 || (cd.v1.summary || '') !== (cd.v2.summary || ''))) {
+      parts.push('- Summary changed.')
+    }
+
+    var excerptChanged = cd.excerptOps && cd.excerptOps.some(function (o) { return o.op !== 'eq' })
+    if (excerptChanged) parts.push('- Source language was edited.')
+
+    if (cd.riskDelta && cd.riskDelta !== 0) {
+      var verb = cd.riskDelta > 0 ? 'WORSENED' : 'IMPROVED'
+      parts.push('- Risk ' + verb + ': '
+        + ((cd.v1 && cd.v1.risk_level) || '—') + ' → '
+        + ((cd.v2 && cd.v2.risk_level) || '—'))
+    }
+
+    if (parts.length === 0) return 'Modified (minor edits).'
+    return parts.join('\n')
   }
 
   // ================================================================
