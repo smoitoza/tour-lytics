@@ -148,6 +148,23 @@
     document.body.appendChild(modal)
     _modal = modal
 
+    // Preset building if requested (e.g. "Add new version for this building")
+    if (opts.presetBuildingAddress) {
+      var sel = modal.querySelector('#lease-building-select')
+      if (sel) {
+        var match = null
+        for (var i = 0; i < sel.options.length; i++) {
+          var opt = sel.options[i]
+          var addr = opt.getAttribute('data-address') || ''
+          if (addr && addr.toLowerCase() === opts.presetBuildingAddress.toLowerCase()) {
+            match = opt
+            break
+          }
+        }
+        if (match) sel.value = match.value
+      }
+    }
+
     var close = function () { modal.remove(); _modal = null }
     modal.querySelector('.lease-modal-close').addEventListener('click', close)
     modal.querySelector('#lease-modal-cancel').addEventListener('click', close)
@@ -302,6 +319,10 @@
       setStatus(modal, '<strong>Done.</strong> Extracted ' + (extractData.clause_count || 0) + ' clauses. Opening summary...', 'success')
       setTimeout(function () {
         if (_modal) { _modal.remove(); _modal = null }
+        // Refresh the lease tab dashboard if it's currently mounted
+        if (typeof leasePageInit === 'function' && document.getElementById('lease-page-root')) {
+          try { leasePageInit() } catch (e) { /* non-critical */ }
+        }
         leaseShowSummary(leaseDoc.id)
       }, 800)
     } catch (e) {
@@ -487,8 +508,183 @@
   }
 
   // ================================================================
+  // LEASE PAGE (TAB) - building tiles like Financials
+  // ================================================================
+  async function leasePageInit() {
+    var root = document.getElementById('lease-page-root')
+    if (!root) return
+    root.innerHTML = '<div class="lease-page-loading"><div class="lease-spinner"></div> Loading leases...</div>'
+
+    var pid = getProjectId()
+    try {
+      var resp = await fetch('/api/lease?projectId=' + encodeURIComponent(pid))
+      var data = await resp.json()
+      if (!resp.ok) throw new Error(data.error || 'Failed to load leases')
+      var leases = Array.isArray(data) ? data : []
+      renderLeasePage(root, leases)
+    } catch (e) {
+      root.innerHTML = '<div class="lease-page-error">Could not load leases: ' + escapeHtml(e.message) + '</div>'
+    }
+  }
+
+  function renderLeasePage(root, leases) {
+    var canUpload = (typeof hasAdminAccess === 'function') ? hasAdminAccess() : true
+
+    // Group by building_address
+    var byBuilding = {}
+    leases.forEach(function (l) {
+      var key = (l.building_address || 'Unknown').trim()
+      if (!byBuilding[key]) byBuilding[key] = []
+      byBuilding[key].push(l)
+    })
+    var buildingList = Object.keys(byBuilding).map(function (k) {
+      var versions = byBuilding[k].sort(function (a, b) { return b.version_number - a.version_number })
+      var latest = versions[0]
+      return {
+        address: k,
+        versions: versions,
+        latest: latest,
+        latestUpdated: versions.reduce(function (max, v) {
+          var t = new Date(v.updated_at || v.created_at).getTime()
+          return t > max ? t : max
+        }, 0),
+      }
+    }).sort(function (a, b) { return b.latestUpdated - a.latestUpdated })
+
+    // Header
+    var html = '<div class="lease-page-header">' +
+      '<div>' +
+        '<div class="lease-page-eyebrow">Lease Review · BETA</div>' +
+        '<div class="lease-page-title">Leases</div>' +
+        '<div class="lease-page-subtitle">Upload, extract, and review lease documents at the building level</div>' +
+      '</div>' +
+      (canUpload
+        ? '<button class="lease-btn-primary" id="lease-page-upload-btn">' +
+            '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' +
+            'Upload New Lease' +
+          '</button>'
+        : '') +
+    '</div>'
+
+    // Empty state
+    if (buildingList.length === 0) {
+      html += '<div class="lease-page-empty">' +
+        '<div class="lease-page-empty-icon">' +
+          '<svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' +
+        '</div>' +
+        '<div class="lease-page-empty-title">No leases uploaded yet</div>' +
+        '<div class="lease-page-empty-hint">Upload a lease PDF or DOCX and the AI will extract clauses, score risks, and surface key terms.</div>' +
+        (canUpload ? '<button class="lease-btn-primary" id="lease-page-upload-btn" style="margin-top:14px">Upload First Lease</button>' : '') +
+      '</div>'
+      root.innerHTML = html
+      bindLeasePageHandlers(root)
+      return
+    }
+
+    // Building tiles
+    html += '<div class="lease-tile-grid">'
+    buildingList.forEach(function (b) {
+      var latest = b.latest
+      var meta = (latest.extraction_json && latest.extraction_json.document_meta) || {}
+      var counts = (latest.summary_json && latest.summary_json.counts) || {}
+      var statusBadge = renderExtractionStatusBadge(latest.extraction_status)
+      html += '<div class="lease-tile" data-address="' + escapeHtml(b.address) + '">' +
+        '<div class="lease-tile-header">' +
+          '<div class="lease-tile-title-wrap">' +
+            '<div class="lease-tile-title">' + escapeHtml(b.address) + '</div>' +
+            '<div class="lease-tile-tenant">' + escapeHtml(meta.tenant_name || meta.landlord_name || '—') + '</div>' +
+          '</div>' +
+          statusBadge +
+        '</div>' +
+        '<div class="lease-tile-stats">' +
+          '<div class="lease-tile-stat">' +
+            '<div class="lease-tile-stat-label">Versions</div>' +
+            '<div class="lease-tile-stat-value">' + b.versions.length + '</div>' +
+          '</div>' +
+          '<div class="lease-tile-stat">' +
+            '<div class="lease-tile-stat-label">Clauses</div>' +
+            '<div class="lease-tile-stat-value">' + (counts.total_clauses || 0) + '</div>' +
+          '</div>' +
+          '<div class="lease-tile-stat">' +
+            '<div class="lease-tile-stat-label">High Risk</div>' +
+            '<div class="lease-tile-stat-value lease-tile-stat-risk-high">' + (counts.high_risk || 0) + '</div>' +
+          '</div>' +
+          '<div class="lease-tile-stat">' +
+            '<div class="lease-tile-stat-label">RSF</div>' +
+            '<div class="lease-tile-stat-value">' + (meta.rsf ? Number(meta.rsf).toLocaleString() : '—') + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="lease-tile-versions">' +
+          '<div class="lease-tile-versions-label">Versions</div>' +
+          b.versions.map(renderVersionRow).join('') +
+        '</div>' +
+        (canUpload
+          ? '<div class="lease-tile-footer">' +
+              '<button class="lease-tile-add-btn" data-action="add-version" data-address="' + escapeHtml(b.address) + '">+ Add new version for this building</button>' +
+            '</div>'
+          : '') +
+      '</div>'
+    })
+    html += '</div>'
+
+    root.innerHTML = html
+    bindLeasePageHandlers(root)
+  }
+
+  function renderVersionRow(v) {
+    var risk = (v.summary_json && v.summary_json.counts) || {}
+    var dt = v.created_at ? new Date(v.created_at) : null
+    var dateStr = dt ? dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
+    return '<div class="lease-version-row" data-lease-id="' + escapeHtml(v.id) + '">' +
+      '<div class="lease-version-meta">' +
+        '<div class="lease-version-label">' + escapeHtml(v.version_label || ('v' + v.version_number)) + '</div>' +
+        '<div class="lease-version-doctype">' + escapeHtml(DOC_TYPE_LABELS[v.doc_type] || v.doc_type) + '</div>' +
+      '</div>' +
+      '<div class="lease-version-date">' + escapeHtml(dateStr) + '</div>' +
+      '<div class="lease-version-risks">' +
+        (risk.high_risk ? '<span class="lease-version-risk lease-version-risk-high">' + risk.high_risk + ' high</span>' : '') +
+        (risk.medium_risk ? '<span class="lease-version-risk lease-version-risk-medium">' + risk.medium_risk + ' med</span>' : '') +
+      '</div>' +
+    '</div>'
+  }
+
+  function renderExtractionStatusBadge(status) {
+    var map = {
+      pending:    { fg: '#475569', bg: '#F1F5F9', label: 'Pending' },
+      extracting: { fg: '#1E40AF', bg: '#DBEAFE', label: 'Extracting...' },
+      done:       { fg: '#15803D', bg: '#F0FDF4', label: 'Ready' },
+      error:      { fg: '#B91C1C', bg: '#FEF2F2', label: 'Error' },
+    }
+    var s = map[status] || map.pending
+    return '<div class="lease-tile-status" style="color:' + s.fg + ';background:' + s.bg + '">' + s.label + '</div>'
+  }
+
+  function bindLeasePageHandlers(root) {
+    // Upload buttons
+    root.querySelectorAll('#lease-page-upload-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () { leaseShowUploadModal() })
+    })
+    // Version row click - open summary
+    root.querySelectorAll('.lease-version-row').forEach(function (row) {
+      row.addEventListener('click', function () {
+        var id = row.getAttribute('data-lease-id')
+        if (id) leaseShowSummary(id)
+      })
+    })
+    // Add version for specific building
+    root.querySelectorAll('[data-action="add-version"]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation()
+        var addr = btn.getAttribute('data-address')
+        leaseShowUploadModal({ presetBuildingAddress: addr })
+      })
+    })
+  }
+
+  // ================================================================
   // EXPOSE
   // ================================================================
   window.leaseShowUploadModal = leaseShowUploadModal
   window.leaseShowSummary = leaseShowSummary
+  window.leasePageInit = leasePageInit
 })()
