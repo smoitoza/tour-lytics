@@ -41,6 +41,17 @@
     other:            'Other',
   }
 
+  // Negotiation status config (mirror of NEGOTIATION_STATUSES in lease-clause-taxonomy.ts)
+  var NEG_STATUSES = [
+    { key: 'open_issue',      label: 'Open Issue',      shortLabel: 'Open',     fg: '#B91C1C', bg: '#FEF2F2', borderColor: '#FECACA', isResolved: false },
+    { key: 'counter_pending', label: 'Counter Pending', shortLabel: 'Counter',  fg: '#B45309', bg: '#FFFBEB', borderColor: '#FDE68A', isResolved: false },
+    { key: 'accepted',        label: 'Accepted',        shortLabel: 'Accepted', fg: '#15803D', bg: '#F0FDF4', borderColor: '#BBF7D0', isResolved: true  },
+    { key: 'wont_address',    label: "Won't Address",   shortLabel: "Won't",    fg: '#475569', bg: '#F8FAFC', borderColor: '#E2E8F0', isResolved: true  },
+    { key: 'not_applicable',  label: 'N/A',             shortLabel: 'N/A',      fg: '#94A3B8', bg: '#F1F5F9', borderColor: '#E2E8F0', isResolved: true  },
+  ]
+  var NEG_STATUS_BY_KEY = {}
+  NEG_STATUSES.forEach(function (s) { NEG_STATUS_BY_KEY[s.key] = s })
+
   function getProjectId() {
     if (typeof CURRENT_PROJECT_ID !== 'undefined' && CURRENT_PROJECT_ID) return CURRENT_PROJECT_ID
     var m = (window.location.pathname || '').match(/project\/([^/?]+)/)
@@ -780,21 +791,60 @@
       })
       var data = await resp.json()
       if (!resp.ok) throw new Error(data.error || 'Compare failed')
-      // Stash for export + regenerate handlers
+
+      // Pull building scope from one of the source documents so we can fetch negotiations
+      var buildingAddress = null
+      var projectId = getProjectId()
+      try {
+        var docResp = await fetch('/api/lease?id=' + encodeURIComponent(v2Id))
+        var docData = await docResp.json()
+        if (docResp.ok && docData) {
+          buildingAddress = docData.building_address
+          projectId = docData.project_id || projectId
+        }
+      } catch (_) { /* best effort */ }
+
+      // Fetch negotiation statuses for this building (in parallel-ish, after compare)
+      var negotiationMap = {}
+      if (buildingAddress) {
+        try {
+          var negResp = await fetch('/api/lease/negotiation?projectId=' + encodeURIComponent(projectId) + '&buildingAddress=' + encodeURIComponent(buildingAddress))
+          var negData = await negResp.json()
+          if (negResp.ok && negData) negotiationMap = negData
+        } catch (_) { /* non-critical */ }
+      }
+
+      // Stash for export + regenerate + status update handlers
       overlay.__compareData = data
       overlay.__compareV1Id = v1Id
       overlay.__compareV2Id = v2Id
-      overlay.innerHTML = renderCompareHtml(data)
+      overlay.__projectId = projectId
+      overlay.__buildingAddress = buildingAddress
+      overlay.__negotiationMap = negotiationMap
+      overlay.__compareId = data.compare_id || null
+
+      overlay.innerHTML = renderCompareHtml(data, negotiationMap)
       bindCompareHandlers(overlay)
     } catch (e) {
       overlay.innerHTML = '<div class="lease-summary-card"><div class="lease-summary-error">Compare failed: ' + escapeHtml(e.message) + '<br><br><button class="lease-btn-secondary" onclick="this.closest(\'.lease-summary-overlay\').remove()">Close</button></div></div>'
     }
   }
 
-  function renderCompareHtml(diff) {
+  function renderCompareHtml(diff, negotiationMap) {
     var clauseDiffs = diff.clauseDiffs || []
     var counts = diff.counts || {}
     var risk = diff.riskDelta || {}
+    negotiationMap = negotiationMap || {}
+
+    // Compute open/closed counts across all clauses (only for clauses that actually appear)
+    var openCount = 0, resolvedCount = 0
+    clauseDiffs.forEach(function (cd) {
+      var n = negotiationMap[cd.type]
+      var status = (n && n.status) || 'open_issue'
+      var meta = NEG_STATUS_BY_KEY[status] || NEG_STATUS_BY_KEY.open_issue
+      if (meta.isResolved) resolvedCount++
+      else openCount++
+    })
 
     var html = '<div class="lease-summary-card lease-summary-full lease-compare-card">'
 
@@ -874,12 +924,14 @@
       '<button class="lease-compare-filter-btn active" data-filter="all">All (' + clauseDiffs.length + ')</button>' +
       '<button class="lease-compare-filter-btn" data-filter="changed">Changed only (' + ((counts.modified || 0) + (counts.added || 0) + (counts.removed || 0)) + ')</button>' +
       '<button class="lease-compare-filter-btn" data-filter="high">Risk worsened (' + (risk.worse || 0) + ')</button>' +
+      '<button class="lease-compare-filter-btn" data-filter="open">Open issues (' + openCount + ')</button>' +
+      '<button class="lease-compare-filter-btn" data-filter="resolved">Resolved (' + resolvedCount + ')</button>' +
     '</div>'
 
     // Clause diff rows
     html += '<div class="lease-compare-list">'
     clauseDiffs.forEach(function (cd, idx) {
-      html += renderClauseDiffRow(cd, idx, diff)
+      html += renderClauseDiffRow(cd, idx, diff, negotiationMap)
     })
     html += '</div>'
 
@@ -887,23 +939,31 @@
     return html
   }
 
-  function renderClauseDiffRow(cd, idx, diff) {
+  function renderClauseDiffRow(cd, idx, diff, negotiationMap) {
     var label = clauseTypeLabel(cd.type)
     var statusBadge = renderStatusBadge(cd.status, cd.riskDelta)
     var section = (cd.v1 && cd.v1.section) || (cd.v2 && cd.v2.section) || ''
     var risk1 = (cd.v1 && cd.v1.risk_level) || ''
     var risk2 = (cd.v2 && cd.v2.risk_level) || ''
 
+    var negotiation = (negotiationMap && negotiationMap[cd.type]) || null
+    var negStatus = (negotiation && negotiation.status) || 'open_issue'
+    var negStatusMeta = NEG_STATUS_BY_KEY[negStatus] || NEG_STATUS_BY_KEY.open_issue
+    var isResolved = negStatusMeta.isResolved
+    var negNotes = (negotiation && negotiation.notes) || ''
+
     var rowClass = 'lease-cmp-row lease-cmp-row-' + cd.status
     if (cd.status === 'modified' && (cd.riskDelta || 0) > 0) rowClass += ' lease-cmp-row-worse'
     if (cd.status === 'modified' && (cd.riskDelta || 0) < 0) rowClass += ' lease-cmp-row-better'
+    if (isResolved) rowClass += ' lease-cmp-row-resolved'
 
-    var html = '<div class="' + rowClass + '" data-status="' + cd.status + '" data-risk-delta="' + (cd.riskDelta || 0) + '">' +
+    var html = '<div class="' + rowClass + '" data-status="' + cd.status + '" data-risk-delta="' + (cd.riskDelta || 0) + '" data-neg-status="' + negStatus + '" data-clause-type="' + escapeHtml(cd.type) + '">' +
       '<div class="lease-cmp-row-head" data-action="toggle-row" data-row-idx="' + idx + '">' +
         '<div class="lease-cmp-row-head-left">' +
           statusBadge +
           '<div class="lease-cmp-row-label">' + escapeHtml(label) + '</div>' +
           (section ? '<div class="lease-cmp-row-section">' + escapeHtml(section) + '</div>' : '') +
+          renderNegStatusPill(cd.type, negStatus) +
         '</div>' +
         '<div class="lease-cmp-row-head-right">' +
           (risk1 || risk2 ? renderRiskMovement(risk1, risk2) : '') +
@@ -912,9 +972,39 @@
       '</div>' +
       '<div class="lease-cmp-row-body">' +
         renderClauseDiffBody(cd) +
+        renderNegotiationWorkspace(cd.type, negStatus, negNotes, negotiation) +
       '</div>' +
     '</div>'
     return html
+  }
+
+  // Status pill that’s clickable - opens a small dropdown of options
+  function renderNegStatusPill(clauseType, currentStatus) {
+    var meta = NEG_STATUS_BY_KEY[currentStatus] || NEG_STATUS_BY_KEY.open_issue
+    return '<button class="lease-cmp-neg-pill" data-action="open-neg-dropdown" data-clause-type="' + escapeHtml(clauseType) + '" ' +
+      'style="color:' + meta.fg + ';background:' + meta.bg + ';border-color:' + meta.borderColor + '" ' +
+      'title="Click to change negotiation status">' +
+      escapeHtml(meta.label) +
+      '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-left:4px;vertical-align:-1px;"><polyline points="6 9 12 15 18 9"/></svg>' +
+    '</button>'
+  }
+
+  // Per-clause notes textarea + last-updated metadata
+  function renderNegotiationWorkspace(clauseType, status, notes, negotiation) {
+    var lastUpdated = ''
+    if (negotiation && negotiation.updated_at) {
+      try {
+        var dt = new Date(negotiation.updated_at)
+        lastUpdated = ' · updated ' + dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        if (negotiation.last_updated_by) lastUpdated += ' by ' + negotiation.last_updated_by
+        if (negotiation.status_changes && negotiation.status_changes > 1) lastUpdated += ' · ' + negotiation.status_changes + ' status changes'
+      } catch (e) { /* skip */ }
+    }
+    return '<div class="lease-cmp-neg-workspace" data-clause-type="' + escapeHtml(clauseType) + '">' +
+      '<div class="lease-cmp-neg-workspace-label">Negotiation Notes' + lastUpdated + '</div>' +
+      '<textarea class="lease-cmp-neg-notes" data-action="save-neg-notes" data-clause-type="' + escapeHtml(clauseType) + '" ' +
+        'placeholder="Add notes: counter terms, reasoning, next steps...">' + escapeHtml(notes || '') + '</textarea>' +
+    '</div>'
   }
 
   function renderStatusBadge(status, riskDelta) {
@@ -1041,13 +1131,13 @@
         if (v1 && v2) leaseRunCompare(v1, v2, { regenerate: true, replaceOverlay: overlay })
       })
     })
-    // Export to Excel (.xlsx download)
+    // Export to Excel (.xlsx download) - includes negotiation map
     overlay.querySelectorAll('[data-action="export-excel"]').forEach(function (b) {
-      b.addEventListener('click', function () { exportCompareToWorkbook(overlay.__compareData, 'excel') })
+      b.addEventListener('click', function () { exportCompareToWorkbook(overlay.__compareData, 'excel', overlay.__negotiationMap) })
     })
     // Export to Google Sheets
     overlay.querySelectorAll('[data-action="export-sheets"]').forEach(function (b) {
-      b.addEventListener('click', function () { exportCompareToWorkbook(overlay.__compareData, 'sheets') })
+      b.addEventListener('click', function () { exportCompareToWorkbook(overlay.__compareData, 'sheets', overlay.__negotiationMap) })
     })
     // Toggle row expand
     overlay.querySelectorAll('[data-action="toggle-row"]').forEach(function (head) {
@@ -1070,15 +1160,165 @@
         overlay.querySelectorAll('.lease-cmp-row').forEach(function (row) {
           var st = row.getAttribute('data-status')
           var rd = parseInt(row.getAttribute('data-risk-delta') || '0')
+          var negSt = row.getAttribute('data-neg-status') || 'open_issue'
+          var negMeta = NEG_STATUS_BY_KEY[negSt] || NEG_STATUS_BY_KEY.open_issue
           var show
           if (f === 'all') show = true
           else if (f === 'changed') show = (st !== 'unchanged')
           else if (f === 'high') show = (st === 'modified' && rd > 0) || (st === 'added' && row.querySelector('[data-action="toggle-row"]'))
+          else if (f === 'open') show = !negMeta.isResolved
+          else if (f === 'resolved') show = negMeta.isResolved
           else show = true
           row.style.display = show ? '' : 'none'
         })
       })
     })
+
+    // Negotiation status pill -> dropdown
+    overlay.querySelectorAll('[data-action="open-neg-dropdown"]').forEach(function (pill) {
+      pill.addEventListener('click', function (e) {
+        e.stopPropagation()  // don't toggle row collapse
+        showNegStatusDropdown(overlay, pill)
+      })
+    })
+
+    // Notes textarea - save on blur, debounced typing
+    overlay.querySelectorAll('[data-action="save-neg-notes"]').forEach(function (ta) {
+      var saveTimer = null
+      var save = function () {
+        var clauseType = ta.getAttribute('data-clause-type')
+        var notes = ta.value
+        saveNegotiation(overlay, clauseType, { notes: notes })
+      }
+      ta.addEventListener('input', function () {
+        if (saveTimer) clearTimeout(saveTimer)
+        saveTimer = setTimeout(save, 1200)
+      })
+      ta.addEventListener('blur', function () {
+        if (saveTimer) { clearTimeout(saveTimer); saveTimer = null }
+        save()
+      })
+      // Don't toggle row when clicking inside textarea
+      ta.addEventListener('click', function (e) { e.stopPropagation() })
+      ta.addEventListener('mousedown', function (e) { e.stopPropagation() })
+    })
+  }
+
+  // Inline dropdown for choosing a negotiation status
+  function showNegStatusDropdown(overlay, pillEl) {
+    // Close any existing dropdown
+    var existing = overlay.querySelector('.lease-cmp-neg-dropdown')
+    if (existing) existing.remove()
+
+    var clauseType = pillEl.getAttribute('data-clause-type')
+    var dropdown = document.createElement('div')
+    dropdown.className = 'lease-cmp-neg-dropdown'
+    dropdown.innerHTML = NEG_STATUSES.map(function (s) {
+      return '<button class="lease-cmp-neg-dropdown-item" data-status="' + s.key + '" ' +
+        'style="color:' + s.fg + ';" title="' + escapeHtml(s.description || '') + '">' +
+        '<span class="lease-cmp-neg-dropdown-dot" style="background:' + s.fg + '"></span>' +
+        '<span>' + escapeHtml(s.label) + '</span>' +
+      '</button>'
+    }).join('')
+
+    // Position relative to pill
+    var rect = pillEl.getBoundingClientRect()
+    dropdown.style.position = 'fixed'
+    dropdown.style.top  = (rect.bottom + 4) + 'px'
+    dropdown.style.left = rect.left + 'px'
+    dropdown.style.zIndex = '10001'
+    document.body.appendChild(dropdown)
+
+    var closeIt = function (e) {
+      if (e && dropdown.contains(e.target)) return
+      dropdown.remove()
+      document.removeEventListener('click', closeIt, true)
+    }
+    setTimeout(function () { document.addEventListener('click', closeIt, true) }, 0)
+
+    dropdown.querySelectorAll('.lease-cmp-neg-dropdown-item').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var newStatus = b.getAttribute('data-status')
+        dropdown.remove()
+        document.removeEventListener('click', closeIt, true)
+        saveNegotiation(overlay, clauseType, { status: newStatus })
+      })
+    })
+  }
+
+  // Save a negotiation update + optimistically reflect in the UI
+  async function saveNegotiation(overlay, clauseType, fields) {
+    var pid = overlay.__projectId
+    var addr = overlay.__buildingAddress
+    if (!pid || !addr || !clauseType) return
+
+    // Optimistic UI update
+    if (fields.status !== undefined) {
+      applyOptimisticStatus(overlay, clauseType, fields.status)
+    }
+
+    try {
+      var resp = await fetch('/api/lease/negotiation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: pid,
+          buildingAddress: addr,
+          clauseType: clauseType,
+          status: fields.status,
+          notes: fields.notes,
+          lastCompareId: overlay.__compareId || null,
+          userEmail: getUserEmail(),
+        }),
+      })
+      var data = await resp.json()
+      if (resp.ok && data) {
+        // Update the local map with the canonical row
+        if (!overlay.__negotiationMap) overlay.__negotiationMap = {}
+        overlay.__negotiationMap[clauseType] = data
+      }
+    } catch (e) {
+      console.warn('saveNegotiation failed:', e)
+    }
+  }
+
+  function applyOptimisticStatus(overlay, clauseType, newStatus) {
+    var meta = NEG_STATUS_BY_KEY[newStatus] || NEG_STATUS_BY_KEY.open_issue
+    var rows = overlay.querySelectorAll('.lease-cmp-row[data-clause-type="' + clauseType + '"]')
+    rows.forEach(function (row) {
+      row.setAttribute('data-neg-status', newStatus)
+      if (meta.isResolved) row.classList.add('lease-cmp-row-resolved')
+      else row.classList.remove('lease-cmp-row-resolved')
+      var pill = row.querySelector('.lease-cmp-neg-pill')
+      if (pill) {
+        pill.style.color = meta.fg
+        pill.style.background = meta.bg
+        pill.style.borderColor = meta.borderColor
+        // Replace label text (preserve chevron icon)
+        pill.firstChild.textContent = meta.label
+      }
+    })
+    // Update local map
+    if (!overlay.__negotiationMap) overlay.__negotiationMap = {}
+    var existing = overlay.__negotiationMap[clauseType] || {}
+    overlay.__negotiationMap[clauseType] = Object.assign({}, existing, { status: newStatus })
+    // Refresh filter counts in filter bar
+    updateFilterCounts(overlay)
+  }
+
+  function updateFilterCounts(overlay) {
+    var allRows = overlay.querySelectorAll('.lease-cmp-row')
+    var openCount = 0, resolvedCount = 0
+    allRows.forEach(function (r) {
+      var ns = r.getAttribute('data-neg-status') || 'open_issue'
+      var m = NEG_STATUS_BY_KEY[ns] || NEG_STATUS_BY_KEY.open_issue
+      if (m.isResolved) resolvedCount++
+      else openCount++
+    })
+    var openBtn = overlay.querySelector('.lease-compare-filter-btn[data-filter="open"]')
+    var resolvedBtn = overlay.querySelector('.lease-compare-filter-btn[data-filter="resolved"]')
+    if (openBtn) openBtn.textContent = 'Open issues (' + openCount + ')'
+    if (resolvedBtn) resolvedBtn.textContent = 'Resolved (' + resolvedCount + ')'
   }
 
   // ================================================================
@@ -1086,7 +1326,8 @@
   // ================================================================
   // Three columns: V1, V2, Summary of Changes - one row per clause
   // Plus header rows for AI summary and risk delta.
-  function exportCompareToWorkbook(diff, target) {
+  function exportCompareToWorkbook(diff, target, negotiationMap) {
+    negotiationMap = negotiationMap || {}
     if (!diff || !diff.clauseDiffs) {
       alert('No comparison data to export.')
       return
@@ -1160,6 +1401,8 @@
       'Clause Type',
       'Section',
       'Status',
+      'Negotiation Status',
+      'Negotiation Notes',
       v1Label + ' — Heading',
       v1Label + ' — Summary',
       v1Label + ' — Key Terms',
@@ -1189,10 +1432,18 @@
       var v2Risk = (cd.v2 && cd.v2.risk_level) || ''
       var changeSummary = buildChangeSummary(cd)
 
+      var n = negotiationMap[cd.type] || {}
+      var negStatusKey = n.status || 'open_issue'
+      var negStatusMeta = NEG_STATUS_BY_KEY[negStatusKey] || NEG_STATUS_BY_KEY.open_issue
+      var negStatusLabel = negStatusMeta.label
+      var negNotes = n.notes || ''
+
       dataRows.push([
         label,
         section,
         cd.status.toUpperCase(),
+        negStatusLabel,
+        negNotes,
         v1Heading, v1Summary, v1KT, v1Excerpt, v1Risk,
         v2Heading, v2Summary, v2KT, v2Excerpt, v2Risk,
         changeSummary,
@@ -1203,7 +1454,9 @@
     ws2['!cols'] = [
       { wch: 22 },              // Clause Type
       { wch: 12 },              // Section
-      { wch: 12 },              // Status
+      { wch: 12 },              // Status (modified/added/removed)
+      { wch: 18 },              // Negotiation Status
+      { wch: 50 },              // Negotiation Notes
       { wch: 28 }, { wch: 50 }, { wch: 35 }, { wch: 60 }, { wch: 10 }, // V1 columns
       { wch: 28 }, { wch: 50 }, { wch: 35 }, { wch: 60 }, { wch: 10 }, // V2 columns
       { wch: 70 },              // Summary of Changes
@@ -1229,6 +1482,14 @@
       REMOVED:  { rgb: 'FEF2F2', fontColor: 'B91C1C' },
       UNCHANGED:{ rgb: 'F8FAFC', fontColor: '64748B' },
     }
+    // Negotiation status colors (mirror NEG_STATUS_BY_KEY)
+    var negStatusColors = {
+      'Open Issue':       { rgb: 'FEF2F2', fontColor: 'B91C1C' },
+      'Counter Pending':  { rgb: 'FFFBEB', fontColor: 'B45309' },
+      'Accepted':         { rgb: 'F0FDF4', fontColor: '15803D' },
+      "Won't Address":    { rgb: 'F8FAFC', fontColor: '475569' },
+      'N/A':              { rgb: 'F1F5F9', fontColor: '94A3B8' },
+    }
     for (var i = 1; i < dataRows.length; i++) {
       var status = dataRows[i][2]
       var sc = statusColors[status]
@@ -1242,8 +1503,22 @@
           }
         }
       }
-      // Wrap long-text columns
-      ;[4, 6, 9, 11, 13].forEach(function (cc) {
+      // Negotiation Status column (col 3)
+      var negStatus = dataRows[i][3]
+      var negSc = negStatusColors[negStatus]
+      if (negSc) {
+        var negRef = XLSX.utils.encode_cell({ r: i, c: 3 })
+        if (ws2[negRef]) {
+          ws2[negRef].s = {
+            font: { bold: true, color: { rgb: negSc.fontColor } },
+            fill: { fgColor: { rgb: negSc.rgb } },
+            alignment: { horizontal: 'center', vertical: 'center' },
+          }
+        }
+      }
+      // Wrap long-text columns: Notes(4), V1 Summary(6), V1 Excerpt(8),
+      //                       V2 Summary(11), V2 Excerpt(13), Summary of Changes(15)
+      ;[4, 6, 8, 11, 13, 15].forEach(function (cc) {
         var rr = XLSX.utils.encode_cell({ r: i, c: cc })
         if (ws2[rr] && typeof ws2[rr].v === 'string' && ws2[rr].v.length > 60) {
           ws2[rr].s = Object.assign({}, ws2[rr].s || {}, { alignment: { wrapText: true, vertical: 'top' } })

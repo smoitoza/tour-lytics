@@ -803,6 +803,100 @@
   line-height: 1.5;
 }
 
+/* ============================================================
+   NEGOTIATION STATUS PILLS + WORKSPACE
+   ============================================================ */
+.lease-cmp-neg-pill {
+  font-size: 0.6875rem; font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid;
+  cursor: pointer;
+  display: inline-flex; align-items: center;
+  font-family: inherit;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  transition: filter 0.12s ease;
+}
+.lease-cmp-neg-pill:hover {
+  filter: brightness(0.96);
+}
+
+/* Resolved rows are subtly de-emphasized */
+.lease-cmp-row-resolved {
+  opacity: 0.85;
+}
+.lease-cmp-row-resolved.lease-cmp-row-unchanged {
+  opacity: 0.65;
+}
+
+/* Floating dropdown for status selection */
+.lease-cmp-neg-dropdown {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.15);
+  padding: 4px;
+  min-width: 200px;
+  font-family: 'DM Sans', sans-serif;
+}
+.lease-cmp-neg-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 6px;
+  text-align: left;
+  font-family: inherit;
+}
+.lease-cmp-neg-dropdown-item:hover {
+  background: #f8fafc;
+}
+.lease-cmp-neg-dropdown-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Notes workspace inside an expanded clause row */
+.lease-cmp-neg-workspace {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed #e2e8f0;
+}
+.lease-cmp-neg-workspace-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+.lease-cmp-neg-notes {
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  color: #0f172a;
+  background: #fff;
+  resize: vertical;
+  line-height: 1.5;
+}
+.lease-cmp-neg-notes:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
 /* Cache + fresh badges in compare header */
 .lease-cmp-cache-badge {
   display: inline-block;

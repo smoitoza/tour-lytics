@@ -103,3 +103,77 @@ export const RISK_COLORS: Record<LeaseRiskLevel, { fg: string; bg: string; label
   high:    { fg: '#B91C1C', bg: '#FEF2F2', label: 'High risk' },
   unknown: { fg: '#475569', bg: '#F8FAFC', label: 'Not assessed' },
 }
+
+// ============================================================
+// NEGOTIATION STATUS (per-clause workflow)
+// ============================================================
+// Status describes the NEGOTIATION ISSUE and spans all lease versions for
+// the same building. Decision: "Holdover at 200% is acceptable" persists
+// whether you're viewing v1->v2 or v2->v3.
+export type NegotiationStatus =
+  | 'open_issue'        // Default - actively in negotiation, requires action
+  | 'counter_pending'   // We've sent (or plan to send) a counter, awaiting response
+  | 'accepted'          // Resolved: tenant accepts the current language
+  | 'wont_address'      // Resolved: tenant won't push back, accepting the risk
+  | 'not_applicable'    // Doesn't apply to this deal (e.g. no parking in a sublease)
+
+export interface NegotiationStatusMeta {
+  key: NegotiationStatus
+  label: string
+  shortLabel: string
+  fg: string                  // Foreground (text) color
+  bg: string                  // Background color for pill
+  borderColor: string         // Border for pill
+  isResolved: boolean         // For 'open issues' filter (true = closed)
+  description: string
+}
+
+export const NEGOTIATION_STATUSES: NegotiationStatusMeta[] = [
+  {
+    key: 'open_issue',
+    label: 'Open Issue',
+    shortLabel: 'Open',
+    fg: '#B91C1C', bg: '#FEF2F2', borderColor: '#FECACA',
+    isResolved: false,
+    description: 'Actively in negotiation. Requires action.',
+  },
+  {
+    key: 'counter_pending',
+    label: 'Counter Pending',
+    shortLabel: 'Counter',
+    fg: '#B45309', bg: '#FFFBEB', borderColor: '#FDE68A',
+    isResolved: false,
+    description: 'Counter offer sent or planned, awaiting landlord response.',
+  },
+  {
+    key: 'accepted',
+    label: 'Accepted',
+    shortLabel: 'Accepted',
+    fg: '#15803D', bg: '#F0FDF4', borderColor: '#BBF7D0',
+    isResolved: true,
+    description: 'Tenant accepts the current language. Closed.',
+  },
+  {
+    key: 'wont_address',
+    label: "Won't Address",
+    shortLabel: "Won't",
+    fg: '#475569', bg: '#F8FAFC', borderColor: '#E2E8F0',
+    isResolved: true,
+    description: 'Tenant chose not to push back. Risk accepted as-is.',
+  },
+  {
+    key: 'not_applicable',
+    label: 'N/A',
+    shortLabel: 'N/A',
+    fg: '#94A3B8', bg: '#F1F5F9', borderColor: '#E2E8F0',
+    isResolved: true,
+    description: 'Not applicable to this deal.',
+  },
+]
+
+export const NEGOTIATION_STATUS_BY_KEY: Record<NegotiationStatus, NegotiationStatusMeta> =
+  NEGOTIATION_STATUSES.reduce((acc, s) => { acc[s.key] = s; return acc }, {} as Record<NegotiationStatus, NegotiationStatusMeta>)
+
+export function isValidNegotiationStatus(s: any): s is NegotiationStatus {
+  return typeof s === 'string' && (s in NEGOTIATION_STATUS_BY_KEY)
+}
