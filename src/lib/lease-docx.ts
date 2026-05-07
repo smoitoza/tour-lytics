@@ -28,6 +28,8 @@ const AUTHOR_DISPLAY: Record<DocxAuthor, string> = {
 function xml(s: string | undefined | null): string {
   if (s == null) return ''
   return String(s)
+    // Strip control characters that are invalid in XML 1.0 (keep \t \n \r)
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -496,7 +498,7 @@ export async function buildMergedVersionDocx(input: MergedDocxInput): Promise<Bu
         if (!p.trim()) continue
         // Bordered block for tenant counters; plain for original
         if (c.isCountered) {
-          blocks.push(`<w:p><w:pPr><w:pBdr><w:left w:val="single" w:sz="6" w:space="4" w:color="2563EB"/></w:pPr></w:pPr>${plainRun(p)}</w:p>`)
+          blocks.push(`<w:p><w:pPr><w:pBdr><w:left w:val="single" w:sz="6" w:space="4" w:color="2563EB"/></w:pBdr><w:ind w:left="120"/></w:pPr>${plainRun(p)}</w:p>`)
         } else {
           blocks.push(para(plainRun(p)))
         }
