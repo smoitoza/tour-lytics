@@ -464,7 +464,7 @@
 }
 .lease-version-row {
   display: grid;
-  grid-template-columns: 1.4fr auto 1fr;
+  grid-template-columns: 1.4fr auto 0.9fr auto;
   gap: 10px;
   align-items: center;
   padding: 8px 10px;
@@ -506,6 +506,49 @@
 }
 .lease-version-risk.lease-version-risk-high { background: #FEF2F2; color: #B91C1C; }
 .lease-version-risk.lease-version-risk-medium { background: #FFFBEB; color: #B45309; }
+
+/* Inline AI badge for merged_counter versions */
+.lease-version-badge-ai {
+  display: inline-block;
+  font-size: 0.625rem;
+  font-weight: 700;
+  background: #dbeafe;
+  color: #1e40af;
+  padding: 1px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.4px;
+  margin-left: 4px;
+  vertical-align: 1px;
+}
+
+/* Per-row download/delete actions */
+.lease-version-actions {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+.lease-version-action-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #94a3b8;
+  padding: 4px 5px;
+  border-radius: 5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.lease-version-action-btn:hover {
+  background: #f1f5f9;
+  color: #334155;
+  border-color: #e2e8f0;
+}
+.lease-version-action-btn.lease-version-action-danger:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
 
 .lease-tile-footer { padding-top: 6px; border-top: 1px solid #f1f5f9; }
 .lease-tile-add-btn {

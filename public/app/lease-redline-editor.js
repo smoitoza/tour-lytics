@@ -95,6 +95,17 @@
       var negotiations = await negResp.json()
       if (!negResp.ok) throw new Error('Could not load negotiations')
 
+      // Compute the actual next version number across ALL existing versions
+      // for this building (not just doc.version_number + 1) so the label
+      // pre-fill matches what the API will assign
+      var allVersionsResp = await fetch('/api/lease?projectId=' + encodeURIComponent(doc.project_id) + '&buildingAddress=' + encodeURIComponent(doc.building_address))
+      var allVersions = await allVersionsResp.json()
+      var nextVersionNumber = (doc.version_number || 1) + 1
+      if (Array.isArray(allVersions) && allVersions.length > 0) {
+        var maxVer = allVersions.reduce(function (m, v) { return Math.max(m, v.version_number || 0) }, 0)
+        nextVersionNumber = maxVer + 1
+      }
+
       // Initialize editor state
       var state = {
         baseDoc: doc,
@@ -103,7 +114,7 @@
         // Per-clause editor state: { type -> { proposedText, excluded, dirty } }
         editorState: {},
         focusedType: null,
-        versionLabel: 'v' + ((doc.version_number || 2) + 1) + ' (Tenant Counter)',
+        versionLabel: 'v' + nextVersionNumber + ' (Tenant Counter)',
         showRationaleAnnotations: false,
         refreshChangedClauses: true,
       }

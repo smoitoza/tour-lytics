@@ -189,7 +189,23 @@ export async function POST(req: Request) {
         p_building_address: baseDoc.building_address,
       })
     const nextVersion = versionData ?? (baseDoc.version_number || 1) + 1
-    const finalVersionLabel = versionLabel || `v${nextVersion} (Tenant Counter)`
+
+    // Auto-correct the user-supplied label so it always reflects the real version_number.
+    // The frontend pre-fills 'v3 (Tenant Counter)' assuming v2 is the latest, but if a v3, v4,
+    // etc. already exist, we bump to the actual next number to avoid '8 versions all named v3'.
+    let finalVersionLabel = (versionLabel || '').trim()
+    if (!finalVersionLabel) {
+      finalVersionLabel = `v${nextVersion} (Tenant Counter)`
+    } else {
+      // If the label starts with vN where N != nextVersion, replace the leading vN
+      const m = finalVersionLabel.match(/^v(\d+)\b/i)
+      if (m && parseInt(m[1]) !== nextVersion) {
+        finalVersionLabel = `v${nextVersion}` + finalVersionLabel.slice(m[0].length)
+      } else if (!m) {
+        // Label has no vN prefix - prepend it for clarity
+        finalVersionLabel = `v${nextVersion} - ${finalVersionLabel}`
+      }
+    }
     const docName = `${finalVersionLabel} - ${baseDoc.building_address}`
 
     // ---- Generate the DOCX ----
