@@ -3704,6 +3704,29 @@ body {
     .photos-reclass-item:hover { background: #F1F5F9; }
     .photos-reclass-item.is-current { color: #1E40AF; font-weight: 600; background: #EFF6FF; }
     .photos-reclass-check { color: #1E40AF; font-weight: 700; }
+    .photos-reclass-divider {
+      height: 1px; background: #E2E8F0;
+      margin: 4px 6px;
+    }
+    .photos-reclass-custom {
+      display: flex; gap: 6px; padding: 6px 6px 4px;
+    }
+    .photos-reclass-input {
+      flex: 1; min-width: 0;
+      padding: 6px 8px; font-size: 0.8125rem;
+      border: 1px solid #CBD5E1; border-radius: 5px;
+      color: #1E293B; background: #fff;
+      outline: none;
+    }
+    .photos-reclass-input:focus { border-color: #1E40AF; box-shadow: 0 0 0 2px rgba(30,64,175,0.15); }
+    .photos-reclass-custom-save {
+      flex: 0 0 auto;
+      background: #1E40AF; color: #fff;
+      border: none; border-radius: 5px;
+      padding: 0 12px; font-size: 0.75rem; font-weight: 600;
+      cursor: pointer;
+    }
+    .photos-reclass-custom-save:hover { background: #1D3F8C; }
     .photos-card-desc {
       font-size: var(--text-xs); color: var(--color-text-muted);
       line-height: 1.45; display: -webkit-box;
@@ -25664,8 +25687,8 @@ async function submitPhotoUpload() {
 
       var res = await fetch('/api/photos', { method: 'POST', body: formData });
       if (!res.ok) {
-        var err = await res.json();
-        throw new Error(err.error || 'Upload failed');
+        var err = await res.json().catch(function(){return {};});
+        throw new Error(err.error || ('HTTP ' + res.status));
       }
 
       await res.json(); // Photo record (AI analysis runs in background)
@@ -25674,7 +25697,17 @@ async function submitPhotoUpload() {
     } catch(e) {
       console.error('Upload error for ' + file.name + ':', e);
       failed++;
-      if (itemStatus) { itemStatus.className = 'batch-status error'; itemStatus.textContent = 'Error'; }
+      if (itemStatus) {
+        var errMsg = (e && e.message) ? e.message : 'Upload failed';
+        var errFile = file.name;
+        itemStatus.className = 'batch-status error';
+        itemStatus.textContent = 'Error';
+        itemStatus.title = errMsg + ' (click for details)';
+        itemStatus.style.cursor = 'pointer';
+        (function(name, msg) {
+          itemStatus.onclick = function(ev) { ev.stopPropagation(); alert(name + '\n\n' + msg); };
+        })(errFile, errMsg);
+      }
     }
 
     // Update progress bar
@@ -25697,16 +25730,21 @@ async function submitPhotoUpload() {
   cancelBtn.onclick = function() {
     _photoUploadModal.remove();
     _photoUploadModal = null;
-    // Refresh photos page and caches
-    _photoCache = {};
-    if (typeof loadPhotosPage === 'function') loadPhotosPage();
+    refreshPhotosGallery();
   };
 
-  // Auto-refresh photos grid after a delay to pick up AI analysis results
-  setTimeout(function() {
-    _photoCache = {};
-    if (typeof loadPhotosPage === 'function') loadPhotosPage();
-  }, 15000); // 15s delay for AI analysis to complete
+  // Immediate gallery refresh so new photos show up right away
+  refreshPhotosGallery();
+  // Re-fetch again after 12s to pick up async AI analysis results (descriptions, tags, area suggestions)
+  setTimeout(refreshPhotosGallery, 12000);
+  // Final pass after 30s in case some photos took longer
+  setTimeout(refreshPhotosGallery, 30000);
+}
+
+function refreshPhotosGallery() {
+  _photoCache = {};
+  _galleryLoaded = false;
+  if (typeof loadPhotosGallery === 'function') loadPhotosGallery();
 }
 
 // --- Photo Lightbox ---
@@ -25856,6 +25894,23 @@ async function savePhotoCorrection(photoId) {
 
 // ---- Gallery inline Reclass dropdown ----
 var _galleryReclassOpen = null;
+
+// Convert a free-text label like "IT Room" to a stable snake_case key like "it_room"
+function customAreaKey(text) {
+  return String(text || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 40) || 'custom';
+}
+// Render a snake_case key back to a Title Case label
+function formatCustomAreaLabel(key) {
+  return String(key || '')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, function(ch) { return ch.toUpperCase(); })
+    .trim() || 'Custom';
+}
+
 function openGalleryReclass(photoId, currentArea, anchorBtn) {
   // Toggle close if same photo
   if (_galleryReclassOpen && _galleryReclassOpen.photoId === photoId) {
@@ -25864,18 +25919,34 @@ function openGalleryReclass(photoId, currentArea, anchorBtn) {
   }
   closeGalleryReclass();
 
-  var areaKeys = Object.keys(AREA_LABELS);
+  // Collect known area keys plus any custom ones already used (so they show in the list)
+  var allKeys = Object.keys(AREA_LABELS).slice();
+  if (Array.isArray(_allGalleryPhotos)) {
+    _allGalleryPhotos.forEach(function(p) {
+      var a = p.ai_area_suggestion || p.area_tag;
+      if (a && allKeys.indexOf(a) === -1) allKeys.push(a);
+    });
+  }
+  if (currentArea && allKeys.indexOf(currentArea) === -1) allKeys.push(currentArea);
+
   var menu = document.createElement('div');
   menu.className = 'photos-reclass-menu';
   menu.onclick = function(e) { e.stopPropagation(); };
   var html = '<div class="photos-reclass-header">Reclassify to</div>';
-  areaKeys.forEach(function(k) {
+  allKeys.forEach(function(k) {
     var isCurrent = k === currentArea;
+    var label = AREA_LABELS[k] || formatCustomAreaLabel(k);
     html += '<button class="photos-reclass-item' + (isCurrent ? ' is-current' : '') + '" data-area="' + k + '">' +
-              AREA_LABELS[k] +
+              label +
               (isCurrent ? '<span class="photos-reclass-check">\u2713</span>' : '') +
             '</button>';
   });
+  // Custom input row at the bottom
+  html += '<div class="photos-reclass-divider"></div>' +
+          '<div class="photos-reclass-custom">' +
+            '<input type="text" class="photos-reclass-input" placeholder="Custom area (e.g. IT Room)" maxlength="40" />' +
+            '<button class="photos-reclass-custom-save" type="button">Save</button>' +
+          '</div>';
   menu.innerHTML = html;
 
   // Position relative to anchor button
@@ -25895,6 +25966,27 @@ function openGalleryReclass(photoId, currentArea, anchorBtn) {
       saveGalleryReclass(photoId, newArea);
     });
   });
+
+  // Custom area input handlers
+  var customInput = menu.querySelector('.photos-reclass-input');
+  var customSaveBtn = menu.querySelector('.photos-reclass-custom-save');
+  function commitCustom() {
+    var raw = (customInput.value || '').trim();
+    if (!raw) return;
+    var key = customAreaKey(raw);
+    // Persist label so other photos with same key render nicely
+    AREA_LABELS[key] = AREA_LABELS[key] || formatCustomAreaLabel(raw);
+    saveGalleryReclass(photoId, key);
+  }
+  if (customSaveBtn) customSaveBtn.addEventListener('click', function(e) { e.stopPropagation(); commitCustom(); });
+  if (customInput) {
+    customInput.addEventListener('click', function(e) { e.stopPropagation(); });
+    customInput.addEventListener('keydown', function(e) {
+      e.stopPropagation();
+      if (e.key === 'Enter') { e.preventDefault(); commitCustom(); }
+    });
+    setTimeout(function() { customInput.focus(); }, 30);
+  }
 
   _galleryReclassOpen = { photoId: photoId, menu: menu };
 
@@ -26168,6 +26260,11 @@ async function loadPhotosGallery() {
     var res = await fetch('/api/photos?projectId=' + getProjectId());
     if (!res.ok) throw new Error('Failed to load photos');
     _allGalleryPhotos = await res.json();
+    // Register any custom area keys so they render with Title Case labels everywhere
+    _allGalleryPhotos.forEach(function(p) {
+      var a = p.ai_area_suggestion || p.area_tag;
+      if (a && !AREA_LABELS[a]) AREA_LABELS[a] = formatCustomAreaLabel(a);
+    });
     populatePhotoFilters();
     applyPhotoFilters();
   } catch(e) {
