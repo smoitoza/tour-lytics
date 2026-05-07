@@ -26005,26 +26005,30 @@ function openGalleryReclass(photoId, currentArea, anchorBtn) {
     setTimeout(function() { customInput.focus(); }, 30);
   }
 
-  _galleryReclassOpen = { photoId: photoId, menu: menu };
+  _galleryReclassOpen = { photoId: photoId, menu: menu, anchor: anchorBtn };
 
-  // Close on outside click / scroll
+  // Close on outside click only (scroll-close was too aggressive on touch devices)
+  // Use bubble-phase + setTimeout so this same click doesn't immediately close us.
   setTimeout(function() {
-    document.addEventListener('click', closeGalleryReclassOnOutside, true);
-    window.addEventListener('scroll', closeGalleryReclass, true);
+    document.addEventListener('mousedown', closeGalleryReclassOnOutside, false);
+    document.addEventListener('touchstart', closeGalleryReclassOnOutside, { passive: true });
   }, 0);
 }
 function closeGalleryReclassOnOutside(e) {
-  if (_galleryReclassOpen && !_galleryReclassOpen.menu.contains(e.target)) {
-    closeGalleryReclass();
-  }
+  if (!_galleryReclassOpen) return;
+  // Don't close if the click is on the menu, the anchor button, or any other reclass button
+  if (_galleryReclassOpen.menu.contains(e.target)) return;
+  if (_galleryReclassOpen.anchor && _galleryReclassOpen.anchor.contains(e.target)) return;
+  if (e.target.closest && e.target.closest('.photos-card-reclass-btn')) return;
+  closeGalleryReclass();
 }
 function closeGalleryReclass() {
   if (_galleryReclassOpen) {
     _galleryReclassOpen.menu.remove();
     _galleryReclassOpen = null;
   }
-  document.removeEventListener('click', closeGalleryReclassOnOutside, true);
-  window.removeEventListener('scroll', closeGalleryReclass, true);
+  document.removeEventListener('mousedown', closeGalleryReclassOnOutside, false);
+  document.removeEventListener('touchstart', closeGalleryReclassOnOutside);
 }
 async function saveGalleryReclass(photoId, newArea) {
   closeGalleryReclass();
@@ -26397,7 +26401,7 @@ function renderPhotosGrid(photos) {
         html += '<div class="photos-card-body">';
         html += '<div class="photos-card-area-row">';
         html +=   '<div class="photos-card-area">' + areaLabel + '</div>';
-        html +=   '<button class="photos-card-reclass-btn" title="Reclassify area" onclick="event.stopPropagation(); openGalleryReclass(\'' + p.id + '\', \'' + currentArea + '\', this)">' +
+        html +=   '<button class="photos-card-reclass-btn" type="button" title="Reclassify area" data-reclass-photo-id="' + p.id + '" data-reclass-current="' + currentArea + '">' +
                     '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>' +
                     ' Reclass' +
                   '</button>';
@@ -26420,6 +26424,20 @@ function renderPhotosGrid(photos) {
   });
 
   grid.innerHTML = html;
+
+  // Bind reclass button handlers (avoids inline-onclick race with card click handlers)
+  grid.querySelectorAll('.photos-card-reclass-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(ev) {
+      ev.stopPropagation();
+      ev.preventDefault();
+      var pid = btn.getAttribute('data-reclass-photo-id');
+      var cur = btn.getAttribute('data-reclass-current') || 'general';
+      openGalleryReclass(pid, cur, btn);
+    });
+    // Some mobile browsers fire mousedown on the card before click; guard there too
+    btn.addEventListener('mousedown', function(ev) { ev.stopPropagation(); });
+    btn.addEventListener('touchstart', function(ev) { ev.stopPropagation(); }, { passive: true });
+  });
 }
 
 var _galleryLightboxIdx = -1;
