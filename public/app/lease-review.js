@@ -627,7 +627,7 @@
         '</div>' +
         '<div class="lease-tile-versions">' +
           '<div class="lease-tile-versions-label">Versions</div>' +
-          b.versions.map(renderVersionRow).join('') +
+          b.versions.map(function (v) { return renderVersionRow(v, b.versions) }).join('') +
         '</div>' +
         '<div class="lease-tile-footer">' +
           (b.versions.length >= 2
@@ -648,12 +648,24 @@
     bindLeasePageHandlers(root)
   }
 
-  function renderVersionRow(v) {
+  function renderVersionRow(v, allVersions) {
     var risk = (v.summary_json && v.summary_json.counts) || {}
     var dt = v.created_at ? new Date(v.created_at) : null
     var dateStr = dt ? dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
     var isMerged = v.generation_method === 'merged_counters'
     var hasSource = !!v.source_url
+
+    // Find a predecessor for the track-changes export.
+    // Priority: based_on_version_id > parent_version_id > the previous version_number
+    var predecessorId = v.based_on_version_id || v.parent_version_id || null
+    if (!predecessorId && Array.isArray(allVersions)) {
+      var prior = allVersions
+        .filter(function (x) { return x.id !== v.id && (x.version_number || 0) < (v.version_number || 0) })
+        .sort(function (a, b) { return (b.version_number || 0) - (a.version_number || 0) })
+      if (prior.length > 0) predecessorId = prior[0].id
+    }
+    var canTrackChanges = !!predecessorId
+
     return '<div class="lease-version-row" data-lease-id="' + escapeHtml(v.id) + '" data-source-url="' + escapeHtml(v.source_url || '') + '">' +
       '<div class="lease-version-meta">' +
         '<div class="lease-version-label">' + escapeHtml(v.version_label || ('v' + v.version_number)) +
@@ -667,7 +679,13 @@
         (risk.medium_risk ? '<span class="lease-version-risk lease-version-risk-medium">' + risk.medium_risk + ' med</span>' : '') +
       '</div>' +
       '<div class="lease-version-actions">' +
-        (hasSource ? '<a class="lease-version-action-btn" href="' + escapeHtml(v.source_url) + '" target="_blank" rel="noopener" data-action="download-source" title="Download source ' + (isMerged ? 'DOCX' : 'file') + '">' +
+        (canTrackChanges
+          ? '<button class="lease-version-action-btn lease-version-action-tc" data-action="download-track-changes" data-v1-id="' + escapeHtml(predecessorId) + '" data-v2-id="' + escapeHtml(v.id) + '" title="Download Word document with track changes vs prior version">' +
+              '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="10" y1="13" x2="14" y2="13" stroke-dasharray="2 2"/><line x1="10" y1="17" x2="14" y2="17" stroke-dasharray="2 2"/></svg>' +
+              '<span class="lease-version-action-label">Track Changes</span>' +
+            '</button>'
+          : '') +
+        (hasSource ? '<a class="lease-version-action-btn" href="' + escapeHtml(v.source_url) + '" target="_blank" rel="noopener" data-action="download-source" title="Download clean source ' + (isMerged ? 'DOCX (no markup)' : 'file') + '">' +
           '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' +
         '</a>' : '') +
         '<button class="lease-version-action-btn lease-version-action-danger" data-action="delete-version" data-lease-id="' + escapeHtml(v.id) + '" title="Archive this version">' +
@@ -716,6 +734,16 @@
         archiveVersion(id)
       })
     })
+    // Track Changes DOCX button - generates v(N-1) -> v(N) redline DOCX
+    root.querySelectorAll('[data-action="download-track-changes"]').forEach(function (b) {
+      b.addEventListener('click', function (e) {
+        e.stopPropagation()
+        var v1Id = b.getAttribute('data-v1-id')
+        var v2Id = b.getAttribute('data-v2-id')
+        if (!v1Id || !v2Id) return
+        downloadTrackChangesDocx(v1Id, v2Id, b)
+      })
+    })
     // Add version for specific building
     root.querySelectorAll('[data-action="add-version"]').forEach(function (btn) {
       btn.addEventListener('click', function (e) {
@@ -732,6 +760,39 @@
         leaseShowComparePicker(addr)
       })
     })
+  }
+
+  async function downloadTrackChangesDocx(v1Id, v2Id, btnEl) {
+    // Show inline loading state on the button
+    var origHtml = btnEl.innerHTML
+    btnEl.disabled = true
+    btnEl.innerHTML = '<div class="lease-spinner" style="display:inline-block;width:11px;height:11px;border-width:1.5px;"></div><span class="lease-version-action-label">Generating...</span>'
+
+    try {
+      var resp = await fetch('/api/lease/export-redline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ v1Id: v1Id, v2Id: v2Id }),
+      })
+      if (!resp.ok) {
+        var err = await resp.json().catch(function () { return {} })
+        throw new Error(err.error || 'Track-changes export failed')
+      }
+      var blob = await resp.blob()
+      var url = URL.createObjectURL(blob)
+      var a = document.createElement('a')
+      a.href = url
+      a.download = 'Lease Redline (Track Changes) - ' + new Date().toISOString().slice(0, 10) + '.docx'
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      setTimeout(function () { URL.revokeObjectURL(url) }, 5000)
+    } catch (e) {
+      alert('Track-changes export failed: ' + e.message)
+    } finally {
+      btnEl.disabled = false
+      btnEl.innerHTML = origHtml
+    }
   }
 
   async function archiveVersion(id) {
