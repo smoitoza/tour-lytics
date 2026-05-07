@@ -576,16 +576,26 @@
         // Update active tab styling
         overlay.querySelectorAll('[data-editor-builder-tab]').forEach(function (t) { t.classList.remove('active') })
         tab.classList.add('active')
+        // Rebind click handler on the NEW Generate button inside the swapped body
+        bindEditorBuilderGoHandlers(overlay)
       })
     })
+    bindEditorBuilderGoHandlers(overlay)
+
+    bindTextareaHandler(overlay)
+  }
+
+  // Bind (or rebind) the Generate button inside the AI Counter Builder body.
+  // Called after each tab switch because the body innerHTML gets replaced.
+  function bindEditorBuilderGoHandlers(overlay) {
     overlay.querySelectorAll('[data-action="editor-builder-go"]').forEach(function (b) {
+      if (b.__builderBound) return
+      b.__builderBound = true
       b.addEventListener('click', function () {
         var mode = b.getAttribute('data-mode')
         runEditorBuilder(overlay, mode, b)
       })
     })
-
-    bindTextareaHandler(overlay)
   }
 
   // Call counter-suggest endpoint and apply result to the proposed text
