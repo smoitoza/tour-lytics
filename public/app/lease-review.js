@@ -638,7 +638,12 @@
                 '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>' +
                 'Compare Versions' +
               '</button>'
-            : '') +
+            : (b.versions.length === 1 && b.versions[0].extraction_status === 'completed'
+              ? '<button class="lease-tile-compare-btn" data-action="draft-counter" data-version-id="' + escapeHtml(b.versions[0].id) + '">' +
+                  '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>' +
+                  'Draft Counter Response' +
+                '</button>'
+              : '')) +
           (canUpload
             ? '<button class="lease-tile-add-btn" data-action="add-version" data-address="' + escapeHtml(b.address) + '">+ Add new version for this building</button>'
             : '') +
@@ -762,6 +767,16 @@
         e.stopPropagation()
         var addr = btn.getAttribute('data-address')
         leaseShowComparePicker(addr)
+      })
+    })
+    // Draft Counter Response button (single-version case) - opens redline editor seeded from v1
+    root.querySelectorAll('[data-action="draft-counter"]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation()
+        var versionId = btn.getAttribute('data-version-id')
+        if (versionId && typeof window.leaseShowRedlineEditor === 'function') {
+          window.leaseShowRedlineEditor(versionId)
+        }
       })
     })
   }
