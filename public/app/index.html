@@ -3683,14 +3683,33 @@ body {
     }
     .photos-reclass-menu {
       background: #fff; border: 1px solid #E2E8F0;
-      border-radius: 8px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
-      padding: 4px; width: 200px;
-      max-height: 360px; overflow-y: auto;
+      border-radius: 10px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+      padding: 0; width: 240px;
+      max-height: 420px; overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    .photos-reclass-custom-wrap {
+      padding: 10px 10px 8px;
+      background: #EFF6FF;
+      border-bottom: 1px solid #DBEAFE;
+      flex: 0 0 auto;
+    }
+    .photos-reclass-custom-label {
+      font-size: 0.625rem; font-weight: 700;
+      color: #1E40AF; text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .photos-reclass-list {
+      padding: 4px;
+      overflow-y: auto;
+      flex: 1 1 auto;
+      min-height: 0;
     }
     .photos-reclass-header {
       font-size: 0.625rem; font-weight: 700;
       color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;
-      padding: 6px 10px 4px;
+      padding: 8px 10px 4px;
+      flex: 0 0 auto;
     }
     .photos-reclass-item {
       display: flex; align-items: center; justify-content: space-between;
@@ -3704,12 +3723,9 @@ body {
     .photos-reclass-item:hover { background: #F1F5F9; }
     .photos-reclass-item.is-current { color: #1E40AF; font-weight: 600; background: #EFF6FF; }
     .photos-reclass-check { color: #1E40AF; font-weight: 700; }
-    .photos-reclass-divider {
-      height: 1px; background: #E2E8F0;
-      margin: 4px 6px;
-    }
+    .photos-reclass-divider { display: none; }
     .photos-reclass-custom {
-      display: flex; gap: 6px; padding: 6px 6px 4px;
+      display: flex; gap: 6px;
     }
     .photos-reclass-input {
       flex: 1; min-width: 0;
@@ -25949,7 +25965,16 @@ function openGalleryReclass(photoId, currentArea, anchorBtn) {
   var menu = document.createElement('div');
   menu.className = 'photos-reclass-menu';
   menu.onclick = function(e) { e.stopPropagation(); };
-  var html = '<div class="photos-reclass-header">Reclassify to</div>';
+  // Custom input sticky at the TOP so it's always visible
+  var html = '<div class="photos-reclass-custom-wrap">' +
+               '<div class="photos-reclass-custom-label">Type a custom area (e.g. IT Room, Server Closet)</div>' +
+               '<div class="photos-reclass-custom">' +
+                 '<input type="text" class="photos-reclass-input" placeholder="Custom area name" maxlength="40" />' +
+                 '<button class="photos-reclass-custom-save" type="button">Save</button>' +
+               '</div>' +
+             '</div>';
+  html += '<div class="photos-reclass-header">Or pick from list</div>';
+  html += '<div class="photos-reclass-list">';
   allKeys.forEach(function(k) {
     var isCurrent = k === currentArea;
     var label = AREA_LABELS[k] || formatCustomAreaLabel(k);
@@ -25958,12 +25983,7 @@ function openGalleryReclass(photoId, currentArea, anchorBtn) {
               (isCurrent ? '<span class="photos-reclass-check">\u2713</span>' : '') +
             '</button>';
   });
-  // Custom input row at the bottom
-  html += '<div class="photos-reclass-divider"></div>' +
-          '<div class="photos-reclass-custom">' +
-            '<input type="text" class="photos-reclass-input" placeholder="Custom area (e.g. IT Room)" maxlength="40" />' +
-            '<button class="photos-reclass-custom-save" type="button">Save</button>' +
-          '</div>';
+  html += '</div>';
   menu.innerHTML = html;
 
   // Position relative to anchor button
