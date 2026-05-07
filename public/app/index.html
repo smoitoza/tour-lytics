@@ -3659,10 +3659,51 @@ body {
     .photos-card-body {
       padding: var(--space-2) var(--space-3) var(--space-3);
     }
+    .photos-card-area-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 6px; margin-bottom: 2px;
+    }
     .photos-card-area {
       font-size: var(--text-xs); font-weight: 600;
-      color: var(--color-primary); margin-bottom: 2px;
+      color: var(--color-primary);
+      flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
+    .photos-card-reclass-btn {
+      flex: 0 0 auto;
+      display: inline-flex; align-items: center; gap: 3px;
+      font-size: 0.6rem; font-weight: 600;
+      background: #EFF6FF; color: #1E40AF;
+      border: 1px solid #DBEAFE;
+      padding: 2px 7px; border-radius: 4px;
+      cursor: pointer; line-height: 1;
+      transition: background 0.12s ease, border-color 0.12s ease;
+    }
+    .photos-card-reclass-btn:hover {
+      background: #DBEAFE; border-color: #93C5FD;
+    }
+    .photos-reclass-menu {
+      background: #fff; border: 1px solid #E2E8F0;
+      border-radius: 8px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+      padding: 4px; width: 200px;
+      max-height: 360px; overflow-y: auto;
+    }
+    .photos-reclass-header {
+      font-size: 0.625rem; font-weight: 700;
+      color: #64748B; text-transform: uppercase; letter-spacing: 0.5px;
+      padding: 6px 10px 4px;
+    }
+    .photos-reclass-item {
+      display: flex; align-items: center; justify-content: space-between;
+      width: 100%;
+      background: transparent; border: none;
+      padding: 7px 10px; border-radius: 5px;
+      font-size: 0.8125rem; color: #1E293B;
+      cursor: pointer; text-align: left;
+      transition: background 0.1s ease;
+    }
+    .photos-reclass-item:hover { background: #F1F5F9; }
+    .photos-reclass-item.is-current { color: #1E40AF; font-weight: 600; background: #EFF6FF; }
+    .photos-reclass-check { color: #1E40AF; font-weight: 700; }
     .photos-card-desc {
       font-size: var(--text-xs); color: var(--color-text-muted);
       line-height: 1.45; display: -webkit-box;
@@ -25830,6 +25871,103 @@ async function savePhotoCorrection(photoId) {
   }
 }
 
+// ---- Gallery inline Reclass dropdown ----
+var _galleryReclassOpen = null;
+function openGalleryReclass(photoId, currentArea, anchorBtn) {
+  // Toggle close if same photo
+  if (_galleryReclassOpen && _galleryReclassOpen.photoId === photoId) {
+    closeGalleryReclass();
+    return;
+  }
+  closeGalleryReclass();
+
+  var areaKeys = Object.keys(AREA_LABELS);
+  var menu = document.createElement('div');
+  menu.className = 'photos-reclass-menu';
+  menu.onclick = function(e) { e.stopPropagation(); };
+  var html = '<div class="photos-reclass-header">Reclassify to</div>';
+  areaKeys.forEach(function(k) {
+    var isCurrent = k === currentArea;
+    html += '<button class="photos-reclass-item' + (isCurrent ? ' is-current' : '') + '" data-area="' + k + '">' +
+              AREA_LABELS[k] +
+              (isCurrent ? '<span class="photos-reclass-check">\u2713</span>' : '') +
+            '</button>';
+  });
+  menu.innerHTML = html;
+
+  // Position relative to anchor button
+  var rect = anchorBtn.getBoundingClientRect();
+  menu.style.position = 'fixed';
+  menu.style.top = (rect.bottom + 4) + 'px';
+  menu.style.left = Math.max(8, rect.right - 200) + 'px';
+  menu.style.zIndex = '10010';
+
+  document.body.appendChild(menu);
+
+  menu.querySelectorAll('.photos-reclass-item').forEach(function(item) {
+    item.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var newArea = item.getAttribute('data-area');
+      if (newArea === currentArea) { closeGalleryReclass(); return; }
+      saveGalleryReclass(photoId, newArea);
+    });
+  });
+
+  _galleryReclassOpen = { photoId: photoId, menu: menu };
+
+  // Close on outside click / scroll
+  setTimeout(function() {
+    document.addEventListener('click', closeGalleryReclassOnOutside, true);
+    window.addEventListener('scroll', closeGalleryReclass, true);
+  }, 0);
+}
+function closeGalleryReclassOnOutside(e) {
+  if (_galleryReclassOpen && !_galleryReclassOpen.menu.contains(e.target)) {
+    closeGalleryReclass();
+  }
+}
+function closeGalleryReclass() {
+  if (_galleryReclassOpen) {
+    _galleryReclassOpen.menu.remove();
+    _galleryReclassOpen = null;
+  }
+  document.removeEventListener('click', closeGalleryReclassOnOutside, true);
+  window.removeEventListener('scroll', closeGalleryReclass, true);
+}
+async function saveGalleryReclass(photoId, newArea) {
+  closeGalleryReclass();
+  try {
+    var res = await fetch('/api/photos', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ photoId: photoId, area_tag: newArea })
+    });
+    if (!res.ok) {
+      var err = await res.json().catch(function(){return{};});
+      alert('Failed to reclassify: ' + (err.error || 'Unknown error'));
+      return;
+    }
+    // Update in-memory caches and re-render the gallery
+    if (Array.isArray(_allGalleryPhotos)) {
+      _allGalleryPhotos.forEach(function(p) {
+        if (p.id === photoId) { p.area_tag = newArea; p.ai_area_suggestion = newArea; }
+      });
+    }
+    Object.keys(_photoCache || {}).forEach(function(key) {
+      var photos = _photoCache[key];
+      if (!Array.isArray(photos)) return;
+      photos.forEach(function(p) {
+        if (p.id === photoId) { p.area_tag = newArea; p.ai_area_suggestion = newArea; }
+      });
+    });
+    // Refresh filters (counts may change) + re-apply
+    if (typeof updatePhotoFilters === 'function') updatePhotoFilters();
+    if (typeof applyPhotoFilters === 'function') applyPhotoFilters();
+  } catch (err) {
+    alert('Failed to reclassify: ' + err.message);
+  }
+}
+
 // ---- Photo Delete Mode (multi-select) ----
 var _photoDeleteMode = false;
 var _photosSelectedForDelete = new Set();
@@ -26153,13 +26291,20 @@ function renderPhotosGrid(photos) {
         var tags = p.ai_tags || [];
         var areaLabel = AREA_LABELS[p.ai_area_suggestion || p.area_tag || 'general'] || area;
 
+        var currentArea = p.ai_area_suggestion || p.area_tag || 'general';
         html += '<div class="photos-card" data-photo-id="' + p.id + '" onclick="if(_photoDeleteMode){togglePhotoSelection(this,\'' + p.id + '\');return;} openGalleryLightbox(' + _galleryFlatIndex + ')">'; 
         if (!window._galleryFlatPhotos) window._galleryFlatPhotos = [];
-        window._galleryFlatPhotos.push({ url: p.file_url, desc: desc, tags: tags, area: areaLabel, building: p.building_name });
+        window._galleryFlatPhotos.push({ id: p.id, url: p.file_url, desc: desc, tags: tags, area: areaLabel, currentArea: currentArea, building: p.building_name });
         _galleryFlatIndex++;
         html += '<img class="photos-card-img" src="' + p.file_url + '" alt="' + areaLabel + '" loading="lazy" />';
         html += '<div class="photos-card-body">';
-        html += '<div class="photos-card-area">' + areaLabel + '</div>';
+        html += '<div class="photos-card-area-row">';
+        html +=   '<div class="photos-card-area">' + areaLabel + '</div>';
+        html +=   '<button class="photos-card-reclass-btn" title="Reclassify area" onclick="event.stopPropagation(); openGalleryReclass(\'' + p.id + '\', \'' + currentArea + '\', this)">' +
+                    '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>' +
+                    ' Reclass' +
+                  '</button>';
+        html += '</div>';
         html += '<div class="photos-card-desc">' + desc + '</div>';
         if (tags.length > 0) {
           html += '<div class="photos-card-tags">';
