@@ -365,9 +365,9 @@
   color: #1e293b;
 }
 .lease-editor-context-rationale {
-  background: #fefce8;
-  border-color: #fde68a;
-  color: #78350f;
+  background: #F8FAFC;
+  border-color: #E2E8F0;
+  color: #475569;
 }
 .lease-editor-context-label {
   font-size: 0.6875rem; font-weight: 700;
@@ -375,7 +375,7 @@
   text-transform: uppercase; letter-spacing: 0.5px;
   margin-bottom: 5px;
 }
-.lease-editor-context-rationale .lease-editor-context-label { color: #92400e; }
+.lease-editor-context-rationale .lease-editor-context-label { color: #1E40AF; }
 .lease-editor-context-risk {
   display: inline-block;
   font-size: 0.75rem; font-weight: 700;

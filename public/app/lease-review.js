@@ -26,11 +26,13 @@
   }
   var GROUP_ORDER = ['economics', 'term', 'use', 'risk', 'misc']
 
+  // Risk: only HIGH gets a color signal (red). Everything else is neutral gray.
+  // The point is to draw the eye to genuine risk, not to chart every clause.
   var RISK_STYLES = {
-    low:     { fg: '#15803D', bg: '#F0FDF4', label: 'Low risk' },
-    medium:  { fg: '#B45309', bg: '#FFFBEB', label: 'Medium risk' },
+    low:     { fg: '#475569', bg: '#F1F5F9', label: 'Low risk' },
+    medium:  { fg: '#334155', bg: '#F1F5F9', label: 'Medium risk' },
     high:    { fg: '#B91C1C', bg: '#FEF2F2', label: 'High risk' },
-    unknown: { fg: '#475569', bg: '#F8FAFC', label: 'Not assessed' },
+    unknown: { fg: '#94A3B8', bg: '#F8FAFC', label: 'Not assessed' },
   }
 
   var DOC_TYPE_LABELS = {
@@ -41,13 +43,14 @@
     other:            'Other',
   }
 
-  // Negotiation status config (mirror of NEGOTIATION_STATUSES in lease-clause-taxonomy.ts)
+  // Negotiation status: bold blue for ACTIVE work (open / counter), gray for resolved.
+  // Two-state visual signal: 'this needs attention' vs 'this is done' - not a 5-color rainbow.
   var NEG_STATUSES = [
-    { key: 'open_issue',      label: 'Open Issue',      shortLabel: 'Open',     fg: '#B91C1C', bg: '#FEF2F2', borderColor: '#FECACA', isResolved: false },
-    { key: 'counter_pending', label: 'Counter Pending', shortLabel: 'Counter',  fg: '#B45309', bg: '#FFFBEB', borderColor: '#FDE68A', isResolved: false },
-    { key: 'accepted',        label: 'Accepted',        shortLabel: 'Accepted', fg: '#15803D', bg: '#F0FDF4', borderColor: '#BBF7D0', isResolved: true  },
-    { key: 'wont_address',    label: "Won't Address",   shortLabel: "Won't",    fg: '#475569', bg: '#F8FAFC', borderColor: '#E2E8F0', isResolved: true  },
-    { key: 'not_applicable',  label: 'N/A',             shortLabel: 'N/A',      fg: '#94A3B8', bg: '#F1F5F9', borderColor: '#E2E8F0', isResolved: true  },
+    { key: 'open_issue',      label: 'Open Issue',      shortLabel: 'Open',     fg: '#1E40AF', bg: '#EFF6FF', borderColor: '#BFDBFE', isResolved: false },
+    { key: 'counter_pending', label: 'Counter Pending', shortLabel: 'Counter',  fg: '#1E40AF', bg: '#EFF6FF', borderColor: '#BFDBFE', isResolved: false },
+    { key: 'accepted',        label: 'Accepted',        shortLabel: 'Accepted', fg: '#475569', bg: '#F1F5F9', borderColor: '#E2E8F0', isResolved: true  },
+    { key: 'wont_address',    label: "Won't Address",   shortLabel: "Won't",    fg: '#94A3B8', bg: '#F8FAFC', borderColor: '#E2E8F0', isResolved: true  },
+    { key: 'not_applicable',  label: 'N/A',             shortLabel: 'N/A',      fg: '#94A3B8', bg: '#F8FAFC', borderColor: '#E2E8F0', isResolved: true  },
   ]
   var NEG_STATUS_BY_KEY = {}
   NEG_STATUSES.forEach(function (s) { NEG_STATUS_BY_KEY[s.key] = s })
@@ -696,10 +699,11 @@
   }
 
   function renderExtractionStatusBadge(status) {
+    // Done = neutral gray (it's the resting state); error = red (only signal that matters here)
     var map = {
-      pending:    { fg: '#475569', bg: '#F1F5F9', label: 'Pending' },
-      extracting: { fg: '#1E40AF', bg: '#DBEAFE', label: 'Extracting...' },
-      done:       { fg: '#15803D', bg: '#F0FDF4', label: 'Ready' },
+      pending:    { fg: '#94A3B8', bg: '#F8FAFC', label: 'Pending' },
+      extracting: { fg: '#1E40AF', bg: '#EFF6FF', label: 'Extracting...' },
+      done:       { fg: '#475569', bg: '#F1F5F9', label: 'Ready' },
       error:      { fg: '#B91C1C', bg: '#FEF2F2', label: 'Error' },
     }
     var s = map[status] || map.pending
@@ -1022,11 +1026,11 @@
     html += '<div class="lease-compare-headline ' + netClass + '">' +
       '<div class="lease-compare-headline-cells">' +
         '<div class="lease-compare-headline-cell"><div class="lease-compare-headline-label">Modified</div><div class="lease-compare-headline-value">' + (counts.modified || 0) + '</div></div>' +
-        '<div class="lease-compare-headline-cell"><div class="lease-compare-headline-label">Added</div><div class="lease-compare-headline-value" style="color:#15803D">' + (counts.added || 0) + '</div></div>' +
-        '<div class="lease-compare-headline-cell"><div class="lease-compare-headline-label">Removed</div><div class="lease-compare-headline-value" style="color:#B91C1C">' + (counts.removed || 0) + '</div></div>' +
-        '<div class="lease-compare-headline-cell"><div class="lease-compare-headline-label">Unchanged</div><div class="lease-compare-headline-value" style="color:#64748B">' + (counts.unchanged || 0) + '</div></div>' +
-        '<div class="lease-compare-headline-cell"><div class="lease-compare-headline-label">Risk Worse</div><div class="lease-compare-headline-value" style="color:#B91C1C">' + (risk.worse || 0) + '</div></div>' +
-        '<div class="lease-compare-headline-cell"><div class="lease-compare-headline-label">Risk Better</div><div class="lease-compare-headline-value" style="color:#15803D">' + (risk.better || 0) + '</div></div>' +
+        '<div class="lease-compare-headline-cell"><div class="lease-compare-headline-label">Added</div><div class="lease-compare-headline-value">' + (counts.added || 0) + '</div></div>' +
+        '<div class="lease-compare-headline-cell"><div class="lease-compare-headline-label">Removed</div><div class="lease-compare-headline-value"' + ((counts.removed || 0) > 0 ? ' style="color:#B91C1C"' : '') + '>' + (counts.removed || 0) + '</div></div>' +
+        '<div class="lease-compare-headline-cell"><div class="lease-compare-headline-label">Unchanged</div><div class="lease-compare-headline-value" style="color:#94A3B8">' + (counts.unchanged || 0) + '</div></div>' +
+        '<div class="lease-compare-headline-cell"><div class="lease-compare-headline-label">Risk Worse</div><div class="lease-compare-headline-value"' + ((risk.worse || 0) > 0 ? ' style="color:#B91C1C"' : '') + '>' + (risk.worse || 0) + '</div></div>' +
+        '<div class="lease-compare-headline-cell"><div class="lease-compare-headline-label">Risk Better</div><div class="lease-compare-headline-value">' + (risk.better || 0) + '</div></div>' +
         '<div class="lease-compare-headline-cell lease-compare-headline-net"><div class="lease-compare-headline-label">Net</div><div class="lease-compare-headline-value">' + escapeHtml(netLabel) + '</div></div>' +
       '</div>' +
     '</div>'
@@ -1216,10 +1220,12 @@
   }
 
   function renderStatusBadge(status, riskDelta) {
+    // Diff status: bold blue for any CHANGE (modified/added), gray for unchanged.
+    // Removed gets a subtle red since it's the destructive case.
     var styles = {
-      unchanged: { bg: '#F1F5F9', fg: '#64748B', label: 'Unchanged' },
-      modified:  { bg: '#FFFBEB', fg: '#B45309', label: 'Modified' },
-      added:     { bg: '#F0FDF4', fg: '#15803D', label: 'Added' },
+      unchanged: { bg: '#F1F5F9', fg: '#94A3B8', label: 'Unchanged' },
+      modified:  { bg: '#EFF6FF', fg: '#1E40AF', label: 'Modified' },
+      added:     { bg: '#EFF6FF', fg: '#1E40AF', label: 'Added' },
       removed:   { bg: '#FEF2F2', fg: '#B91C1C', label: 'Removed' },
     }
     var s = styles[status] || styles.unchanged
@@ -1230,10 +1236,12 @@
     if (!r1 && !r2) return ''
     if (r1 === r2) return '<span class="lease-cmp-risk-badge">' + (r2 || r1) + '</span>'
     var arrow = '→'
+    // Only flag when risk got WORSE - that's the only signal worth a color callout
     var rankOrder = { unknown: 0, low: 1, medium: 2, high: 3 }
     var d = (rankOrder[r2] || 0) - (rankOrder[r1] || 0)
-    var color = d > 0 ? '#B91C1C' : (d < 0 ? '#15803D' : '#64748B')
-    return '<span class="lease-cmp-risk-badge" style="color:' + color + '">' + (r1 || '—') + ' ' + arrow + ' ' + (r2 || '—') + '</span>'
+    var color = d > 0 ? '#B91C1C' : '#475569'
+    var weight = d > 0 ? 'font-weight:700;' : ''
+    return '<span class="lease-cmp-risk-badge" style="color:' + color + ';' + weight + '">' + (r1 || '—') + ' ' + arrow + ' ' + (r2 || '—') + '</span>'
   }
 
   function renderClauseDiffBody(cd) {
@@ -2200,19 +2208,20 @@
     }
     ws2['!rows'] = [{ hpt: 38 }]
     // Color-code status column + add wrap to long text cells
+    // Diff status colors - blue for changes, red only for destructive (removed)
     var statusColors = {
-      MODIFIED: { rgb: 'FFFBEB', fontColor: 'B45309' },
-      ADDED:    { rgb: 'F0FDF4', fontColor: '15803D' },
+      MODIFIED: { rgb: 'EFF6FF', fontColor: '1E40AF' },
+      ADDED:    { rgb: 'EFF6FF', fontColor: '1E40AF' },
       REMOVED:  { rgb: 'FEF2F2', fontColor: 'B91C1C' },
-      UNCHANGED:{ rgb: 'F8FAFC', fontColor: '64748B' },
+      UNCHANGED:{ rgb: 'F8FAFC', fontColor: '94A3B8' },
     }
-    // Negotiation status colors (mirror NEG_STATUS_BY_KEY)
+    // Negotiation status colors (mirror NEG_STATUS_BY_KEY) - blue active, gray resolved
     var negStatusColors = {
-      'Open Issue':       { rgb: 'FEF2F2', fontColor: 'B91C1C' },
-      'Counter Pending':  { rgb: 'FFFBEB', fontColor: 'B45309' },
-      'Accepted':         { rgb: 'F0FDF4', fontColor: '15803D' },
-      "Won't Address":    { rgb: 'F8FAFC', fontColor: '475569' },
-      'N/A':              { rgb: 'F1F5F9', fontColor: '94A3B8' },
+      'Open Issue':       { rgb: 'EFF6FF', fontColor: '1E40AF' },
+      'Counter Pending':  { rgb: 'EFF6FF', fontColor: '1E40AF' },
+      'Accepted':         { rgb: 'F1F5F9', fontColor: '475569' },
+      "Won't Address":    { rgb: 'F8FAFC', fontColor: '94A3B8' },
+      'N/A':              { rgb: 'F8FAFC', fontColor: '94A3B8' },
     }
     for (var i = 1; i < dataRows.length; i++) {
       var status = dataRows[i][2]

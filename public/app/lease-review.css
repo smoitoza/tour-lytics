@@ -191,8 +191,8 @@
   border-radius: 999px;
 }
 .lease-risk-pill.lease-risk-high   { background: #FEF2F2; color: #B91C1C; }
-.lease-risk-pill.lease-risk-medium { background: #FFFBEB; color: #B45309; }
-.lease-risk-pill.lease-risk-low    { background: #F0FDF4; color: #15803D; }
+.lease-risk-pill.lease-risk-medium { background: #F1F5F9; color: #475569; }
+.lease-risk-pill.lease-risk-low    { background: #F1F5F9; color: #475569; }
 .lease-risk-meta { font-size: 0.8125rem; color: #64748b; margin-left: auto; }
 
 /* ---- Top risks callout ---- */
@@ -505,7 +505,7 @@
   border-radius: 999px;
 }
 .lease-version-risk.lease-version-risk-high { background: #FEF2F2; color: #B91C1C; }
-.lease-version-risk.lease-version-risk-medium { background: #FFFBEB; color: #B45309; }
+.lease-version-risk.lease-version-risk-medium { background: #F1F5F9; color: #475569; }
 
 /* Inline AI badge for merged_counter versions */
 .lease-version-badge-ai {
@@ -645,7 +645,7 @@
   margin-bottom: 18px;
 }
 .lease-compare-headline-worse  { border-left: 4px solid #B91C1C; }
-.lease-compare-headline-better { border-left: 4px solid #15803D; }
+.lease-compare-headline-better { border-left: 4px solid #1E40AF; }
 .lease-compare-headline-cells {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -701,10 +701,10 @@
   overflow: hidden;
   transition: border-color 0.12s ease;
 }
-.lease-cmp-row-modified { border-left: 4px solid #B45309; }
+.lease-cmp-row-modified { border-left: 4px solid #1E40AF; }
 .lease-cmp-row-modified.lease-cmp-row-worse  { border-left-color: #B91C1C; }
-.lease-cmp-row-modified.lease-cmp-row-better { border-left-color: #15803D; }
-.lease-cmp-row-added   { border-left: 4px solid #15803D; background: #F0FDF4; }
+.lease-cmp-row-modified.lease-cmp-row-better { border-left-color: #1E40AF; }
+.lease-cmp-row-added   { border-left: 4px solid #1E40AF; background: #EFF6FF; }
 .lease-cmp-row-removed { border-left: 4px solid #B91C1C; background: #FEF2F2; }
 .lease-cmp-row-unchanged { opacity: 0.78; }
 
@@ -801,15 +801,16 @@
   padding: 10px 12px;
 }
 .lease-cmp-ins {
-  background: #dcfce7;
-  color: #14532d;
+  background: #EFF6FF;
+  color: #1E40AF;
   text-decoration: none;
+  font-weight: 700;
   padding: 1px 2px;
   border-radius: 3px;
 }
 .lease-cmp-del {
-  background: #fee2e2;
-  color: #7f1d1d;
+  background: transparent;
+  color: #94A3B8;
   text-decoration: line-through;
   padding: 1px 2px;
   border-radius: 3px;
@@ -848,8 +849,8 @@
   vertical-align: top;
 }
 .lease-cmp-keyterms-key { font-weight: 700; color: #334155; width: 25%; }
-.lease-cmp-keyterms-old { color: #B91C1C; background: rgba(254, 226, 226, 0.4); }
-.lease-cmp-keyterms-new { color: #15803D; background: rgba(220, 252, 231, 0.4); font-weight: 600; }
+.lease-cmp-keyterms-old { color: #94A3B8; background: #F8FAFC; text-decoration: line-through; }
+.lease-cmp-keyterms-new { color: #1E40AF; background: #EFF6FF; font-weight: 700; }
 .lease-cmp-keyterms-old em, .lease-cmp-keyterms-new em { color: #94a3b8; }
 
 .lease-cmp-side-only {
@@ -1000,8 +1001,8 @@
 /* Counter result card (AI-generated or saved counter) */
 .lease-cmp-counter-result {
   margin-top: 12px;
-  background: #fefce8;
-  border: 1px solid #fde68a;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
   border-radius: 10px;
   padding: 12px 14px;
 }
@@ -1015,7 +1016,7 @@
 .lease-cmp-counter-label {
   font-size: 0.6875rem;
   font-weight: 700;
-  color: #78350f;
+  color: #1E40AF;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 6px;
@@ -1035,7 +1036,7 @@
 }
 .lease-cmp-counter-rationale {
   font-size: 0.8125rem;
-  color: #78350f;
+  color: #475569;
   margin-bottom: 8px;
   line-height: 1.5;
 }
@@ -1043,7 +1044,7 @@
   font-size: 0.875rem;
   color: #1e293b;
   background: #fff;
-  border: 1px solid #fde68a;
+  border: 1px solid #E2E8F0;
   border-radius: 6px;
   padding: 10px 12px;
   white-space: pre-wrap;
@@ -1052,7 +1053,7 @@
 }
 .lease-cmp-counter-hint {
   font-size: 0.75rem;
-  color: #78350f;
+  color: #475569;
   margin-top: 6px;
   font-style: italic;
 }
@@ -1224,8 +1225,8 @@
 }
 .lease-cmp-counter-mode-badge {
   font-size: 0.625rem;
-  background: #e0e7ff;
-  color: #4338ca;
+  background: #EFF6FF;
+  color: #1E40AF;
   padding: 1px 7px;
   border-radius: 999px;
   font-weight: 600;
@@ -1248,7 +1249,7 @@
   width: 100%;
   min-height: 120px;
   padding: 10px 12px;
-  border: 1px solid #fde68a;
+  border: 1px solid #E2E8F0;
   border-radius: 6px;
   font-family: 'Calibri', 'Helvetica', sans-serif;
   font-size: 0.875rem;
@@ -1271,7 +1272,7 @@
 .lease-cmp-counter-refine-panel {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px dashed #fde68a;
+  border-top: 1px dashed #E2E8F0;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1296,7 +1297,7 @@
   z-index: 10002;
   max-width: 460px;
 }
-.lease-toast-success { background: #15803d; }
+.lease-toast-success { background: #1E40AF; }
 .lease-toast-error { background: #b91c1c; }
 .lease-toast .lease-spinner { color: #fff; }
 
@@ -1315,6 +1316,6 @@
   vertical-align: middle;
 }
 .lease-cmp-cache-badge.lease-cmp-cache-fresh {
-  background: #DCFCE7;
-  color: #15803D;
+  background: #EFF6FF;
+  color: #1E40AF;
 }
