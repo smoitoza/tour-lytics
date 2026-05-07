@@ -347,6 +347,7 @@ export interface CounterDocxInput {
 }
 
 import { wordDiff } from './lease-compare'
+import { LEASE_CLAUSE_TYPES, CLAUSE_GROUP_LABELS } from './lease-clause-taxonomy'
 
 export async function buildCounterDocx(input: CounterDocxInput): Promise<Buffer> {
   const dateIso = input.generatedAt
@@ -419,6 +420,126 @@ export interface MemoDocxInput {
 }
 
 const STATUS_ORDER = ['open_issue', 'counter_pending', 'accepted', 'wont_address', 'not_applicable']
+
+// ============================================================
+// PUBLIC: MERGED VERSION DOCX (clean, finalized lease document)
+// ============================================================
+// Used as the source_url for a saved v3. No track changes - this is
+// what your counsel would email to the landlord as your formal counter draft.
+//
+// Layout: title page, table of contents-ish summary, then every clause as a
+// titled section. Clauses with counter_language use the counter; others
+// carry forward v2's original_excerpt.
+
+export interface MergedClauseForDocx {
+  type: string
+  typeLabel: string
+  group: string
+  groupLabel: string
+  section?: string
+  heading?: string
+  text: string                  // The final language - either counter or v2 original
+  isCountered: boolean
+  counter_rationale?: string    // Optional inline annotation if it's a counter
+}
+
+export interface MergedDocxInput {
+  buildingAddress: string
+  versionLabel: string          // "Tenant Counter v3"
+  basedOnLabel: string          // "v2 - Landlord Redline"
+  generatedAt: string
+  clauses: MergedClauseForDocx[]
+  showRationaleAnnotations?: boolean   // If true, italicize the counter rationale beneath each countered clause
+}
+
+export async function buildMergedVersionDocx(input: MergedDocxInput): Promise<Buffer> {
+  const blocks: string[] = []
+
+  // Title page
+  blocks.push(heading(input.versionLabel, 1))
+  blocks.push(para(plainRun(input.buildingAddress, { size: 24, color: '475569' })))
+  blocks.push(para(plainRun(`Based on: ${input.basedOnLabel}`, { size: 20, color: '64748b' })))
+  blocks.push(para(plainRun(`Generated ${new Date(input.generatedAt).toLocaleString()}`, { size: 18, color: '94a3b8', italic: true })))
+  blocks.push(divider())
+
+  // Summary block
+  const counteredCount = input.clauses.filter(c => c.isCountered).length
+  const totalCount = input.clauses.length
+  blocks.push(heading('Summary', 2))
+  blocks.push(para(plainRun(`This document is a finalized tenant counter proposal. ${counteredCount} of ${totalCount} clauses contain proposed tenant edits; the remainder carry forward unchanged from ${input.basedOnLabel}.`)))
+  blocks.push(divider())
+
+  // Group clauses by group (Economics, Term, etc.)
+  const byGroup: Record<string, MergedClauseForDocx[]> = {}
+  for (const c of input.clauses) {
+    if (!byGroup[c.group]) byGroup[c.group] = []
+    byGroup[c.group].push(c)
+  }
+  const groupOrder = ['economics', 'term', 'use', 'risk', 'misc']
+
+  for (const g of groupOrder) {
+    const list = byGroup[g] || []
+    if (list.length === 0) continue
+    const groupLabel = list[0].groupLabel || g
+    blocks.push(heading(groupLabel, 2))
+
+    for (const c of list) {
+      const sectionLabel = c.section ? `${c.section} — ` : ''
+      blocks.push(heading(`${sectionLabel}${c.heading || c.typeLabel}`, 3))
+      // Counter badge if this clause is a tenant counter
+      if (c.isCountered) {
+        blocks.push(para(plainRun('[Tenant Counter]', { bold: true, color: '1e40af', size: 18 })))
+      }
+      // The actual lease language (multi-paragraph aware)
+      const paragraphs = (c.text || '').split(/\n\n+/)
+      for (const p of paragraphs) {
+        if (!p.trim()) continue
+        // Bordered block for tenant counters; plain for original
+        if (c.isCountered) {
+          blocks.push(`<w:p><w:pPr><w:pBdr><w:left w:val="single" w:sz="6" w:space="4" w:color="2563EB"/></w:pPr></w:pPr>${plainRun(p)}</w:p>`)
+        } else {
+          blocks.push(para(plainRun(p)))
+        }
+      }
+      // Optional rationale annotation
+      if (input.showRationaleAnnotations && c.isCountered && c.counter_rationale) {
+        blocks.push(para(plainRun(`[Drafting note: ${c.counter_rationale}]`, { italic: true, color: '64748b', size: 18 })))
+      }
+      blocks.push(para(plainRun(' ')))
+    }
+    blocks.push(divider())
+  }
+
+  return assembleDocxNoTrackChanges(blocks.join('\n'))
+}
+
+// Merged version doesn't need <w:trackRevisions/> since there are no markups.
+// Build a separate settings.xml without that flag.
+async function assembleDocxNoTrackChanges(bodyContent: string): Promise<Buffer> {
+  const settingsNoTrack = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:rsids><w:rsidRoot w:val="00000000"/></w:rsids>
+  <w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat>
+</w:settings>`
+  const zip = new JSZip()
+  zip.file('[Content_Types].xml', CONTENT_TYPES_XML)
+  zip.file('_rels/.rels', RELS_XML)
+  zip.file('word/document.xml', documentXml(bodyContent))
+  zip.file('word/styles.xml', STYLES_XML)
+  zip.file('word/settings.xml', settingsNoTrack)
+  zip.file('word/_rels/document.xml.rels', DOCUMENT_RELS_XML)
+  return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE', compressionOptions: { level: 6 } })
+}
+
+// Helper to map a clause type to its group + group label
+export function getClauseGroup(clauseType: string): { group: string; groupLabel: string; typeLabel: string } {
+  const meta = LEASE_CLAUSE_TYPES.find(t => t.type === clauseType)
+  return {
+    group: meta?.group || 'misc',
+    groupLabel: CLAUSE_GROUP_LABELS[(meta?.group || 'misc') as keyof typeof CLAUSE_GROUP_LABELS] || 'Other',
+    typeLabel: meta?.label || clauseType,
+  }
+}
 
 export async function buildMemoDocx(input: MemoDocxInput): Promise<Buffer> {
   const blocks: string[] = []

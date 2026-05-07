@@ -883,6 +883,10 @@
           'Word' +
           '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-left:4px;"><polyline points="6 9 12 15 18 9"/></svg>' +
         '</button>' +
+        '<button class="lease-btn-primary" data-action="build-new-version" title="Assemble a new lease version from your counters">' +
+          '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M12 5v14"/><path d="M5 12h14"/></svg>' +
+          'Build New Version' +
+        '</button>' +
         '<button class="lease-btn-secondary" data-action="regenerate" title="Regenerate AI summary with a fresh pass">' +
           '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>' +
           'Regenerate' +
@@ -1245,6 +1249,17 @@
       b.addEventListener('click', function (e) {
         e.stopPropagation()
         showWordExportMenu(overlay, b)
+      })
+    })
+    // Build New Version - opens the redline editor
+    overlay.querySelectorAll('[data-action="build-new-version"]').forEach(function (b) {
+      b.addEventListener('click', function (e) {
+        e.stopPropagation()
+        if (typeof leaseShowRedlineEditor === 'function') {
+          leaseShowRedlineEditor(overlay.__compareV2Id)
+        } else {
+          alert('Redline editor not loaded. Please refresh the page.')
+        }
       })
     })
     bindCounterBuilderHandlers(overlay)
