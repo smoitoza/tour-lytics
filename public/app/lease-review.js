@@ -1565,17 +1565,20 @@
 
     var v1Id = overlay.__compareV1Id
     var v2Id = overlay.__compareV2Id
+    var data = overlay.__compareData || {}
+    var v1Label = data.v1_label || 'v1'
+    var v2Label = data.v2_label || 'v2'
 
     var menu = document.createElement('div')
     menu.className = 'lease-cmp-word-menu lease-cmp-neg-dropdown'  // reuse dropdown styling
     menu.innerHTML =
       '<button class="lease-cmp-word-menu-item" data-word-action="redline">' +
-        '<div class="lease-cmp-word-menu-title">Landlord Redline</div>' +
-        '<div class="lease-cmp-word-menu-desc">v1 → v2 changes as native Word track changes</div>' +
+        '<div class="lease-cmp-word-menu-title">Version Redline (' + escapeHtml(v1Label) + ' → ' + escapeHtml(v2Label) + ')</div>' +
+        '<div class="lease-cmp-word-menu-desc">All differences as native Word track changes</div>' +
       '</button>' +
       '<button class="lease-cmp-word-menu-item" data-word-action="counter">' +
         '<div class="lease-cmp-word-menu-title">Tenant Counter Proposal</div>' +
-        '<div class="lease-cmp-word-menu-desc">Your counters as track changes against v2</div>' +
+        '<div class="lease-cmp-word-menu-desc">Your saved counters as track changes against ' + escapeHtml(v2Label) + '</div>' +
       '</button>' +
       '<button class="lease-cmp-word-menu-item" data-word-action="memo">' +
         '<div class="lease-cmp-word-menu-title">Negotiation Memo</div>' +
@@ -1602,25 +1605,26 @@
         var action = item.getAttribute('data-word-action')
         menu.remove()
         document.removeEventListener('click', closeIt, true)
-        downloadWordExport(action, v1Id, v2Id)
+        downloadWordExport(action, v1Id, v2Id, v1Label, v2Label)
       })
     })
   }
 
-  async function downloadWordExport(kind, v1Id, v2Id) {
+  async function downloadWordExport(kind, v1Id, v2Id, v1Label, v2Label) {
     var endpoint, body, fileNameHint
+    var labelTag = (v1Label && v2Label) ? (' ' + v1Label + ' to ' + v2Label) : ''
     if (kind === 'redline') {
       endpoint = '/api/lease/export-redline'
       body = { v1Id: v1Id, v2Id: v2Id }
-      fileNameHint = 'Lease Redline'
+      fileNameHint = 'Lease Redline' + labelTag
     } else if (kind === 'counter') {
       endpoint = '/api/lease/export-counter'
       body = { v2Id: v2Id }
-      fileNameHint = 'Tenant Counter'
+      fileNameHint = 'Tenant Counter' + (v2Label ? ' against ' + v2Label : '')
     } else if (kind === 'memo') {
       endpoint = '/api/lease/export-memo'
       body = { v1Id: v1Id, v2Id: v2Id }
-      fileNameHint = 'Negotiation Memo'
+      fileNameHint = 'Negotiation Memo' + labelTag
     } else {
       return
     }
