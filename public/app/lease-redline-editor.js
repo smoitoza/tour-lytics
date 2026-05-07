@@ -113,6 +113,8 @@
         negotiations: negotiations || {},
         // Per-clause editor state: { type -> { proposedText, excluded, dirty } }
         editorState: {},
+        // Per-clause AI builder state: { type -> { mode, instructions } }
+        builderState: {},
         focusedType: null,
         versionLabel: 'v' + nextVersionNumber + ' (Tenant Counter)',
         showRationaleAnnotations: false,
@@ -271,11 +273,76 @@
         renderEditorTab('proposed', c, st, neg) +
       '</div>' +
 
+      // ---- AI Counter Builder (4 modes: Auto / With Instructions / Legal Drafter / AI Edit) ----
+      renderEditorBuilder(state, c, st) +
+
       // Right rail INSIDE center for now (collapsed below proposed). Showing here for context.
       '<div class="lease-editor-context">' +
         renderRightRailContext(c, neg) +
       '</div>' +
     '</div>'
+  }
+
+  // ================================================================
+  // AI Counter Builder inside the editor (mirrors Compare Versions panel)
+  // ================================================================
+  function renderEditorBuilder(state, c, st) {
+    if (st.excluded) return ''
+    var clauseType = c.type
+    // Available modes. AI Edit only when there's text to refine.
+    var hasText = !!(st.proposedText && st.proposedText.trim())
+    var activeMode = (state.builderState && state.builderState[clauseType] && state.builderState[clauseType].mode) || 'auto'
+    var prefilled = (state.builderState && state.builderState[clauseType] && state.builderState[clauseType].instructions) || ''
+
+    var tabs =
+      '<button class="lease-cmp-builder-tab' + (activeMode === 'auto' ? ' active' : '') + '" data-editor-builder-tab="auto">AI Suggest</button>' +
+      '<button class="lease-cmp-builder-tab' + (activeMode === 'with_instructions' ? ' active' : '') + '" data-editor-builder-tab="with_instructions">With Instructions</button>' +
+      '<button class="lease-cmp-builder-tab' + (activeMode === 'legal_drafter' ? ' active' : '') + '" data-editor-builder-tab="legal_drafter">Legal Drafter</button>' +
+      (hasText ? '<button class="lease-cmp-builder-tab' + (activeMode === 'ai_edit' ? ' active' : '') + '" data-editor-builder-tab="ai_edit">AI Edit</button>' : '')
+
+    return '<div class="lease-cmp-counter-builder lease-editor-builder" data-editor-builder>' +
+      '<div class="lease-cmp-builder-header">' +
+        '<div class="lease-cmp-builder-label">AI Counter Builder</div>' +
+        '<div class="lease-cmp-builder-tabs">' + tabs + '</div>' +
+      '</div>' +
+      '<div class="lease-cmp-builder-body" data-editor-builder-body>' +
+        renderEditorBuilderModeBody(activeMode, clauseType, prefilled) +
+      '</div>' +
+    '</div>'
+  }
+
+  function renderEditorBuilderModeBody(mode, clauseType, prefilledInstructions) {
+    if (mode === 'auto') {
+      return '<div class="lease-cmp-builder-mode">' +
+        '<div class="lease-cmp-builder-hint">Let AI propose a tenant-favorable counter without further input. AI reads the clause and risk rationale automatically.</div>' +
+        '<button class="lease-cmp-builder-go" data-action="editor-builder-go" data-mode="auto">' +
+          '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;"><path d="M12 2v4"/><path d="M12 18v4"/><path d="m4.93 4.93 2.83 2.83"/><path d="m16.24 16.24 2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/></svg>' +
+          'Generate Counter' +
+        '</button>' +
+      '</div>'
+    }
+    if (mode === 'with_instructions') {
+      return '<div class="lease-cmp-builder-mode">' +
+        '<div class="lease-cmp-builder-hint">Tell the AI exactly what you want changed. Example: "Reduce lock-in from 6 to 3 months and add a one-time termination right at month 24."</div>' +
+        '<textarea class="lease-cmp-builder-prompt" data-editor-builder-prompt rows="3" placeholder="What do you want to change?">' + escapeHtml(prefilledInstructions || '') + '</textarea>' +
+        '<button class="lease-cmp-builder-go" data-action="editor-builder-go" data-mode="with_instructions">Generate Counter from Instructions</button>' +
+      '</div>'
+    }
+    if (mode === 'legal_drafter') {
+      return '<div class="lease-cmp-builder-mode">' +
+        '<div class="lease-cmp-builder-hint">Describe what you want in plain English - AI will translate into proper lease drafting with defined terms, lease-style construction, and proper cross-references.</div>' +
+        '<textarea class="lease-cmp-builder-prompt" data-editor-builder-prompt rows="3" placeholder="Plain-English goal: e.g. We want 12 months free rent up front and a 9-month free-rent bank for years 2-5">' + escapeHtml(prefilledInstructions || '') + '</textarea>' +
+        '<button class="lease-cmp-builder-go" data-action="editor-builder-go" data-mode="legal_drafter">Translate to Legal Language</button>' +
+      '</div>'
+    }
+    if (mode === 'ai_edit') {
+      return '<div class="lease-cmp-builder-mode">' +
+        '<div class="lease-cmp-builder-hint">Refine the current Proposed text with AI. Example: "Make this more aggressive on landlord caps" or "Tighten the language and remove redundancy."</div>' +
+        '<textarea class="lease-cmp-builder-prompt" data-editor-builder-prompt rows="3" placeholder="How should the AI refine the current text?">' + escapeHtml(prefilledInstructions || '') + '</textarea>' +
+        '<button class="lease-cmp-builder-go" data-action="editor-builder-go" data-mode="ai_edit">Refine with AI</button>' +
+      '</div>'
+    }
+    return ''
   }
 
   function renderEditorTab(tab, c, st, neg) {
@@ -491,7 +558,103 @@
       })
     })
 
+    // ---- AI Counter Builder ----
+    overlay.querySelectorAll('[data-editor-builder-tab]').forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        var state = overlay.__editorState
+        var c = state.baseClauses.find(function (cc) { return cc.type === state.focusedType })
+        if (!c) return
+        // Persist current instructions before switching
+        var promptEl = overlay.querySelector('[data-editor-builder-prompt]')
+        if (!state.builderState[c.type]) state.builderState[c.type] = { mode: 'auto', instructions: '' }
+        if (promptEl) state.builderState[c.type].instructions = promptEl.value
+        var newMode = tab.getAttribute('data-editor-builder-tab')
+        state.builderState[c.type].mode = newMode
+        // Re-render the builder section only
+        var body = overlay.querySelector('[data-editor-builder-body]')
+        if (body) body.innerHTML = renderEditorBuilderModeBody(newMode, c.type, state.builderState[c.type].instructions)
+        // Update active tab styling
+        overlay.querySelectorAll('[data-editor-builder-tab]').forEach(function (t) { t.classList.remove('active') })
+        tab.classList.add('active')
+      })
+    })
+    overlay.querySelectorAll('[data-action="editor-builder-go"]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var mode = b.getAttribute('data-mode')
+        runEditorBuilder(overlay, mode, b)
+      })
+    })
+
     bindTextareaHandler(overlay)
+  }
+
+  // Call counter-suggest endpoint and apply result to the proposed text
+  async function runEditorBuilder(overlay, mode, btn) {
+    var state = overlay.__editorState
+    var c = state.baseClauses.find(function (cc) { return cc.type === state.focusedType })
+    if (!c) return
+    // Capture latest textarea text first
+    savePendingText(overlay)
+    var st = state.editorState[c.type]
+
+    var promptEl = overlay.querySelector('[data-editor-builder-prompt]')
+    var instructions = promptEl ? promptEl.value.trim() : ''
+    if ((mode === 'with_instructions' || mode === 'legal_drafter' || mode === 'ai_edit') && !instructions) {
+      alert('Please enter instructions first.')
+      return
+    }
+    if (mode === 'ai_edit' && !(st.proposedText && st.proposedText.trim())) {
+      alert('Add some proposed text first, then refine it with AI.')
+      return
+    }
+
+    if (!state.builderState[c.type]) state.builderState[c.type] = { mode: mode, instructions: '' }
+    state.builderState[c.type].mode = mode
+    state.builderState[c.type].instructions = instructions
+
+    var origLabel = btn.innerHTML
+    btn.disabled = true
+    btn.innerHTML = '<div class="lease-spinner" style="display:inline-block;width:11px;height:11px;border-width:1.5px;margin-right:6px;vertical-align:-2px;"></div>Generating...'
+
+    try {
+      var resp = await fetch('/api/lease/counter-suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          v2Id: state.baseDoc.id,            // base doc IS the version we are countering
+          clauseType: c.type,
+          mode: mode,
+          instructions: instructions,
+          currentCounter: mode === 'ai_edit' ? st.proposedText : '',
+          userEmail: (typeof getCurrentUserEmail === 'function' ? getCurrentUserEmail() : ''),
+        }),
+      })
+      if (!resp.ok) {
+        var err = await resp.json().catch(function () { return {} })
+        throw new Error(err.error || ('HTTP ' + resp.status))
+      }
+      var data = await resp.json()
+      // Update negotiation cache so 'Apply AI Counter' / context rationale show up
+      if (data && data.counter_language) {
+        if (!state.negotiations[c.type]) state.negotiations[c.type] = {}
+        state.negotiations[c.type].counter_language = data.counter_language
+        state.negotiations[c.type].counter_rationale = data.counter_rationale || ''
+        state.negotiations[c.type].counter_mode = data.counter_mode || mode
+        state.negotiations[c.type].counter_instructions = instructions
+        state.negotiations[c.type].counter_source = mode === 'ai_edit' ? 'ai_edited' : 'ai_generated'
+        // Apply to the proposed text
+        st.proposedText = data.counter_language
+        st.dirty = true
+        st.excluded = false
+      }
+      // Re-render the clause to show updated text + new rationale + Apply AI Counter button
+      rerenderClause(overlay)
+    } catch (e) {
+      console.error('AI Counter Builder failed:', e)
+      alert('AI Counter Builder failed: ' + e.message)
+      btn.disabled = false
+      btn.innerHTML = origLabel
+    }
   }
 
   function bindTextareaHandler(overlay) {

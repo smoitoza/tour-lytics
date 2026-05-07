@@ -369,6 +369,23 @@
   border-color: #E2E8F0;
   color: #475569;
 }
+
+/* AI Counter Builder embedded in the editor center pane */
+.lease-editor-builder {
+  margin-top: 14px;
+  margin-bottom: 14px;
+  border: 1px solid #E2E8F0;
+  background: #F8FAFC;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.lease-editor-builder .lease-cmp-builder-label {
+  color: #1E40AF;
+  font-weight: 700;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
 .lease-editor-context-label {
   font-size: 0.6875rem; font-weight: 700;
   color: #475569;
