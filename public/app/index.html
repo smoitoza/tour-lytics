@@ -9579,7 +9579,13 @@ body {
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
         <span id="commuteSavedInfo" style="font-size:var(--text-sm);color:var(--color-text);"></span>
       </div>
-      <button class="commute-clear-btn" id="commuteNewStudyBtn" onclick="commuteStartNew()" style="display:none;">Upload New File</button>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button id="commuteRecalcBtn" onclick="commuteRunStudy()" title="Re-run with latest shortlist + current office" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#1E40AF;color:#fff;border:none;border-radius:6px;font-weight:600;font-size:0.8125rem;cursor:pointer;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          Recalculate
+        </button>
+        <button class="commute-clear-btn" id="commuteNewStudyBtn" onclick="commuteStartNew()" style="display:none;">Upload New File</button>
+      </div>
     </div>
 
     <!-- Upload section -->
