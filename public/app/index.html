@@ -4770,6 +4770,7 @@ body {
     .commute-current-hint span { color: #475569; font-weight: 400; margin-left: 4px; }
     .commute-current-row { background: #EFF6FF; }
     .commute-current-row td.commute-rank-num { background: #1E40AF !important; color: #fff !important; }
+    .commute-current-time { color: #1E40AF; font-weight: 600; }
     .commute-current-badge {
       display: inline-block;
       font-size: 0.625rem; font-weight: 700;
@@ -29465,7 +29466,7 @@ function renderCommuteResults() {
   html += '</tbody></table></div>';
 
   // Business Unit / Group Breakdown
-  html += renderCommuteGroupBreakdown(summaries, details);
+  html += renderCommuteGroupBreakdown(summaries, details, currentSummary);
 
   // Heatmap
   html += '<div class="commute-heatmap-section">';
@@ -30517,7 +30518,7 @@ function commuteFormatDuration(seconds) {
 // ============================================================
 var _commuteGroupMode = 'driving'; // independent mode toggle for group breakdown
 
-function renderCommuteGroupBreakdown(summaries, details) {
+function renderCommuteGroupBreakdown(summaries, details, currentSummary) {
   if (!_commuteEmployees.length || !details.length) return '';
 
   // Find groupable meta columns (columns with 2-20 unique values, non-lat/lng)
@@ -30561,8 +30562,10 @@ function renderCommuteGroupBreakdown(summaries, details) {
   var detailMap = {};
   details.forEach(function(d) { detailMap[d.employee] = d; });
 
-  // Build building order from summaries
+  // Build building order from summaries (Current Office first if present)
   var buildingOrder = summaries.map(function(s) { return s.building; });
+  var currentOfficeName = currentSummary ? currentSummary.building : null;
+  if (currentOfficeName) buildingOrder = [currentOfficeName].concat(buildingOrder);
 
   // Calculate per-group, per-building averages
   var groupNames = Object.keys(groups).sort();
@@ -30620,9 +30623,12 @@ function renderCommuteGroupBreakdown(summaries, details) {
   html += '<div class="commute-group-cards">';
   groupNames.forEach(function(gName) {
     var gd = groupData[gName];
-    // Find the best building for this group
+    // Find the best building for this group (excluding the Current Office baseline)
     var bestSec = Infinity;
-    gd.buildings.forEach(function(b) { if (b.avgSec !== null && b.avgSec < bestSec) bestSec = b.avgSec; });
+    gd.buildings.forEach(function(b) {
+      if (currentOfficeName && b.building === currentOfficeName) return;
+      if (b.avgSec !== null && b.avgSec < bestSec) bestSec = b.avgSec;
+    });
 
     html += '<div class="commute-group-card">';
     html += '<div class="commute-group-card-title">' + gName +
@@ -30631,10 +30637,17 @@ function renderCommuteGroupBreakdown(summaries, details) {
     html += '<thead><tr><th>Building</th><th>Avg. ' + (modeKey === 'driving' ? 'Drive' : 'Transit') + '</th></tr></thead>';
     html += '<tbody>';
     gd.buildings.forEach(function(b) {
-      var isBest = b.avgSec !== null && b.avgSec === bestSec;
-      html += '<tr>';
-      html += '<td>' + b.building + '</td>';
-      html += '<td class="' + (isBest ? 'commute-group-best' : '') + '">' +
+      var isCurrent = currentOfficeName && b.building === currentOfficeName;
+      // Best = best among the actual building options only (skip current office)
+      var isBest = !isCurrent && b.avgSec !== null && b.avgSec === bestSec;
+      html += '<tr' + (isCurrent ? ' class="commute-current-row"' : '') + '>';
+      if (isCurrent) {
+        html += '<td><strong style="color:#1E40AF;">\u2605 Current Office</strong></td>';
+      } else {
+        html += '<td>' + b.building + '</td>';
+      }
+      var tdClass = isCurrent ? 'commute-current-time' : (isBest ? 'commute-group-best' : '');
+      html += '<td class="' + tdClass + '">' +
         (b.avgSec !== null ? commuteFormatDuration(b.avgSec) : 'N/A') +
         (isBest ? ' &#9733;' : '') + '</td>';
       html += '</tr>';
