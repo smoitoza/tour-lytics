@@ -28906,10 +28906,15 @@ async function commuteLoadSaved() {
     _commuteLatCol = data.lat_col || 0;
     _commuteLngCol = data.lng_col || 0;
 
-    // Snapshot building info from results for stale detection
+    // Snapshot building info from results for stale detection.
+    // Exclude the Current Office baseline - it's not part of the shortlist,
+    // so the stale check shouldn't compare against it.
     if (_commuteResults && _commuteResults.summaries) {
-      _commuteLastBuildingCount = _commuteResults.summaries.length;
-      _commuteLastBuildingNames = _commuteResults.summaries.map(function(s) { return s.building; }).sort();
+      var actualBuildings = _commuteResults.summaries.filter(function(s) {
+        return !s.isCurrentLocation && s.building !== 'Current Office' && s.building !== 'Current Location';
+      });
+      _commuteLastBuildingCount = actualBuildings.length;
+      _commuteLastBuildingNames = actualBuildings.map(function(s) { return s.building; }).sort();
     }
 
     // Show saved banner
@@ -29352,9 +29357,12 @@ async function commuteRunStudy() {
     _commuteResults.current_address = includeCurrent ? (proj && proj.hq_address) : null;
     _commuteResults.current_lat = includeCurrent ? (proj && proj.hq_lat) : null;
     _commuteResults.current_lng = includeCurrent ? (proj && proj.hq_lng) : null;
-    // Snapshot the building list used for this run
-    _commuteLastBuildingCount = buildings.length;
-    _commuteLastBuildingNames = buildings.map(function(b) { return b.name; }).sort();
+    // Snapshot the building list used for this run.
+    // Exclude the Current Office baseline so stale detection only tracks
+    // actual shortlist buildings, not the auto-included HQ baseline.
+    var actualBuildingsForSnapshot = buildings.filter(function(b) { return !b.isCurrentLocation; });
+    _commuteLastBuildingCount = actualBuildingsForSnapshot.length;
+    _commuteLastBuildingNames = actualBuildingsForSnapshot.map(function(b) { return b.name; }).sort();
     renderCommuteResults();
     // Persist to server so everyone can see it
     commuteSaveToServer(_commuteFilename);
