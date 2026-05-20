@@ -40,23 +40,48 @@ export async function POST(req: Request) {
     uploadedBy = '',
   } = body
 
-  // Debit tokens for commute study upload
+  // Decide whether this is a fresh upload (charge tokens) or a recalculate
+  // (no charge - employee data already paid for). A save is a recalc when
+  // an existing row exists for this project AND the employee count is
+  // identical, AND the filename is unchanged or empty. Otherwise treat as
+  // a new upload.
+  let isRecalc = false
   try {
-    const tokenResult = await debitTokens({
-      projectId,
-      action: 'commute_study',
-      userEmail: uploadedBy,
-      metadata: { filename, employee_count: employees.length },
-      note: `Commute study: ${filename} (${employees.length} employees)`,
-    })
-    if (!tokenResult.success) {
-      return NextResponse.json(
-        { error: 'Insufficient tokens for commute study upload.' },
-        { status: 402 }
-      )
+    const { data: existing } = await supabase
+      .from('commute_studies')
+      .select('filename, employees')
+      .eq('project_id', projectId)
+      .maybeSingle()
+    if (existing) {
+      const existingCount = Array.isArray(existing.employees) ? existing.employees.length : 0
+      const sameCount = existingCount === employees.length
+      const sameFile = !filename || !existing.filename || existing.filename === filename
+      isRecalc = sameCount && sameFile
     }
   } catch (e) {
-    console.warn('Token debit skipped:', (e as Error).message)
+    console.warn('Recalc detection failed, defaulting to charge:', (e as Error).message)
+  }
+
+  // Debit tokens ONLY for fresh uploads. Recalculates re-run the calc against
+  // already-uploaded employee data and must not be billed twice.
+  if (!isRecalc) {
+    try {
+      const tokenResult = await debitTokens({
+        projectId,
+        action: 'commute_study',
+        userEmail: uploadedBy,
+        metadata: { filename, employee_count: employees.length },
+        note: `Commute study: ${filename} (${employees.length} employees)`,
+      })
+      if (!tokenResult.success) {
+        return NextResponse.json(
+          { error: 'Insufficient tokens for commute study upload.' },
+          { status: 402 }
+        )
+      }
+    } catch (e) {
+      console.warn('Token debit skipped:', (e as Error).message)
+    }
   }
 
   const { data, error } = await supabase
