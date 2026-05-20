@@ -4760,6 +4760,28 @@ body {
     }
     .commute-run-btn:hover { background: #1d4ed8; }
     .commute-run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .commute-include-current {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 0.8125rem; color: #1e293b; font-weight: 500;
+      cursor: pointer; user-select: none;
+      padding: 8px 12px;
+      background: #EFF6FF; border: 1px solid #DBEAFE; border-radius: 8px;
+    }
+    .commute-include-current input { width: 14px; height: 14px; accent-color: #1E40AF; cursor: pointer; }
+    .commute-include-current-addr {
+      color: #475569; font-size: 0.75rem; font-weight: 400;
+      max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .commute-current-row { background: #EFF6FF; }
+    .commute-current-row td.commute-rank-num { background: #1E40AF !important; color: #fff !important; }
+    .commute-current-badge {
+      display: inline-block;
+      font-size: 0.625rem; font-weight: 700;
+      color: #1E40AF; background: #DBEAFE;
+      padding: 2px 8px; border-radius: 999px;
+      margin-left: 8px; vertical-align: middle;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
     .commute-run-note {
       font-size: 0.8125rem;
       color: var(--color-text-muted);
@@ -9593,6 +9615,11 @@ body {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           Calculate Commutes
         </button>
+        <label class="commute-include-current" id="commuteIncludeCurrentLabel" style="display:none;">
+          <input type="checkbox" id="commuteIncludeCurrentChk" />
+          <span>Include current location in comparison</span>
+          <span class="commute-include-current-addr" id="commuteIncludeCurrentAddr"></span>
+        </label>
         <span class="commute-run-note" id="commuteRunNote"></span>
       </div>
     </div>
@@ -13870,6 +13897,12 @@ function getProjectId() {
       if (Array.isArray(data)) {
         var proj = data.find(function(p) { return p.id === pid; });
         if (proj) {
+          // Cache project for other tabs (Commute, etc.)
+          window._currentProject = proj;
+          // If commute toggle has already been rendered, refresh it now that we have HQ data
+          if (typeof refreshCommuteIncludeCurrentToggle === 'function') {
+            try { refreshCommuteIncludeCurrentToggle(); } catch (e) {}
+          }
           var titleTextEl2 = document.getElementById('projectTitleText');
           if (titleTextEl2) titleTextEl2.textContent = proj.name;
           if (mobName) mobName.textContent = proj.name;
@@ -28882,6 +28915,8 @@ async function commuteLoadSaved() {
     // Render results
     renderCommuteResults();
     commuteCheckStale();
+    // Refresh the include-current toggle so it reflects saved preference
+    refreshCommuteIncludeCurrentToggle();
     // Re-apply role access now that data is loaded
     commuteApplyRoleAccess();
   } catch(e) {
@@ -29185,10 +29220,34 @@ function commuteProcessRows(rows, filename) {
   // Show actions
   var actions = document.getElementById('commuteActions');
   actions.style.display = 'flex';
-  
+
+  // Show 'Include current location' toggle if project has an HQ address with coords
+  refreshCommuteIncludeCurrentToggle();
+
   var buildingCount = (_shortlistItems && _shortlistItems.length) || 0;
   document.getElementById('commuteRunNote').textContent =
     _commuteEmployees.length + ' employees x ' + buildingCount + ' buildings on shortlist';
+}
+
+function refreshCommuteIncludeCurrentToggle() {
+  var label = document.getElementById('commuteIncludeCurrentLabel');
+  var addrEl = document.getElementById('commuteIncludeCurrentAddr');
+  var chk = document.getElementById('commuteIncludeCurrentChk');
+  if (!label || !chk) return;
+  var proj = window._currentProject;
+  var hasCurrent = !!(proj && proj.hq_lat && proj.hq_lng);
+  if (!hasCurrent) {
+    label.style.display = 'none';
+    chk.checked = false;
+    return;
+  }
+  label.style.display = 'inline-flex';
+  if (addrEl) addrEl.textContent = '(' + (proj.hq_address || 'HQ') + ')';
+  // Restore last preference from saved study (only if not already set during this session)
+  if (chk.dataset.userTouched !== '1' && _commuteResults && typeof _commuteResults.include_current === 'boolean') {
+    chk.checked = !!_commuteResults.include_current;
+  }
+  chk.onchange = function() { chk.dataset.userTouched = '1'; };
 }
 
 function commuteClearFile() {
@@ -29232,6 +29291,21 @@ async function commuteRunStudy() {
     };
   });
 
+  // Optionally prepend the project's current location (HQ) as a special baseline entry
+  var includeCurrent = false;
+  var currentChk = document.getElementById('commuteIncludeCurrentChk');
+  var proj = window._currentProject;
+  if (currentChk && currentChk.checked && proj && proj.hq_lat && proj.hq_lng) {
+    includeCurrent = true;
+    buildings.unshift({
+      name: 'Current Location',
+      address: proj.hq_address || '',
+      lat: proj.hq_lat,
+      lng: proj.hq_lng,
+      isCurrentLocation: true
+    });
+  }
+
   try {
     var res = await fetch('/api/commute', {
       method: 'POST',
@@ -29246,6 +29320,16 @@ async function commuteRunStudy() {
       throw new Error(err.error || 'API request failed');
     }
     _commuteResults = await res.json();
+    // Tag the current location summary so we can render it distinctly
+    if (includeCurrent && _commuteResults.summaries) {
+      _commuteResults.summaries.forEach(function(s) {
+        if (s.building === 'Current Location') s.isCurrentLocation = true;
+      });
+    }
+    _commuteResults.include_current = includeCurrent;
+    _commuteResults.current_address = includeCurrent ? (proj && proj.hq_address) : null;
+    _commuteResults.current_lat = includeCurrent ? (proj && proj.hq_lat) : null;
+    _commuteResults.current_lng = includeCurrent ? (proj && proj.hq_lng) : null;
     // Snapshot the building list used for this run
     _commuteLastBuildingCount = buildings.length;
     _commuteLastBuildingNames = buildings.map(function(b) { return b.name; }).sort();
@@ -29278,10 +29362,13 @@ function renderCommuteResults() {
   var staleBanner = document.getElementById('commuteStaleBanner');
   if (staleBanner) staleBanner.style.display = 'none';
 
-  var summaries = _commuteResults.summaries || [];
+  var allSummaries = _commuteResults.summaries || [];
   var details = _commuteResults.details || [];
+  // Separate Current Location from the actual buildings being evaluated
+  var currentSummary = allSummaries.find(function(s) { return s.isCurrentLocation; });
+  var summaries = allSummaries.filter(function(s) { return !s.isCurrentLocation; });
 
-  // Find best buildings
+  // Find best buildings (exclude Current Location so 'best' = actual options)
   var bestDrive = summaries[0] || {};
   var bestTransit = [...summaries].sort(function(a, b) {
     return (a.transit_avg_seconds || Infinity) - (b.transit_avg_seconds || Infinity);
@@ -29315,6 +29402,22 @@ function renderCommuteResults() {
   html += '<div class="commute-summary-value">' + commuteFormatDuration(overallAvg) + '</div>';
   html += '<div class="commute-summary-sub">Across ' + summaries.length + ' buildings, ' + _commuteEmployees.length + ' employees</div>';
   html += '</div>';
+
+  // Current Location baseline card (only if user opted in)
+  if (currentSummary) {
+    var delta = (bestDrive.driving_avg_seconds && currentSummary.driving_avg_seconds)
+      ? (bestDrive.driving_avg_seconds - currentSummary.driving_avg_seconds) : null;
+    var deltaLabel = '';
+    if (delta !== null && delta !== 0) {
+      var sign = delta < 0 ? '-' : '+';
+      deltaLabel = sign + commuteFormatDuration(Math.abs(delta)) + ' vs best option';
+    }
+    html += '<div class="commute-summary-card" style="border-left:4px solid #1E40AF;">';
+    html += '<div class="commute-summary-label">Current Location <span class="commute-current-badge">Baseline</span></div>';
+    html += '<div class="commute-summary-value">' + (currentSummary.driving_avg_text || 'N/A') + '</div>';
+    html += '<div class="commute-summary-sub">' + (_commuteResults.current_address || 'HQ') + (deltaLabel ? ' &middot; ' + deltaLabel : '') + '</div>';
+    html += '</div>';
+  }
   html += '</div>';
 
   // Employee Location Map
@@ -29326,6 +29429,17 @@ function renderCommuteResults() {
   html += '<table class="commute-ranked-table">';
   html += '<thead><tr><th>Rank</th><th>Building</th><th>Avg. Drive</th><th>Drive Dist.</th><th>Avg. Transit</th><th>Transit Dist.</th></tr></thead>';
   html += '<tbody>';
+  // Current Location row first (no rank number, distinct styling)
+  if (currentSummary) {
+    html += '<tr class="commute-current-row">';
+    html += '<td class="commute-rank-num" style="background:#1E40AF;color:#fff;">\u2605</td>';
+    html += '<td class="commute-building-cell"><strong>Current Location</strong><span class="commute-current-badge">Baseline</span><div style="font-size:0.6875rem;color:#64748B;font-weight:400;">' + (_commuteResults.current_address || '') + '</div></td>';
+    html += '<td class="commute-time-cell">' + (currentSummary.driving_avg_text || 'N/A') + '</td>';
+    html += '<td class="commute-dist-cell">' + (currentSummary.driving_avg_distance_text || 'N/A') + '</td>';
+    html += '<td class="commute-time-cell">' + (currentSummary.transit_avg_text || 'N/A') + '</td>';
+    html += '<td class="commute-dist-cell">' + (currentSummary.transit_avg_distance_text || 'N/A') + '</td>';
+    html += '</tr>';
+  }
   summaries.forEach(function(s, i) {
     html += '<tr>';
     html += '<td class="commute-rank-num ' + (i < 3 ? 'commute-rank-top' : 'commute-rank-rest') + '">' + (i + 1) + '</td>';
@@ -29353,6 +29467,10 @@ function renderCommuteResults() {
   html += '<div class="commute-heatmap-wrapper">';
   html += '<table class="commute-heatmap">';
   html += '<thead><tr><th>Employee</th>';
+  // Current Location column first (if present)
+  if (currentSummary) {
+    html += '<th style="background:#EFF6FF;color:#1E40AF;">\u2605 Current Location</th>';
+  }
   // Use ranked order for column headers
   summaries.forEach(function(s) {
     html += '<th>' + s.building + '</th>';
@@ -29361,6 +29479,7 @@ function renderCommuteResults() {
 
   // Build a lookup: building name -> column index in ranked summaries
   var buildingOrder = summaries.map(function(s) { return s.building; });
+  if (currentSummary) buildingOrder = ['Current Location'].concat(buildingOrder);
 
   details.forEach(function(emp) {
     html += '<tr><td>' + emp.employee + '</td>';
@@ -29566,7 +29685,11 @@ function renderCommuteMapMarkers() {
 
   // Also add shortlist building markers if we have commute results
   if (_commuteResults && _commuteResults.summaries) {
-    _commuteResults.summaries.forEach(function(s, idx) {
+    // Filter out Current Location from the ranked numbering, render it as a special star marker
+    var rankedBuildings = _commuteResults.summaries.filter(function(s) { return !s.isCurrentLocation; });
+    var currentLocSummary = _commuteResults.summaries.find(function(s) { return s.isCurrentLocation; });
+
+    rankedBuildings.forEach(function(s, idx) {
       // Try to find building coords from BUILDINGS or SURVEY_BUILDINGS
       var bCoords = findBuildingCoords(s.building);
       if (bCoords) {
@@ -29582,6 +29705,20 @@ function renderCommuteMapMarkers() {
         bounds.push([bCoords.lat, bCoords.lng]);
       }
     });
+
+    // Current Location star marker
+    if (currentLocSummary && _commuteResults.current_lat && _commuteResults.current_lng) {
+      var hqIconCM = L.divIcon({
+        className: 'commute-hq-marker-wrapper',
+        html: '<div style="width:30px;height:30px;border-radius:50%;background:#1E40AF;border:3px solid #fff;box-shadow:0 2px 10px rgba(30,64,175,0.4);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;">\u2605</div>',
+        iconSize: [30, 30],
+        iconAnchor: [15, 15]
+      });
+      var hqMarkerCM = L.marker([_commuteResults.current_lat, _commuteResults.current_lng], { icon: hqIconCM, zIndexOffset: 3000 }).addTo(_commuteMap);
+      hqMarkerCM.bindTooltip('<div style="font-weight:700;font-size:12px;">Current Location</div><div style="font-size:11px;color:#475569;margin:2px 0;">' + (_commuteResults.current_address || 'HQ') + '</div><div style="font-size:10px;color:#64748b;">Avg. drive: ' + (currentLocSummary.driving_avg_text || 'N/A') + '</div>', { direction: 'top', offset: [0, -16], className: 'building-tooltip' });
+      _commuteMapMarkers.push(hqMarkerCM);
+      bounds.push([_commuteResults.current_lat, _commuteResults.current_lng]);
+    }
   }
 
   // Fit map to bounds
