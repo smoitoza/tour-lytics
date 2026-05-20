@@ -28946,7 +28946,7 @@ async function commuteLoadSaved() {
 // Save commute study to server
 async function commuteSaveToServer(filename) {
   try {
-    await fetch('/api/commute-study', {
+    var res = await fetch('/api/commute-study', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -28960,8 +28960,17 @@ async function commuteSaveToServer(filename) {
         uploadedBy: getCurrentUserEmail() || ''
       })
     });
+    if (!res.ok) {
+      // Surface persistence failures so users aren't surprised by stale data
+      // after navigating away (recalc rendered in memory but never saved).
+      var msg = 'Failed to save commute study';
+      try { var body = await res.json(); if (body && body.error) msg = body.error; } catch(_) {}
+      console.warn('commuteSaveToServer:', res.status, msg);
+      alert('Commute results were calculated but could not be saved (' + res.status + '): ' + msg + '\n\nYour view will be lost when you leave this page.');
+    }
   } catch(e) {
     console.warn('Failed to save commute study:', e);
+    alert('Commute results were calculated but could not be saved: ' + (e && e.message ? e.message : e) + '\n\nYour view will be lost when you leave this page.');
   }
 }
 
