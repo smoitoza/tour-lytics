@@ -242,13 +242,35 @@ export async function getTokenPricing(): Promise<any[]> {
 
 // ============================================================
 // Resolve userId from a projectId
-// 1. Check token_balances (backfilled projects)
-// 2. Fallback: look up project owner email -> auth.users
+//
+// Order of lookup (changed 2026-05-21):
+//   1. projects.owner_id -> auth.users (source of truth for current ownership)
+//   2. Fallback: token_balances (legacy/backfilled rows)
+//
+// Why owner_id first: when a project is transferred to a new owner via
+// projects.owner_id, the AI Usage page should immediately reflect the new
+// owner's account balance. The previous behavior (token_balances first)
+// caused stale legacy project-scoped balance rows pinned to the old owner's
+// user_id to keep returning that user, even after ownership had moved.
 // ============================================================
 export async function resolveUserIdFromProject(projectId: string): Promise<string | null> {
   const supabase = getAdminClient()
 
-  // Try token_balances first (fast path for projects that have consumed tokens)
+  // Primary: resolve via project owner email -> auth user id
+  const { data: project } = await supabase
+    .from('projects')
+    .select('owner_id, created_by')
+    .eq('id', projectId)
+    .single()
+  const ownerEmail = project?.owner_id || project?.created_by
+  if (ownerEmail) {
+    const { data: authUsers } = await supabase.auth.admin.listUsers({ perPage: 1000 })
+    const match = authUsers?.users?.find((u) => u.email?.toLowerCase() === ownerEmail.toLowerCase())
+    if (match?.id) return match.id
+  }
+
+  // Fallback: legacy token_balances lookup for projects that don't have
+  // a resolvable owner email (very old data or orphaned projects).
   const { data: balRow } = await supabase
     .from('token_balances')
     .select('user_id')
@@ -258,18 +280,7 @@ export async function resolveUserIdFromProject(projectId: string): Promise<strin
     .single()
   if (balRow?.user_id) return balRow.user_id
 
-  // Fallback: resolve via project owner email -> auth user id
-  const { data: project } = await supabase
-    .from('projects')
-    .select('owner_id, created_by')
-    .eq('id', projectId)
-    .single()
-  const ownerEmail = project?.owner_id || project?.created_by
-  if (!ownerEmail) return null
-
-  const { data: authUsers } = await supabase.auth.admin.listUsers({ perPage: 1000 })
-  const match = authUsers?.users?.find((u) => u.email?.toLowerCase() === ownerEmail.toLowerCase())
-  return match?.id || null
+  return null
 }
 
 // ============================================================
