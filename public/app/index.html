@@ -19058,8 +19058,11 @@ function rfpBuildCompareRoundsDeltaSheet(wb, crd) {
   var headerStyle = { font: { bold: true, sz: 10, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1E293B' } }, alignment: { horizontal: 'center' } };
   var labelStyle = { font: { sz: 10, color: { rgb: '334155' } }, border: { bottom: { style: 'thin', color: { rgb: 'E2E8F0' } } } };
   var currStyle = { font: { sz: 10 }, numFmt: getCurrencyExcelFmt(), border: { bottom: { style: 'thin', color: { rgb: 'E2E8F0' } } }, alignment: { horizontal: 'right' } };
+  var numStyle = { font: { sz: 10 }, numFmt: '#,##0', border: { bottom: { style: 'thin', color: { rgb: 'E2E8F0' } } }, alignment: { horizontal: 'right' } };
   var deltaGreenStyle = { font: { sz: 10, bold: true, color: { rgb: '16A34A' } }, numFmt: getCurrencyExcelFmt(), alignment: { horizontal: 'right' }, border: { bottom: { style: 'thin', color: { rgb: 'E2E8F0' } } } };
   var deltaRedStyle = { font: { sz: 10, bold: true, color: { rgb: 'DC2626' } }, numFmt: getCurrencyExcelFmt(), alignment: { horizontal: 'right' }, border: { bottom: { style: 'thin', color: { rgb: 'E2E8F0' } } } };
+  var numDeltaGreenStyle = { font: { sz: 10, bold: true, color: { rgb: '16A34A' } }, numFmt: '#,##0', alignment: { horizontal: 'right' }, border: { bottom: { style: 'thin', color: { rgb: 'E2E8F0' } } } };
+  var numDeltaRedStyle = { font: { sz: 10, bold: true, color: { rgb: 'DC2626' } }, numFmt: '#,##0', alignment: { horizontal: 'right' }, border: { bottom: { style: 'thin', color: { rgb: 'E2E8F0' } } } };
   var pctStyle = { font: { sz: 10 }, numFmt: '0.0%', alignment: { horizontal: 'right' }, border: { bottom: { style: 'thin', color: { rgb: 'E2E8F0' } } } };
   var pctGreenStyle = { font: { sz: 10, bold: true, color: { rgb: '16A34A' } }, numFmt: '0.0%', alignment: { horizontal: 'right' }, border: { bottom: { style: 'thin', color: { rgb: 'E2E8F0' } } } };
   var pctRedStyle = { font: { sz: 10, bold: true, color: { rgb: 'DC2626' } }, numFmt: '0.0%', alignment: { horizontal: 'right' }, border: { bottom: { style: 'thin', color: { rgb: 'E2E8F0' } } } };
@@ -19076,21 +19079,26 @@ function rfpBuildCompareRoundsDeltaSheet(wb, crd) {
   setCell(r, 4, 'Delta (%)', headerStyle);
   r++;
 
-  function deltaRow(label, valA, valB) {
+  function deltaRow(label, valA, valB, opts) {
+    opts = opts || {};
+    var isNumber = !!opts.plainNumber;
+    var valStyle = isNumber ? numStyle : currStyle;
     var diff = valB - valA;
     var pct = valA !== 0 ? diff / Math.abs(valA) : 0;
-    var isSaving = diff < 0; // less cost = saving
-    var deltaStyle = diff === 0 ? currStyle : (isSaving ? deltaGreenStyle : deltaRedStyle);
+    var isSaving = diff < 0; // less cost = saving (for RSF, a bigger footprint isn't 'savings' but color stays consistent w/ direction)
+    var greenStyle = isNumber ? numDeltaGreenStyle : deltaGreenStyle;
+    var redStyle = isNumber ? numDeltaRedStyle : deltaRedStyle;
+    var deltaStyle = diff === 0 ? valStyle : (isSaving ? greenStyle : redStyle);
     var pctDeltaStyle = diff === 0 ? pctStyle : (isSaving ? pctGreenStyle : pctRedStyle);
     setCell(r, 0, label, labelStyle);
-    setCell(r, 1, valA, currStyle);
-    setCell(r, 2, valB, currStyle);
+    setCell(r, 1, valA, valStyle);
+    setCell(r, 2, valB, valStyle);
     setCell(r, 3, diff, deltaStyle);
     setCell(r, 4, pct, pctDeltaStyle);
     r++;
   }
 
-  deltaRow('Combined RSF', cdA.totalRSF || 0, cdB.totalRSF || 0);
+  deltaRow('Combined RSF', cdA.totalRSF || 0, cdB.totalRSF || 0, { plainNumber: true });
   deltaRow('Total All-in Cost', cdA.totalAllIn || 0, cdB.totalAllIn || 0);
   deltaRow('Combined NPV @ 8%', cdA.combinedNPV || 0, cdB.combinedNPV || 0);
   deltaRow('Total Concessions', cdA.totalConcessions || 0, cdB.totalConcessions || 0);
