@@ -18371,6 +18371,8 @@ function rfpComputeCombinedData(components, address) {
 
 function rfpBuildCombinedView(componentMap, address) {
   var crState = (window._rfpState.compareRounds = window._rfpState.compareRounds || { active: false, sideA: { label: 'Round A', selections: {} }, sideB: { label: 'Round B', selections: {} } });
+  // Per-component version selections for Single Round mode (defaults to latest)
+  var srState = (window._rfpState.singleRound = window._rfpState.singleRound || { selections: {} });
 
   // ===== MODE TOGGLE HEADER =====
   var modeHtml = '<div style="display:flex;align-items:center;gap:var(--space-3);margin:var(--space-3) 0 var(--space-2);">';
@@ -18390,10 +18392,50 @@ function rfpBuildCombinedView(componentMap, address) {
   }
 
   // ===== SINGLE ROUND MODE (original behavior) =====
-  var components = rfpComputeCombinedComponents(componentMap, address, null);
+  // Validate/cleanse stored selections against current submissions
+  var srComponentKeys = Object.keys(componentMap).filter(function(k) { return !!k; });
+  srComponentKeys.forEach(function(key) {
+    var subs = componentMap[key] || [];
+    if (srState.selections[key] && !subs.find(function(s) { return s.id === srState.selections[key]; })) {
+      delete srState.selections[key];
+    }
+  });
+
+  var components = rfpComputeCombinedComponents(componentMap, address, srState.selections);
 
   if (components.length < 2) {
     return modeHtml + '<div style="padding:var(--space-8);text-align:center;color:var(--color-text-muted)">Need at least 2 labeled components with analysis data for a combined view.</div>';
+  }
+
+  // ===== PER-COMPONENT VERSION SELECTORS =====
+  // Only show if at least one component has more than 1 submission
+  var hasMultipleSubs = srComponentKeys.some(function(k) { return (componentMap[k] || []).length > 1; });
+  if (hasMultipleSubs) {
+    var selHtml = '<div style="margin:var(--space-3) 0;padding:var(--space-3);background:var(--color-bg);border:1px solid var(--color-border);border-radius:var(--radius-lg);">';
+    selHtml += '<div style="font-size:var(--text-xs);font-weight:700;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:var(--space-2);">Round Selection per Component</div>';
+    selHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:var(--space-2);">';
+    srComponentKeys.forEach(function(key) {
+      var subs = (componentMap[key] || []).slice().sort(function(a, b) {
+        return new Date(a.created_at || a.createdAt || 0) - new Date(b.created_at || b.createdAt || 0);
+      });
+      // Determine currently used submission id (explicit selection, else latest = last in sorted asc)
+      var selectedId = srState.selections[key] || (subs.length ? subs[subs.length - 1].id : '');
+      selHtml += '<div>';
+      selHtml += '<label style="font-size:var(--text-xs);font-weight:600;color:var(--color-text-muted);display:block;margin-bottom:2px;">' + esc(key) + '</label>';
+      selHtml += '<select onchange="rfpSetSingleRoundSelection(\'' + key.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + '\',this.value)" style="width:100%;padding:5px 8px;font-size:var(--text-xs);border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface-2);color:var(--color-text);">';
+      subs.forEach(function(s, idx) {
+        var docType = s.doc_type || s.docType || 'RFP';
+        var vLabel = s.version_label || s.versionLabel || (docType + ' #' + (idx + 1));
+        var dateStr = (s.created_at || s.createdAt) ? new Date(s.created_at || s.createdAt).toLocaleDateString() : '';
+        var optLabel = esc(vLabel) + (dateStr ? ' (' + dateStr + ')' : '');
+        selHtml += '<option value="' + s.id + '"' + (s.id === selectedId ? ' selected' : '') + '>' + optLabel + '</option>';
+      });
+      selHtml += '</select>';
+      selHtml += '</div>';
+    });
+    selHtml += '</div>';
+    selHtml += '</div>';
+    modeHtml += selHtml;
   }
 
   // Compute all derived data via shared helper
@@ -18710,6 +18752,17 @@ function rfpToggleCompareRoundsMode(active) {
   var crState = window._rfpState.compareRounds;
   if (!crState) { crState = { active: false, sideA: { label: 'Round A', selections: {} }, sideB: { label: 'Round B', selections: {} } }; window._rfpState.compareRounds = crState; }
   crState.active = !!active;
+  rfpRenderDashboard(window._rfpState.submissions);
+}
+
+// ===== SINGLE ROUND PER-COMPONENT SELECTORS =====
+function rfpSetSingleRoundSelection(componentKey, submissionId) {
+  var srState = window._rfpState.singleRound = window._rfpState.singleRound || { selections: {} };
+  if (submissionId) {
+    srState.selections[componentKey] = submissionId;
+  } else {
+    delete srState.selections[componentKey];
+  }
   rfpRenderDashboard(window._rfpState.submissions);
 }
 
