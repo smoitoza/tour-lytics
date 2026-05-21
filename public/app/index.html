@@ -22311,7 +22311,13 @@ function rfpExportExcel() {
       setFormula(cfWS, r, 6 + cfO + cfTRO, baseColL + er + '-' + freeColL + er, Object.assign({}, formulaStyle, rowFill));
 
       // Col H+cfO+cfTRO: OpEx
-      setFormula(cfWS, r, 7 + cfO + cfTRO, cfDT + dtRefs.opex_monthly, Object.assign({}, formulaStyle, rowFill));
+      // Use the per-month OpEx from the analysis (already reflects free-OpEx months,
+      // stepped opex_periods, and OpEx escalation). The previous version wrote a constant
+      // formula referencing Deal Terms!opex_monthly, which ignored the abatement schedule
+      // and showed full OpEx during free-OpEx months. (e.g. Buildings A/D with 12 months
+      // free OpEx were showing OpEx every month in the export.)
+      var cfOpexVal = (typeof row.opex === 'number') ? row.opex : 0;
+      setCell(cfWS, r, 7 + cfO + cfTRO, cfOpexVal, Object.assign({}, currStyle, rowFill));
 
       // Col I+cfO+cfTRO: Parking = Spots * Rate
       setFormula(cfWS, r, 8 + cfO + cfTRO, cfDT + dtRefs.parking_spots + '*' + cfDT + dtRefs.parking_rate, Object.assign({}, formulaStyle, rowFill));
