@@ -21820,8 +21820,15 @@ function rfpExportExcel() {
       if (slHasTIEx) netRentFormula += '+' + slCol('tiCredit') + excelRow;
       setFormula(slWS, r, slColIdx.netRent, netRentFormula, Object.assign({}, formulaStyle, rowFill));
 
-      // OpEx = Monthly OpEx * Months
-      setFormula(slWS, r, slColIdx.opex, dtOpexMonthly + '*' + slCol('months') + excelRow, Object.assign({}, formulaStyle, rowFill));
+      // OpEx per year: use the annual sum from the analysis engine, which already
+      // reflects free-OpEx months (they contributed $0) and stepped opex_periods.
+      // OpEx is NOT straight-lined for GAAP/P&L purposes - free-OpEx months are
+      // both Cash and P&L abatements, so the per-year SL P&L number must equal the
+      // sum of actual paid monthly OpEx for that year.
+      // Previous version wrote opex_monthly * months in year, which ignored
+      // abatement and overstated OpEx during free-OpEx years.
+      var slOpexYr = (typeof row.opex === 'number') ? row.opex : 0;
+      setCell(slWS, r, slColIdx.opex, slOpexYr, Object.assign({}, currStyle, rowFill));
 
       // Parking = Spots * Rate * Months
       setFormula(slWS, r, slColIdx.parking, dtParkingSpots + '*' + dtParkingRate + '*' + slCol('months') + excelRow, Object.assign({}, formulaStyle, rowFill));
