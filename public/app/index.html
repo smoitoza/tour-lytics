@@ -15465,6 +15465,25 @@ function getYear1BaseRentRSF(terms) {
   return parseFloat(t.base_rent_rsf || t.baseRent || 0);
 }
 
+// Starting (contract) OpEx rate per RSF/yr - ignores free-opex months so the
+// displayed rate matches what the RFP quotes. Falls back to flat opexRSF, or
+// back-calculates from monthly opex + rsf.
+function getStartingOpexRSF(terms) {
+  var t = terms || {};
+  var op = t.opex_periods || t.opexPeriods;
+  if (op && op.length > 0) {
+    var sorted = op.slice().sort(function(a, b) { return (a.from_month || 0) - (b.from_month || 0); });
+    var firstPaid = sorted.find(function(p) { return !p.is_free_opex && Number(p.opex_rsf_yr) > 0; });
+    if (firstPaid) return Number(firstPaid.opex_rsf_yr);
+  }
+  var annual = parseFloat(t.opex_rsf_yr || t.opexRSF || 0);
+  if (annual > 0) return annual;
+  var monthly = parseFloat(t.opex_monthly || t.opex || 0);
+  var rsf = parseFloat(t.rsf || 0);
+  if (monthly > 0 && rsf > 0) return (monthly * 12) / rsf;
+  return 0;
+}
+
 function rfpFmtCurrency(v) {
   if (v == null || isNaN(v)) return '--';
   var abs = Math.abs(v);
@@ -18612,13 +18631,9 @@ function rfpBuildCombinedView(componentMap, address) {
   compRow('Rent/SF/mo', compTerms.map(function(t) {
     return Math.round(getYear1BaseRentRSF(t) / 12 * 100) / 100;
   }), 'curr_dec', '', 'Starting base rent per RSF per month');
-  compRow('OpEx/SF/mo', components.map(function(c) {
-    var rsf = c.summary.rsf || 0;
-    var termMo = c.summary.termMonths || 1;
-    var cfTot = c.totals || {};
-    var totalOpex = cfTot.totalOpex || 0;
-    return rsf > 0 ? Math.round(totalOpex / termMo / rsf * 100) / 100 : 0;
-  }), 'curr_dec', '', 'Operating expenses per RSF per month');
+  compRow('OpEx/SF/mo', compTerms.map(function(t) {
+    return Math.round(getStartingOpexRSF(t) / 12 * 100) / 100;
+  }), 'curr_dec', '', 'Starting operating expenses per RSF per month (contract rate)');
   compRow('Full Service Gross/SF/mo', components.map(function(c) {
     var rsf = c.summary.rsf || 0;
     var termMo = c.summary.termMonths || 1;
@@ -19451,11 +19466,9 @@ function rfpBuildCombinedExcelSheet(wb, cd, sheetName) {
   addRow('Rent/SF/mo', terms.map(function(t) {
     return Math.round(getYear1BaseRentRSF(t) / 12 * 100) / 100;
   }), 'curr_dec', 'curr_dec', 'Starting base rent per RSF per month');
-  addRow('OpEx/SF/mo', comps.map(function(c) {
-    var rsf = c.summary.rsf || 0; var termMo = c.summary.termMonths || 1;
-    var cfTot = c.totals || {}; var totalOpex = cfTot.totalOpex || 0;
-    return rsf > 0 ? Math.round(totalOpex / termMo / rsf * 100) / 100 : 0;
-  }), 'curr_dec', 'curr_dec', 'Operating expenses per RSF per month');
+  addRow('OpEx/SF/mo', terms.map(function(t) {
+    return Math.round(getStartingOpexRSF(t) / 12 * 100) / 100;
+  }), 'curr_dec', 'curr_dec', 'Starting operating expenses per RSF per month (contract rate)');
   addRow('Full Service Gross/SF/mo', comps.map(function(c) {
     var rsf = c.summary.rsf || 0; var termMo = c.summary.termMonths || 1;
     var cfTot = c.totals || {}; var totalRent = cfTot.totalBaseRent || 0; var totalOpex = cfTot.totalOpex || 0;
@@ -19871,7 +19884,12 @@ function rfpShowVersionComparison(buildingAddress) {
         // Fallback: blended average from cash flow
         return Math.round((cf2.totalBaseRent || 0) / termMo2 / rsf2 * 100) / 100;
       }
-      if (field.computed === 'opexPerSFMo') return Math.round((cf2.totalOpex || 0) / termMo2 / rsf2 * 100) / 100;
+      if (field.computed === 'opexPerSFMo') {
+        var opexYrPerSF = getStartingOpexRSF(dt2);
+        if (opexYrPerSF > 0) return Math.round(opexYrPerSF / 12 * 100) / 100;
+        // Fallback: blended average from cash flow
+        return Math.round((cf2.totalOpex || 0) / termMo2 / rsf2 * 100) / 100;
+      }
       if (field.computed === 'fsgPerSFMo') return Math.round(((cf2.totalBaseRent || 0) + (cf2.totalOpex || 0)) / termMo2 / rsf2 * 100) / 100;
       return 0;
     }
@@ -22814,7 +22832,8 @@ function rfpExportExcel() {
             }
             val = expBaseRent > 0 ? Math.round(expBaseRent / 12 * 100) / 100 : (cRsf > 0 ? Math.round((cCf.totalBaseRent || 0) / cTermMo / cRsf * 100) / 100 : 0);
           } else if (f.key === 'opexPerSFMo') {
-            val = cRsf > 0 ? Math.round((cCf.totalOpex || 0) / cTermMo / cRsf * 100) / 100 : 0;
+            var expOpex = getStartingOpexRSF(s.deal_terms || s.dealTerms || {});
+            val = expOpex > 0 ? Math.round(expOpex / 12 * 100) / 100 : (cRsf > 0 ? Math.round((cCf.totalOpex || 0) / cTermMo / cRsf * 100) / 100 : 0);
           } else if (f.key === 'fsgPerSFMo') {
             val = cRsf > 0 ? Math.round(((cCf.totalBaseRent || 0) + (cCf.totalOpex || 0)) / cTermMo / cRsf * 100) / 100 : 0;
           } else if (f.key === 'mgmtFeePerSFYr') {
@@ -24735,9 +24754,7 @@ function rfpBuildComparisonHtml(submissions, byBuilding) {
 
     // OpEx: year then month together
     ['OpEx/SF/mo', function(d) {
-      var rsf = d.summary.rsf || 0; var termMo = d.summary.termMonths || 1;
-      var cfTot = (d.cfTotals || {}); var totalOpex = cfTot.totalOpex || 0;
-      return rsf > 0 ? Math.round(totalOpex / termMo / rsf * 100) / 100 : 0;
+      return Math.round(getStartingOpexRSF(d.terms) / 12 * 100) / 100;
     }, true, 'curr_dec'],
     // Full service gross
     ['Full Service Gross/SF/mo', function(d) {
@@ -25497,7 +25514,7 @@ var _onePagerGroups = [
       }, fmt: 'curr_dec' },
       { key: 'rentSfMo',  label: 'Rent/SF/mo',              getter: function(d) { if (d.baseRentPerMo) return d.baseRentPerMo; var rsf = d.summary.rsf || 0; var tm = d.summary.termMonths || 1; var t = (d.cfTotals || {}).totalBaseRent || 0; return rsf > 0 ? Math.round(t / tm / rsf * 100) / 100 : 0; }, fmt: 'curr_dec' },
       { key: 'effRent',   label: 'Effective Rent/RSF',      getter: function(d) { return d.summary.effectiveRentRSF || 0; }, fmt: 'curr_dec' },
-      { key: 'opexSfMo',  label: 'OpEx/SF/mo',              getter: function(d) { var rsf = d.summary.rsf || 0; var tm = d.summary.termMonths || 1; var t = (d.cfTotals || {}).totalOpex || 0; return rsf > 0 ? Math.round(t / tm / rsf * 100) / 100 : 0; }, fmt: 'curr_dec' },
+      { key: 'opexSfMo',  label: 'OpEx/SF/mo',              getter: function(d) { var oxYr = getStartingOpexRSF(d.terms || {}); if (oxYr > 0) return Math.round(oxYr / 12 * 100) / 100; var rsf = d.summary.rsf || 0; var tm = d.summary.termMonths || 1; var t = (d.cfTotals || {}).totalOpex || 0; return rsf > 0 ? Math.round(t / tm / rsf * 100) / 100 : 0; }, fmt: 'curr_dec' },
       { key: 'opexRSFyr', label: 'OpEx/Tax/CAM (RSF/yr)',   getter: function(d) { return (d.terms && (d.terms.opex_rsf_yr || d.terms.opexRSF)) || 0; }, fmt: 'curr_dec' },
       { key: 'fsg',       label: 'Full Service Gross/SF/mo',getter: function(d) { var rsf = d.summary.rsf || 0; var tm = d.summary.termMonths || 1; var ct = d.cfTotals || {}; return rsf > 0 ? Math.round(((ct.totalBaseRent || 0) + (ct.totalOpex || 0)) / tm / rsf * 100) / 100 : 0; }, fmt: 'curr_dec' },
       { key: 'tiPerRSF',  label: 'TI Allowance/RSF',        getter: function(d) { return (d.terms && (d.terms.ti_allowance_rsf || d.terms.tiAllowancePerRSF)) || 0; }, fmt: 'curr_dec' },
