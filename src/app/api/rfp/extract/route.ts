@@ -20,7 +20,11 @@ export async function POST(req: Request) {
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 4000,
+      // 16K is enough for a 5-building, 10-year deal with full rent_periods
+      // schedules expanded month-by-month. 4K was truncating mid-response
+      // for any multi-building LOI (e.g. campus deals), producing invalid
+      // JSON and the 'Failed to parse extracted terms' error.
+      max_tokens: 16000,
       messages: [
         {
           role: 'user',
@@ -118,7 +122,7 @@ IMPORTANT:
 - Use null for any field you cannot find
 
 DOCUMENT TEXT:
-${documentText.substring(0, 15000)}`
+${documentText.substring(0, 60000)}`
         }
       ]
     })
@@ -137,8 +141,14 @@ ${documentText.substring(0, 15000)}`
         dealTerms = JSON.parse(responseText)
       }
     } catch (parseError) {
+      // Detect the most common cause: response hit the output token limit
+      // mid-JSON. stop_reason will be 'max_tokens' from the Anthropic API.
+      const hitTokenLimit = (message as any).stop_reason === 'max_tokens'
+      const errMsg = hitTokenLimit
+        ? 'The document is too complex for automatic extraction (response was truncated). Try splitting into separate uploads per building, or enter terms manually.'
+        : 'Failed to parse extracted terms. Please try again or enter terms manually.'
       return NextResponse.json(
-        { error: 'Failed to parse extracted terms. Please try again or enter terms manually.', raw: responseText },
+        { error: errMsg, raw: responseText, stop_reason: (message as any).stop_reason },
         { status: 422 }
       )
     }
@@ -154,7 +164,8 @@ ${documentText.substring(0, 15000)}`
             comp[key] = shared[key]
           }
         })
-        // Clean nulls
+        // Clean nulls + apply same auto-extend / unit-check logic each
+        // component receives the same defensive cleanup as a single-building deal.
         cleanNulls(comp)
       })
       return NextResponse.json({ dealTerms, multi_building: true, raw: responseText })
