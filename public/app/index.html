@@ -15552,6 +15552,9 @@ function rfpInit() {
           if (row.building_address) {
             var mapKey = row.building_address + (row.component_label ? '::' + row.component_label : '');
             map[mapKey] = row;
+            // Note: building-level rows (no component_label) are stored under the bare address key.
+            // CAPEX lookups use ONLY the per-component key, so building-level rows no longer leak
+            // across components. Other (non-CAPEX) lookups can still read from the bare key.
             if (!row.component_label && !map[row.building_address]) map[row.building_address] = row;
           }
         });
@@ -20318,7 +20321,9 @@ function getAssumptionsForSubmission(sub) {
 // ===== CAPEX DATA HELPER =====
 function getCapexForBuilding(buildingAddr, leaseTermMonths, componentLabel) {
   var key = getAssumptionsKey(buildingAddr, componentLabel);
-  var a = (key && window._rfpState && window._rfpState.assumptionsMap) ? (window._rfpState.assumptionsMap[key] || window._rfpState.assumptionsMap[buildingAddr] || {}) : {};
+  // Per-building CAPEX: ONLY look up by per-component key. No building-level fallback,
+  // otherwise CAPEX entered for one building leaks to all other buildings.
+  var a = (key && window._rfpState && window._rfpState.assumptionsMap) ? (window._rfpState.assumptionsMap[key] || {}) : {};
   var constrTotal = parseFloat(a.capex_construction_total) || 0;
   var ffeTotal = parseFloat(a.capex_ffe_total) || 0;
   var itTotal = parseFloat(a.capex_it_total) || 0;
@@ -23199,7 +23204,8 @@ function rfpBuildCapexPanel(selected) {
   var buildingAddr = selected ? (selected.building_address || selected.buildingAddress || '') : '';
   var componentLabel = selected ? (selected.component_label || '') : '';
   var assumptionsKey = getAssumptionsKey(buildingAddr, componentLabel);
-  var a = assumptionsKey ? (window._rfpState.assumptionsMap[assumptionsKey] || window._rfpState.assumptionsMap[buildingAddr] || {}) : {};
+  // Per-building CAPEX: ONLY look up by per-component key. No building-level fallback.
+  var a = assumptionsKey ? (window._rfpState.assumptionsMap[assumptionsKey] || {}) : {};
   var canEdit = hasAdminAccess();
   var analysis = selected ? selected.analysis : null;
   var summary = (analysis && analysis.summary) ? analysis.summary : {};
@@ -23598,7 +23604,8 @@ function capexSetMode(id, mode) {
   var buildingAddr = container.getAttribute('data-capex-building');
   var compLabel = container.getAttribute('data-capex-component') || '';
   var assumKey = getAssumptionsKey(buildingAddr, compLabel);
-  var a = window._rfpState.assumptionsMap[assumKey] || window._rfpState.assumptionsMap[buildingAddr] || {};
+  // Per-building CAPEX: no building-level fallback.
+  var a = window._rfpState.assumptionsMap[assumKey] || {};
   a['capex_' + id + '_input_mode'] = mode;
   window._rfpState.assumptionsMap[assumKey] = a;
   // Re-render CAPEX tab
@@ -23620,7 +23627,8 @@ function capexAddCustomItem() {
   var buildingAddr = container.getAttribute('data-capex-building');
   var compLabel = container.getAttribute('data-capex-component') || '';
   var assumKey = getAssumptionsKey(buildingAddr, compLabel);
-  var a = window._rfpState.assumptionsMap[assumKey] || window._rfpState.assumptionsMap[buildingAddr] || {};
+  // Per-building CAPEX: no building-level fallback.
+  var a = window._rfpState.assumptionsMap[assumKey] || {};
   var items = a.capex_custom_items || [];
   items.push({ label: '', total: 0 });
   a.capex_custom_items = items;
@@ -23638,7 +23646,8 @@ function capexUpdateCustomItem(idx, field, value) {
   var buildingAddr = container.getAttribute('data-capex-building');
   var compLabel = container.getAttribute('data-capex-component') || '';
   var assumKey = getAssumptionsKey(buildingAddr, compLabel);
-  var a = window._rfpState.assumptionsMap[assumKey] || window._rfpState.assumptionsMap[buildingAddr] || {};
+  // Per-building CAPEX: no building-level fallback.
+  var a = window._rfpState.assumptionsMap[assumKey] || {};
   var items = a.capex_custom_items || [];
   if (items[idx]) {
     items[idx][field] = field === 'total' ? parseFloat(value) || 0 : value;
@@ -23654,7 +23663,8 @@ function capexRemoveCustomItem(idx) {
   var buildingAddr = container.getAttribute('data-capex-building');
   var compLabel = container.getAttribute('data-capex-component') || '';
   var assumKey = getAssumptionsKey(buildingAddr, compLabel);
-  var a = window._rfpState.assumptionsMap[assumKey] || window._rfpState.assumptionsMap[buildingAddr] || {};
+  // Per-building CAPEX: no building-level fallback.
+  var a = window._rfpState.assumptionsMap[assumKey] || {};
   var items = a.capex_custom_items || [];
   items.splice(idx, 1);
   a.capex_custom_items = items;
@@ -23699,9 +23709,8 @@ function capexSave() {
   var buildingAddr = container.getAttribute('data-capex-building');
   var compLabel = container.getAttribute('data-capex-component') || '';
   var assumKey = getAssumptionsKey(buildingAddr, compLabel);
-  var compLabel = container.getAttribute('data-capex-component') || '';
-  var assumKey = getAssumptionsKey(buildingAddr, compLabel);
-  var a = window._rfpState.assumptionsMap[assumKey] || window._rfpState.assumptionsMap[buildingAddr] || {};
+  // Per-building CAPEX: ONLY save under per-component key. No building-level fallback.
+  var a = window._rfpState.assumptionsMap[assumKey] || {};
   var status = document.getElementById('capex-save-status');
 
   // Read current input values
