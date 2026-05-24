@@ -90,20 +90,37 @@ export default function PortfolioHome() {
                       {c.slug} · reporting in {c.reporting_currency} · your role: {c.my_role}
                     </p>
                   </div>
-                  <Link
-                    href={`/portfolio/${c.slug}/upload`}
-                    style={{
-                      background: '#0070f3',
-                      color: 'white',
-                      padding: '8px 16px',
-                      borderRadius: 6,
-                      textDecoration: 'none',
-                      fontSize: 14,
-                      fontWeight: 600,
-                    }}
-                  >
-                    Upload documents
-                  </Link>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <Link
+                      href={`/portfolio/${c.slug}/upload`}
+                      style={{
+                        background: '#fff',
+                        color: '#0070f3',
+                        border: '1px solid #0070f3',
+                        padding: '8px 16px',
+                        borderRadius: 6,
+                        textDecoration: 'none',
+                        fontSize: 14,
+                        fontWeight: 600,
+                      }}
+                    >
+                      Bulk upload
+                    </Link>
+                    <Link
+                      href={`/portfolio/${c.slug}/leases`}
+                      style={{
+                        background: '#0070f3',
+                        color: 'white',
+                        padding: '8px 16px',
+                        borderRadius: 6,
+                        textDecoration: 'none',
+                        fontSize: 14,
+                        fontWeight: 600,
+                      }}
+                    >
+                      View leases
+                    </Link>
+                  </div>
                 </div>
                 <div style={{ marginTop: 16 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#666', marginBottom: 4 }}>
@@ -125,10 +142,10 @@ export default function PortfolioHome() {
       )}
 
       <div style={{ marginTop: 40, padding: 16, background: '#fafafa', borderRadius: 8, fontSize: 13, color: '#666' }}>
-        <strong>Portfolio module — DEV build, Phase 1 scaffold</strong>
+        <strong>Portfolio module — DEV build, Phase 2</strong>
         <br />
-        Database, RLS, and Storage bucket are live on tourlytics-dev.
-        Next: list / detail / map views, AI abstraction pipeline, Scout integration.
+        Leases, multi-document grouping, and per-document type classification are now live on tourlytics-dev.
+        Next: AI abstraction pipeline, map view, Portfolio Scout integration.
       </div>
     </div>
   )
