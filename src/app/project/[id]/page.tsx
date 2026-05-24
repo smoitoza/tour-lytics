@@ -148,6 +148,36 @@ export default function ProjectPage() {
                 </span>
               )}
               <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{user?.email}</span>
+              <Link
+                href="/portfolio"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.375rem',
+                  padding: '0.25rem 0.625rem',
+                  borderRadius: '0.375rem',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  background: '#2563eb',
+                  color: '#fff',
+                  border: '1px solid #2563eb',
+                  textDecoration: 'none',
+                  fontFamily: 'inherit',
+                }}
+                title="Open the Portfolio module (beta)"
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+                Portfolio
+                <span style={{
+                  fontSize: '0.5625rem',
+                  fontWeight: 700,
+                  padding: '0.0625rem 0.25rem',
+                  borderRadius: '9999px',
+                  background: 'rgba(255,255,255,0.22)',
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase',
+                }}>Beta</span>
+              </Link>
               <button
                 onClick={handleSignOut}
                 style={{

@@ -912,6 +912,40 @@ export default function DashboardPage() {
               )}
             </div>
             <Link
+              href="/portfolio"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.375rem',
+                padding: '0.375rem 0.75rem',
+                borderRadius: '0.5rem',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                background: '#2563eb',
+                color: '#fff',
+                border: '1px solid #2563eb',
+                textDecoration: 'none',
+                fontFamily: 'inherit',
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#1d4ed8'; e.currentTarget.style.borderColor = '#1d4ed8' }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = '#2563eb'; e.currentTarget.style.borderColor = '#2563eb' }}
+              title="Open the Portfolio module (beta)"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9v.01"/><path d="M9 12v.01"/><path d="M9 15v.01"/><path d="M9 18v.01"/></svg>
+              Portfolio
+              <span style={{
+                fontSize: '0.625rem',
+                fontWeight: 700,
+                padding: '0.0625rem 0.3125rem',
+                borderRadius: '9999px',
+                background: 'rgba(255,255,255,0.22)',
+                color: '#fff',
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+              }}>Beta</span>
+            </Link>
+            <Link
               href="/billing"
               style={{
                 fontSize: '0.75rem',
