@@ -223,7 +223,7 @@ export default function PortfolioLeasesPage() {
             <h2 style={{ margin: 0, fontSize: 16 }}>Portfolio map</h2>
             <span style={{ fontSize: 12, color: '#888' }}>
               {geoLeases.filter((l) => l.location).length} of {geoLeases.length} mapped
-              {!mapConfigured && ' · Mapbox token not set'}
+              {!mapConfigured && ' · Google Maps key not set'}
             </span>
           </div>
           <LeaseMap slug={company.slug} leases={geoLeases} height={360} />

@@ -26,17 +26,20 @@ type LeaseRow = {
   expiration_date: string | null
 }
 
-// Server-side geocode via Mapbox. Uses MAPBOX_TOKEN (or NEXT_PUBLIC_MAPBOX_TOKEN as fallback).
+// Server-side geocode via Google Geocoding API. Uses GOOGLE_GEOCODE_API_KEY,
+// falling back to GOOGLE_MAPS_API_KEY (both already configured in Vercel for
+// the survey/tour-lytics workflows).
 // Returns [lng, lat] or null.
-async function geocode(query: string, token: string): Promise<[number, number] | null> {
+async function geocode(query: string, key: string): Promise<[number, number] | null> {
   try {
-    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&limit=1`
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${key}`
     const res = await fetch(url)
     if (!res.ok) return null
     const data = await res.json()
-    const feat = data?.features?.[0]
-    if (!feat || !Array.isArray(feat.center) || feat.center.length < 2) return null
-    return [Number(feat.center[0]), Number(feat.center[1])]
+    if (data.status !== 'OK' || !Array.isArray(data.results) || data.results.length === 0) return null
+    const loc = data.results[0]?.geometry?.location
+    if (!loc || typeof loc.lat !== 'number' || typeof loc.lng !== 'number') return null
+    return [Number(loc.lng), Number(loc.lat)]
   } catch {
     return null
   }
@@ -125,14 +128,14 @@ export async function GET(
     }
 
     // Geocode any missing coords.
-    const token = process.env.MAPBOX_TOKEN || process.env.NEXT_PUBLIC_MAPBOX_TOKEN
-    if (token) {
+    const geocodeKey = process.env.GOOGLE_GEOCODE_API_KEY || process.env.GOOGLE_MAPS_API_KEY
+    if (geocodeKey) {
       for (const leaseId of Object.keys(byLease)) {
         const loc = byLease[leaseId]
         if (loc.latitude != null && loc.longitude != null) continue
         const addr = fullAddress(loc)
         if (!addr) continue
-        const coords = await geocode(addr, token)
+        const coords = await geocode(addr, geocodeKey)
         if (coords) {
           const [lng, lat] = coords
           await admin
@@ -174,7 +177,7 @@ export async function GET(
 
     return NextResponse.json({
       leases: output,
-      mapbox_configured: Boolean(token),
+      mapbox_configured: Boolean(geocodeKey),
     })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
