@@ -50,14 +50,14 @@ OUTPUT FORMAT — return ONLY valid JSON, no markdown fences, no commentary. Use
       "monthly_rent": <number — gross monthly base rent in the lease currency>,
       "rent_psf_annual": <number or null — annual base rent per rentable square foot if calculable>,
       "is_free_rent": <true | false — true if this period is free/abated rent>,
-      "escalation_type": "<fixed_percentage | cpi | fmr | flat | step | other | null>",
+      "escalation_type": "<fixed | cpi | fmv | none | null>  // use 'fixed' for any fixed/stepped/flat increase, 'cpi' for CPI-tied, 'fmv' for fair-market-value resets, 'none' for flat (no increase)>",
       "escalation_note": "<string or null — e.g. '3% annual on anniversary' or 'CPI capped 4%'>"
     }
   ],
   "opex_terms": {
     "starting_opex_psf_annual": <number or null — first-year opex / CAM passthrough in $/RSF/year>,
     "escalation_pct": <number or null — annual opex escalation %, e.g. 3 for 3%>,
-    "escalation_type": "<fixed_percentage | cpi | actual | other | null>",
+    "escalation_type": "<fixed | cpi | capped | uncapped | null>  // use 'fixed' for fixed % escalator, 'cpi' for CPI-tied, 'capped' if expense growth is capped, 'uncapped' if pure passthrough>",
     "cap_pct": <number or null — cap on controllable opex growth, e.g. 5 for 5%>,
     "free_opex_months": <integer or null — number of months of free/abated opex>,
     "free_opex_start": "<YYYY-MM-DD or null>",
@@ -66,7 +66,7 @@ OUTPUT FORMAT — return ONLY valid JSON, no markdown fences, no commentary. Use
   },
   "critical_dates": [
     {
-      "date_type": "<renewal_option | termination_right | rofo | rofr | expansion_option | contraction_option | notice_deadline | rent_review | expiration | other>",
+      "date_type": "<notice_to_renew | option_to_extend | notice_to_terminate | option_to_terminate | rofr | rofo | rent_review | cap_review | expiration | cam_reconciliation | loc_renewal | other>  // use notice_to_renew/notice_to_terminate for the deadline to give notice; use option_to_extend/option_to_terminate for the substantive right itself>",
       "trigger_date": "<YYYY-MM-DD — the date or earliest date the right matures / notice may begin>",
       "trigger_date_end": "<YYYY-MM-DD or null — latest date in a notice window>",
       "description": "<string — concise description, e.g. '5-year renewal at 95% FMR; notice 12-9 months prior'>",
@@ -76,7 +76,7 @@ OUTPUT FORMAT — return ONLY valid JSON, no markdown fences, no commentary. Use
   ],
   "security_instruments": [
     {
-      "instrument_type": "<cash_deposit | letter_of_credit | guaranty | surety_bond | other>",
+      "instrument_type": "<cash_deposit | letter_of_credit | corporate_guaranty | personal_guaranty | surety_bond | other>",
       "amount": <number>,
       "currency": "<ISO-3 currency, defaults to lease currency>",
       "issuer": "<string or null — bank or guarantor name>",
@@ -111,6 +111,8 @@ GUIDELINES:
 7) CONFIDENCE: Be honest. If the lease is poorly scanned or amendments are missing, score lower and call it out in confidence.notes.
 
 8) SOURCE DOCUMENTS: List each document I gave you in the order I provided, with the role you inferred for each.
+
+9) ENUM VALUES ARE STRICT: The enumerated values above are exact. Do NOT invent variants like 'stepped', 'flat', 'percentage', 'annual', 'fixed_percentage', 'fmr', 'renewal_option', 'termination_right', 'guaranty'. If unsure between two enums, pick the closest match or use null/other.
 
 Return the JSON now.`
 

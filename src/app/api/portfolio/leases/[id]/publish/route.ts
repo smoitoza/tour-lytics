@@ -4,6 +4,79 @@ import { getPortfolioAdminClient } from '@/lib/portfolio/admin'
 
 export const maxDuration = 30
 
+// Normalize AI-extracted enum values to what the DB check constraints allow.
+// Returns null if the value can't be mapped (so the DB stores NULL rather than violating the check).
+function normalizeRentEscalation(v: unknown): string | null {
+  if (!v || typeof v !== 'string') return null
+  const s = v.toLowerCase().trim()
+  if (['fixed', 'cpi', 'fmv', 'none'].includes(s)) return s
+  // Common AI variants
+  if (['fixed_percentage', 'fixed_pct', 'stepped', 'step', 'flat', 'percentage', 'annual', 'fixed_increase'].includes(s)) return 'fixed'
+  if (['fmr', 'fair_market', 'fair_market_rent', 'market', 'market_rate'].includes(s)) return 'fmv'
+  if (['cpi_capped', 'cpi_uncapped', 'index'].includes(s)) return 'cpi'
+  if (['flat_rate', 'no_increase'].includes(s)) return 'none'
+  return null
+}
+
+function normalizeOpexEscalation(v: unknown): string | null {
+  if (!v || typeof v !== 'string') return null
+  const s = v.toLowerCase().trim()
+  if (['fixed', 'cpi', 'capped', 'uncapped'].includes(s)) return s
+  if (['fixed_percentage', 'fixed_pct', 'percentage', 'stepped', 'step'].includes(s)) return 'fixed'
+  if (['actual', 'passthrough', 'pass_through'].includes(s)) return 'uncapped'
+  if (['cap', 'capped_growth'].includes(s)) return 'capped'
+  return null
+}
+
+function normalizeDateType(v: unknown): string {
+  if (!v || typeof v !== 'string') return 'other'
+  const allowed = ['notice_to_renew', 'notice_to_terminate', 'option_to_extend', 'option_to_terminate', 'rofr', 'rofo', 'cap_review', 'rent_review', 'expiration', 'cam_reconciliation', 'loc_renewal', 'other']
+  const s = v.toLowerCase().trim()
+  if (allowed.includes(s)) return s
+  // Common AI variants
+  if (s === 'renewal_option') return 'option_to_extend'
+  if (s === 'termination_right' || s === 'termination_option') return 'option_to_terminate'
+  if (s === 'notice_deadline' || s === 'renewal_notice') return 'notice_to_renew'
+  if (s === 'termination_notice') return 'notice_to_terminate'
+  if (s === 'expansion_option' || s === 'contraction_option') return 'other'
+  return 'other'
+}
+
+function normalizeInstrumentType(v: unknown): string {
+  if (!v || typeof v !== 'string') return 'cash_deposit'
+  const allowed = ['cash_deposit', 'letter_of_credit', 'corporate_guaranty', 'personal_guaranty', 'surety_bond', 'other']
+  const s = v.toLowerCase().trim()
+  if (allowed.includes(s)) return s
+  if (s === 'guaranty' || s === 'guarantee') return 'corporate_guaranty'
+  if (s === 'loc' || s === 'lc') return 'letter_of_credit'
+  if (s === 'deposit' || s === 'cash') return 'cash_deposit'
+  return 'other'
+}
+
+function normalizeUseType(v: unknown): string | null {
+  if (!v || typeof v !== 'string') return null
+  const allowed = ['office', 'industrial', 'flex', 'retail', 'lab', 'warehouse', 'data_center', 'other']
+  const s = v.toLowerCase().trim()
+  if (allowed.includes(s)) return s
+  if (s === 'r_and_d' || s === 'rd' || s === 'research') return 'lab'
+  if (s === 'mixed_use' || s === 'mixed') return 'other'
+  return 'other'
+}
+
+function normalizeLeaseType(v: unknown): string | null {
+  if (!v || typeof v !== 'string') return null
+  const allowed = ['NNN', 'gross', 'modified_gross', 'full_service', 'ground', 'other']
+  const s = v.trim()
+  if (allowed.includes(s)) return s
+  const lower = s.toLowerCase()
+  if (lower === 'nnn' || lower === 'triple_net' || lower === 'triple-net') return 'NNN'
+  if (lower === 'gross') return 'gross'
+  if (lower === 'modified_gross' || lower === 'mod_gross') return 'modified_gross'
+  if (lower === 'full_service' || lower === 'fsg') return 'full_service'
+  if (lower === 'ground') return 'ground'
+  return 'other'
+}
+
 // POST /api/portfolio/leases/[id]/publish
 // Approves the most recent abstraction and writes its fields to the operational portfolio_* tables.
 // Body: { reviewer_notes?: string }
@@ -72,7 +145,7 @@ export async function POST(
     const leaseUpdates: Record<string, unknown> = {}
     if (leaseMeta.landlord_name) leaseUpdates.landlord_name = leaseMeta.landlord_name
     if (leaseMeta.landlord_entity) leaseUpdates.landlord_entity = leaseMeta.landlord_entity
-    if (leaseMeta.lease_type) leaseUpdates.lease_type = leaseMeta.lease_type
+    if (leaseMeta.lease_type) leaseUpdates.lease_type = normalizeLeaseType(leaseMeta.lease_type)
     if (leaseMeta.currency) leaseUpdates.currency = leaseMeta.currency
     if (leaseMeta.commencement_date) leaseUpdates.commencement_date = leaseMeta.commencement_date
     if (leaseMeta.rent_commencement_date) leaseUpdates.rent_commencement_date = leaseMeta.rent_commencement_date
@@ -109,7 +182,7 @@ export async function POST(
           state_province: l.state_province || null,
           postal_code: l.postal_code || null,
           country: l.country || 'US',
-          use_type: l.use_type || null,
+          use_type: normalizeUseType(l.use_type),
           rentable_sqft: l.rentable_sqft ?? null,
           floor_count: l.floor_count ?? null,
           is_primary: l.is_primary === true || (!hasPrimary && i === 0),
@@ -134,7 +207,7 @@ export async function POST(
           monthly_rent: r.monthly_rent ?? 0,
           rent_psf_annual: r.rent_psf_annual ?? null,
           is_free_rent: r.is_free_rent === true,
-          escalation_type: r.escalation_type || null,
+          escalation_type: normalizeRentEscalation(r.escalation_type),
         }))
       if (rentRows.length > 0) {
         const { error: rentErr } = await admin.from('portfolio_rent_schedule').insert(rentRows)
@@ -151,7 +224,7 @@ export async function POST(
         lease_id: leaseId,
         starting_opex_psf_annual: opex.starting_opex_psf_annual ?? null,
         escalation_pct: opex.escalation_pct ?? null,
-        escalation_type: opex.escalation_type || null,
+        escalation_type: normalizeOpexEscalation(opex.escalation_type),
         cap_pct: opex.cap_pct ?? null,
         free_opex_months: opex.free_opex_months ?? 0,
         free_opex_start: opex.free_opex_start || null,
@@ -171,7 +244,7 @@ export async function POST(
         .filter((c) => c.trigger_date)
         .map((c) => ({
           lease_id: leaseId,
-          date_type: c.date_type || 'other',
+          date_type: normalizeDateType(c.date_type),
           trigger_date: c.trigger_date,
           trigger_date_end: c.trigger_date_end || null,
           description: c.description || null,
@@ -194,7 +267,7 @@ export async function POST(
         .filter((s) => s.amount !== null && s.amount !== undefined)
         .map((s) => ({
           lease_id: leaseId,
-          instrument_type: s.instrument_type || 'cash_deposit',
+          instrument_type: normalizeInstrumentType(s.instrument_type),
           amount: s.amount,
           currency: s.currency || leaseCurrency,
           issuer: s.issuer || null,

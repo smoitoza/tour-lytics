@@ -110,11 +110,12 @@ type Lease = {
 }
 
 const DATE_TYPES = [
-  'renewal_option', 'termination_right', 'rofo', 'rofr',
-  'expansion_option', 'contraction_option', 'notice_deadline',
-  'rent_review', 'expiration', 'other',
+  'notice_to_renew', 'option_to_extend', 'notice_to_terminate', 'option_to_terminate',
+  'rofr', 'rofo', 'rent_review', 'cap_review', 'expiration',
+  'cam_reconciliation', 'loc_renewal', 'other',
 ]
-const INSTRUMENT_TYPES = ['cash_deposit', 'letter_of_credit', 'guaranty', 'surety_bond', 'other']
+const INSTRUMENT_TYPES = ['cash_deposit', 'letter_of_credit', 'corporate_guaranty', 'personal_guaranty', 'surety_bond', 'other']
+const OPEX_ESCALATION_TYPES = ['fixed', 'cpi', 'capped', 'uncapped']
 const USE_TYPES = ['office', 'industrial', 'flex', 'retail', 'lab', 'warehouse', 'data_center', 'other']
 
 const inputStyle: React.CSSProperties = {
@@ -772,7 +773,10 @@ export default function ReviewPage() {
               </div>
               <div>
                 <label style={labelStyle}>Escalation type</label>
-                <input style={inputStyle} value={opex.escalation_type || ''} onChange={(e) => updateOpex({ escalation_type: e.target.value || null })} />
+                <select style={inputStyle} value={opex.escalation_type || ''} onChange={(e) => updateOpex({ escalation_type: e.target.value || null })}>
+                  <option value="">—</option>
+                  {OPEX_ESCALATION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
               </div>
               <div>
                 <label style={labelStyle}>Cap %</label>
