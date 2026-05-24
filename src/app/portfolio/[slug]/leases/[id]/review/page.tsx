@@ -165,6 +165,7 @@ export default function ReviewPage() {
   const [saving, setSaving] = useState(false)
   const [publishing, setPublishing] = useState(false)
   const [reviewerNotes, setReviewerNotes] = useState('')
+  const [rentView, setRentView] = useState<'annual' | 'monthly'>('annual')
   const [dirty, setDirty] = useState(false)
   const [statusMsg, setStatusMsg] = useState<string | null>(null)
 
@@ -668,7 +669,35 @@ export default function ReviewPage() {
           <div style={sectionStyle}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>Rent schedule ({rent.length} period{rent.length === 1 ? '' : 's'})</h3>
-              <button onClick={addRent} style={{ fontSize: 12, padding: '4px 10px', background: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: 4, cursor: 'pointer' }}>+ Add</button>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <div style={{ display: 'inline-flex', border: '1px solid #d1d5db', borderRadius: 4, overflow: 'hidden' }}>
+                  <button
+                    onClick={() => setRentView('annual')}
+                    style={{
+                      fontSize: 11, padding: '3px 10px', cursor: 'pointer',
+                      background: rentView === 'annual' ? '#0070f3' : '#fff',
+                      color: rentView === 'annual' ? '#fff' : '#374151',
+                      border: 'none',
+                    }}
+                    title="Show rent as annual amount (monthly × 12)"
+                  >
+                    Annual
+                  </button>
+                  <button
+                    onClick={() => setRentView('monthly')}
+                    style={{
+                      fontSize: 11, padding: '3px 10px', cursor: 'pointer',
+                      background: rentView === 'monthly' ? '#0070f3' : '#fff',
+                      color: rentView === 'monthly' ? '#fff' : '#374151',
+                      border: 'none', borderLeft: '1px solid #d1d5db',
+                    }}
+                    title="Show rent as monthly amount (stored value)"
+                  >
+                    Monthly
+                  </button>
+                </div>
+                <button onClick={addRent} style={{ fontSize: 12, padding: '4px 10px', background: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: 4, cursor: 'pointer' }}>+ Add</button>
+              </div>
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
@@ -676,7 +705,9 @@ export default function ReviewPage() {
                   <tr style={{ background: '#f9fafb' }}>
                     <th style={{ padding: 6, textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Start</th>
                     <th style={{ padding: 6, textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>End</th>
-                    <th style={{ padding: 6, textAlign: 'right', borderBottom: '1px solid #e5e7eb' }}>Monthly</th>
+                    <th style={{ padding: 6, textAlign: 'right', borderBottom: '1px solid #e5e7eb' }}>
+                      {rentView === 'annual' ? 'Annual rent' : 'Monthly rent'}
+                    </th>
                     <th style={{ padding: 6, textAlign: 'right', borderBottom: '1px solid #e5e7eb' }}>$/RSF/yr</th>
                     <th style={{ padding: 6, textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>Free</th>
                     <th style={{ padding: 6, borderBottom: '1px solid #e5e7eb' }}></th>
@@ -692,7 +723,23 @@ export default function ReviewPage() {
                         <input type="date" style={{ ...inputStyle, padding: 4 }} value={r.period_end || ''} onChange={(e) => updateRent(i, { period_end: e.target.value })} />
                       </td>
                       <td style={{ padding: 4 }}>
-                        <input type="number" step="0.01" style={{ ...inputStyle, padding: 4, textAlign: 'right' }} value={r.monthly_rent ?? ''} onChange={(e) => updateRent(i, { monthly_rent: e.target.value ? parseFloat(e.target.value) : 0 })} />
+                        <input
+                          type="number"
+                          step="0.01"
+                          style={{ ...inputStyle, padding: 4, textAlign: 'right' }}
+                          value={
+                            r.monthly_rent == null
+                              ? ''
+                              : rentView === 'annual'
+                              ? Number((r.monthly_rent * 12).toFixed(2))
+                              : r.monthly_rent
+                          }
+                          onChange={(e) => {
+                            const v = e.target.value ? parseFloat(e.target.value) : 0
+                            const monthly = rentView === 'annual' ? Number((v / 12).toFixed(2)) : v
+                            updateRent(i, { monthly_rent: monthly })
+                          }}
+                        />
                       </td>
                       <td style={{ padding: 4 }}>
                         <input type="number" step="0.01" style={{ ...inputStyle, padding: 4, textAlign: 'right' }} value={r.rent_psf_annual ?? ''} onChange={(e) => updateRent(i, { rent_psf_annual: e.target.value ? parseFloat(e.target.value) : null })} />
