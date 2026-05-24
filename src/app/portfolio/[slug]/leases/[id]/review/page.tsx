@@ -139,6 +139,28 @@ export default function ReviewPage() {
   const [fields, setFields] = useState<ExtractedFields>({})
   const [docs, setDocs] = useState<Doc[]>([])
   const [activeDocIdx, setActiveDocIdx] = useState(0)
+
+  // Re-sign a document's URL (used for the "Open in new tab" link) so the user
+  // can always pop the PDF out into a separate tab during a long review session.
+  const refreshDocUrl = async (idx: number) => {
+    const d = docs[idx]
+    if (!d) return
+    try {
+      const res = await fetch(`/api/portfolio/documents/${d.id}/sign`)
+      if (!res.ok) return
+      const json = await res.json()
+      if (json.signed_url) {
+        setDocs(prev => prev.map((x, i) => (i === idx ? { ...x, signed_url: json.signed_url } : x)))
+      }
+    } catch {
+      // best-effort refresh; existing URL still in state
+    }
+  }
+
+  const selectDoc = (i: number) => {
+    setActiveDocIdx(i)
+    void refreshDocUrl(i)
+  }
   const [loadError, setLoadError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [publishing, setPublishing] = useState(false)
@@ -447,7 +469,7 @@ export default function ReviewPage() {
               {docs.map((d, i) => (
                 <button
                   key={d.id}
-                  onClick={() => setActiveDocIdx(i)}
+                  onClick={() => selectDoc(i)}
                   style={{
                     padding: '4px 10px', fontSize: 12,
                     background: i === activeDocIdx ? '#0070f3' : '#f3f4f6',
@@ -462,20 +484,53 @@ export default function ReviewPage() {
               ))}
             </div>
             {activeDoc && (
-              <div style={{ fontSize: 11, color: '#6b7280', marginTop: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {activeDoc.original_filename}
-                {activeDoc.effective_date && ` · effective ${activeDoc.effective_date}`}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                <div style={{ fontSize: 11, color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                  {activeDoc.original_filename}
+                  {activeDoc.effective_date && ` · effective ${activeDoc.effective_date}`}
+                </div>
+                {activeDoc.signed_url && (
+                  <a
+                    href={activeDoc.signed_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ fontSize: 11, color: '#0070f3', textDecoration: 'none', whiteSpace: 'nowrap' }}
+                  >
+                    Open in new tab ↗
+                  </a>
+                )}
               </div>
             )}
           </div>
-          <div style={{ flex: 1, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
-            {activeDoc?.signed_url && activeDoc.mime_type === 'application/pdf' ? (
-              <iframe
+          <div style={{ flex: 1, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden', position: 'relative' }}>
+            {activeDoc && activeDoc.mime_type === 'application/pdf' ? (
+              <object
                 key={activeDoc.id}
-                src={activeDoc.signed_url}
-                style={{ width: '100%', height: '100%', border: 'none' }}
-                title={activeDoc.original_filename}
-              />
+                data={`/api/portfolio/documents/${activeDoc.id}/view#view=FitH&toolbar=1`}
+                type="application/pdf"
+                style={{ width: '100%', height: '100%' }}
+                aria-label={activeDoc.original_filename}
+              >
+                <div style={{ padding: 20, textAlign: 'center' }}>
+                  <p style={{ marginBottom: 12, color: '#6b7280' }}>
+                    Your browser cannot display this PDF inline.
+                  </p>
+                  {activeDoc.signed_url && (
+                    <a
+                      href={activeDoc.signed_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        display: 'inline-block', padding: '8px 16px',
+                        background: '#0070f3', color: 'white',
+                        borderRadius: 4, textDecoration: 'none', fontSize: 13,
+                      }}
+                    >
+                      Open {activeDoc.original_filename} in new tab
+                    </a>
+                  )}
+                </div>
+              </object>
             ) : activeDoc?.signed_url ? (
               <div style={{ padding: 20, textAlign: 'center' }}>
                 <p style={{ marginBottom: 12, color: '#6b7280' }}>Preview not available for this file type.</p>
