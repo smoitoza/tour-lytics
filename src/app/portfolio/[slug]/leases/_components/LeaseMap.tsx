@@ -1,16 +1,13 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   APIProvider,
   Map,
-  AdvancedMarker,
-  Pin,
   InfoWindow,
-  useAdvancedMarkerRef,
+  useMap,
 } from '@vis.gl/react-google-maps'
-import { useState } from 'react'
 
 export type GeoLease = {
   id: string
@@ -34,26 +31,125 @@ type Props = {
   height?: number
 }
 
-const STATUS_PIN_COLOR: Record<string, { bg: string; border: string; glyph: string }> = {
-  draft: { bg: '#9ca3af', border: '#fff', glyph: '#fff' },
-  pending_review: { bg: '#f59e0b', border: '#fff', glyph: '#fff' },
-  active: { bg: '#22c55e', border: '#fff', glyph: '#fff' },
-  expired: { bg: '#ef4444', border: '#fff', glyph: '#fff' },
-  terminated: { bg: '#6b7280', border: '#fff', glyph: '#fff' },
+const STATUS_PIN_COLOR: Record<string, string> = {
+  draft: '#9ca3af',
+  pending_review: '#f59e0b',
+  active: '#22c55e',
+  expired: '#ef4444',
+  terminated: '#6b7280',
 }
 
-// A Map ID is required for AdvancedMarker. This default is fine for most apps —
-// styling is controlled by the standard Map theme. If you want custom map styling,
-// create a Map ID in Google Cloud Console and override NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID.
-const DEFAULT_MAP_ID = 'DEMO_MAP_ID'
+// Builds a classic SVG marker icon as a data URL. Works without a Map ID.
+function svgPin(color: string): string {
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='32' height='40' viewBox='0 0 32 40'>
+    <path d='M16 0C7.163 0 0 7.163 0 16c0 11 16 24 16 24s16-13 16-24C32 7.163 24.837 0 16 0z' fill='${color}' stroke='#fff' stroke-width='2'/>
+    <circle cx='16' cy='16' r='5' fill='#fff'/>
+  </svg>`
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`
+}
 
-function LeaseMapInner({ slug, leases }: { slug: string; leases: GeoLease[] }) {
+// Classic-marker layer that uses the imperative Google Maps API directly.
+// This avoids the Map ID requirement of AdvancedMarker.
+function MarkersLayer({
+  slug,
+  leases,
+}: {
+  slug: string
+  leases: GeoLease[]
+}) {
+  const map = useMap()
   const router = useRouter()
   const [openId, setOpenId] = useState<string | null>(null)
+  const markersRef = useRef<google.maps.Marker[]>([])
 
+  useEffect(() => {
+    if (!map) return
+    // Clear old markers
+    markersRef.current.forEach((m) => m.setMap(null))
+    markersRef.current = []
+
+    const bounds = new google.maps.LatLngBounds()
+    let count = 0
+
+    leases.forEach((l) => {
+      if (!l.location) return
+      const color = STATUS_PIN_COLOR[l.status] || '#0070f3'
+      const pos = { lat: l.location.latitude, lng: l.location.longitude }
+      const marker = new google.maps.Marker({
+        position: pos,
+        map,
+        title: l.name,
+        icon: {
+          url: svgPin(color),
+          scaledSize: new google.maps.Size(32, 40),
+          anchor: new google.maps.Point(16, 40),
+        },
+      })
+      marker.addListener('click', () => setOpenId(l.id))
+      markersRef.current.push(marker)
+      bounds.extend(pos)
+      count++
+    })
+
+    if (count === 1) {
+      const single = markersRef.current[0].getPosition()
+      if (single) {
+        map.setCenter(single)
+        map.setZoom(13)
+      }
+    } else if (count > 1) {
+      map.fitBounds(bounds, 60)
+    }
+
+    return () => {
+      markersRef.current.forEach((m) => m.setMap(null))
+      markersRef.current = []
+    }
+  }, [map, leases])
+
+  const open = openId ? leases.find((l) => l.id === openId) : null
+  if (!open || !open.location) return null
+
+  return (
+    <InfoWindow
+      position={{ lat: open.location.latitude, lng: open.location.longitude }}
+      onCloseClick={() => setOpenId(null)}
+      pixelOffset={[0, -40]}
+    >
+      <div style={{ fontFamily: 'system-ui, sans-serif', fontSize: 13, padding: 2, maxWidth: 240 }}>
+        <div style={{ fontWeight: 600, marginBottom: 2, color: '#111' }}>{open.name}</div>
+        <div style={{ color: '#666', fontSize: 12 }}>
+          {open.location.address_line1}, {open.location.city}
+          {open.location.state_province ? `, ${open.location.state_province}` : ''}
+        </div>
+        <div style={{ color: '#888', fontSize: 11, marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          {open.status.replace('_', ' ')}
+        </div>
+        <button
+          onClick={() => router.push(`/portfolio/${slug}/leases/${open.id}`)}
+          style={{
+            marginTop: 8,
+            padding: '6px 10px',
+            background: '#0070f3',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 4,
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          Open lease →
+        </button>
+      </div>
+    </InfoWindow>
+  )
+}
+
+function LeaseMapInner({ slug, leases }: { slug: string; leases: GeoLease[] }) {
   const withCoords = useMemo(() => leases.filter((l) => l.location), [leases])
 
-  const { center, zoom } = useMemo(() => {
+  const initial = useMemo(() => {
     if (withCoords.length === 0) {
       return { center: { lat: 39.8283, lng: -98.5795 }, zoom: 3 }
     }
@@ -63,8 +159,6 @@ function LeaseMapInner({ slug, leases }: { slug: string; leases: GeoLease[] }) {
         zoom: 13,
       }
     }
-    // Compute centroid + a fitted zoom (rough — Google fits via bounds below would
-    // need imperative API access). Centroid is fine for now.
     let sumLat = 0
     let sumLng = 0
     for (const l of withCoords) {
@@ -79,94 +173,18 @@ function LeaseMapInner({ slug, leases }: { slug: string; leases: GeoLease[] }) {
     }
   }, [withCoords])
 
-  const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || DEFAULT_MAP_ID
-
   return (
     <Map
-      defaultCenter={center}
-      defaultZoom={zoom}
-      mapId={mapId}
+      defaultCenter={initial.center}
+      defaultZoom={initial.zoom}
       gestureHandling="greedy"
-      disableDefaultUI={false}
       mapTypeControl={false}
       streetViewControl={false}
       fullscreenControl={false}
       style={{ width: '100%', height: '100%' }}
     >
-      {withCoords.map((l) => {
-        if (!l.location) return null
-        return (
-          <LeasePin
-            key={l.id}
-            lease={l}
-            isOpen={openId === l.id}
-            onOpen={() => setOpenId(l.id)}
-            onClose={() => setOpenId(null)}
-            onNavigate={() => router.push(`/portfolio/${slug}/leases/${l.id}`)}
-          />
-        )
-      })}
+      <MarkersLayer slug={slug} leases={leases} />
     </Map>
-  )
-}
-
-function LeasePin({
-  lease,
-  isOpen,
-  onOpen,
-  onClose,
-  onNavigate,
-}: {
-  lease: GeoLease
-  isOpen: boolean
-  onOpen: () => void
-  onClose: () => void
-  onNavigate: () => void
-}) {
-  const [markerRef, marker] = useAdvancedMarkerRef()
-  if (!lease.location) return null
-  const color = STATUS_PIN_COLOR[lease.status] || STATUS_PIN_COLOR.draft
-
-  return (
-    <>
-      <AdvancedMarker
-        ref={markerRef}
-        position={{ lat: lease.location.latitude, lng: lease.location.longitude }}
-        onClick={onOpen}
-      >
-        <Pin background={color.bg} borderColor={color.border} glyphColor={color.glyph} />
-      </AdvancedMarker>
-      {isOpen && marker && (
-        <InfoWindow anchor={marker} onClose={onClose}>
-          <div style={{ fontFamily: 'system-ui, sans-serif', fontSize: 13, padding: 2, maxWidth: 240 }}>
-            <div style={{ fontWeight: 600, marginBottom: 2, color: '#111' }}>{lease.name}</div>
-            <div style={{ color: '#666', fontSize: 12 }}>
-              {lease.location.address_line1}, {lease.location.city}
-              {lease.location.state_province ? `, ${lease.location.state_province}` : ''}
-            </div>
-            <div style={{ color: '#888', fontSize: 11, marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-              {lease.status.replace('_', ' ')}
-            </div>
-            <button
-              onClick={onNavigate}
-              style={{
-                marginTop: 8,
-                padding: '6px 10px',
-                background: '#0070f3',
-                color: '#fff',
-                border: 'none',
-                borderRadius: 4,
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Open lease →
-            </button>
-          </div>
-        </InfoWindow>
-      )}
-    </>
   )
 }
 
@@ -200,6 +218,7 @@ export default function LeaseMap({ slug, leases, height = 360 }: Props) {
       borderRadius: 12,
       overflow: 'hidden',
       border: '1px solid #e5e7eb',
+      position: 'relative',
     }}>
       <APIProvider apiKey={apiKey}>
         <LeaseMapInner slug={slug} leases={leases} />
