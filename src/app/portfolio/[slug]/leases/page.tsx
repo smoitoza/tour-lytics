@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import LeaseMap, { type GeoLease } from './_components/LeaseMap'
 
 type Company = {
   id: string
@@ -59,6 +60,8 @@ export default function PortfolioLeasesPage() {
   const [unassignedCount, setUnassignedCount] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [geoLeases, setGeoLeases] = useState<GeoLease[]>([])
+  const [mapConfigured, setMapConfigured] = useState(true)
 
   useEffect(() => {
     let cancelled = false
@@ -78,6 +81,18 @@ export default function PortfolioLeasesPage() {
         if (cancelled) return
         setLeases(lData.leases || [])
         setUnassignedCount(lData.unassigned_document_count || 0)
+
+        // Fetch geo data for the map (separate endpoint; lazy-geocodes on first call)
+        try {
+          const gRes = await fetch(`/api/portfolio/${params.slug}/leases-geo`)
+          if (gRes.ok && !cancelled) {
+            const gData = await gRes.json()
+            setGeoLeases(gData.leases || [])
+            setMapConfigured(gData.mapbox_configured !== false)
+          }
+        } catch {
+          // Non-fatal
+        }
       } catch (e) {
         setError(String(e))
       } finally {
@@ -199,6 +214,19 @@ export default function PortfolioLeasesPage() {
               + Create your first lease
             </Link>
           )}
+        </div>
+      )}
+
+      {leases.length > 0 && company && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+            <h2 style={{ margin: 0, fontSize: 16 }}>Portfolio map</h2>
+            <span style={{ fontSize: 12, color: '#888' }}>
+              {geoLeases.filter((l) => l.location).length} of {geoLeases.length} mapped
+              {!mapConfigured && ' · Mapbox token not set'}
+            </span>
+          </div>
+          <LeaseMap slug={company.slug} leases={geoLeases} height={360} />
         </div>
       )}
 

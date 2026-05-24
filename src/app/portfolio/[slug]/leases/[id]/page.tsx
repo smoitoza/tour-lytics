@@ -68,6 +68,22 @@ type Document = {
   storage_path: string
 }
 
+type CriticalDate = {
+  id: string
+  date_type: string
+  trigger_date: string
+  trigger_date_end: string | null
+  description: string | null
+  reminder_days_before: number | null
+  status: string
+  notes: string | null
+  days_until: number
+  days_until_end: number | null
+  urgency: 'overdue' | 'imminent' | 'soon' | 'upcoming' | 'future'
+}
+
+type AskSource = { id: string; filename: string; type: string | null }
+
 type StagedFile = {
   file: File
   documentType: PortfolioDocumentType
@@ -102,6 +118,29 @@ const DOC_TYPE_LABELS: Record<string, string> = {
   other: 'Other',
 }
 
+const DATE_TYPE_LABELS: Record<string, string> = {
+  notice_to_renew: 'Notice to Renew',
+  notice_to_terminate: 'Notice to Terminate',
+  option_to_extend: 'Option to Extend',
+  option_to_terminate: 'Option to Terminate',
+  rofr: 'Right of First Refusal',
+  rofo: 'Right of First Offer',
+  cap_review: 'Cap Review',
+  rent_review: 'Rent Review',
+  expiration: 'Expiration',
+  cam_reconciliation: 'CAM Reconciliation',
+  loc_renewal: 'LOC Renewal',
+  other: 'Other',
+}
+
+const URGENCY_COLORS: Record<string, { bg: string; fg: string; border: string; label: string }> = {
+  overdue: { bg: '#fee2e2', fg: '#991b1b', border: '#fca5a5', label: 'Overdue' },
+  imminent: { bg: '#ffedd5', fg: '#9a3412', border: '#fdba74', label: 'Within 30 days' },
+  soon: { bg: '#fef9c3', fg: '#854d0e', border: '#fde68a', label: 'Within 90 days' },
+  upcoming: { bg: '#dbeafe', fg: '#1e40af', border: '#93c5fd', label: 'Upcoming' },
+  future: { bg: '#f3f4f6', fg: '#374151', border: '#d1d5db', label: 'Future' },
+}
+
 const STATUS_COLORS: Record<string, { bg: string; fg: string }> = {
   draft: { bg: '#f4f4f5', fg: '#52525b' },
   pending_review: { bg: '#fef3c7', fg: '#92400e' },
@@ -128,6 +167,17 @@ export default function LeaseDetailPage() {
   const [abstraction, setAbstraction] = useState<AbstractionSummary | null>(null)
   const [extracting, setExtracting] = useState(false)
   const [extractMsg, setExtractMsg] = useState<string | null>(null)
+
+  // Upcoming triggers (critical dates)
+  const [triggers, setTriggers] = useState<CriticalDate[]>([])
+  const [triggersLoading, setTriggersLoading] = useState(false)
+
+  // Lease Q&A
+  const [askQuestion, setAskQuestion] = useState('')
+  const [askAnswer, setAskAnswer] = useState<string | null>(null)
+  const [askSources, setAskSources] = useState<AskSource[]>([])
+  const [askLoading, setAskLoading] = useState(false)
+  const [askError, setAskError] = useState<string | null>(null)
 
   // Inline edit of basics
   const [editingBasics, setEditingBasics] = useState(false)
@@ -189,6 +239,34 @@ export default function LeaseDetailPage() {
     }
   }
 
+  const submitAsk = async () => {
+    if (!lease) return
+    const q = askQuestion.trim()
+    if (!q) return
+    setAskLoading(true)
+    setAskError(null)
+    setAskAnswer(null)
+    setAskSources([])
+    try {
+      const res = await fetch(`/api/portfolio/leases/${lease.id}/ask`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: q }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setAskError(data.error || 'Request failed')
+      } else {
+        setAskAnswer(data.answer || '')
+        setAskSources(data.sources || [])
+      }
+    } catch (e) {
+      setAskError(String(e))
+    } finally {
+      setAskLoading(false)
+    }
+  }
+
   const runExtraction = async () => {
     if (!lease) return
     setExtracting(true)
@@ -224,6 +302,20 @@ export default function LeaseDetailPage() {
       setLease(lData.lease)
       setLocations(lData.locations || [])
       setDocuments(lData.documents || [])
+
+      // Fetch upcoming triggers (next 365 days)
+      try {
+        setTriggersLoading(true)
+        const tRes = await fetch(`/api/portfolio/leases/${params.id}/critical-dates?window=365`)
+        if (tRes.ok) {
+          const tData = await tRes.json()
+          setTriggers(tData.upcoming || [])
+        }
+      } catch {
+        // Non-fatal
+      } finally {
+        setTriggersLoading(false)
+      }
 
       // Lightly probe for an existing abstraction so we can render status + actions.
       try {
@@ -603,6 +695,150 @@ export default function LeaseDetailPage() {
                 )}
               </div>
             ))}
+          </div>
+        )}
+      </section>
+
+      {/* Upcoming triggers */}
+      <section style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 20, marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
+          <h2 style={{ margin: 0, fontSize: 16 }}>Upcoming triggers</h2>
+          <span style={{ fontSize: 12, color: '#888' }}>Next 12 months</span>
+        </div>
+        {triggersLoading ? (
+          <p style={{ color: '#888', margin: 0, fontSize: 14 }}>Loading…</p>
+        ) : triggers.length === 0 ? (
+          <p style={{ color: '#888', margin: 0, fontSize: 14 }}>
+            No critical dates in the next 12 months. Once you publish the abstraction, key dates like option windows and notice deadlines will show up here.
+          </p>
+        ) : (
+          <div style={{ display: 'grid', gap: 8 }}>
+            {triggers.map((t) => {
+              const c = URGENCY_COLORS[t.urgency] || URGENCY_COLORS.upcoming
+              const label = DATE_TYPE_LABELS[t.date_type] || t.date_type
+              const daysText = t.days_until < 0
+                ? `${Math.abs(t.days_until)} day${Math.abs(t.days_until) === 1 ? '' : 's'} ago`
+                : t.days_until === 0
+                ? 'Today'
+                : `in ${t.days_until} day${t.days_until === 1 ? '' : 's'}`
+              return (
+                <div key={t.id} style={{
+                  padding: 12,
+                  border: `1px solid ${c.border}`,
+                  background: c.bg,
+                  borderRadius: 8,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  gap: 12,
+                }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: c.fg }}>{label}</span>
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
+                        letterSpacing: 0.5, color: c.fg,
+                        background: '#fff', padding: '2px 6px', borderRadius: 999,
+                        border: `1px solid ${c.border}`,
+                      }}>{c.label}</span>
+                    </div>
+                    <div style={{ fontSize: 13, color: c.fg, marginBottom: t.description ? 4 : 0 }}>
+                      {formatDate(t.trigger_date)}{t.trigger_date_end ? ` → ${formatDate(t.trigger_date_end)}` : ''} · {daysText}
+                    </div>
+                    {t.description && (
+                      <div style={{ fontSize: 13, color: '#374151', marginTop: 4 }}>{t.description}</div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* Lease Q&A */}
+      <section style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 20, marginBottom: 16 }}>
+        <h2 style={{ margin: '0 0 4px', fontSize: 16 }}>Ask this lease</h2>
+        <p style={{ fontSize: 13, color: '#666', margin: '0 0 12px' }}>
+          Ask any question about the lease and amendments. The AI reads the source PDFs and the structured abstraction and cites where it found the answer. Responses take 15-30 seconds.
+        </p>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+          <textarea
+            value={askQuestion}
+            onChange={(e) => setAskQuestion(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault()
+                submitAsk()
+              }
+            }}
+            placeholder="e.g. What is the renewal notice window? Or: How does the CPI escalation work?"
+            rows={2}
+            disabled={askLoading}
+            style={{
+              flex: 1,
+              padding: '8px 10px',
+              border: '1px solid #d1d5db',
+              borderRadius: 6,
+              fontSize: 14,
+              fontFamily: 'inherit',
+              resize: 'vertical',
+              minHeight: 48,
+            }}
+          />
+          <button
+            onClick={submitAsk}
+            disabled={askLoading || !askQuestion.trim()}
+            style={{
+              padding: '8px 16px',
+              background: askLoading || !askQuestion.trim() ? '#9ca3af' : '#111827',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 6,
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: askLoading || !askQuestion.trim() ? 'not-allowed' : 'pointer',
+              alignSelf: 'flex-start',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {askLoading ? 'Asking…' : 'Ask'}
+          </button>
+        </div>
+        {askLoading && (
+          <div style={{ fontSize: 13, color: '#6b7280', fontStyle: 'italic' }}>
+            Reading the lease and amendments…
+          </div>
+        )}
+        {askError && (
+          <div style={{
+            padding: 12, background: '#fef2f2', border: '1px solid #fecaca',
+            borderRadius: 6, fontSize: 13, color: '#991b1b',
+          }}>{askError}</div>
+        )}
+        {askAnswer && !askLoading && (
+          <div>
+            <div style={{
+              padding: 14,
+              background: '#f9fafb',
+              border: '1px solid #e5e7eb',
+              borderRadius: 6,
+              fontSize: 14,
+              lineHeight: 1.6,
+              whiteSpace: 'pre-wrap',
+              color: '#111827',
+            }}>{askAnswer}</div>
+            {askSources.length > 0 && (
+              <div style={{ marginTop: 10, fontSize: 12, color: '#6b7280' }}>
+                <span style={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, fontSize: 11 }}>Sources reviewed:</span>{' '}
+                {askSources.map((s, i) => (
+                  <span key={s.id}>
+                    {i > 0 && ', '}
+                    {s.filename}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </section>
