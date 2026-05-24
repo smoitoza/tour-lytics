@@ -57,6 +57,53 @@ const USE_TYPES = [
   { value: 'other', label: 'Other' },
 ]
 
+function ProgressOverlay({ phase, totalDocs, doneDocs }: { phase: 'creating' | 'uploading' | 'extracting'; totalDocs: number; doneDocs: number }) {
+  const steps = [
+    { key: 'creating', label: 'Create lease record' },
+    { key: 'uploading', label: `Upload documents (${doneDocs}/${totalDocs})` },
+    { key: 'extracting', label: 'AI extraction — reading the bundle, may take 30-90 seconds' },
+  ] as const
+  const activeIdx = steps.findIndex((s) => s.key === phase)
+  return (
+    <div style={{
+      background: '#fff',
+      border: '1px solid #c7d2fe',
+      borderLeft: '4px solid #4f46e5',
+      borderRadius: 10,
+      padding: 20,
+      marginBottom: 16,
+    }}>
+      <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 12, color: '#312e81' }}>
+        Creating lease and extracting terms…
+      </div>
+      <div style={{ display: 'grid', gap: 8 }}>
+        {steps.map((s, i) => {
+          const done = i < activeIdx
+          const active = i === activeIdx
+          return (
+            <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: done ? '#059669' : active ? '#1f2937' : '#9ca3af' }}>
+              <div style={{
+                width: 18, height: 18, borderRadius: '50%',
+                background: done ? '#059669' : active ? '#4f46e5' : '#e5e7eb',
+                color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 11, fontWeight: 700, flexShrink: 0,
+              }}>
+                {done ? '✓' : active ? '…' : i + 1}
+              </div>
+              <span style={{ fontWeight: active ? 600 : 400 }}>{s.label}</span>
+            </div>
+          )
+        })}
+      </div>
+      {phase === 'extracting' && (
+        <p style={{ margin: '12px 0 0', fontSize: 12, color: '#6b7280' }}>
+          Claude is reading the executed lease plus any amendments to build the current-state abstraction. Don’t close this tab — you’ll be redirected to a review screen when it’s done.
+        </p>
+      )}
+    </div>
+  )
+}
+
 export default function NewLeasePage() {
   const params = useParams<{ slug: string }>()
   const router = useRouter()
@@ -189,6 +236,10 @@ export default function NewLeasePage() {
     }
   }
 
+  // Extraction phase state — used to show a progress screen while Claude processes the bundle.
+  const [phase, setPhase] = useState<'form' | 'creating' | 'uploading' | 'extracting' | 'redirecting'>('form')
+  const [extractError, setExtractError] = useState<string | null>(null)
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!company) return
@@ -197,7 +248,9 @@ export default function NewLeasePage() {
       return
     }
     setError(null)
+    setExtractError(null)
     setSubmitting(true)
+    setPhase('creating')
 
     try {
       const hasAddress = addressLine1.trim() && city.trim()
@@ -233,21 +286,53 @@ export default function NewLeasePage() {
       if (!res.ok || !data.lease) {
         setError(data.error || 'Failed to create lease')
         setSubmitting(false)
+        setPhase('form')
         return
       }
 
       const leaseId = data.lease.id
 
-      // Upload all staged docs in parallel-ish (sequential to keep UI calm)
+      // Upload all staged docs sequentially.
+      setPhase('uploading')
+      let pdfCount = 0
       for (let i = 0; i < staged.length; i++) {
-        await uploadSingleDoc(leaseId, i)
+        const ok = await uploadSingleDoc(leaseId, i)
+        if (ok && staged[i].file.type === 'application/pdf') pdfCount++
       }
 
-      // Navigate to the lease detail page
-      router.push(`/portfolio/${company.slug}/leases/${leaseId}`)
+      // If there are no PDFs uploaded, skip extraction and go straight to the lease detail.
+      if (pdfCount === 0) {
+        setPhase('redirecting')
+        router.push(`/portfolio/${company.slug}/leases/${leaseId}`)
+        return
+      }
+
+      // Kick off extraction. Will hold for ~30-90s.
+      setPhase('extracting')
+      try {
+        const extractRes = await fetch(`/api/portfolio/leases/${leaseId}/extract`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        })
+        const extractData = await extractRes.json()
+        if (!extractRes.ok || !extractData.abstraction_id) {
+          setExtractError(extractData.error || 'Extraction failed')
+          // Still route to the lease detail so the user can retry from there.
+          setPhase('redirecting')
+          router.push(`/portfolio/${company.slug}/leases/${leaseId}`)
+          return
+        }
+        setPhase('redirecting')
+        router.push(`/portfolio/${company.slug}/leases/${leaseId}/review`)
+      } catch (e) {
+        setExtractError(String(e))
+        setPhase('redirecting')
+        router.push(`/portfolio/${company.slug}/leases/${leaseId}`)
+      }
     } catch (err) {
       setError(String(err))
       setSubmitting(false)
+      setPhase('form')
     }
   }
 
@@ -301,6 +386,19 @@ export default function NewLeasePage() {
         <div style={{ background: '#fee', border: '1px solid #fcc', padding: 12, borderRadius: 8, color: '#900', marginBottom: 16 }}>
           {error}
         </div>
+      )}
+      {extractError && (
+        <div style={{ background: '#fff8e1', border: '1px solid #fde68a', padding: 12, borderRadius: 8, color: '#92400e', marginBottom: 16 }}>
+          <strong>Extraction warning:</strong> {extractError}
+        </div>
+      )}
+
+      {phase !== 'form' && phase !== 'redirecting' && (
+        <ProgressOverlay
+          phase={phase}
+          totalDocs={staged.length}
+          doneDocs={staged.filter((s) => s.status === 'done').length}
+        />
       )}
 
       <form onSubmit={handleSubmit}>
@@ -545,9 +643,12 @@ export default function NewLeasePage() {
             }}
           >
             {submitting
-              ? `Creating lease… ${staged.filter((s) => s.status === 'done').length}/${staged.length} docs uploaded`
+              ? phase === 'creating' ? 'Creating lease…'
+                : phase === 'uploading' ? `Uploading… ${staged.filter((s) => s.status === 'done').length}/${staged.length}`
+                : phase === 'extracting' ? 'Extracting with AI…'
+                : 'Working…'
               : staged.length > 0
-                ? `Create lease and upload ${staged.length} document${staged.length === 1 ? '' : 's'}`
+                ? `Create lease and extract from ${staged.length} document${staged.length === 1 ? '' : 's'}`
                 : 'Create lease'
             }
           </button>
