@@ -19883,7 +19883,7 @@ function rfpShowVersionComparison(buildingAddress) {
         var cItems = aData.opex_custom_items || [];
         if (typeof cItems === 'string') { try { cItems = JSON.parse(cItems); } catch(e) { cItems = []; } }
         var cTotal = 0;
-        if (Array.isArray(cItems)) cItems.forEach(function(ci) { cTotal += parseFloat(ci.amount) || 0; });
+        if (Array.isArray(cItems)) cItems.forEach(function(ci) { cTotal += parseFloat(ci.monthly || ci.amount) || 0; });
         return (parseFloat(aData.opex_food_beverage) || 0) + (parseFloat(aData.opex_workplace_experience) || 0) + (parseFloat(aData.opex_maintenance_security) || 0) + cTotal;
       }
       return 0;
@@ -19966,7 +19966,7 @@ function rfpShowVersionComparison(buildingAddress) {
       var tocIntCustom = tocAData.opex_custom_items || [];
       if (typeof tocIntCustom === 'string') { try { tocIntCustom = JSON.parse(tocIntCustom); } catch(e) { tocIntCustom = []; } }
       var tocIntCTotal = 0;
-      if (Array.isArray(tocIntCustom)) tocIntCustom.forEach(function(ci) { tocIntCTotal += parseFloat(ci.amount) || 0; });
+      if (Array.isArray(tocIntCustom)) tocIntCustom.forEach(function(ci) { tocIntCTotal += parseFloat(ci.monthly || ci.amount) || 0; });
       var tocIntTotal = tocIntFB + tocIntWPE + tocIntMaint + tocIntCTotal;
       var tocAmortTI = (tocCf.amortizedTIMonthlyPayment || 0);
       var tocMonthly = tocSlRent + tocOpex + tocPark + tocLHI + tocBF + tocAmortTI + tocIntTotal;
@@ -20155,7 +20155,7 @@ function rfpOpenVersionOnePager() {
   var intCustom = aData.opex_custom_items || [];
   if (typeof intCustom === 'string') { try { intCustom = JSON.parse(intCustom); } catch(e) { intCustom = []; } }
   var intCTotal = 0;
-  if (Array.isArray(intCustom)) intCustom.forEach(function(ci) { intCTotal += parseFloat(ci.amount) || 0; });
+  if (Array.isArray(intCustom)) intCustom.forEach(function(ci) { intCTotal += parseFloat(ci.monthly || ci.amount) || 0; });
   var totalInternalOpex = intFB + intWPE + intMaint + intCTotal;
 
   var allBd = vd.subs.map(function(sub, idx) {
@@ -20540,7 +20540,7 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
   var cfCustomInternal = cfAssumData.opex_custom_items || [];
   if (typeof cfCustomInternal === 'string') { try { cfCustomInternal = JSON.parse(cfCustomInternal); } catch(e) { cfCustomInternal = []; } }
   var cfCustomTotal = 0;
-  if (Array.isArray(cfCustomInternal)) cfCustomInternal.forEach(function(ci) { cfCustomTotal += parseFloat(ci.amount) || 0; });
+  if (Array.isArray(cfCustomInternal)) cfCustomInternal.forEach(function(ci) { cfCustomTotal += parseFloat(ci.monthly || ci.amount) || 0; });
   var cfInternalOpex = cfFnB + cfWPE + cfMnS + cfCustomTotal;
   var hasInternalOpex = cfInternalOpex > 0;
 
@@ -21081,7 +21081,7 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
   var intCustomItems = assum_sl.opex_custom_items || [];
   if (typeof intCustomItems === 'string') { try { intCustomItems = JSON.parse(intCustomItems); } catch(e) { intCustomItems = []; } }
   var intCustomTotal = 0;
-  if (Array.isArray(intCustomItems)) intCustomItems.forEach(function(ci) { intCustomTotal += parseFloat(ci.amount) || 0; });
+  if (Array.isArray(intCustomItems)) intCustomItems.forEach(function(ci) { intCustomTotal += parseFloat(ci.monthly || ci.amount) || 0; });
   var intTotalMonthly = intFB + intWPE + intMaint + intCustomTotal;
   var hasInternalOpex = intTotalMonthly > 0;
 
@@ -21170,7 +21170,7 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
     if (intWPE > 0) slBuildRow('Workplace Experience', intWPE, 'color:#0369a1;', '');
     if (intMaint > 0) slBuildRow('Maintenance & Security', intMaint, 'color:#0369a1;', '');
     if (Array.isArray(intCustomItems)) intCustomItems.forEach(function(ci) {
-      var ciAmt = parseFloat(ci.amount) || 0;
+      var ciAmt = parseFloat(ci.monthly || ci.amount) || 0;
       if (ciAmt > 0) slBuildRow(ci.label || 'Custom', ciAmt, 'color:#0369a1;', '');
     });
   }
@@ -22079,7 +22079,7 @@ function rfpExportExcel() {
     var exIntCustomItems = exAsData.opex_custom_items || [];
     if (typeof exIntCustomItems === 'string') { try { exIntCustomItems = JSON.parse(exIntCustomItems); } catch(e) { exIntCustomItems = []; } }
     var exIntCustomTotal = 0;
-    if (Array.isArray(exIntCustomItems)) exIntCustomItems.forEach(function(ci) { exIntCustomTotal += parseFloat(ci.amount) || 0; });
+    if (Array.isArray(exIntCustomItems)) exIntCustomItems.forEach(function(ci) { exIntCustomTotal += parseFloat(ci.monthly || ci.amount) || 0; });
     var exIntTotal = exIntFB + exIntWPE + exIntMaint + exIntCustomTotal;
 
     if (exIntTotal > 0) {
@@ -22106,7 +22106,7 @@ function rfpExportExcel() {
         smRow++;
       }
       if (Array.isArray(exIntCustomItems)) exIntCustomItems.forEach(function(ci) {
-        var ciAmt = parseFloat(ci.amount) || 0;
+        var ciAmt = parseFloat(ci.monthly || ci.amount) || 0;
         if (ciAmt > 0) {
           setCell(slWS, smRow, 0, ci.label || 'Custom', metricLabelStyle);
           setCell(slWS, smRow, 1, Math.round(ciAmt), Object.assign({}, formulaStyle));
@@ -22216,7 +22216,7 @@ function rfpExportExcel() {
     var cfExCustomInt = cfExAssumData.opex_custom_items || [];
     if (typeof cfExCustomInt === 'string') { try { cfExCustomInt = JSON.parse(cfExCustomInt); } catch(e) { cfExCustomInt = []; } }
     var cfExCustomTotal = 0;
-    if (Array.isArray(cfExCustomInt)) cfExCustomInt.forEach(function(ci) { cfExCustomTotal += parseFloat(ci.amount) || 0; });
+    if (Array.isArray(cfExCustomInt)) cfExCustomInt.forEach(function(ci) { cfExCustomTotal += parseFloat(ci.monthly || ci.amount) || 0; });
     var cfExInternalOpex = cfExFnB + cfExWPE + cfExMnS + cfExCustomTotal;
     var cfHasInternal = cfExInternalOpex > 0;
     // Security deposit from deal terms
@@ -22889,7 +22889,7 @@ function rfpExportExcel() {
             var intCI = intAData.opex_custom_items || [];
             if (typeof intCI === 'string') { try { intCI = JSON.parse(intCI); } catch(e) { intCI = []; } }
             var intCT = 0;
-            if (Array.isArray(intCI)) intCI.forEach(function(ci) { intCT += parseFloat(ci.amount) || 0; });
+            if (Array.isArray(intCI)) intCI.forEach(function(ci) { intCT += parseFloat(ci.monthly || ci.amount) || 0; });
             val = (parseFloat(intAData.opex_food_beverage) || 0) + (parseFloat(intAData.opex_workplace_experience) || 0) + (parseFloat(intAData.opex_maintenance_security) || 0) + intCT;
           } else val = 0;
         } else if (f.src === 'computed_amortTI') {
@@ -22918,7 +22918,7 @@ function rfpExportExcel() {
           var tocIC = tocAD.opex_custom_items || [];
           if (typeof tocIC === 'string') { try { tocIC = JSON.parse(tocIC); } catch(e) { tocIC = []; } }
           var tocICT = 0;
-          if (Array.isArray(tocIC)) tocIC.forEach(function(ci) { tocICT += parseFloat(ci.amount) || 0; });
+          if (Array.isArray(tocIC)) tocIC.forEach(function(ci) { tocICT += parseFloat(ci.monthly || ci.amount) || 0; });
           var tocInt = (parseFloat(tocAD.opex_food_beverage) || 0) + (parseFloat(tocAD.opex_workplace_experience) || 0) + (parseFloat(tocAD.opex_maintenance_security) || 0) + tocICT;
           var tocAT = (tocCf.amortizedTIMonthlyPayment || 0);
           var tocMo = tocSL + tocOp + tocPk + tocLH + tocBF + tocAT + tocInt;
