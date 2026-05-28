@@ -1,9 +1,9 @@
 'use client'
 
 import { createClient } from '@/lib/supabase-browser'
-import { useState, useEffect, Suspense } from 'react'
+import { useState, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 
 /* Reusable styled input */
 function FormInput({
@@ -73,28 +73,36 @@ function FormInput({
   )
 }
 
-function LoginPageInner() {
-  const searchParams = useSearchParams()
-  const startOnSignUp = searchParams.get('signup') === 'true'
+// Public sign-ups are disabled. Beta access is invite-only via the
+// Request Beta Access flow on the landing page. The ?signup=true URL
+// param and the in-page "Create one" toggle are intentionally disabled
+// so no path to /auth/v1/signup is exposed from the UI. The dormant
+// sign-up JSX and handler branch remain in the file (behind an always-
+// false `isSignUp` flag) so this change is reversible in one commit if
+// we later re-enable signups behind beta-allowlist + CAPTCHA.
+const SIGNUP_ENABLED = false
+const noop = () => {}
 
+function LoginPageInner() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
   const [company, setCompany] = useState('')
   const [jobTitle, setJobTitle] = useState('')
   const [agreedToTerms, setAgreedToTerms] = useState(false)
-  const [isSignUp, setIsSignUp] = useState(startOnSignUp)
+  // isSignUp is hard-pinned to false while SIGNUP_ENABLED is false.
+  // The setter is a no-op so JSX/handler references still type-check.
+  const isSignUp = false
+  const setIsSignUp: (v: boolean) => void = noop
+  // Silence unused-var warnings for setters that only feed the dormant
+  // sign-up form below.
+  void setFullName; void setCompany; void setJobTitle; void setAgreedToTerms
   const [isForgotPassword, setIsForgotPassword] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const router = useRouter()
-
-  // Sync isSignUp with URL param on mount
-  useEffect(() => {
-    if (startOnSignUp) setIsSignUp(true)
-  }, [startOnSignUp])
 
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true)
@@ -153,7 +161,7 @@ function LoginPageInner() {
 
     const supabase = createClient()
 
-    if (isSignUp) {
+    if (isSignUp && SIGNUP_ENABLED) {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -655,7 +663,7 @@ function LoginPageInner() {
               color: '#64748b',
             }}
           >
-            {isSignUp ? (
+            {SIGNUP_ENABLED && isSignUp ? (
               <>
                 Already have an account?{' '}
                 <button
@@ -680,24 +688,16 @@ function LoginPageInner() {
             ) : (
               <>
                 Don&apos;t have an account?{' '}
-                <button
-                  onClick={() => {
-                    setIsSignUp(true)
-                    setError(null)
-                    setMessage(null)
-                  }}
+                <Link
+                  href="/#contact"
                   style={{
                     color: '#2563eb',
                     fontWeight: 500,
-                    background: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontFamily: 'inherit',
-                    fontSize: 'inherit',
+                    textDecoration: 'none',
                   }}
                 >
-                  Create one
-                </button>
+                  Request beta access
+                </Link>
               </>
             )}
           </div>
