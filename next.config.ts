@@ -63,10 +63,11 @@ const securityHeaders = [
   // Referrer -- send origin only to cross-origin, full to same-origin
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
 
-  // Permissions-Policy -- disable hardware APIs we don't use
+  // Permissions-Policy -- allow microphone for Web Speech API voice input
+  // (used in Scout chat and Project Brief). Camera/payment/usb still locked.
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(self), payment=(), usb=()",
+    value: "camera=(), microphone=(self), geolocation=(self), payment=(), usb=()",
   },
 
   // XSS protection (legacy header, still respected by some proxies)
