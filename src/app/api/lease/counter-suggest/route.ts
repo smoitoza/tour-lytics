@@ -6,7 +6,7 @@ import { LEASE_CLAUSE_TYPES } from '@/lib/lease-clause-taxonomy'
 export const maxDuration = 60
 
 const anthropic = new Anthropic()
-const COUNTER_AI_MODEL = 'claude-sonnet-4-20250514'
+const COUNTER_AI_MODEL = 'claude-sonnet-4-6'
 
 function getAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL

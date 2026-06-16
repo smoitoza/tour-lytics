@@ -10,7 +10,7 @@ export const maxDuration = 90
 const anthropic = new Anthropic()
 
 // Bumping these forces all cached compares to regenerate
-const AI_MODEL_VERSION = 'claude-sonnet-4-20250514'
+const AI_MODEL_VERSION = 'claude-sonnet-4-6'
 const AI_PROMPT_VERSION = 'v1'
 
 function getAdminClient() {

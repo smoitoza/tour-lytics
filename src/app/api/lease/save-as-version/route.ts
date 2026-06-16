@@ -8,7 +8,7 @@ import { LEASE_CLAUSE_TYPES, type LeaseClauseType } from '@/lib/lease-clause-tax
 export const maxDuration = 120
 
 const anthropic = new Anthropic()
-const AI_REFRESH_MODEL = 'claude-sonnet-4-20250514'
+const AI_REFRESH_MODEL = 'claude-sonnet-4-6'
 
 function getAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
