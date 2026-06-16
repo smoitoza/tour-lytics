@@ -202,6 +202,7 @@ export default function ProjectPage() {
           <iframe
             src={`/app/index.html?userEmail=${encodeURIComponent(user?.email || '')}&projectId=${encodeURIComponent(projectId)}${paymentParam ? '&payment=' + paymentParam : ''}${tokensParam ? '&tokens=' + tokensParam : ''}&v=${Date.now()}${tabParam ? '#' + tabParam : ''}`}
             title={project?.name || 'Project Application'}
+            allow="microphone"
           />
         </div>
       </div>
