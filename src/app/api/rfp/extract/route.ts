@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     }
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       // 16K is enough for a 5-building, 10-year deal with full rent_periods
       // schedules expanded month-by-month. 4K was truncating mid-response
       // for any multi-building LOI (e.g. campus deals), producing invalid
