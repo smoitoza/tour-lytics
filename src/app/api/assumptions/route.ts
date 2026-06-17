@@ -21,28 +21,45 @@ export async function GET(req: Request) {
   const buildingAddress = searchParams.get('buildingAddress')
 
   const componentLabel = searchParams.get('componentLabel') || null
+  // Optional: when provided, return version-override row if it exists,
+  // otherwise return the building-default row.
+  const submissionId = searchParams.get('submissionId') || null
 
   if (buildingAddress) {
-    // Fetch assumptions for a specific building (+ optional component)
-    let query = supabase
-      .from('project_assumptions')
-      .select('*')
-      .eq('project_id', projectId)
-      .eq('building_address', buildingAddress)
-
-    if (componentLabel) {
-      query = query.eq('component_label', componentLabel)
-    } else {
-      query = query.is('component_label', null)
+    const buildQuery = (forSubmissionId: string | null) => {
+      let q = supabase
+        .from('project_assumptions')
+        .select('*')
+        .eq('project_id', projectId)
+        .eq('building_address', buildingAddress)
+      if (componentLabel) {
+        q = q.eq('component_label', componentLabel)
+      } else {
+        q = q.is('component_label', null)
+      }
+      if (forSubmissionId) {
+        q = q.eq('submission_id', forSubmissionId)
+      } else {
+        q = q.is('submission_id', null)
+      }
+      return q
     }
 
-    const { data, error } = await query.single()
-
-    if (error && error.code === 'PGRST116') {
-      return NextResponse.json(null)
+    // 1) If a submissionId was passed, try version-level override first.
+    if (submissionId) {
+      const { data: vRow, error: vErr } = await buildQuery(submissionId).maybeSingle()
+      if (vErr && vErr.code !== 'PGRST116') {
+        return NextResponse.json({ error: vErr.message }, { status: 500 })
+      }
+      if (vRow) return NextResponse.json(vRow)
     }
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json(data)
+
+    // 2) Fall back to building-default (submission_id IS NULL).
+    const { data, error } = await buildQuery(null).maybeSingle()
+    if (error && error.code !== 'PGRST116') {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+    return NextResponse.json(data || null)
   } else {
     // Fetch ALL assumptions for the project (used by chatbot)
     const { data, error } = await supabase
@@ -63,6 +80,7 @@ export async function POST(req: Request) {
     projectId = 'sf-office-search',
     building_address = '',
     component_label = null,
+    submission_id = null,
     opex_food_beverage = 0,
     opex_workplace_experience = 0,
     opex_maintenance_security = 0,
@@ -119,6 +137,7 @@ export async function POST(req: Request) {
     project_id: projectId,
     building_address,
     component_label: component_label || null,
+    submission_id: submission_id || null,
     opex_food_beverage,
     opex_workplace_experience,
     opex_maintenance_security,
@@ -152,7 +171,7 @@ export async function POST(req: Request) {
     updated_at: new Date().toISOString(),
   }
 
-  // Check if a row exists for this project + building + component
+  // Check if a row exists for this project + building + component + submission
   let existsQuery = supabase
     .from('project_assumptions')
     .select('id')
@@ -162,6 +181,11 @@ export async function POST(req: Request) {
     existsQuery = existsQuery.eq('component_label', component_label)
   } else {
     existsQuery = existsQuery.is('component_label', null)
+  }
+  if (submission_id) {
+    existsQuery = existsQuery.eq('submission_id', submission_id)
+  } else {
+    existsQuery = existsQuery.is('submission_id', null)
   }
   const { data: existing } = await existsQuery.maybeSingle()
 
@@ -190,4 +214,39 @@ export async function POST(req: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   await touchProject(projectId)
   return NextResponse.json(data)
+}
+
+// DELETE - remove a version-level override row so the building default is used again.
+// Required params: projectId, buildingAddress, submissionId. componentLabel optional.
+// We refuse to delete the building-default row (submission_id NULL) via this endpoint
+// to avoid accidental data loss; that row is cleared via POST with zeroed fields.
+export async function DELETE(req: Request) {
+  const { searchParams } = new URL(req.url)
+  const projectId = searchParams.get('projectId') || 'sf-office-search'
+  const buildingAddress = searchParams.get('buildingAddress')
+  const componentLabel = searchParams.get('componentLabel') || null
+  const submissionId = searchParams.get('submissionId')
+
+  if (!buildingAddress) {
+    return NextResponse.json({ error: 'buildingAddress is required' }, { status: 400 })
+  }
+  if (!submissionId) {
+    return NextResponse.json({ error: 'submissionId is required (cannot DELETE the building-default row via this endpoint)' }, { status: 400 })
+  }
+
+  let q = supabase
+    .from('project_assumptions')
+    .delete()
+    .eq('project_id', projectId)
+    .eq('building_address', buildingAddress)
+    .eq('submission_id', submissionId)
+  if (componentLabel) {
+    q = q.eq('component_label', componentLabel)
+  } else {
+    q = q.is('component_label', null)
+  }
+  const { error } = await q
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  await touchProject(projectId)
+  return NextResponse.json({ ok: true })
 }

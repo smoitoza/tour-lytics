@@ -15563,18 +15563,24 @@ function rfpInit() {
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (Array.isArray(data)) {
+        // Building-default rows (submission_id IS NULL) -> assumptionsMap keyed by address/component.
+        // Per-version override rows (submission_id set) -> versionAssumptionsMap keyed by submission_id.
+        // Effective values for a given version = merge(default, override), with override fields
+        // taking precedence when set.
         var map = {};
+        var vmap = {};
         data.forEach(function(row) {
-          if (row.building_address) {
+          if (!row.building_address) return;
+          if (row.submission_id) {
+            vmap[row.submission_id] = row;
+          } else {
             var mapKey = row.building_address + (row.component_label ? '::' + row.component_label : '');
             map[mapKey] = row;
-            // Note: building-level rows (no component_label) are stored under the bare address key.
-            // CAPEX lookups use ONLY the per-component key, so building-level rows no longer leak
-            // across components. Other (non-CAPEX) lookups can still read from the bare key.
             if (!row.component_label && !map[row.building_address]) map[row.building_address] = row;
           }
         });
         window._rfpState.assumptionsMap = map;
+        window._rfpState.versionAssumptionsMap = vmap;
       }
     })
     .catch(function() { /* assumptions optional */ });
@@ -18262,10 +18268,10 @@ function rfpBuildDetailHtml(subs) {
   var bComp = selected.component_label || '';
 
   // Cash Flow tab
-  html += '<div class="fin-sheet-content" id="fin-cash-flow">' + rfpBuildCashFlowTable(selected.analysis, bAddr, bComp) + '</div>';
+  html += '<div class="fin-sheet-content" id="fin-cash-flow">' + rfpBuildCashFlowTable(selected.analysis, bAddr, bComp, selected && selected.id) + '</div>';
 
   // Straight-Line P&L tab
-  html += '<div class="fin-sheet-content" id="fin-straight-line">' + rfpBuildStraightLineTable(selected.analysis, bAddr, bComp) + '</div>';
+  html += '<div class="fin-sheet-content" id="fin-straight-line">' + rfpBuildStraightLineTable(selected.analysis, bAddr, bComp, selected && selected.id) + '</div>';
 
   // GAAP tab
   html += '<div class="fin-sheet-content" id="fin-gaap">' + rfpBuildGAAPTable(selected.analysis, bAddr, bComp) + '</div>';
@@ -19872,10 +19878,9 @@ function rfpShowVersionComparison(buildingAddress) {
       var cfTotals = (sub.analysis && sub.analysis.cash_flow && sub.analysis.cash_flow.totals) ? sub.analysis.cash_flow.totals : {};
       return cfTotals.totalBaseRent || 0;
     }
-    // Internal OpEx computed fields
+    // Internal OpEx computed fields (per-version override aware)
     if (field.computed === 'intFB' || field.computed === 'intWPE' || field.computed === 'intMaint' || field.computed === 'intTotal') {
-      var aKey = getAssumptionsKey(buildingAddress, '');
-      var aData = window._rfpState.assumptionsMap[aKey] || window._rfpState.assumptionsMap[buildingAddress] || {};
+      var aData = getEffectiveAssumptions(buildingAddress, '', sub && sub.id);
       if (field.computed === 'intFB') return parseFloat(aData.opex_food_beverage) || 0;
       if (field.computed === 'intWPE') return parseFloat(aData.opex_workplace_experience) || 0;
       if (field.computed === 'intMaint') return parseFloat(aData.opex_maintenance_security) || 0;
@@ -19958,8 +19963,7 @@ function rfpShowVersionComparison(buildingAddress) {
       var tocLHI = (tocCapex && tocCapex.hasCapex) ? (tocCapex.monthlyDepreciation || 0) : 0;
       var tocBF = (tocBroker && tocBroker.hasBrokerFee) ? (tocBroker.slMonthlyImpact || 0) : 0;
       // Internal OpEx
-      var tocAKey = getAssumptionsKey(buildingAddress, '');
-      var tocAData = window._rfpState.assumptionsMap[tocAKey] || window._rfpState.assumptionsMap[buildingAddress] || {};
+      var tocAData = getEffectiveAssumptions(buildingAddress, '', sub && sub.id);
       var tocIntFB = parseFloat(tocAData.opex_food_beverage) || 0;
       var tocIntWPE = parseFloat(tocAData.opex_workplace_experience) || 0;
       var tocIntMaint = parseFloat(tocAData.opex_maintenance_security) || 0;
@@ -20144,20 +20148,9 @@ function rfpOpenVersionOnePager() {
   var vd = window._rfpVersionOnePagerData;
   if (!vd || !vd.subs || vd.subs.length === 0) return;
 
-  // Build buildingData-compatible array from versions
-  // Each version becomes a "building" column in the one-pager
-  // Load internal OpEx assumptions for this building
-  var aKey = (window.getAssumptionsKey ? window.getAssumptionsKey(vd.address, '') : null) || vd.address;
-  var aData = (window._rfpState && window._rfpState.assumptionsMap) ? (window._rfpState.assumptionsMap[aKey] || window._rfpState.assumptionsMap[vd.address] || {}) : {};
-  var intFB = parseFloat(aData.opex_food_beverage) || 0;
-  var intWPE = parseFloat(aData.opex_workplace_experience) || 0;
-  var intMaint = parseFloat(aData.opex_maintenance_security) || 0;
-  var intCustom = aData.opex_custom_items || [];
-  if (typeof intCustom === 'string') { try { intCustom = JSON.parse(intCustom); } catch(e) { intCustom = []; } }
-  var intCTotal = 0;
-  if (Array.isArray(intCustom)) intCustom.forEach(function(ci) { intCTotal += parseFloat(ci.monthly || ci.amount) || 0; });
-  var totalInternalOpex = intFB + intWPE + intMaint + intCTotal;
-
+  // Build buildingData-compatible array from versions.
+  // Each version becomes a "building" column in the one-pager.
+  // Internal OpEx is per-version-aware: version override beats building default.
   var allBd = vd.subs.map(function(sub, idx) {
     var summary = (sub.analysis && sub.analysis.summary) || {};
     var cfTotals = (sub.analysis && sub.analysis.cash_flow && sub.analysis.cash_flow.totals) || {};
@@ -20167,6 +20160,16 @@ function rfpOpenVersionOnePager() {
     // Load CAPEX and Broker Fee from assumptions (not from analysis)
     var capexData = (typeof getCapexForBuilding === 'function') ? getCapexForBuilding(vd.address, termMo) : { hasCapex: false };
     var brokerFee = (typeof getBrokerFeeForBuilding === 'function') ? getBrokerFeeForBuilding(vd.address, termMo) : { hasBrokerFee: false };
+    // Per-version internal OpEx assumptions
+    var aData = getEffectiveAssumptions(vd.address, '', sub && sub.id);
+    var intFB = parseFloat(aData.opex_food_beverage) || 0;
+    var intWPE = parseFloat(aData.opex_workplace_experience) || 0;
+    var intMaint = parseFloat(aData.opex_maintenance_security) || 0;
+    var intCustom = aData.opex_custom_items || [];
+    if (typeof intCustom === 'string') { try { intCustom = JSON.parse(intCustom); } catch(e) { intCustom = []; } }
+    var intCTotal = 0;
+    if (Array.isArray(intCustom)) intCustom.forEach(function(ci) { intCTotal += parseFloat(ci.monthly || ci.amount) || 0; });
+    var totalInternalOpex = intFB + intWPE + intMaint + intCTotal;
     var opexMo = (cfTotals.totalOpex || 0) / termMo;
     var parkMo = (cfTotals.totalParking || 0) / termMo;
     var lhiMo = capexData.hasCapex ? (capexData.monthlyDepreciation || 0) : 0;
@@ -20327,12 +20330,53 @@ function getAssumptionsKey(buildingAddr, componentLabel) {
   return buildingAddr;
 }
 
+// Fields that can be overridden per-version. Adding to this list is safe.
+// Only OpEx fields are version-overridable right now; CAPEX/broker stay building-level.
+var VERSION_OVERRIDABLE_FIELDS = [
+  'opex_food_beverage',
+  'opex_workplace_experience',
+  'opex_maintenance_security',
+  'opex_custom_items',
+  'headcount'
+];
+
+// Returns the effective assumptions for a given building + component + (optional) submission_id.
+// Merge logic: start from building-default row, then overlay version row's overridable fields
+// when the version row has them set. Returns a plain object (never null).
+function getEffectiveAssumptions(buildingAddr, componentLabel, submissionId) {
+  var state = window._rfpState || {};
+  var aMap = state.assumptionsMap || {};
+  var vMap = state.versionAssumptionsMap || {};
+  var key = getAssumptionsKey(buildingAddr, componentLabel);
+  var base = aMap[key] || aMap[buildingAddr] || {};
+  if (!submissionId || !vMap[submissionId]) return base;
+  var override = vMap[submissionId];
+  var merged = {};
+  for (var k in base) { if (Object.prototype.hasOwnProperty.call(base, k)) merged[k] = base[k]; }
+  VERSION_OVERRIDABLE_FIELDS.forEach(function(f) {
+    if (override[f] !== undefined && override[f] !== null) merged[f] = override[f];
+  });
+  // Mark which fields came from the override so the UI can badge them.
+  merged.__overriddenFields = VERSION_OVERRIDABLE_FIELDS.filter(function(f) {
+    return override[f] !== undefined && override[f] !== null;
+  });
+  merged.__hasVersionOverride = true;
+  merged.__versionRowId = override.id;
+  return merged;
+}
+
+// True iff a version-level override row exists for this submission.
+function hasVersionOverride(submissionId) {
+  if (!submissionId) return false;
+  var vMap = (window._rfpState && window._rfpState.versionAssumptionsMap) || {};
+  return !!vMap[submissionId];
+}
+
 function getAssumptionsForSubmission(sub) {
   if (!sub) return {};
   var addr = sub.building_address || sub.buildingAddress || '';
   var comp = sub.component_label || '';
-  var key = getAssumptionsKey(addr, comp);
-  return (window._rfpState && window._rfpState.assumptionsMap) ? (window._rfpState.assumptionsMap[key] || window._rfpState.assumptionsMap[addr] || {}) : {};
+  return getEffectiveAssumptions(addr, comp, sub.id);
 }
 
 // ===== CAPEX DATA HELPER =====
@@ -20515,7 +20559,7 @@ function getBrokerFeeForBuilding(buildingAddr, leaseTermMonths, componentLabel) 
 }
 
 // ===== CASH FLOW TABLE =====
-function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
+function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel, submissionId) {
   if (!analysis || !analysis.cash_flow || !analysis.cash_flow.monthly) {
     return '<div style="padding:var(--space-4);color:var(--color-text-muted)">No cash flow data available.</div>';
   }
@@ -20531,9 +20575,8 @@ function rfpBuildCashFlowTable(analysis, buildingAddr, componentLabel) {
   var hasTIReceived = ((totals.totalTIReceived || 0) + (totals.totalAmortTIReceived || 0)) > 0;
   var hasMgmtFee = (totals.totalManagementFee || 0) > 0;
 
-  // Internal operating costs from assumptions
-  var cfAssumKey = (buildingAddr || '') + (componentLabel ? '::' + componentLabel : '');
-  var cfAssumData = (window._rfpState && window._rfpState.assumptionsMap && window._rfpState.assumptionsMap[cfAssumKey]) || {};
+  // Internal operating costs from assumptions (per-version override aware)
+  var cfAssumData = getEffectiveAssumptions(buildingAddr || '', componentLabel || '', submissionId);
   var cfFnB = parseFloat(cfAssumData.opex_food_beverage) || 0;
   var cfWPE = parseFloat(cfAssumData.opex_workplace_experience) || 0;
   var cfMnS = parseFloat(cfAssumData.opex_maintenance_security) || 0;
@@ -20946,7 +20989,7 @@ function tiDisbSave() {
     var tiPanel = document.getElementById('fin-ti-allowance');
     if (tiPanel) tiPanel.innerHTML = rfpBuildTIAllowanceTab(sub.analysis, bAddr, bComp);
     var cfPanel = document.getElementById('fin-cash-flow');
-    if (cfPanel) cfPanel.innerHTML = rfpBuildCashFlowTable(sub.analysis, bAddr, bComp);
+    if (cfPanel) cfPanel.innerHTML = rfpBuildCashFlowTable(sub.analysis, bAddr, bComp, sub && sub.id);
     // Keep TI Allowance tab active
     switchFinSheet('ti-allowance');
   })
@@ -20957,7 +21000,7 @@ function tiDisbSave() {
 }
 
 // ===== STRAIGHT-LINE P&L TABLE =====
-function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
+function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel, submissionId) {
   if (!analysis || !analysis.straight_line_pl || !analysis.straight_line_pl.annual) {
     return '<div style="padding:var(--space-4);color:var(--color-text-muted)">No straight-line P&amp;L data available.</div>';
   }
@@ -21072,9 +21115,8 @@ function rfpBuildStraightLineTable(analysis, buildingAddr, componentLabel) {
   var slMonthlyAllIn = slMonthlyRent + opexMonthly_sl + parkingMonthly_sl + mgmtFeeMonthly_sl + (slHasAmortTI ? slAmortTIMonthly : 0);
   var brokerMonthlyImpact = slBrokerFee.hasBrokerFee ? slBrokerFee.slMonthlyImpact : 0;
 
-  // Internal assumptions (F&B, Workplace Experience, Maintenance, custom items)
-  var assumKey_sl = getAssumptionsKey(buildingAddr, componentLabel);
-  var assum_sl = window._rfpState.assumptionsMap[assumKey_sl] || window._rfpState.assumptionsMap[buildingAddr] || {};
+  // Internal assumptions (F&B, Workplace Experience, Maintenance, custom items) -- per-version override aware
+  var assum_sl = getEffectiveAssumptions(buildingAddr, componentLabel, submissionId);
   var intFB = parseFloat(assum_sl.opex_food_beverage) || 0;
   var intWPE = parseFloat(assum_sl.opex_workplace_experience) || 0;
   var intMaint = parseFloat(assum_sl.opex_maintenance_security) || 0;
@@ -22070,9 +22112,8 @@ function rfpExportExcel() {
       smRow++;
     }
 
-    // Internal Operating Costs (from Assumptions)
-    var exAsKey = getAssumptionsKey(address, compLabel);
-    var exAsData = window._rfpState.assumptionsMap[exAsKey] || window._rfpState.assumptionsMap[address] || {};
+    // Internal Operating Costs (from Assumptions) - per-version override aware
+    var exAsData = getEffectiveAssumptions(address, compLabel, selected && selected.id);
     var exIntFB = parseFloat(exAsData.opex_food_beverage) || 0;
     var exIntWPE = parseFloat(exAsData.opex_workplace_experience) || 0;
     var exIntMaint = parseFloat(exAsData.opex_maintenance_security) || 0;
@@ -22207,9 +22248,8 @@ function rfpExportExcel() {
     var cfHasTIReceived = ((cfTotals.totalTIReceived || 0) + (cfTotals.totalAmortTIReceived || 0)) > 0;
     var cfCapex = getCapexForBuilding(address, cfTermMo, compLabel);
     var cfHasCapex = cfCapex.hasCapex;
-    // Internal operating costs from assumptions
-    var cfExAssumKey = (address || '') + (compLabel ? '::' + compLabel : '');
-    var cfExAssumData = (window._rfpState && window._rfpState.assumptionsMap && window._rfpState.assumptionsMap[cfExAssumKey]) || {};
+    // Internal operating costs from assumptions - per-version override aware
+    var cfExAssumData = getEffectiveAssumptions(address || '', compLabel || '', selected && selected.id);
     var cfExFnB = parseFloat(cfExAssumData.opex_food_beverage) || 0;
     var cfExWPE = parseFloat(cfExAssumData.opex_workplace_experience) || 0;
     var cfExMnS = parseFloat(cfExAssumData.opex_maintenance_security) || 0;
@@ -22879,9 +22919,8 @@ function rfpExportExcel() {
             val = (cRsf > 0 && mfTotal2 > 0) ? Math.round((mfTotal2 / cTermMo) / cRsf * 100) / 100 : 0;
           } else { val = 0; }
         } else if (f.src === 'computed_int') {
-          // Internal OpEx from assumptions (same for all versions)
-          var intAKey = getAssumptionsKey(address, '');
-          var intAData = window._rfpState.assumptionsMap[intAKey] || window._rfpState.assumptionsMap[address] || {};
+          // Internal OpEx from assumptions (now per-version-aware: version override wins, building default fallback)
+          var intAData = getEffectiveAssumptions(address, '', s.id);
           if (f.key === 'intFB') val = parseFloat(intAData.opex_food_beverage) || 0;
           else if (f.key === 'intWPE') val = parseFloat(intAData.opex_workplace_experience) || 0;
           else if (f.key === 'intMaint') val = parseFloat(intAData.opex_maintenance_security) || 0;
@@ -22913,8 +22952,7 @@ function rfpExportExcel() {
           var tocBr = getBrokerFeeForBuilding(address, tocTM);
           var tocLH = (tocCx && tocCx.hasCapex) ? (tocCx.monthlyDepreciation || 0) : 0;
           var tocBF = (tocBr && tocBr.hasBrokerFee) ? (tocBr.slMonthlyImpact || 0) : 0;
-          var tocAK = getAssumptionsKey(address, '');
-          var tocAD = window._rfpState.assumptionsMap[tocAK] || window._rfpState.assumptionsMap[address] || {};
+          var tocAD = getEffectiveAssumptions(address, '', s.id);
           var tocIC = tocAD.opex_custom_items || [];
           if (typeof tocIC === 'string') { try { tocIC = JSON.parse(tocIC); } catch(e) { tocIC = []; } }
           var tocICT = 0;
@@ -23834,9 +23872,9 @@ function capexSave() {
       var bComp = selected.component_label || '';
       document.getElementById('fin-capex').innerHTML = rfpBuildCapexPanel(selected);
       var cfPanel = document.getElementById('fin-cash-flow');
-      if (cfPanel) cfPanel.innerHTML = rfpBuildCashFlowTable(selected.analysis, bAddr, bComp);
+      if (cfPanel) cfPanel.innerHTML = rfpBuildCashFlowTable(selected.analysis, bAddr, bComp, selected && selected.id);
       var slPanel = document.getElementById('fin-straight-line');
-      if (slPanel) slPanel.innerHTML = rfpBuildStraightLineTable(selected.analysis, bAddr, bComp);
+      if (slPanel) slPanel.innerHTML = rfpBuildStraightLineTable(selected.analysis, bAddr, bComp, selected && selected.id);
       var gaapPanel = document.getElementById('fin-gaap');
       if (gaapPanel) gaapPanel.innerHTML = rfpBuildGAAPTable(selected.analysis, bAddr, bComp);
     }
@@ -24343,9 +24381,9 @@ function rfpSaveBrokerFee() {
       var panel = document.getElementById('fin-broker-fees');
       if (panel) panel.innerHTML = rfpBuildBrokerFeesPanel(sel);
       var cfPanel = document.getElementById('fin-cash-flow');
-      if (cfPanel) cfPanel.innerHTML = rfpBuildCashFlowTable(sel.analysis, bAddr, bComp);
+      if (cfPanel) cfPanel.innerHTML = rfpBuildCashFlowTable(sel.analysis, bAddr, bComp, sel && sel.id);
       var slPanel = document.getElementById('fin-straight-line');
-      if (slPanel) slPanel.innerHTML = rfpBuildStraightLineTable(sel.analysis, bAddr, bComp);
+      if (slPanel) slPanel.innerHTML = rfpBuildStraightLineTable(sel.analysis, bAddr, bComp, sel && sel.id);
       var gaapPanel = document.getElementById('fin-gaap');
       if (gaapPanel) gaapPanel.innerHTML = rfpBuildGAAPTable(sel.analysis, bAddr, bComp);
     }
@@ -24358,12 +24396,33 @@ function rfpSaveBrokerFee() {
 
 function rfpBuildAssumptionsPanel(selected) {
   var buildingAddr = selected ? (selected.building_address || selected.buildingAddress || '') : '';
-  var a = buildingAddr ? (window._rfpState.assumptionsMap[buildingAddr] || {}) : {};
   var canEdit = hasAdminAccess();
   var analysis = selected ? selected.analysis : null;
   var summary = (analysis && analysis.summary) ? analysis.summary : {};
 
-  // Compute totals from assumptions
+  // Scope: 'building' (default) or 'version' (per-submission override).
+  // Persisted across re-renders on _rfpState so the user's choice sticks while editing.
+  if (!window._rfpState.assumptionsScope) window._rfpState.assumptionsScope = {};
+  var scopeKey = buildingAddr + '::' + (selected ? selected.id : '');
+  var scope = window._rfpState.assumptionsScope[scopeKey] || 'building';
+  // If the user lands on a version that already has overrides, default to 'version' scope.
+  if (!window._rfpState.assumptionsScope[scopeKey] && selected && hasVersionOverride(selected.id)) {
+    scope = 'version';
+    window._rfpState.assumptionsScope[scopeKey] = 'version';
+  }
+
+  // For display: in 'version' scope, show the EFFECTIVE merged values (version override
+  // on top of building default). In 'building' scope, show just the building default.
+  var a;
+  if (scope === 'version' && selected) {
+    a = getEffectiveAssumptions(buildingAddr, '', selected.id);
+  } else {
+    a = buildingAddr ? (window._rfpState.assumptionsMap[buildingAddr] || {}) : {};
+  }
+  var versionLabel = selected ? (selected.version_label || selected.versionLabel || 'this version') : '';
+  var hasOverride = selected ? hasVersionOverride(selected.id) : false;
+
+  // Compute totals from assumptions (uses the scope-appropriate `a`)
   var fb = parseFloat(a.opex_food_beverage) || 0;
   var wpe = parseFloat(a.opex_workplace_experience) || 0;
   var maint = parseFloat(a.opex_maintenance_security) || 0;
@@ -24384,7 +24443,31 @@ function rfpBuildAssumptionsPanel(selected) {
   var allInPerRSF = rsf > 0 ? Math.round(allInAnnual / rsf * 100) / 100 : 0;
   var densityFit = (headcount > 0 && rsf > 0) ? Math.round(rsf / headcount) : 0;
 
-  var html = '<div style="padding:var(--space-4)" data-assumption-building="' + buildingAddr.replace(/"/g, '&quot;') + '">';
+  var html = '<div style="padding:var(--space-4)" data-assumption-building="' + buildingAddr.replace(/"/g, '&quot;') + '" data-assumption-scope="' + scope + '">';
+
+  // Scope toggle: edit building default vs. version-specific override
+  if (selected && selected.id) {
+    var safeVerLabel = (versionLabel || 'this version').replace(/"/g, '&quot;');
+    var bldgActiveStyle = scope === 'building'
+      ? 'background:#fff;color:#0f172a;border:1px solid #1d2942;font-weight:600;'
+      : 'background:transparent;color:#64748b;border:1px solid transparent;font-weight:500;';
+    var verActiveStyle = scope === 'version'
+      ? 'background:#fff;color:#0f172a;border:1px solid #1d2942;font-weight:600;'
+      : 'background:transparent;color:#64748b;border:1px solid transparent;font-weight:500;';
+    var badge = hasOverride ? ' <span style="display:inline-block;margin-left:6px;padding:1px 6px;border-radius:999px;background:#fef3c7;color:#92400e;font-size:0.7rem;font-weight:600">Override</span>' : '';
+    html += '<div style="display:flex;align-items:center;gap:var(--space-3);background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;margin-bottom:var(--space-4)">' +
+      '<div style="font-size:0.8rem;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;font-weight:600">Editing scope:</div>' +
+      '<div style="display:inline-flex;gap:4px;padding:3px;background:#e2e8f0;border-radius:8px">' +
+        '<button onclick="rfpSetAssumptionsScope(\'building\')" style="padding:5px 12px;border-radius:6px;cursor:pointer;font-size:0.85rem;' + bldgActiveStyle + '">Building default</button>' +
+        '<button onclick="rfpSetAssumptionsScope(\'version\')" style="padding:5px 12px;border-radius:6px;cursor:pointer;font-size:0.85rem;' + verActiveStyle + '">This version' + badge + '</button>' +
+      '</div>' +
+      '<div style="flex:1;font-size:0.8rem;color:#64748b;text-align:right">' +
+        (scope === 'version'
+          ? 'Editing override for "' + safeVerLabel + '". Building default applies to other versions.'
+          : 'Editing the building default. Used by all versions unless a version overrides it.') +
+      '</div>' +
+    '</div>';
+  }
 
   // All-In summary (only show if assumptions have been saved with non-zero OpEx)
   if (totalMonthlyOpex > 0 && slMonthly > 0) {
@@ -24476,33 +24559,49 @@ function rfpBuildAssumptionsPanel(selected) {
   '</div>';
 
   // Save button
-  html += '<div style="margin-top:var(--space-5);display:flex;gap:var(--space-3);align-items:center">' +
-    '<button class="rfp-btn-primary" onclick="rfpSaveAssumptions()" id="assumption-save-btn">Save Assumptions</button>' +
-    '<div id="assumption-save-status" style="font-size:var(--text-sm);color:var(--color-text-muted)"></div>' +
+  var saveLabel = (scope === 'version')
+    ? 'Save version overrides'
+    : 'Save building default';
+  html += '<div style="margin-top:var(--space-5);display:flex;gap:var(--space-3);align-items:center;flex-wrap:wrap">' +
+    '<button class="rfp-btn-primary" onclick="rfpSaveAssumptions()" id="assumption-save-btn">' + saveLabel + '</button>';
+  if (scope === 'version' && hasOverride) {
+    html += '<button onclick="rfpResetVersionOverride()" style="padding:8px 14px;border:1px solid #fca5a5;border-radius:6px;background:#fff;color:#b91c1c;cursor:pointer;font-size:0.85rem">Reset to building default</button>';
+  }
+  html += '<div id="assumption-save-status" style="font-size:var(--text-sm);color:var(--color-text-muted)"></div>' +
   '</div>';
 
   html += '</div>';
   return html;
 }
 
-// Read current form values into assumptionsMap for the current building before re-rendering
+// Read current form values into assumptionsMap for the current building before re-rendering.
+// Scope-aware: when editing a version override, only mutates versionAssumptionsMap so the
+// building default is not polluted by mid-dashboard rerenders.
 function rfpReadAssumptionsFromForm() {
   var addr = rfpGetCurrentBuildingAddress();
   if (!addr) return {};
-  var a = window._rfpState.assumptionsMap[addr] || {};
+  var sub = (typeof rfpGetCurrentSubmission === 'function') ? rfpGetCurrentSubmission() : null;
+  var subId = sub && sub.id ? sub.id : null;
+  // assumptionsScope is a map keyed by `${buildingAddr}::${submissionId}`
+  var scopeMap = (window._rfpState && window._rfpState.assumptionsScope) || {};
+  var scopeKey = addr + '::' + (subId || '');
+  var scope = (typeof scopeMap === 'object' && scopeMap !== null) ? (scopeMap[scopeKey] || 'building') : 'building';
+
+  // Read raw form values once
+  var form = {};
   var el;
   el = document.getElementById('assumption-fb');
-  if (el) a.opex_food_beverage = parseFloat(el.value) || 0;
+  if (el) form.opex_food_beverage = parseFloat(el.value) || 0;
   el = document.getElementById('assumption-wpe');
-  if (el) a.opex_workplace_experience = parseFloat(el.value) || 0;
+  if (el) form.opex_workplace_experience = parseFloat(el.value) || 0;
   el = document.getElementById('assumption-maint');
-  if (el) a.opex_maintenance_security = parseFloat(el.value) || 0;
+  if (el) form.opex_maintenance_security = parseFloat(el.value) || 0;
   el = document.getElementById('assumption-headcount');
-  if (el) a.headcount = parseInt(el.value) || 0;
+  if (el) form.headcount = parseInt(el.value) || 0;
   el = document.getElementById('assumption-density');
-  if (el) a.target_density_rsf = parseInt(el.value) || 0;
+  if (el) form.target_density_rsf = parseInt(el.value) || 0;
   el = document.getElementById('assumption-discount');
-  if (el) a.discount_rate = parseFloat(el.value) || 6.0;
+  if (el) form.discount_rate = parseFloat(el.value) || 6.0;
   // Read custom items from DOM
   var customItems = [];
   var i = 0;
@@ -24516,8 +24615,35 @@ function rfpReadAssumptionsFromForm() {
     });
     i++;
   }
-  if (customItems.length > 0 || (a.opex_custom_items && a.opex_custom_items.length > 0)) {
-    a.opex_custom_items = customItems;
+  form.opex_custom_items = customItems;
+
+  if (scope === 'version' && subId) {
+    // Write only overridable fields to the version map. Discount rate / density stay
+    // building-level since they are not in VERSION_OVERRIDABLE_FIELDS.
+    if (!window._rfpState.versionAssumptionsMap) window._rfpState.versionAssumptionsMap = {};
+    if (!window._rfpState.versionAssumptionsMap[subId]) window._rfpState.versionAssumptionsMap[subId] = {};
+    var v = window._rfpState.versionAssumptionsMap[subId];
+    v.opex_food_beverage = form.opex_food_beverage;
+    v.opex_workplace_experience = form.opex_workplace_experience;
+    v.opex_maintenance_security = form.opex_maintenance_security;
+    v.headcount = form.headcount;
+    if (form.opex_custom_items.length > 0 || (v.opex_custom_items && v.opex_custom_items.length > 0)) {
+      v.opex_custom_items = form.opex_custom_items;
+    }
+    window._rfpState.versionAssumptionsMap[subId] = v;
+    return v;
+  }
+
+  // Building default scope: write everything to the building map
+  var a = window._rfpState.assumptionsMap[addr] || {};
+  a.opex_food_beverage = form.opex_food_beverage;
+  a.opex_workplace_experience = form.opex_workplace_experience;
+  a.opex_maintenance_security = form.opex_maintenance_security;
+  a.headcount = form.headcount;
+  a.target_density_rsf = form.target_density_rsf;
+  a.discount_rate = form.discount_rate;
+  if (form.opex_custom_items.length > 0 || (a.opex_custom_items && a.opex_custom_items.length > 0)) {
+    a.opex_custom_items = form.opex_custom_items;
   }
   window._rfpState.assumptionsMap[addr] = a;
   return a;
@@ -24584,12 +24710,25 @@ function rfpSaveAssumptions() {
   // Merge with existing map data to preserve CAPEX + broker fee fields
   var sub = rfpGetCurrentSubmission();
   var compLabel = sub ? (sub.component_label || '') : '';
-  var assumKey = getAssumptionsKey(buildingAddr, compLabel);
-  var existing = window._rfpState.assumptionsMap[assumKey] || window._rfpState.assumptionsMap[buildingAddr] || {};
+
+  // Scope: 'building' default vs. 'version' override
+  var scopeKey = buildingAddr + '::' + (sub ? sub.id : '');
+  var scope = (window._rfpState.assumptionsScope && window._rfpState.assumptionsScope[scopeKey]) || 'building';
+  var saveSubmissionId = (scope === 'version' && sub) ? sub.id : null;
+
+  var existing;
+  if (saveSubmissionId) {
+    var vMap = window._rfpState.versionAssumptionsMap || {};
+    existing = vMap[saveSubmissionId] || {};
+  } else {
+    var assumKey = getAssumptionsKey(buildingAddr, compLabel);
+    existing = window._rfpState.assumptionsMap[assumKey] || window._rfpState.assumptionsMap[buildingAddr] || {};
+  }
   var payload = Object.assign({}, existing, {
     projectId: getProjectId(),
     building_address: buildingAddr,
     component_label: compLabel || null,
+    submission_id: saveSubmissionId,
     opex_food_beverage: parseFloat((document.getElementById('assumption-fb') || {}).value) || 0,
     opex_workplace_experience: parseFloat((document.getElementById('assumption-wpe') || {}).value) || 0,
     opex_maintenance_security: parseFloat((document.getElementById('assumption-maint') || {}).value) || 0,
@@ -24612,8 +24751,14 @@ function rfpSaveAssumptions() {
   .then(function(r) { return r.json(); })
   .then(function(data) {
     if (data.error) throw new Error(data.error);
-    window._rfpState.assumptionsMap[buildingAddr] = data;
-    if (status) { status.textContent = 'Saved for ' + buildingAddr; status.style.color = '#16a34a'; }
+    if (saveSubmissionId) {
+      if (!window._rfpState.versionAssumptionsMap) window._rfpState.versionAssumptionsMap = {};
+      window._rfpState.versionAssumptionsMap[saveSubmissionId] = data;
+      if (status) { status.textContent = 'Saved override for "' + (sub.version_label || 'this version') + '"'; status.style.color = '#16a34a'; }
+    } else {
+      window._rfpState.assumptionsMap[buildingAddr] = data;
+      if (status) { status.textContent = 'Saved building default for ' + buildingAddr; status.style.color = '#16a34a'; }
+    }
     if (btn) btn.disabled = false;
     // Re-render to update All-In metrics
     rfpRenderDashboard(window._rfpState.submissions);
@@ -24624,6 +24769,55 @@ function rfpSaveAssumptions() {
     if (status) { status.textContent = 'Error: ' + (err.message || 'Failed to save'); status.style.color = '#dc2626'; }
     if (btn) btn.disabled = false;
   });
+}
+
+// ===== PER-VERSION ASSUMPTIONS SCOPE HELPERS =====
+
+// Switch the assumptions panel between 'building' default and 'version' override scope.
+function rfpSetAssumptionsScope(newScope) {
+  var sub = rfpGetCurrentSubmission();
+  var buildingAddr = sub ? (sub.building_address || sub.buildingAddress || '') : '';
+  if (!buildingAddr) return;
+  if (newScope !== 'building' && newScope !== 'version') return;
+  if (!window._rfpState.assumptionsScope) window._rfpState.assumptionsScope = {};
+  var scopeKey = buildingAddr + '::' + (sub ? sub.id : '');
+  window._rfpState.assumptionsScope[scopeKey] = newScope;
+  // Re-render the assumptions panel with the new scope's values
+  var container = document.getElementById('fin-assumptions');
+  if (container) container.innerHTML = rfpBuildAssumptionsPanel(sub);
+}
+
+// Delete the version-level override row, falling back to the building default.
+function rfpResetVersionOverride() {
+  var sub = rfpGetCurrentSubmission();
+  if (!sub || !sub.id) return;
+  var buildingAddr = sub.building_address || sub.buildingAddress || '';
+  if (!buildingAddr) return;
+  if (!confirm('Remove the version-specific assumptions for "' + (sub.version_label || 'this version') + '"? This version will use the building default going forward.')) return;
+  var status = document.getElementById('assumption-save-status');
+  if (status) { status.textContent = 'Removing override...'; status.style.color = '#64748b'; }
+  var email = getCurrentUserEmail();
+  var qs = 'projectId=' + encodeURIComponent(getProjectId())
+    + '&buildingAddress=' + encodeURIComponent(buildingAddr)
+    + '&submissionId=' + encodeURIComponent(sub.id);
+  if (email) qs += '&userEmail=' + encodeURIComponent(email);
+  fetch('/api/assumptions?' + qs, { method: 'DELETE' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) throw new Error(data.error);
+      // Drop from local map
+      if (window._rfpState.versionAssumptionsMap) delete window._rfpState.versionAssumptionsMap[sub.id];
+      // Switch scope back to building default
+      if (!window._rfpState.assumptionsScope) window._rfpState.assumptionsScope = {};
+      window._rfpState.assumptionsScope[buildingAddr + '::' + sub.id] = 'building';
+      if (status) { status.textContent = 'Override removed. Now using building default.'; status.style.color = '#16a34a'; }
+      rfpRenderDashboard(window._rfpState.submissions);
+      setTimeout(function() { switchFinSheet('assumptions'); }, 50);
+    })
+    .catch(function(err) {
+      console.error('Reset override error:', err);
+      if (status) { status.textContent = 'Error: ' + (err.message || 'Failed to reset'); status.style.color = '#dc2626'; }
+    });
 }
 
 // ===== COMPARISON VIEW =====
