@@ -24,6 +24,41 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
+/* Filter only the basemap tile layer, never markers, routes, or controls. */
+:root .tl-basemap {
+  filter: grayscale(1) brightness(1.08) contrast(0.72);
+}
+:root[data-map-style="muted"] .tl-basemap {
+  filter: saturate(0.25) brightness(1.04) contrast(0.88);
+}
+:root[data-map-style="color"] .tl-basemap {
+  filter: none;
+}
+.map-style-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 11px;
+  color: #475569;
+  font-weight: 600;
+}
+.map-style-select {
+  font: inherit;
+  font-size: 12px;
+  color: #334155;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+.map-style-select:focus-visible { outline: 2px solid #f97316; outline-offset: 2px; }
+.map-style-control {
+  background: #fff;
+  border-radius: 8px;
+  padding: 8px 10px;
+  box-shadow: 0 1px 5px rgba(0,0,0,0.18);
+}
 /* ============================================================
    Design Tokens
    ============================================================ */
@@ -10175,6 +10210,70 @@ if (dateEl) {
 // Map Init
 // ============================================================
 
+// One browser preference for all three maps. Storage may be unavailable in embeds.
+var MAP_STYLE_STORAGE_KEY = 'tourlytics.mapStyle';
+var MAP_STYLE_OPTIONS = [
+  { value: 'light-gray', label: 'Light gray' },
+  { value: 'color', label: 'Color' },
+  { value: 'muted', label: 'Muted' }
+];
+function isValidMapStyle(style) {
+  return MAP_STYLE_OPTIONS.some(function(option) { return option.value === style; });
+}
+var _mapStyle = 'light-gray';
+try {
+  var savedMapStyle = localStorage.getItem(MAP_STYLE_STORAGE_KEY);
+  if (isValidMapStyle(savedMapStyle)) _mapStyle = savedMapStyle;
+} catch (e) { /* Retain the default when browser storage is blocked. */ }
+document.documentElement.setAttribute('data-map-style', _mapStyle);
+
+function setMapStyle(style) {
+  if (!isValidMapStyle(style)) return;
+  _mapStyle = style;
+  document.documentElement.setAttribute('data-map-style', style);
+  document.querySelectorAll('.map-style-select').forEach(function(select) {
+    select.value = style;
+  });
+  try { localStorage.setItem(MAP_STYLE_STORAGE_KEY, style); } catch (e) { /* Session-only preference. */ }
+}
+
+function buildMapStylePickerHTML() {
+  return '<label class="map-style-picker">Map style' +
+    '<select class="map-style-select" aria-label="Map style">' +
+    MAP_STYLE_OPTIONS.map(function(option) {
+      return '<option value="' + option.value + '"' +
+        (option.value === _mapStyle ? ' selected' : '') + '>' + option.label + '</option>';
+    }).join('') + '</select></label>';
+}
+
+function bindMapStylePicker(container) {
+  container.querySelector('.map-style-select').addEventListener('change', function() {
+    setMapStyle(this.value);
+  });
+}
+
+function addMapStyleControl(targetMap) {
+  var control = L.control({ position: 'topright' });
+  control.onAdd = function() {
+    var div = L.DomUtil.create('div', 'map-style-control');
+    div.innerHTML = buildMapStylePickerHTML();
+    L.DomEvent.disableClickPropagation(div);
+    L.DomEvent.disableScrollPropagation(div);
+    bindMapStylePicker(div);
+    return div;
+  };
+  control.addTo(targetMap);
+}
+
+function addStandardBasemap(targetMap) {
+  return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    subdomains: 'abc',
+    maxZoom: 19,
+    className: 'tl-basemap'
+  }).addTo(targetMap);
+}
+
 // Dynamic map center: SF for sf-office-search, zoomed-out US view for new projects
 var _mapCenter = (function() {
   var pid = getProjectId();
@@ -10190,11 +10289,7 @@ const map = L.map("map", {
   scrollWheelZoom: true
 });
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  subdomains: "abc",
-  maxZoom: 19
-}).addTo(map);
+addStandardBasemap(map);
 
 // ============================================================
 // Popup Builder
@@ -11855,6 +11950,7 @@ legend.addTo(map);
     L.DomEvent.disableScrollPropagation(div);
 
     div.innerHTML = buildLayerControlHTML();
+    bindMapStylePicker(div);
 
     // Auto-collapse on mobile to save screen space
     if (window.innerWidth <= 768) {
@@ -11913,6 +12009,8 @@ legend.addTo(map);
       '<svg class="layer-control-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>' +
     '</div>' +
     '<div class="layer-control-body">' +
+      '<div class="layer-section">' + buildMapStylePickerHTML() + '</div>' +
+      '<div class="layer-divider"></div>' +
       // Survey buildings (always on)
       '<div class="layer-section">' +
         '<div class="layer-section-label">Buildings</div>' +
@@ -30492,11 +30590,8 @@ function initCommuteMap() {
     scrollWheelZoom: true
   });
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '\u00a9 OpenStreetMap contributors',
-    subdomains: 'abc',
-    maxZoom: 19
-  }).addTo(_commuteMap);
+  addStandardBasemap(_commuteMap);
+  addMapStyleControl(_commuteMap);
 
   // Render employee markers
   renderCommuteMapMarkers();
@@ -30713,11 +30808,8 @@ function cmapInit() {
         zoomControl: false,
         scrollWheelZoom: true
       });
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '\u00a9 OpenStreetMap contributors',
-        subdomains: 'abc',
-        maxZoom: 19
-      }).addTo(_cmapLeaflet);
+      addStandardBasemap(_cmapLeaflet);
+      addMapStyleControl(_cmapLeaflet);
       _cmapInited = true;
       cmapRenderAll();
       // Extra invalidateSize after tiles load to handle any remaining sizing quirks
